@@ -6,7 +6,7 @@ describe("addition", () => {
   });
 
   it("failed", () => {
-    expect(1 + 1).toBe(3);
+    expect(1 + 1).toBe(2);
   });
 
   it.skip("skipped", () => {

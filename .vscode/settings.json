@@ -27,5 +27,6 @@
     "titleBar.inactiveBackground": "#0fa84799",
     "titleBar.inactiveForeground": "#e7e7e799"
   },
-  "peacock.color": "#0fa847"
+  "peacock.color": "#0fa847",
+  "cSpell.words": ["execa"]
 }

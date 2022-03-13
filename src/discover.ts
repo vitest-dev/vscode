@@ -5,6 +5,7 @@ import {
   testData,
   TestDescribe,
   TestCase,
+  testItemIdMap,
 } from "./test_data";
 import parse from "./pure/parsers";
 import { NamedBlock } from "./pure/parsers/parser_nodes";
@@ -50,6 +51,11 @@ export function discoverTestFromFileContent(
   content: string,
   item: vscode.TestItem
 ) {
+  if (testItemIdMap.get(controller) == null) {
+    testItemIdMap.set(controller, new Map());
+  }
+
+  const idMap = testItemIdMap.get(controller)!;
   const ancestors = [
     {
       item,
@@ -81,11 +87,10 @@ export function discoverTestFromFileContent(
   arr.sort((a, b) => (a.start?.line || 0) - (b.start?.line || 0));
   for (const block of arr) {
     const parent = getParent(block);
-    const testCase = controller.createTestItem(
-      `${item.uri}/${block.name}`,
-      block.name!,
-      item.uri
-    );
+    const id = `${item.uri}/${block.name}`;
+    console.log(`register ${id}`);
+    const testCase = controller.createTestItem(id, block.name!, item.uri);
+    idMap.set(id, testCase);
     testCase.range = new vscode.Range(
       new vscode.Position(block.start!.line - 1, block.start!.column),
       new vscode.Position(block.end!.line - 1, block.end!.column)
@@ -93,9 +98,9 @@ export function discoverTestFromFileContent(
     parent.children.push(testCase);
     ancestors.push({ item: testCase, block, children: [] });
     if (block.type === "describe") {
-      testData.set(testCase, new TestDescribe());
+      testData.set(testCase, new TestDescribe(block.name!, item));
     } else if (block.type === "it") {
-      testData.set(testCase, new TestCase());
+      testData.set(testCase, new TestCase(block.name!, item));
     } else {
       throw new Error();
     }
