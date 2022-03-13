@@ -8,7 +8,7 @@
  * @flow
  */
 
-import type { Location } from '../types';
+import type { Location } from "../../types";
 
 /**
  * range and location here are 1-based position.
@@ -18,7 +18,12 @@ export class ParsedRange {
 
   end: Location;
 
-  constructor(startLine: number, startCol: number, endLine: number, endCol: number) {
+  constructor(
+    startLine: number,
+    startCol: number,
+    endLine: number,
+    endCol: number
+  ) {
     this.start = { column: startCol, line: startLine };
     this.end = { column: endCol, line: endLine };
   }
@@ -27,10 +32,10 @@ export class ParsedRange {
 // export type ParsedNodeType = 'expect' | 'describe' | 'it' | 'ROOT';
 
 export const ParsedNodeTypes = {
-  describe: 'describe',
-  expect: 'expect',
-  it: 'it',
-  root: 'root',
+  describe: "describe",
+  expect: "expect",
+  it: "it",
+  root: "root",
 } as const;
 
 export type ParsedNodeType = keyof typeof ParsedNodeTypes;
@@ -75,7 +80,10 @@ export class ParsedNode {
     return child;
   }
 
-  filter(f: (node: ParsedNode) => boolean, filterSelf: boolean = false): Array<ParsedNode> {
+  filter(
+    f: (node: ParsedNode) => boolean,
+    filterSelf: boolean = false
+  ): Array<ParsedNode> {
     const filtered: Array<ParsedNode> = [];
 
     const _filter = (node: ParsedNode, _filterSelf: boolean) => {
@@ -160,14 +168,23 @@ export class ParseResult {
     } else if (node instanceof ItBlock) {
       this.itBlocks.push(node);
     } else if (node instanceof Expect) {
-      if (dedup && this.expects.some((e) => e.start?.line === node.start?.line && e.start?.column === node.start?.column)) {
+      if (
+        dedup &&
+        this.expects.some(
+          (e) =>
+            e.start?.line === node.start?.line &&
+            e.start?.column === node.start?.column
+        )
+      ) {
         // found dup, return
         return;
       }
 
       this.expects.push(node);
     } else {
-      throw new TypeError(`unexpected node class '${typeof node}': ${JSON.stringify(node)}`);
+      throw new TypeError(
+        `unexpected node class '${typeof node}': ${JSON.stringify(node)}`
+      );
     }
   }
 }
