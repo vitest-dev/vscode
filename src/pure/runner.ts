@@ -67,7 +67,6 @@ export class TestRunner {
     testNamePattern: string | undefined
   ): Promise<AggregatedResult> {
     const release = await this.lock.acquire(10000).catch(() => () => {});
-    console.log("Start Running", testFile, testNamePattern, this.vitePath);
     try {
       const path = getTempPath();
       const args = [
@@ -83,7 +82,6 @@ export class TestRunner {
         args.push("-t", testNamePattern);
       }
 
-      console.log(args);
       try {
         if (this.vitePath) {
           await execa(this.vitePath, args, {

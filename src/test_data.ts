@@ -38,7 +38,7 @@ export async function runTest(
 
   const data = testData.get(item)!;
   const out = await runner.scheduleRun(item.uri!.fsPath, data.pattern);
-  console.dir(out);
+  console.log(out.testResults);
   out.testResults.forEach((result) => {
     const id = getTestCaseId(item, result.displayName!) || "";
     const child = idMap.get(id);

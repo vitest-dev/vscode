@@ -1,5 +1,6 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
+import { debounce } from "mighty-promise";
 import * as vscode from "vscode";
 
 import { extensionId } from "./config";
@@ -50,8 +51,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidOpenTextDocument(
       discoverTestFromDoc.bind(null, ctrl)
     ),
-    vscode.workspace.onDidChangeTextDocument((e) =>
-      discoverTestFromDoc(ctrl, e.document)
+    vscode.workspace.onDidChangeTextDocument(
+      debounce((e) => discoverTestFromDoc(ctrl, e.document), 1000)
     )
   );
 }

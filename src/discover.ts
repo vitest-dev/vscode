@@ -82,13 +82,19 @@ export function discoverTestFromFileContent(
     return parent;
   }
 
-  const result = parse(item.id, content);
+  let result: ReturnType<typeof parse>;
+  try {
+    result = parse(item.id, content);
+  } catch (e) {
+    console.log("parse error");
+    return;
+  }
+
   const arr: NamedBlock[] = [...result.describeBlocks, ...result.itBlocks];
   arr.sort((a, b) => (a.start?.line || 0) - (b.start?.line || 0));
   for (const block of arr) {
     const parent = getParent(block);
     const id = `${item.uri}/${block.name}`;
-    console.log(`register ${id}`);
     const testCase = controller.createTestItem(id, block.name!, item.uri);
     idMap.set(id, testCase);
     testCase.range = new vscode.Range(

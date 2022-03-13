@@ -12,8 +12,12 @@ describe("addition", () => {
   it.skip("skipped", () => {
     expect(1 + 1).toBe(3);
   });
+
+  it.todo("emmm");
+  it("123", () => {});
 });
 
 describe("haha a a", () => {
   it("run", () => {});
+  it("123", () => {});
 });
