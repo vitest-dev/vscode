@@ -6,7 +6,8 @@ import * as vscode from "vscode";
 import { extensionId } from "./config";
 import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
 import { getVitePath as getVitestPath, TestRunner } from "./pure/runner";
-import { runTest, TestCase, TestData, testData, TestFile } from "./test_data";
+import { TestCase, TestData, testData, TestFile } from "./test_data";
+import { runTest } from "./runTest";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -76,7 +77,7 @@ async function runHandler(
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
   const run = ctrl.createTestRun(request);
-  await Promise.all(tests.map((test) => runTest(ctrl, runner, run, test)));
+  await Promise.all(tests.map((test) => runTest(runner, run, test)));
 }
 
 function gatherTestItems(collection: vscode.TestItemCollection) {
