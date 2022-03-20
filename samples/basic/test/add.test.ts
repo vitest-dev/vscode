@@ -18,6 +18,8 @@ describe("addition", () => {
 });
 
 describe("haha a a", () => {
-  it("run", () => {});
+  it("run", () => {
+    expect(5).toBe(4);
+  });
   it("123", () => {});
 });

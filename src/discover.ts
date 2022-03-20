@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import {
   TestFile,
   TestData,
-  testData,
+  WEAKMAP_TEST_DATA,
   TestDescribe,
   TestCase,
   testItemIdMap,
@@ -29,7 +29,10 @@ export function discoverTestFromDoc(
 function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
   const existing = controller.items.get(uri.toString());
   if (existing) {
-    return { file: existing, data: testData.get(existing) as TestFile };
+    return {
+      file: existing,
+      data: WEAKMAP_TEST_DATA.get(existing) as TestFile,
+    };
   }
 
   const file = controller.createTestItem(
@@ -40,7 +43,7 @@ function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
   controller.items.add(file);
 
   const data = new TestFile();
-  testData.set(file, data);
+  WEAKMAP_TEST_DATA.set(file, data);
 
   file.canResolveChildren = true;
   return { file, data };
@@ -52,6 +55,7 @@ export function discoverTestFromFileContent(
   item: vscode.TestItem,
   data: TestFile
 ) {
+  data.testCases.length = 0;
   if (testItemIdMap.get(controller) == null) {
     testItemIdMap.set(controller, new Map());
   }
@@ -94,23 +98,30 @@ export function discoverTestFromFileContent(
 
   const arr: NamedBlock[] = [...result.describeBlocks, ...result.itBlocks];
   arr.sort((a, b) => (a.start?.line || 0) - (b.start?.line || 0));
+  let testCaseIndex = 0;
   for (const block of arr) {
     const parent = getParent(block);
     const id = `${item.uri}/${block.name}`;
-    const testCase = controller.createTestItem(id, block.name!, item.uri);
-    idMap.set(id, testCase);
-    testCase.range = new vscode.Range(
+    const caseItem = controller.createTestItem(id, block.name!, item.uri);
+    idMap.set(id, caseItem);
+    caseItem.range = new vscode.Range(
       new vscode.Position(block.start!.line - 1, block.start!.column),
       new vscode.Position(block.end!.line - 1, block.end!.column)
     );
-    parent.children.push(testCase);
+    parent.children.push(caseItem);
     if (block.type === "describe") {
-      const data = new TestDescribe(block.name!, item, parent.data);
-      testData.set(testCase, data);
-      ancestors.push({ item: testCase, block, children: [], data });
+      const data = new TestDescribe(block.name!, item, parent.data as TestFile);
+      WEAKMAP_TEST_DATA.set(caseItem, data);
+      ancestors.push({ item: caseItem, block, children: [], data });
     } else if (block.type === "it") {
-      const data = new TestCase(block.name!, item, parent.data);
-      testData.set(testCase, data);
+      const testCase = new TestCase(
+        block.name!,
+        item,
+        parent.data as TestFile | TestDescribe,
+        testCaseIndex++
+      );
+      WEAKMAP_TEST_DATA.set(caseItem, testCase);
+      data.testCases.push(caseItem);
     } else {
       throw new Error();
     }

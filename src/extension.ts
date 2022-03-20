@@ -2,12 +2,11 @@
 // Import the module and reference it with the alias vscode in your code below
 import { debounce } from "mighty-promise";
 import * as vscode from "vscode";
-
 import { extensionId } from "./config";
 import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
 import { getVitePath as getVitestPath, TestRunner } from "./pure/runner";
-import { TestCase, TestData, testData, TestFile } from "./test_data";
 import { runTest } from "./run_test";
+import { WEAKMAP_TEST_DATA, TestFile } from "./test_data";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -26,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (!item) {
       await discoverAllFilesInWorkspace(ctrl);
     } else {
-      const data = testData.get(item);
+      const data = WEAKMAP_TEST_DATA.get(item);
       if (data instanceof TestFile) {
         await data.updateFromDisk(ctrl, item);
       }

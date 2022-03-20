@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { discoverTestFromFileContent } from "./discover";
 import { getContentFromFilesystem } from "./vscode_utils";
 
-export const testData = new WeakMap<vscode.TestItem, TestData>();
+export const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>();
 export const testItemIdMap = new WeakMap<
   vscode.TestController,
   Map<string, vscode.TestItem>
@@ -14,7 +14,7 @@ export function getTestCaseId(
   childItem: vscode.TestItem,
   name: string
 ): string | undefined {
-  const data = testData.get(childItem);
+  const data = WEAKMAP_TEST_DATA.get(childItem);
   if (data instanceof TestDescribe || data instanceof TestCase) {
     return `${data.fileItem.uri}/${name}`;
   } else {
@@ -52,7 +52,8 @@ export class TestCase {
   constructor(
     public pattern: string,
     public fileItem: vscode.TestItem,
-    public parent: TestDescribe | TestFile
+    public parent: TestDescribe | TestFile,
+    public index: number
   ) {}
 
   getFullPattern(): string {
@@ -63,6 +64,7 @@ export class TestCase {
 export class TestFile {
   resolved = false;
   pattern = "";
+  testCases: vscode.TestItem[] = [];
   public async updateFromDisk(
     controller: vscode.TestController,
     item: vscode.TestItem
@@ -92,12 +94,7 @@ function getFullPattern(start: TestDescribe | TestCase): string {
 
   parents.reverse();
   if (parents.length) {
-    return (
-      '"' +
-      parents.reduce((a, b) => a + b.pattern + " ", "") +
-      start.pattern +
-      '"'
-    );
+    return parents.reduce((a, b) => a + b.pattern + " ", "") + start.pattern;
   } else {
     return start.pattern;
   }
