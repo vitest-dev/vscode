@@ -23,7 +23,7 @@ export function discoverTestFromDoc(
   }
 
   const { file, data } = getOrCreateFile(ctrl, e.uri);
-  discoverTestFromFileContent(ctrl, e.getText(), file);
+  discoverTestFromFileContent(ctrl, e.getText(), file, data);
 }
 
 function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
@@ -49,7 +49,8 @@ function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
 export function discoverTestFromFileContent(
   controller: vscode.TestController,
   content: string,
-  item: vscode.TestItem
+  item: vscode.TestItem,
+  data: TestFile
 ) {
   if (testItemIdMap.get(controller) == null) {
     testItemIdMap.set(controller, new Map());
@@ -61,6 +62,7 @@ export function discoverTestFromFileContent(
       item,
       block: undefined as NamedBlock | undefined,
       children: [] as vscode.TestItem[],
+      data: data as TestData,
     },
   ];
 
@@ -102,11 +104,13 @@ export function discoverTestFromFileContent(
       new vscode.Position(block.end!.line - 1, block.end!.column)
     );
     parent.children.push(testCase);
-    ancestors.push({ item: testCase, block, children: [] });
     if (block.type === "describe") {
-      testData.set(testCase, new TestDescribe(block.name!, item));
+      const data = new TestDescribe(block.name!, item, parent.data);
+      testData.set(testCase, data);
+      ancestors.push({ item: testCase, block, children: [], data });
     } else if (block.type === "it") {
-      testData.set(testCase, new TestCase(block.name!, item));
+      const data = new TestCase(block.name!, item, parent.data);
+      testData.set(testCase, data);
     } else {
       throw new Error();
     }

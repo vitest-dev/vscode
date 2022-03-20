@@ -37,10 +37,27 @@ export function getAllTestCases(
 }
 
 export class TestDescribe {
-  constructor(public pattern: string, public fileItem: vscode.TestItem) {}
+  constructor(
+    public pattern: string,
+    public fileItem: vscode.TestItem,
+    public parent: TestDescribe | TestFile
+  ) {}
+
+  getFullPattern(): string {
+    return getFullPattern(this);
+  }
 }
+
 export class TestCase {
-  constructor(public pattern: string, public fileItem: vscode.TestItem) {}
+  constructor(
+    public pattern: string,
+    public fileItem: vscode.TestItem,
+    public parent: TestDescribe | TestFile
+  ) {}
+
+  getFullPattern(): string {
+    return getFullPattern(this);
+  }
 }
 
 export class TestFile {
@@ -53,10 +70,35 @@ export class TestFile {
     try {
       const content = await getContentFromFilesystem(item.uri!);
       item.error = undefined;
-      discoverTestFromFileContent(controller, content, item);
+      discoverTestFromFileContent(controller, content, item, this);
       this.resolved = true;
     } catch (e) {
       item.error = (e as Error).stack;
     }
+  }
+
+  getFullPattern(): string {
+    return this.pattern;
+  }
+}
+
+function getFullPattern(start: TestDescribe | TestCase): string {
+  const parents: TestDescribe[] = [];
+  let iter = start.parent;
+  while (iter && iter instanceof TestDescribe) {
+    parents.push(iter);
+    iter = iter.parent;
+  }
+
+  parents.reverse();
+  if (parents.length) {
+    return (
+      '"' +
+      parents.reduce((a, b) => a + b.pattern + " ", "") +
+      start.pattern +
+      '"'
+    );
+  } else {
+    return start.pattern;
   }
 }

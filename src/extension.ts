@@ -7,7 +7,7 @@ import { extensionId } from "./config";
 import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
 import { getVitePath as getVitestPath, TestRunner } from "./pure/runner";
 import { TestCase, TestData, testData, TestFile } from "./test_data";
-import { runTest } from "./runTest";
+import { runTest } from "./run_test";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed

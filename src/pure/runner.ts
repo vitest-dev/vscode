@@ -83,6 +83,7 @@ export class TestRunner {
       }
 
       try {
+        console.log(args);
         if (this.vitePath) {
           await execa(this.vitePath, args, {
             windowsHide: false,
