@@ -35,39 +35,53 @@ export async function runTest(
 
   const data = WEAKMAP_TEST_DATA.get(item)!;
   const out = await runner.scheduleRun(item.uri!.fsPath, data.getFullPattern());
-  out.testResults.forEach((result, index) => {
-    let child: undefined | vscode.TestItem = fileTestCases[index];
-    const id = getTestCaseId(item, result.displayName!) || "";
-    if (!child || !child.id.startsWith(id)) {
-      console.error("not match");
-      console.dir(out.testResults);
-      console.dir(fileTestCases);
-      throw new Error();
-    }
+  if (out.testResults.length !== 0) {
+    out.testResults.forEach((result, index) => {
+      let child: undefined | vscode.TestItem = fileTestCases[index];
+      const id = getTestCaseId(item, result.displayName!) || "";
+      if (!child || !child.id.startsWith(id)) {
+        console.error("not match");
+        console.dir(out.testResults);
+        console.dir(fileTestCases);
+        throw new Error();
+      }
 
-    if (!child || !testCaseSet.has(child)) {
-      return;
-    }
-
-    testCaseSet.delete(child);
-    switch (result.status) {
-      case "pass":
-        run.passed(child, result.perfStats?.runtime);
+      if (!child || !testCaseSet.has(child)) {
         return;
-      case "fail":
-        run.failed(child, new vscode.TestMessage(result.failureMessage || ""));
-        return;
-    }
+      }
 
-    if (result.skipped || result.status == null) {
-      run.skipped(child);
-    }
-  });
+      testCaseSet.delete(child);
+      switch (result.status) {
+        case "pass":
+          run.passed(child, result.perfStats?.runtime);
+          return;
+        case "fail":
+          run.failed(
+            child,
+            new vscode.TestMessage(result.failureMessage || "")
+          );
+          return;
+      }
 
-  testCaseSet.forEach((testCase) => {
-    run.skipped(testCase);
-    run.appendOutput(`Cannot find test ${testCase.id}`);
-  });
+      if (result.skipped || result.status == null) {
+        run.skipped(child);
+      }
+    });
+
+    testCaseSet.forEach((testCase) => {
+      run.skipped(testCase);
+      run.appendOutput(`Cannot find test ${testCase.id}`);
+    });
+  } else {
+    testCaseSet.forEach((testCase) => {
+      run.errored(
+        testCase,
+        new vscode.TestMessage(
+          "Testing is not started correctly. Please check your configuration."
+        )
+      );
+    });
+  }
 
   run.end();
 }

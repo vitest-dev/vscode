@@ -84,10 +84,12 @@ export class TestRunner {
 
       try {
         if (this.vitePath) {
-          await execa(this.vitePath, args, {
+          const { stderr, stdout } = await execa(this.vitePath, args, {
             windowsHide: false,
             cwd: this.workspacePath,
           });
+          console.error(stderr);
+          console.log(stdout);
         } else {
           await execa("npx", ["vitest"].concat(args), {
             cwd: this.workspacePath,

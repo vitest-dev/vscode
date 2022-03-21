@@ -18,7 +18,8 @@ export function discoverTestFromDoc(
     return;
   }
 
-  if (!e.uri.path.match(/\.[tj]sx?$/)) {
+  // TODO: use config
+  if (!e.uri.path.match(/test\.[tj]sx?(.git)?$/)) {
     return;
   }
 
