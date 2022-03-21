@@ -1,7 +1,7 @@
 import { existsSync, readFile } from "fs-extra";
 import * as path from "path";
 import { tmpdir } from "os";
-import { Lock, PriorityTaskQueue, TaskQueue } from "mighty-promise";
+import { TaskQueue } from "mighty-promise";
 import execa = require("execa");
 
 export function getVitestPath(projectRoot: string): string | undefined {
@@ -10,12 +10,15 @@ export function getVitestPath(projectRoot: string): string | undefined {
     return;
   }
 
-  if (existsSync(path.resolve(node_modules, ".bin", "vitest"))) {
-    return path.resolve(node_modules, ".bin", "vitest");
+  if (existsSync(path.resolve(node_modules, "vitest", "vitest.mjs"))) {
+    return path.resolve(node_modules, "vitest", "vitest.mjs");
   }
 
-  if (existsSync(path.resolve(node_modules, ".bin", "vitest.cmd"))) {
-    return path.resolve(node_modules, ".bin", "vitest.cmd");
+  const suffixes = [".js", "", ".cmd"];
+  for (const suffix of suffixes) {
+    if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
+      return path.resolve(node_modules, ".bin", "vitest" + suffix);
+    }
   }
 
   return;

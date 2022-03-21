@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { extensionId } from "./config";
 import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
-import { runHandler } from "./runHandler";
+import { debugHandler, runHandler } from "./runHandler";
 import { WEAKMAP_TEST_DATA, TestFile } from "./TestData";
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -39,6 +39,13 @@ export async function activate(context: vscode.ExtensionContext) {
     "Run Tests",
     vscode.TestRunProfileKind.Run,
     runHandler.bind(null, ctrl),
+    true
+  );
+
+  ctrl.createRunProfile(
+    "Debug Tests",
+    vscode.TestRunProfileKind.Debug,
+    debugHandler.bind(null, ctrl),
     true
   );
 

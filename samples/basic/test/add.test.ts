@@ -19,7 +19,8 @@ describe("addition", () => {
 
 describe("haha a a", () => {
   it("run", () => {
-    expect(5).toBe(4);
+    let a = 10;
+    expect(a).toBe(10);
   });
   it("123", () => {});
 });

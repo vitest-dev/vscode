@@ -1,3 +1,4 @@
+import { resolve } from "path";
 import * as vscode from "vscode";
 import { getVitestPath as getVitestPath, TestRunner } from "./pure/runner";
 import {
@@ -7,12 +8,79 @@ import {
   TestFile,
 } from "./TestData";
 
+export async function debugHandler(
+  ctrl: vscode.TestController,
+  request: vscode.TestRunRequest
+) {
+  if (
+    vscode.workspace.workspaceFolders === undefined ||
+    vscode.workspace.workspaceFolders.length === 0
+  ) {
+    return;
+  }
+
+  const tests = request.include ?? [];
+  if (tests.length === 1) {
+    await debugTest(vscode.workspace.workspaceFolders[0], tests[0]);
+  } else {
+    await debugTest(vscode.workspace.workspaceFolders[0]);
+  }
+}
+
+async function debugTest(
+  workspaceFolder: vscode.WorkspaceFolder,
+  testItem?: vscode.TestItem
+) {
+  let config = {
+    type: "pwa-node",
+    request: "launch",
+    name: "Debug Current Test File",
+    autoAttachChildProcesses: true,
+    skipFiles: ["<node_internals>/**", "**/node_modules/**"],
+    program: getVitestPath(workspaceFolder.uri.path),
+    args: [] as string[],
+    smartStep: true,
+    console: "integratedTerminal",
+  };
+
+  if (testItem) {
+    const data = WEAKMAP_TEST_DATA.get(testItem);
+    if (!data) {
+      console.error("Item not found");
+      return;
+    }
+
+    config.args = [
+      "run",
+      data.getFilePath(),
+      "--testNamePattern",
+      data.getFullPattern(),
+    ];
+  } else {
+    config.args = ["run"];
+  }
+
+  if (config.program == null) {
+    vscode.window.showErrorMessage("Cannot find vitest");
+    return;
+  }
+
+  try {
+    vscode.debug.startDebugging(workspaceFolder, config);
+  } catch (e) {
+    console.error(`startDebugging error ${(e as any).toString()}`);
+  }
+}
+
 export async function runHandler(
   ctrl: vscode.TestController,
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken
 ) {
-  if (vscode.workspace.workspaceFolders === undefined) {
+  if (
+    vscode.workspace.workspaceFolders === undefined ||
+    vscode.workspace.workspaceFolders.length === 0
+  ) {
     return;
   }
 

@@ -46,6 +46,10 @@ export class TestDescribe {
   getFullPattern(): string {
     return getFullPattern(this);
   }
+
+  getFilePath(): string {
+    return this.fileItem.uri!.path;
+  }
 }
 
 export class TestCase {
@@ -58,6 +62,10 @@ export class TestCase {
 
   getFullPattern(): string {
     return getFullPattern(this);
+  }
+
+  getFilePath(): string {
+    return this.fileItem.uri!.path;
   }
 }
 
@@ -86,7 +94,11 @@ export class TestFile {
   }
 
   getFullPattern(): string {
-    return this.pattern;
+    return "";
+  }
+
+  getFilePath(): string {
+    return this.item.uri!.path;
   }
 }
 
