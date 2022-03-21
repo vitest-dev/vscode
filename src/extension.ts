@@ -33,6 +33,10 @@ export function activate(context: vscode.ExtensionContext) {
     true
   );
 
+  vscode.window.visibleTextEditors.forEach((x) =>
+    discoverTestFromDoc(ctrl, x.document)
+  );
+
   context.subscriptions.push(
     ctrl,
     vscode.commands.registerCommand("vitest-explorer.configureTest", () => {
