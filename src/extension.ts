@@ -2,15 +2,24 @@ import { debounce } from "mighty-promise";
 import * as vscode from "vscode";
 import { extensionId } from "./config";
 import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
-import { getVitePath as getVitestPath, TestRunner } from "./pure/runner";
-import { runTest } from "./run_test";
-import { WEAKMAP_TEST_DATA, TestFile } from "./test_data";
+import { isVitestEnv } from "./pure/isVitestEnv";
+import { runHandler } from "./runHandler";
+import { WEAKMAP_TEST_DATA, TestFile } from "./TestData";
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  if (
+    vscode.workspace.workspaceFolders == null ||
+    vscode.workspace.workspaceFolders.length === 0 ||
+    !(await isVitestEnv(vscode.workspace.workspaceFolders[0].uri.path))
+  ) {
+    return;
+  }
+
   const ctrl = vscode.tests.createTestController(
     `${extensionId}`,
     "Vitest Test Provider"
   );
+
   ctrl.refreshHandler = async () => {
     await discoverAllFilesInWorkspace(ctrl);
   };
@@ -52,28 +61,3 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
-
-async function runHandler(
-  ctrl: vscode.TestController,
-  request: vscode.TestRunRequest,
-  cancellation: vscode.CancellationToken
-) {
-  if (vscode.workspace.workspaceFolders === undefined) {
-    return;
-  }
-
-  const runner = new TestRunner(
-    vscode.workspace.workspaceFolders[0].uri.path,
-    getVitestPath(vscode.workspace.workspaceFolders[0].uri.path)
-  );
-
-  const tests = request.include ?? gatherTestItems(ctrl.items);
-  const run = ctrl.createTestRun(request);
-  await Promise.all(tests.map((test) => runTest(runner, run, test)));
-}
-
-function gatherTestItems(collection: vscode.TestItemCollection) {
-  const items: vscode.TestItem[] = [];
-  collection.forEach((item) => items.push(item));
-  return items;
-}

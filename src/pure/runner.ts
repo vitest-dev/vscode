@@ -4,7 +4,7 @@ import { tmpdir } from "os";
 import { Lock } from "mighty-promise";
 import execa = require("execa");
 
-export function getVitePath(projectRoot: string): string | undefined {
+export function getVitestPath(projectRoot: string): string | undefined {
   const node_modules = path.resolve(projectRoot, "node_modules");
   if (!existsSync(node_modules)) {
     return;

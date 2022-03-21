@@ -5,7 +5,7 @@ import {
   WEAKMAP_TEST_DATA,
   getTestCaseId,
   TestFile,
-} from "./test_data";
+} from "./TestData";
 
 export async function runTest(
   runner: TestRunner,

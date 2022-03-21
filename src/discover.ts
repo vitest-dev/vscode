@@ -6,7 +6,7 @@ import {
   TestDescribe,
   TestCase,
   testItemIdMap,
-} from "./test_data";
+} from "./TestData";
 import parse from "./pure/parsers";
 import { NamedBlock } from "./pure/parsers/parser_nodes";
 
