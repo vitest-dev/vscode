@@ -2,7 +2,7 @@
   "name": "vitest-explorer",
   "displayName": "Vitest",
   "description": "Run Vitest tests right from vscode",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "icon": "img/icon.png",
   "preview": true,
   "author": "zxch3n",
