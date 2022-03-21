@@ -19,7 +19,10 @@ export function discoverTestFromDoc(
   }
 
   // TODO: use config
-  if (!e.uri.path.match(/test\.[tj]sx?(.git)?$/)) {
+  if (
+    !e.uri.path.match(/test\.[tj]sx?(.git)?$/) ||
+    e.uri.path.match(/node_modules/)
+  ) {
     return;
   }
 
@@ -43,7 +46,7 @@ function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
   );
   controller.items.add(file);
 
-  const data = new TestFile();
+  const data = new TestFile(file);
   WEAKMAP_TEST_DATA.set(file, data);
 
   file.canResolveChildren = true;
@@ -146,24 +149,32 @@ export async function discoverAllFilesInWorkspace(
     vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
       const pattern = new vscode.RelativePattern(
         workspaceFolder,
-        "**/*.test.ts"
+        "**/*.test.{js,ts,tsx,jsx}"
       );
       const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-
+      const filter = (v: vscode.Uri) => !v.path.includes("node_modules");
       // When files are created, make sure there's a corresponding "file" node in the tree
-      watcher.onDidCreate((uri) => getOrCreateFile(controller, uri));
+      watcher.onDidCreate(
+        (uri) => filter(uri) && getOrCreateFile(controller, uri)
+      );
       // When files change, re-parse them. Note that you could optimize this so
       // that you only re-parse children that have been resolved in the past.
       watcher.onDidChange((uri) => {
+        if (!filter(uri)) {
+          return;
+        }
+
         const { data, file } = getOrCreateFile(controller, uri);
-        data.updateFromDisk(controller, file);
+        data.updateFromDisk(controller);
       });
       // And, finally, delete TestItems for removed files. This is simple, since
       // we use the URI as the TestItem's ID.
-      watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
+      watcher.onDidDelete(
+        (uri) => filter(uri) && controller.items.delete(uri.toString())
+      );
 
       for (const file of await vscode.workspace.findFiles(pattern)) {
-        getOrCreateFile(controller, file);
+        filter(file) && getOrCreateFile(controller, file);
       }
 
       return watcher;

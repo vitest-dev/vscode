@@ -64,18 +64,25 @@ export class TestCase {
 export class TestFile {
   resolved = false;
   pattern = "";
-  public async updateFromDisk(
-    controller: vscode.TestController,
-    item: vscode.TestItem
-  ) {
+  constructor(public item: vscode.TestItem) {}
+  public async updateFromDisk(controller: vscode.TestController) {
+    const item = this.item;
     try {
       const content = await getContentFromFilesystem(item.uri!);
-      item.error = undefined;
+      this.item.error = undefined;
       discoverTestFromFileContent(controller, content, item, this);
       this.resolved = true;
     } catch (e) {
-      item.error = (e as Error).stack;
+      this.item.error = (e as Error).stack;
     }
+  }
+
+  load(ctrl: vscode.TestController): Promise<void> | undefined {
+    if (this.resolved) {
+      return;
+    }
+
+    return this.updateFromDisk(ctrl);
   }
 
   getFullPattern(): string {

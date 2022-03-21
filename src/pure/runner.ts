@@ -1,7 +1,7 @@
 import { existsSync, readFile } from "fs-extra";
 import * as path from "path";
 import { tmpdir } from "os";
-import { Lock } from "mighty-promise";
+import { Lock, PriorityTaskQueue, TaskQueue } from "mighty-promise";
 import execa = require("execa");
 
 export function getVitestPath(projectRoot: string): string | undefined {
@@ -57,7 +57,9 @@ interface AggregatedResult {
 }
 
 export class TestRunner {
-  private lock = new Lock();
+  private queue = new TaskQueue<Promise<AggregatedResult>>({
+    maxParallelNum: 4,
+  });
   constructor(
     private workspacePath: string,
     private vitePath: string | undefined
@@ -66,8 +68,7 @@ export class TestRunner {
     testFile: string | undefined,
     testNamePattern: string | undefined
   ): Promise<AggregatedResult> {
-    const release = await this.lock.acquire(10000).catch(() => () => {});
-    try {
+    return this.queue.push(async () => {
       const path = getTempPath();
       const args = [
         "--reporter=json",
@@ -117,8 +118,6 @@ export class TestRunner {
       const file = await readFile(path, "utf-8");
       const out = JSON.parse(file) as AggregatedResult;
       return out;
-    } finally {
-      release();
-    }
+    });
   }
 }

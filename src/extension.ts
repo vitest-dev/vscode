@@ -30,7 +30,7 @@ export async function activate(context: vscode.ExtensionContext) {
     } else {
       const data = WEAKMAP_TEST_DATA.get(item);
       if (data instanceof TestFile) {
-        await data.updateFromDisk(ctrl, item);
+        await data.updateFromDisk(ctrl);
       }
     }
   };
