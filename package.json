@@ -1,7 +1,7 @@
 {
   "name": "vitest-explorer",
   "displayName": "Vitest",
-  "description": "Run Vitest tests right from editor",
+  "description": "Run/Debug Vitest tests right from editor",
   "version": "0.1.0",
   "icon": "img/icon.png",
   "preview": true,
