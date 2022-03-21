@@ -1,8 +1,24 @@
 {
   "name": "vitest-explorer",
-  "displayName": "vitest explorer",
-  "description": "Testing adaptor for vitest",
+  "displayName": "Vitest",
+  "description": "Run Vitest tests right from vscode",
   "version": "0.0.1",
+  "icon": "img/icon.png",
+  "author": "zxch3n",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zxch3n/vitest-explorer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zxch3n/vitest-explorer/issues"
+  },
+  "keywords": [
+    "vitest",
+    "test",
+    "typescript",
+    "javascript"
+  ],
   "engines": {
     "vscode": "^1.59.0"
   },
@@ -15,14 +31,7 @@
     "workspaceContains:**/vite.config.*s"
   ],
   "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "vitest-explorer.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
+  "contributes": {},
   "scripts": {
     "vscode:prepublish": "yarn run compile",
     "compile": "tsc -p ./",
@@ -37,7 +46,7 @@
     "@types/glob": "^7.2.0",
     "@types/mocha": "^9.1.0",
     "@types/node": "14.x",
-    "@types/vscode": "^1.65.0",
+    "@types/vscode": "^1.59.0",
     "@typescript-eslint/eslint-plugin": "^5.12.1",
     "@typescript-eslint/parser": "^5.12.1",
     "@vscode/test-electron": "^2.1.2",
