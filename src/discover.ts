@@ -55,7 +55,6 @@ export function discoverTestFromFileContent(
   item: vscode.TestItem,
   data: TestFile
 ) {
-  data.testCases.length = 0;
   if (testItemIdMap.get(controller) == null) {
     testItemIdMap.set(controller, new Map());
   }
@@ -99,9 +98,10 @@ export function discoverTestFromFileContent(
   const arr: NamedBlock[] = [...result.describeBlocks, ...result.itBlocks];
   arr.sort((a, b) => (a.start?.line || 0) - (b.start?.line || 0));
   let testCaseIndex = 0;
+  let index = 0;
   for (const block of arr) {
     const parent = getParent(block);
-    const id = `${item.uri}/${block.name}`;
+    const id = `${item.uri}/${block.name}@${index++}`;
     const caseItem = controller.createTestItem(id, block.name!, item.uri);
     idMap.set(id, caseItem);
     caseItem.range = new vscode.Range(
@@ -121,7 +121,6 @@ export function discoverTestFromFileContent(
         testCaseIndex++
       );
       WEAKMAP_TEST_DATA.set(caseItem, testCase);
-      data.testCases.push(caseItem);
     } else {
       throw new Error();
     }

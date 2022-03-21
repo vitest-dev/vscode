@@ -83,7 +83,6 @@ export class TestRunner {
       }
 
       try {
-        console.log(args);
         if (this.vitePath) {
           await execa(this.vitePath, args, {
             windowsHide: false,
@@ -99,7 +98,8 @@ export class TestRunner {
       }
 
       const file = await readFile(path, "utf-8");
-      return JSON.parse(file) as AggregatedResult;
+      const out = JSON.parse(file) as AggregatedResult;
+      return out;
     } finally {
       release();
     }

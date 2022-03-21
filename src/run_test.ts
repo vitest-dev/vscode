@@ -17,33 +17,32 @@ export async function runTest(
     throw new Error("file item not found");
   }
 
-  let file: TestFile;
+  let file: vscode.TestItem;
   if (testingData instanceof TestFile) {
-    file = testingData;
+    file = item;
   } else {
-    file = WEAKMAP_TEST_DATA.get(testingData.fileItem) as TestFile;
+    file = testingData.fileItem;
     if (!file) {
       throw new Error("file item not found");
     }
   }
 
+  const fileTestCases = getAllTestCases(file);
   const testCaseSet = new Set(getAllTestCases(item));
-  const idMap = new Map<string, vscode.TestItem>();
   testCaseSet.forEach((testCase) => {
     run.started(testCase);
-    idMap.set(testCase.id, testCase);
   });
 
   const data = WEAKMAP_TEST_DATA.get(item)!;
   const out = await runner.scheduleRun(item.uri!.fsPath, data.getFullPattern());
   out.testResults.forEach((result, index) => {
-    let child: undefined | vscode.TestItem = file.testCases[index];
+    let child: undefined | vscode.TestItem = fileTestCases[index];
     const id = getTestCaseId(item, result.displayName!) || "";
-    if (!child || child.id !== id) {
-      child = idMap.get(id);
+    if (!child || !child.id.startsWith(id)) {
       console.error("not match");
       console.dir(out.testResults);
-      console.dir(file.testCases);
+      console.dir(fileTestCases);
+      throw new Error();
     }
 
     if (!child || !testCaseSet.has(child)) {

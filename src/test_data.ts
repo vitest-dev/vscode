@@ -64,7 +64,6 @@ export class TestCase {
 export class TestFile {
   resolved = false;
   pattern = "";
-  testCases: vscode.TestItem[] = [];
   public async updateFromDisk(
     controller: vscode.TestController,
     item: vscode.TestItem
