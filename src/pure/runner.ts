@@ -88,8 +88,6 @@ export class TestRunner {
             windowsHide: false,
             cwd: this.workspacePath,
           });
-          console.error(stderr);
-          console.log(stdout);
         } else {
           await execa("npx", ["vitest"].concat(args), {
             cwd: this.workspacePath,
@@ -97,6 +95,23 @@ export class TestRunner {
         }
       } catch (e) {
         console.error(e);
+      }
+
+      if (!existsSync(path)) {
+        return {
+          numFailedTests: 0,
+          numFailedTestSuites: 0,
+          numPassedTests: 0,
+          numPassedTestSuites: 0,
+          numPendingTests: 0,
+          numTodoTests: 0,
+          numPendingTestSuites: 0,
+          numTotalTests: 0,
+          numTotalTestSuites: 0,
+          startTime: 0,
+          success: false,
+          testResults: [],
+        };
       }
 
       const file = await readFile(path, "utf-8");
