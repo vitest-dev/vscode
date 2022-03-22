@@ -24,13 +24,3 @@ All notable changes to this project will be documented in this file. See [standa
 * run test with full name ([4269efc](https://github.com/zxch3n/vitest-explorer/commit/4269efc2efd8ee35d4ea7a89b47a41dffd92611b))
 * test registry bug ([d041868](https://github.com/zxch3n/vitest-explorer/commit/d041868550c42ae2c65a9e4577d0c7875a51b4d0))
 * use testCase index to retrieve testItem ([89daff4](https://github.com/zxch3n/vitest-explorer/commit/89daff47638091f035a4a455d388b224a8a3d22a))
-
-# Change Log
-
-All notable changes to the "vitest-explorer" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
