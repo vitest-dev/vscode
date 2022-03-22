@@ -1,7 +1,7 @@
 {
   "name": "vitest-explorer",
   "displayName": "Vitest",
-  "description": "Run/Debug Vitest tests right from editor",
+  "description": "Run and debug Vitest test cases",
   "version": "0.1.0",
   "icon": "img/icon.png",
   "preview": true,
@@ -25,7 +25,7 @@
     "vscode": "^1.59.0"
   },
   "categories": [
-    "Other"
+    "Testing"
   ],
   "activationEvents": [
     "onCommand:vitest-explorer.configureTest",
