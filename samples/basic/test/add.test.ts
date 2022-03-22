@@ -13,14 +13,14 @@ describe("addition", () => {
     expect(1 + 1).toBe(3);
   });
 
-  it.todo("emmm");
-  it("123", () => {});
+  it.todo("todo");
+  it("same name", () => {});
 });
 
-describe("haha a a", () => {
+describe("testing", () => {
   it("run", () => {
     let a = 10;
     expect(a).toBe(10);
   });
-  it("123", () => {});
+  it("same name", () => {});
 });

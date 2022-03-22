@@ -2,6 +2,8 @@
 
 > This plugin is WIP
 
+![preview](img/screenshot.png)
+
 Run/debug vitest tests with
 [vscode testing api](https://code.visualstudio.com/api/extension-guides/testing).
 
