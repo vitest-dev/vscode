@@ -108,7 +108,7 @@ async function runTest(
   items: readonly vscode.TestItem[]
 ) {
   const testCaseSet: Set<vscode.TestItem> = new Set();
-  const fileToTestCasesMap = new Map<string, vscode.TestItem[]>();
+  const testItemIdMap = new Map<string, vscode.TestItem>();
   const fileItems: vscode.TestItem[] = [];
   for (const item of items) {
     const testingData = WEAKMAP_TEST_DATA.get(item);
@@ -133,14 +133,19 @@ async function runTest(
 
     fileItems.push(file);
     const fileTestCases = getAllTestCases(file);
-    fileToTestCasesMap.set(item.uri!.path, fileTestCases);
+    for (const testCase of fileTestCases) {
+      // remove suffix of test item id
+      // e.g. "test-case@1" -> "test-case"
+      // TODO: refactor
+      testItemIdMap.set(testCase.id.replace(/@\d+$/g, ""), testCase);
+    }
+
     for (const test of getAllTestCases(item)) {
       testCaseSet.add(test);
     }
   }
 
   testCaseSet.forEach((testCase) => {
-    run.enqueued(testCase);
     run.started(testCase);
   });
 
@@ -149,8 +154,8 @@ async function runTest(
     pathToFile.set(file.uri!.path, file);
   }
 
-  try {
-    const out = await runner.scheduleRun(
+  const out = await runner
+    .scheduleRun(
       fileItems.map((x) => x.uri!.fsPath),
       items.length === 1
         ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
@@ -158,66 +163,64 @@ async function runTest(
       items.length === 1
         ? (msg) => run.appendOutput(msg, undefined, items[0])
         : (msg) => run.appendOutput(msg)
-    );
-    if (out.testResults.length !== 0) {
-      Object.values(groupBy(out.testResults, (x) => x.testFilePath)).forEach(
-        (results) => {
-          results.forEach((result, index) => {
-            const fileTestCases = fileToTestCasesMap.get(result.testFilePath!)!;
-            /**
-             * ATTENTION: Current implementation assumes that testResults are ordered by
-             * original test case position for each test file
-             */
-            let child: undefined | vscode.TestItem = fileTestCases[index];
-            const id =
-              getTestCaseId(
-                pathToFile.get(result.testFilePath!)!,
-                result.displayName!
-              ) || "";
-            if (!child || !child.id.startsWith(id)) {
-              console.error("not match");
-              throw new Error("not match");
-            }
+    )
+    .catch((e) => {
+      run.appendOutput("Run test failed \r\n" + (e as Error) + "\r\n");
+      run.appendOutput("" + (e as Error)?.stack + "\r\n");
+      testCaseSet.forEach((testCase) => {
+        run.errored(testCase, new vscode.TestMessage((e as Error)?.toString()));
+      });
+    });
 
-            if (!child || !testCaseSet.has(child)) {
+  if (out === undefined) {
+    return;
+  }
+
+  if (out.testResults.length !== 0) {
+    Object.values(groupBy(out.testResults, (x) => x.testFilePath)).forEach(
+      (results) => {
+        results.forEach((result, index) => {
+          const id =
+            getTestCaseId(
+              pathToFile.get(result.testFilePath!)!,
+              result.displayName!
+            ) || "";
+          const child = testItemIdMap.get(id)!;
+          if (!child || !testCaseSet.has(child)) {
+            return;
+          }
+
+          testCaseSet.delete(child);
+          switch (result.status) {
+            case "pass":
+              run.passed(child, result.perfStats?.runtime);
               return;
-            }
+            case "fail":
+              run.failed(
+                child,
+                new vscode.TestMessage(result.failureMessage || "")
+              );
+              return;
+          }
 
-            testCaseSet.delete(child);
-            switch (result.status) {
-              case "pass":
-                run.passed(child, result.perfStats?.runtime);
-                return;
-              case "fail":
-                run.failed(
-                  child,
-                  new vscode.TestMessage(result.failureMessage || "")
-                );
-                return;
-            }
-
-            if (result.skipped || result.status == null) {
-              run.skipped(child);
-            }
-          });
-        }
+          if (result.skipped || result.status == null) {
+            run.skipped(child);
+          }
+        });
+      }
+    );
+    testCaseSet.forEach((testCase) => {
+      run.skipped(testCase);
+      run.appendOutput(`Cannot find test ${testCase.id}`);
+    });
+  } else {
+    testCaseSet.forEach((testCase) => {
+      run.errored(
+        testCase,
+        new vscode.TestMessage(
+          "Unexpected condition. Please report the bug to https://github.com/zxch3n/vitest-explorer/issues"
+        )
       );
-      testCaseSet.forEach((testCase) => {
-        run.skipped(testCase);
-        run.appendOutput(`Cannot find test ${testCase.id}`);
-      });
-    } else {
-      testCaseSet.forEach((testCase) => {
-        run.errored(
-          testCase,
-          new vscode.TestMessage(
-            "Unexpected condition. Please report the bug to https://github.com/zxch3n/vitest-explorer/issues"
-          )
-        );
-      });
-    }
-  } catch (e) {
-    console.error(e);
-    run.appendOutput("Run test failed " + (e as Error).toString());
+    });
   }
 }

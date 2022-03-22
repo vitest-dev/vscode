@@ -64,6 +64,9 @@ interface AggregatedResult {
 export class TestRunner {
   private queue = new TaskQueue<Promise<AggregatedResult>>({
     maxParallelNum: 4,
+    onError: (err) => {
+      throw err;
+    },
   });
   constructor(
     private workspacePath: string,
@@ -93,6 +96,7 @@ export class TestRunner {
 
       let child;
       let error: any;
+      let outputs: string[] = [];
       try {
         // it will throw when test failed or the testing is failed to run
         if (this.vitestPath) {
@@ -109,21 +113,35 @@ export class TestRunner {
 
         for await (const line of chunksToLinesAsync(child.stdout)) {
           log(line + "\r\n");
+          outputs.push(line);
         }
       } catch (e) {
         error = e;
       }
 
       if (!existsSync(path)) {
-        console.error("scheduleRun error", error.toString());
-        console.error(error.stack);
-        console.log("vitestPah", this.vitestPath, args, this.workspacePath);
-        throw error;
+        handleError();
       }
 
       const file = await readFile(path, "utf-8");
       const out = JSON.parse(file) as AggregatedResult;
+      if (out.testResults.length === 0) {
+        handleError();
+      }
+
       return out;
+
+      function handleError() {
+        if (error) {
+          console.error("scheduleRun error", error.toString());
+          console.error(error.stack);
+        } else {
+          error = new Error(outputs.join("\n"));
+        }
+
+        console.error(outputs.join("\n"));
+        return error as Error;
+      }
     });
   }
 }
