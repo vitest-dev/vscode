@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/zxch3n/vitest-explorer/compare/v0.1.2...v0.1.3) (2022-03-22)
+
+
+### Bug Fixes
+
+* audit issues ([ae7cc44](https://github.com/zxch3n/vitest-explorer/commit/ae7cc4461f05ea5f29e279613aafc7f5635b4789))
+* make error more informative ([5ced470](https://github.com/zxch3n/vitest-explorer/commit/5ced4707f6011637430e4b9320e6951cd2615582))
+
 ### [0.1.2](https://github.com/zxch3n/vitest-explorer/compare/v0.1.1...v0.1.2) (2022-03-22)
 
 
