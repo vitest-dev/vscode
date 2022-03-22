@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/zxch3n/vitest-explorer/compare/v0.1.3...v0.1.4) (2022-03-22)
+
+
+### Bug Fixes
+
+* should use test name as id instead of index ([e7622dd](https://github.com/zxch3n/vitest-explorer/commit/e7622dd3eced06eb538940c390a15a75816114b5))
+
 ### [0.1.3](https://github.com/zxch3n/vitest-explorer/compare/v0.1.2...v0.1.3) (2022-03-22)
 
 
