@@ -63,7 +63,7 @@
   "dependencies": {
     "@babel/parser": "^7.17.3",
     "@babel/types": "^7.17.0",
-    "execa": "^5.1.0",
+    "@rauschma/stringio": "^1.4.0",
     "fs-extra": "^10.0.1",
     "mighty-promise": "^0.0.8"
   }

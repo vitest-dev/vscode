@@ -139,8 +139,9 @@ async function runTest(
   try {
     const data = WEAKMAP_TEST_DATA.get(item)!;
     const out = await runner.scheduleRun(
-      item.uri!.fsPath,
-      data.getFullPattern()
+      [item.uri!.fsPath],
+      data.getFullPattern(),
+      (msg) => run.appendOutput(msg, undefined, item)
     );
     if (out.testResults.length !== 0) {
       out.testResults.forEach((result, index) => {

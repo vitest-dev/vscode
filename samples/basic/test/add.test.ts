@@ -2,6 +2,7 @@ import { expect, describe, it } from "vitest";
 
 describe("addition", () => {
   it("run", () => {
+    console.log("run");
     expect(1 + 1).toBe(2);
   });
 

@@ -1,8 +1,10 @@
+import { spawn } from "child_process";
 import { existsSync, readFile } from "fs-extra";
-import * as path from "path";
-import { tmpdir } from "os";
 import { TaskQueue } from "mighty-promise";
-import execa = require("execa");
+import { tmpdir } from "os";
+import * as path from "path";
+
+import { chunksToLinesAsync } from "@rauschma/stringio";
 
 export function getVitestPath(projectRoot: string): string | undefined {
   const node_modules = path.resolve(projectRoot, "node_modules");
@@ -67,35 +69,45 @@ export class TestRunner {
     private workspacePath: string,
     private vitePath: string | undefined
   ) {}
+
   async scheduleRun(
-    testFile: string | undefined,
-    testNamePattern: string | undefined
+    testFile: string[] | undefined,
+    testNamePattern: string | undefined,
+    log: (msg: string) => void = () => {}
   ): Promise<AggregatedResult> {
     return this.queue.push(async () => {
       const path = getTempPath();
       const args = [
         "--reporter=json",
+        "--reporter=verbose",
         "--outputFile",
         path,
         "--run",
       ] as string[];
       if (testFile) {
-        args.push(testFile);
+        args.push(...testFile);
       }
       if (testNamePattern) {
         args.push("-t", testNamePattern);
       }
 
       try {
+        let child;
         if (this.vitePath) {
-          const { stderr, stdout } = await execa(this.vitePath, args, {
-            windowsHide: false,
+          child = spawn(this.vitePath, args, {
             cwd: this.workspacePath,
+            stdio: ["ignore", "pipe", "pipe"],
           });
         } else {
-          await execa("npx", ["vitest"].concat(args), {
+          child = spawn("npx", ["vitest"].concat(args), {
             cwd: this.workspacePath,
+            stdio: ["ignore", "pipe", "pipe"],
           });
+        }
+
+        for await (const line of chunksToLinesAsync(child.stdout)) {
+          log(line + "\r\n");
+          console.log("LINE", line);
         }
       } catch (e) {
         console.error(e);
