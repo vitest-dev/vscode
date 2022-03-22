@@ -211,7 +211,7 @@ async function runTest(
         run.errored(
           testCase,
           new vscode.TestMessage(
-            "Testing is not started correctly. Please check your configuration."
+            "Unexpected condition. Please report the bug to https://github.com/zxch3n/vitest-explorer/issues"
           )
         );
       });

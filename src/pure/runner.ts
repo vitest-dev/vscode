@@ -67,7 +67,7 @@ export class TestRunner {
   });
   constructor(
     private workspacePath: string,
-    private vitePath: string | undefined
+    private vitestPath: string | undefined
   ) {}
 
   async scheduleRun(
@@ -91,10 +91,12 @@ export class TestRunner {
         args.push("-t", testNamePattern);
       }
 
+      let child;
+      let error: any;
       try {
-        let child;
-        if (this.vitePath) {
-          child = spawn(this.vitePath, args, {
+        // it will throw when test failed or the testing is failed to run
+        if (this.vitestPath) {
+          child = spawn(this.vitestPath, args, {
             cwd: this.workspacePath,
             stdio: ["ignore", "pipe", "pipe"],
           });
@@ -109,24 +111,14 @@ export class TestRunner {
           log(line + "\r\n");
         }
       } catch (e) {
-        console.error(e);
+        error = e;
       }
 
       if (!existsSync(path)) {
-        return {
-          numFailedTests: 0,
-          numFailedTestSuites: 0,
-          numPassedTests: 0,
-          numPassedTestSuites: 0,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          numPendingTestSuites: 0,
-          numTotalTests: 0,
-          numTotalTestSuites: 0,
-          startTime: 0,
-          success: false,
-          testResults: [],
-        };
+        console.error("scheduleRun error", error.toString());
+        console.error(error.stack);
+        console.log("vitestPah", this.vitestPath, args, this.workspacePath);
+        throw error;
       }
 
       const file = await readFile(path, "utf-8");
