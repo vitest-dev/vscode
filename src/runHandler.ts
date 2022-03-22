@@ -1,6 +1,6 @@
-import { resolve } from "path";
 import * as vscode from "vscode";
 import { getVitestPath as getVitestPath, TestRunner } from "./pure/runner";
+import groupBy = require("lodash.groupby");
 import {
   getAllTestCases,
   WEAKMAP_TEST_DATA,
@@ -91,9 +91,7 @@ export async function runHandler(
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
   const run = ctrl.createTestRun(request);
-  await Promise.allSettled(
-    tests.map((test) => runTest(ctrl, runner, run, test))
-  );
+  await runTest(ctrl, runner, run, tests);
   run.end();
 }
 
@@ -107,75 +105,103 @@ async function runTest(
   ctrl: vscode.TestController,
   runner: TestRunner,
   run: vscode.TestRun,
-  item: vscode.TestItem
+  items: readonly vscode.TestItem[]
 ) {
-  const testingData = WEAKMAP_TEST_DATA.get(item);
-  if (!testingData) {
-    console.error("Item not found");
-    throw new Error("Item not found");
-  }
+  const testCaseSet: Set<vscode.TestItem> = new Set();
+  const fileToTestCasesMap = new Map<string, vscode.TestItem[]>();
+  const fileItems: vscode.TestItem[] = [];
+  for (const item of items) {
+    const testingData = WEAKMAP_TEST_DATA.get(item);
+    if (!testingData) {
+      console.error("Item not found");
+      throw new Error("Item not found");
+    }
 
-  if (testingData instanceof TestFile) {
-    await testingData.load(ctrl);
-  }
+    if (testingData instanceof TestFile) {
+      await testingData.load(ctrl);
+    }
 
-  let file: vscode.TestItem;
-  if (testingData instanceof TestFile) {
-    file = item;
-  } else {
-    file = testingData.fileItem;
-    if (!file) {
-      throw new Error("file item not found");
+    let file: vscode.TestItem;
+    if (testingData instanceof TestFile) {
+      file = item;
+    } else {
+      file = testingData.fileItem;
+      if (!file) {
+        throw new Error("file item not found");
+      }
+    }
+
+    fileItems.push(file);
+    const fileTestCases = getAllTestCases(file);
+    fileToTestCasesMap.set(item.uri!.path, fileTestCases);
+    for (const test of getAllTestCases(item)) {
+      testCaseSet.add(test);
     }
   }
 
-  const fileTestCases = getAllTestCases(file);
-  const testCaseSet = new Set(getAllTestCases(item));
   testCaseSet.forEach((testCase) => {
     run.enqueued(testCase);
     run.started(testCase);
   });
 
+  const pathToFile = new Map<string, vscode.TestItem>();
+  for (const file of fileItems) {
+    pathToFile.set(file.uri!.path, file);
+  }
+
   try {
-    const data = WEAKMAP_TEST_DATA.get(item)!;
     const out = await runner.scheduleRun(
-      [item.uri!.fsPath],
-      data.getFullPattern(),
-      (msg) => run.appendOutput(msg, undefined, item)
+      fileItems.map((x) => x.uri!.fsPath),
+      items.length === 1
+        ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
+        : "",
+      items.length === 1
+        ? (msg) => run.appendOutput(msg, undefined, items[0])
+        : (msg) => run.appendOutput(msg)
     );
     if (out.testResults.length !== 0) {
-      out.testResults.forEach((result, index) => {
-        let child: undefined | vscode.TestItem = fileTestCases[index];
-        const id = getTestCaseId(item, result.displayName!) || "";
-        if (!child || !child.id.startsWith(id)) {
-          console.error("not match");
-          console.dir(out.testResults);
-          console.dir(fileTestCases);
-          throw new Error();
-        }
+      Object.values(groupBy(out.testResults, (x) => x.testFilePath)).forEach(
+        (results) => {
+          results.forEach((result, index) => {
+            const fileTestCases = fileToTestCasesMap.get(result.testFilePath!)!;
+            /**
+             * ATTENTION: Current implementation assumes that testResults are ordered by
+             * original test case position for each test file
+             */
+            let child: undefined | vscode.TestItem = fileTestCases[index];
+            const id =
+              getTestCaseId(
+                pathToFile.get(result.testFilePath!)!,
+                result.displayName!
+              ) || "";
+            if (!child || !child.id.startsWith(id)) {
+              console.error("not match");
+              throw new Error("not match");
+            }
 
-        if (!child || !testCaseSet.has(child)) {
-          return;
-        }
+            if (!child || !testCaseSet.has(child)) {
+              return;
+            }
 
-        testCaseSet.delete(child);
-        switch (result.status) {
-          case "pass":
-            run.passed(child, result.perfStats?.runtime);
-            return;
-          case "fail":
-            run.failed(
-              child,
-              new vscode.TestMessage(result.failureMessage || "")
-            );
-            return;
-        }
+            testCaseSet.delete(child);
+            switch (result.status) {
+              case "pass":
+                run.passed(child, result.perfStats?.runtime);
+                return;
+              case "fail":
+                run.failed(
+                  child,
+                  new vscode.TestMessage(result.failureMessage || "")
+                );
+                return;
+            }
 
-        if (result.skipped || result.status == null) {
-          run.skipped(child);
+            if (result.skipped || result.status == null) {
+              run.skipped(child);
+            }
+          });
         }
-      });
-
+      );
       testCaseSet.forEach((testCase) => {
         run.skipped(testCase);
         run.appendOutput(`Cannot find test ${testCase.id}`);
@@ -191,6 +217,7 @@ async function runTest(
       });
     }
   } catch (e) {
-    run.errored(item, new vscode.TestMessage((e as any).toString()));
+    console.error(e);
+    run.appendOutput("Run test failed " + (e as Error).toString());
   }
 }

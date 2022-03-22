@@ -30,7 +30,7 @@ export function getAllTestCases(
     item.children.forEach((child) => {
       getAllTestCases(child, agg);
     });
-  } else {
+  } else if (WEAKMAP_TEST_DATA.get(item) instanceof TestCase) {
     agg.push(item);
   }
   return agg;

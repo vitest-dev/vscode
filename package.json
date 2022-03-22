@@ -46,6 +46,7 @@
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^7.2.0",
+    "@types/lodash.groupby": "^4.6.6",
     "@types/mocha": "^9.1.0",
     "@types/node": "14.x",
     "@types/vscode": "^1.59.0",
@@ -65,6 +66,7 @@
     "@babel/types": "^7.17.0",
     "@rauschma/stringio": "^1.4.0",
     "fs-extra": "^10.0.1",
+    "lodash.groupby": "^4.6.0",
     "mighty-promise": "^0.0.8"
   }
 }

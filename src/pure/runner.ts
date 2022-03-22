@@ -107,7 +107,6 @@ export class TestRunner {
 
         for await (const line of chunksToLinesAsync(child.stdout)) {
           log(line + "\r\n");
-          console.log("LINE", line);
         }
       } catch (e) {
         console.error(e);
