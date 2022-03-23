@@ -1,7 +1,7 @@
 import { debounce } from "mighty-promise";
 import * as vscode from "vscode";
 import { extensionId } from "./config";
-import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
+import { TestFileDiscoverer } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
 import { debugHandler, runHandler } from "./runHandler";
 import { WEAKMAP_TEST_DATA, TestFile } from "./TestData";
@@ -20,14 +20,19 @@ export async function activate(context: vscode.ExtensionContext) {
     "Vitest Test Provider"
   );
 
+  const fileDiscoverer = new TestFileDiscoverer();
   ctrl.refreshHandler = async () => {
     // TODO: should delete redundant tests here
-    context.subscriptions.push(...(await discoverAllFilesInWorkspace(ctrl)));
+    context.subscriptions.push(
+      ...(await fileDiscoverer.discoverAllFilesInWorkspace(ctrl))
+    );
   };
 
   ctrl.resolveHandler = async (item) => {
     if (!item) {
-      context.subscriptions.push(...(await discoverAllFilesInWorkspace(ctrl)));
+      context.subscriptions.push(
+        ...(await fileDiscoverer.discoverAllFilesInWorkspace(ctrl))
+      );
     } else {
       const data = WEAKMAP_TEST_DATA.get(item);
       if (data instanceof TestFile) {
@@ -51,7 +56,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   vscode.window.visibleTextEditors.forEach((x) =>
-    discoverTestFromDoc(ctrl, x.document)
+    fileDiscoverer.discoverTestFromDoc(ctrl, x.document)
   );
 
   context.subscriptions.push(
@@ -61,10 +66,13 @@ export async function activate(context: vscode.ExtensionContext) {
     //   vscode.window.showInformationMessage("Not implemented");
     // }),
     vscode.workspace.onDidOpenTextDocument((e) => {
-      discoverTestFromDoc(ctrl, e);
+      fileDiscoverer.discoverTestFromDoc(ctrl, e);
     }),
     vscode.workspace.onDidChangeTextDocument(
-      debounce((e) => discoverTestFromDoc(ctrl, e.document), 1000)
+      debounce(
+        (e) => fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
+        1000
+      )
     )
   );
 }

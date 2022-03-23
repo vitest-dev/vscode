@@ -14,43 +14,116 @@ import { shouldIncludeFile } from "./vscodeUtils";
 import minimatch from "minimatch";
 import { getConfig } from "./config";
 import { debounce } from "mighty-promise";
-export function discoverTestFromDoc(
-  ctrl: vscode.TestController,
-  e: vscode.TextDocument
-) {
-  if (e.uri.scheme !== "file") {
-    return;
+
+export class TestFileDiscoverer extends vscode.Disposable {
+  private lastWatches = [] as vscode.FileSystemWatcher[];
+
+  constructor() {
+    super(() => {
+      for (const watch of this.lastWatches) {
+        watch.dispose();
+      }
+
+      this.lastWatches = [];
+    });
   }
 
-  if (!shouldIncludeFile(e.uri.fsPath)) {
-    return;
+  async discoverAllFilesInWorkspace(
+    controller: vscode.TestController
+  ): Promise<vscode.FileSystemWatcher[]> {
+    for (const watch of this.lastWatches) {
+      watch.dispose();
+    }
+
+    if (!vscode.workspace.workspaceFolders) {
+      return []; // handle the case of no open folders
+    }
+
+    const watchers = [] as vscode.FileSystemWatcher[];
+    await Promise.all(
+      vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
+        const exclude = getConfig().exclude;
+        for (const include of getConfig().include) {
+          const pattern = new vscode.RelativePattern(
+            workspaceFolder.uri,
+            include
+          );
+          const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+          const filter = (v: vscode.Uri) =>
+            exclude.every((x) => !minimatch(v.path, x, { dot: true }));
+          watcher.onDidCreate(
+            (uri) => filter(uri) && this.getOrCreateFile(controller, uri)
+          );
+
+          watcher.onDidChange(
+            debounce((uri) => {
+              if (!filter(uri)) {
+                return;
+              }
+
+              const { data, file } = this.getOrCreateFile(controller, uri);
+              if (!data.resolved) {
+                return;
+              }
+
+              data.updateFromDisk(controller);
+            }, 500)
+          );
+
+          watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
+
+          for (const file of await vscode.workspace.findFiles(pattern)) {
+            filter(file) && this.getOrCreateFile(controller, file);
+          }
+
+          watchers.push(watcher);
+        }
+
+        return watchers;
+      })
+    );
+    this.lastWatches = watchers.concat();
+    return watchers;
   }
 
-  const { file, data } = getOrCreateFile(ctrl, e.uri);
-  discoverTestFromFileContent(ctrl, e.getText(), file, data);
-}
+  public discoverTestFromDoc(
+    ctrl: vscode.TestController,
+    e: vscode.TextDocument
+  ) {
+    if (e.uri.scheme !== "file") {
+      return;
+    }
 
-function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
-  const existing = controller.items.get(uri.toString());
-  if (existing) {
-    return {
-      file: existing,
-      data: WEAKMAP_TEST_DATA.get(existing) as TestFile,
-    };
+    if (!shouldIncludeFile(e.uri.fsPath)) {
+      return;
+    }
+
+    const { file, data } = this.getOrCreateFile(ctrl, e.uri);
+    discoverTestFromFileContent(ctrl, e.getText(), file, data);
   }
 
-  const file = controller.createTestItem(
-    uri.toString(),
-    uri.path.split("/").pop()!,
-    uri
-  );
-  controller.items.add(file);
+  private getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
+    const existing = controller.items.get(uri.toString());
+    if (existing) {
+      return {
+        file: existing,
+        data: WEAKMAP_TEST_DATA.get(existing) as TestFile,
+      };
+    }
 
-  const data = new TestFile(file);
-  WEAKMAP_TEST_DATA.set(file, data);
+    const file = controller.createTestItem(
+      uri.toString(),
+      uri.path.split("/").pop()!,
+      uri
+    );
+    controller.items.add(file);
 
-  file.canResolveChildren = true;
-  return { file, data };
+    const data = new TestFile(file);
+    WEAKMAP_TEST_DATA.set(file, data);
+
+    file.canResolveChildren = true;
+    return { file, data };
+  }
 }
 
 export function discoverTestFromFileContent(
@@ -136,63 +209,4 @@ export function discoverTestFromFileContent(
       top.item.children.replace(top.children);
     }
   }
-}
-
-let lastWatches = [] as vscode.FileSystemWatcher[];
-export async function discoverAllFilesInWorkspace(
-  controller: vscode.TestController
-): Promise<vscode.FileSystemWatcher[]> {
-  for (const watch of lastWatches) {
-    watch.dispose();
-  }
-
-  if (!vscode.workspace.workspaceFolders) {
-    return []; // handle the case of no open folders
-  }
-
-  const watchers = [] as vscode.FileSystemWatcher[];
-  await Promise.all(
-    vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-      const exclude = getConfig().exclude;
-      for (const include of getConfig().include) {
-        const pattern = new vscode.RelativePattern(
-          workspaceFolder.uri,
-          include
-        );
-        const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-        const filter = (v: vscode.Uri) =>
-          exclude.every((x) => !minimatch(v.path, x, { dot: true }));
-        watcher.onDidCreate(
-          (uri) => filter(uri) && getOrCreateFile(controller, uri)
-        );
-
-        watcher.onDidChange(
-          debounce((uri) => {
-            if (!filter(uri)) {
-              return;
-            }
-
-            const { data, file } = getOrCreateFile(controller, uri);
-            if (!data.resolved) {
-              return;
-            }
-
-            data.updateFromDisk(controller);
-          }, 500)
-        );
-
-        watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
-
-        for (const file of await vscode.workspace.findFiles(pattern)) {
-          filter(file) && getOrCreateFile(controller, file);
-        }
-
-        watchers.push(watcher);
-      }
-
-      return watchers;
-    })
-  );
-  lastWatches = watchers.concat();
-  return watchers;
 }
