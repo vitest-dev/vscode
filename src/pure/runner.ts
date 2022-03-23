@@ -73,15 +73,13 @@ export class TestRunner {
   ): Promise<AggregatedResult> {
     const path = getTempPath();
     const args = [
+      ...(testFile ? testFile : []),
       "--reporter=json",
       "--reporter=verbose",
       "--outputFile",
       path,
       "--run",
     ] as string[];
-    if (testFile) {
-      args.push(...testFile);
-    }
     if (testNamePattern) {
       args.push("-t", testNamePattern);
     }
@@ -90,6 +88,7 @@ export class TestRunner {
     let child;
     let error: any;
     let outputs: string[] = [];
+    const command = ["npx", "vitest", ...args];
     try {
       // it will throw when test failed or the testing is failed to run
       if (this.vitestPath) {
@@ -99,7 +98,7 @@ export class TestRunner {
         });
       } else {
         child = spawn("npx", ["vitest"].concat(args), {
-          cwd: this.workspacePath,
+          cwd: workspacePath,
           stdio: ["ignore", "pipe", "pipe"],
         });
       }
