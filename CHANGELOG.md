@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.9](https://github.com/zxch3n/vitest-explorer/compare/v0.1.8...v0.1.9) (2022-03-23)
+
+
+### Features
+
+* add directory prefix if needed ([23f40d1](https://github.com/zxch3n/vitest-explorer/commit/23f40d16408e0c82fed909bfc470aae32aa30681))
+
+
+### Bug Fixes
+
+* detect vitest env by vitest config file ([d584b28](https://github.com/zxch3n/vitest-explorer/commit/d584b28b4a976a169dd04463ae96f4500b3dc077))
+* filter tests correctly ([4f57d6e](https://github.com/zxch3n/vitest-explorer/commit/4f57d6e21c70a2fc6501989c31642e689a9486f4))
+
 ### [0.1.8](https://github.com/zxch3n/vitest-explorer/compare/v0.1.7...v0.1.8) (2022-03-23)
 
 
