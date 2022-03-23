@@ -69,10 +69,16 @@ export class TestRunner {
   async scheduleRun(
     testFile: string[] | undefined,
     testNamePattern: string | undefined,
-    log: (msg: string) => void = () => {}
+    log: (msg: string) => void = () => {},
+    workspaceEnv: Record<string, string> = {},
+    vitestCommand: string[] = this.vitestPath
+      ? [this.vitestPath]
+      : ["npx", "vitest"]
   ): Promise<AggregatedResult> {
     const path = getTempPath();
+    const command = vitestCommand[0];
     const args = [
+      ...vitestCommand.slice(1),
       ...(testFile ? testFile : []),
       "--reporter=json",
       "--reporter=verbose",
@@ -85,23 +91,16 @@ export class TestRunner {
     }
 
     const workspacePath = this.workspacePath;
-    let child;
     let error: any;
     let outputs: string[] = [];
-    const command = ["npx", "vitest", ...args];
+    const env = { ...process.env, ...workspaceEnv };
     try {
       // it will throw when test failed or the testing is failed to run
-      if (this.vitestPath) {
-        child = spawn(this.vitestPath, args, {
-          cwd: workspacePath,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-      } else {
-        child = spawn("npx", ["vitest"].concat(args), {
-          cwd: workspacePath,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-      }
+      const child = spawn(command, args, {
+        cwd: workspacePath,
+        stdio: ["ignore", "pipe", "pipe"],
+        env,
+      });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
         log(line + "\r\n");
@@ -112,22 +111,24 @@ export class TestRunner {
     }
 
     if (!existsSync(path)) {
-      handleError();
+      await handleError();
     }
 
     const file = await readFile(path, "utf-8");
     const out = JSON.parse(file) as AggregatedResult;
     if (out.testResults.length === 0) {
-      handleError();
+      await handleError();
     }
 
     return out;
 
-    function handleError() {
+    async function handleError() {
       const prefix =
         `When running:\n` +
-        `    npx vitest ${args.join(" ")}\n` +
-        `cwd: ${workspacePath}`;
+        `    ${command + " " + args.join(" ")}\n` +
+        `cwd: ${workspacePath}\n` +
+        `node: ${await getNodeVersion()}` +
+        `env.PATH: ${env.PATH}`;
       if (error) {
         console.error("scheduleRun error", error.toString());
         console.error(error.stack);
@@ -135,11 +136,21 @@ export class TestRunner {
         error = new Error(prefix + "\n" + error.toString());
         error.stack = e.stack;
       } else {
-        error = new Error(prefix + "\nLog:\n" + outputs.join("\n"));
+        error = new Error(prefix + "\n\n------\n\nLog:\n" + outputs.join("\n"));
       }
 
       console.error(outputs.join("\n"));
       throw error;
     }
+  }
+}
+
+async function getNodeVersion() {
+  const process = spawn("node", ["-v"], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  for await (const line of chunksToLinesAsync(process.stdout)) {
+    return line;
   }
 }

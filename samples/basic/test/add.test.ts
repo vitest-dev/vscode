@@ -6,7 +6,8 @@ describe("addition", () => {
     expect(1 + 1).toBe(2);
   });
 
-  it("should failed", () => {
+  it("should failed", async () => {
+    await new Promise((r) => setTimeout(r, 100));
     expect(1 + 2).toBe(2);
   });
 

@@ -33,7 +33,47 @@
     "workspaceContains:**/vite.config.*s"
   ],
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "configuration": {
+      "title": "Vitest",
+      "properties": {
+        "vitest.commandLine": {
+          "description": "The command line to start vitest tests. It should be the same command line users run vitest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime). For example `npx vitest` or `yarn test -- --run`",
+          "type": "string",
+          "scope": "resource",
+          "default": ""
+        },
+        "vitest.include": {
+          "description": "Include glob for test files",
+          "type": "array",
+          "default": [
+            "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
+          ],
+          "scope": "resource"
+        },
+        "vitest.exclude": {
+          "description": "Exclude globs for test files",
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/cypress/**",
+            "**/.{idea,git,cache,output,temp}/**"
+          ],
+          "scope": "resource"
+        },
+        "vitest.nodeEnv": {
+          "markdownDescription": "The env passed to runner process in addition to `process.env`",
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        }
+      }
+    }
+  },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
     "compile": "tsc -p ./",
@@ -67,6 +107,7 @@
     "@rauschma/stringio": "^1.4.0",
     "fs-extra": "^10.0.1",
     "lodash.groupby": "^4.6.0",
-    "mighty-promise": "^0.0.8"
+    "mighty-promise": "^0.0.8",
+    "minimatch": "^5.0.1"
   }
 }

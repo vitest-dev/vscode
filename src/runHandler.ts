@@ -7,6 +7,7 @@ import {
   getTestCaseId,
   TestFile,
 } from "./TestData";
+import { getConfig } from "./config";
 
 export async function debugHandler(
   ctrl: vscode.TestController,
@@ -107,6 +108,7 @@ async function runTest(
   run: vscode.TestRun,
   items: readonly vscode.TestItem[]
 ) {
+  const config = getConfig();
   const testCaseSet: Set<vscode.TestItem> = new Set();
   const testItemIdMap = new Map<string, vscode.TestItem>();
   const fileItems: vscode.TestItem[] = [];
@@ -162,7 +164,9 @@ async function runTest(
         : "",
       items.length === 1
         ? (msg) => run.appendOutput(msg, undefined, items[0])
-        : (msg) => run.appendOutput(msg)
+        : (msg) => run.appendOutput(msg),
+      config.env || undefined,
+      config.commandLine?.trim().split(" ") || undefined
     )
     .catch((e) => {
       run.appendOutput("Run test failed \r\n" + (e as Error) + "\r\n");

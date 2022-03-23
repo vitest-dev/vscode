@@ -1,15 +1,19 @@
 import * as vscode from "vscode";
-import {
-  TestFile,
-  TestData,
-  WEAKMAP_TEST_DATA,
-  TestDescribe,
-  TestCase,
-  testItemIdMap,
-} from "./TestData";
 import parse from "./pure/parsers";
 import { NamedBlock } from "./pure/parsers/parser_nodes";
+import {
+  TestCase,
+  TestData,
+  TestDescribe,
+  TestFile,
+  testItemIdMap,
+  WEAKMAP_TEST_DATA,
+} from "./TestData";
+import { shouldIncludeFile } from "./vscodeUtils";
 
+import minimatch = require("minimatch");
+import { getConfig } from "./config";
+import { debounce } from "mighty-promise";
 export function discoverTestFromDoc(
   ctrl: vscode.TestController,
   e: vscode.TextDocument
@@ -18,11 +22,7 @@ export function discoverTestFromDoc(
     return;
   }
 
-  // TODO: use config
-  if (
-    !e.uri.path.match(/test\.[tj]sx?(.git)?$/) ||
-    e.uri.path.match(/node_modules/)
-  ) {
+  if (!shouldIncludeFile(e.uri.fsPath)) {
     return;
   }
 
@@ -138,46 +138,61 @@ export function discoverTestFromFileContent(
   }
 }
 
+let lastWatches = [] as vscode.FileSystemWatcher[];
 export async function discoverAllFilesInWorkspace(
   controller: vscode.TestController
-) {
+): Promise<vscode.FileSystemWatcher[]> {
+  for (const watch of lastWatches) {
+    watch.dispose();
+  }
+
   if (!vscode.workspace.workspaceFolders) {
     return []; // handle the case of no open folders
   }
 
-  return Promise.all(
+  const watchers = [] as vscode.FileSystemWatcher[];
+  await Promise.all(
     vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-      const pattern = new vscode.RelativePattern(
-        workspaceFolder,
-        "**/*.test.{js,ts,tsx,jsx}"
-      );
-      const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-      const filter = (v: vscode.Uri) => !v.path.includes("node_modules");
-      // When files are created, make sure there's a corresponding "file" node in the tree
-      watcher.onDidCreate(
-        (uri) => filter(uri) && getOrCreateFile(controller, uri)
-      );
-      // When files change, re-parse them. Note that you could optimize this so
-      // that you only re-parse children that have been resolved in the past.
-      watcher.onDidChange((uri) => {
-        if (!filter(uri)) {
-          return;
+      const exclude = getConfig().exclude;
+      for (const include of getConfig().include) {
+        const pattern = new vscode.RelativePattern(
+          workspaceFolder.uri,
+          include
+        );
+        const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+        const filter = (v: vscode.Uri) =>
+          exclude.every((x) => !minimatch(v.path, x));
+        watcher.onDidCreate(
+          (uri) => filter(uri) && getOrCreateFile(controller, uri)
+        );
+
+        watcher.onDidChange(
+          debounce((uri) => {
+            if (!filter(uri)) {
+              return;
+            }
+
+            const { data, file } = getOrCreateFile(controller, uri);
+            if (!data.resolved) {
+              return;
+            }
+
+            data.updateFromDisk(controller);
+          }, 500)
+        );
+
+        watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
+
+        for (const file of await vscode.workspace.findFiles(pattern)) {
+          filter(file) && getOrCreateFile(controller, file);
         }
 
-        const { data, file } = getOrCreateFile(controller, uri);
-        data.updateFromDisk(controller);
-      });
-      // And, finally, delete TestItems for removed files. This is simple, since
-      // we use the URI as the TestItem's ID.
-      watcher.onDidDelete(
-        (uri) => filter(uri) && controller.items.delete(uri.toString())
-      );
-
-      for (const file of await vscode.workspace.findFiles(pattern)) {
-        filter(file) && getOrCreateFile(controller, file);
+        watchers.push(watcher);
       }
 
-      return watcher;
+      return watchers;
     })
   );
+  lastWatches = watchers.concat();
+  return watchers;
 }

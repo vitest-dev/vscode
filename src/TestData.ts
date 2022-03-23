@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { discoverTestFromFileContent } from "./discover";
-import { getContentFromFilesystem } from "./vscode_utils";
+import { getContentFromFilesystem } from "./vscodeUtils";
 
 export const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>();
 export const testItemIdMap = new WeakMap<

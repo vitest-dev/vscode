@@ -5,6 +5,7 @@ import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
 import { debugHandler, runHandler } from "./runHandler";
 import { WEAKMAP_TEST_DATA, TestFile } from "./TestData";
+import { shouldIncludeFile } from "./vscodeUtils";
 
 export async function activate(context: vscode.ExtensionContext) {
   if (
@@ -21,12 +22,12 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   ctrl.refreshHandler = async () => {
-    await discoverAllFilesInWorkspace(ctrl);
+    context.subscriptions.push(...(await discoverAllFilesInWorkspace(ctrl)));
   };
 
   ctrl.resolveHandler = async (item) => {
     if (!item) {
-      await discoverAllFilesInWorkspace(ctrl);
+      context.subscriptions.push(...(await discoverAllFilesInWorkspace(ctrl)));
     } else {
       const data = WEAKMAP_TEST_DATA.get(item);
       if (data instanceof TestFile) {
@@ -55,9 +56,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     ctrl,
-    vscode.commands.registerCommand("vitest-explorer.configureTest", () => {
-      vscode.window.showInformationMessage("Not implemented");
-    }),
+    // TODO
+    // vscode.commands.registerCommand("vitest-explorer.configureTest", () => {
+    //   vscode.window.showInformationMessage("Not implemented");
+    // }),
     vscode.workspace.onDidOpenTextDocument((e) => {
       discoverTestFromDoc(ctrl, e);
     }),
