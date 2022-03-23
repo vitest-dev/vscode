@@ -1,7 +1,7 @@
 import { Uri, workspace } from "vscode";
 import { TextDecoder } from "util";
 import { getConfig } from "./config";
-import minimatch = require("minimatch");
+import minimatch from "minimatch";
 
 const textDecoder = new TextDecoder("utf-8");
 

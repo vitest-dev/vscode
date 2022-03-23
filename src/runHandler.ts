@@ -166,7 +166,7 @@ async function runTest(
         ? (msg) => run.appendOutput(msg, undefined, items[0])
         : (msg) => run.appendOutput(msg),
       config.env || undefined,
-      config.commandLine?.trim().split(" ") || undefined
+      config.commandLine ? config.commandLine.trim().split(" ") : undefined
     )
     .catch((e) => {
       run.appendOutput("Run test failed \r\n" + (e as Error) + "\r\n");

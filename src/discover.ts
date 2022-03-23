@@ -11,7 +11,7 @@ import {
 } from "./TestData";
 import { shouldIncludeFile } from "./vscodeUtils";
 
-import minimatch = require("minimatch");
+import minimatch from "minimatch";
 import { getConfig } from "./config";
 import { debounce } from "mighty-promise";
 export function discoverTestFromDoc(
