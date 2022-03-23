@@ -1,12 +1,12 @@
 import { expect, describe, it } from "vitest";
 
 describe("addition", () => {
-  it("run", () => {
+  it("run 1", () => {
     console.log("run");
-    expect(1 + 1).toBe(3);
+    expect(1 + 1).toBe(2);
   });
 
-  it("failed", () => {
+  it("should failed", () => {
     expect(1 + 2).toBe(2);
   });
 
@@ -19,9 +19,9 @@ describe("addition", () => {
 });
 
 describe("testing", () => {
-  it("run", () => {
+  it("run 2", () => {
     let a = 10;
     expect(a).toBe(10);
   });
-  it("same name", () => {});
+  it("same name 2", () => {});
 });

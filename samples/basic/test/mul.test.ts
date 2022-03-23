@@ -1,6 +1,6 @@
 import { expect, describe, it } from "vitest";
 
 describe("mul", () => {
-  it.skip("run", () => {});
+  it.skip("run 1", () => {});
   it("run", () => {});
 });

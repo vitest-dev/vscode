@@ -210,7 +210,14 @@ async function runTest(
       }
     );
     testCaseSet.forEach((testCase) => {
-      run.skipped(testCase);
+      run.errored(
+        testCase,
+        new vscode.TestMessage(
+          `Test result not found. \n` +
+            `Can you run vitest successfully on this file? Does it need custom option to run?\n` +
+            `Does this file contain test case with the same name? \n`
+        )
+      );
       run.appendOutput(`Cannot find test ${testCase.id}`);
     });
   } else {

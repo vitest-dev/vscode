@@ -1,6 +1,5 @@
 import { spawn } from "child_process";
 import { existsSync, readFile } from "fs-extra";
-import { TaskQueue } from "mighty-promise";
 import { tmpdir } from "os";
 import * as path from "path";
 
@@ -62,12 +61,6 @@ interface AggregatedResult {
 }
 
 export class TestRunner {
-  private queue = new TaskQueue<Promise<AggregatedResult>>({
-    maxParallelNum: 4,
-    onError: (err) => {
-      throw err;
-    },
-  });
   constructor(
     private workspacePath: string,
     private vitestPath: string | undefined
@@ -78,70 +71,76 @@ export class TestRunner {
     testNamePattern: string | undefined,
     log: (msg: string) => void = () => {}
   ): Promise<AggregatedResult> {
-    return this.queue.push(async () => {
-      const path = getTempPath();
-      const args = [
-        "--reporter=json",
-        "--reporter=verbose",
-        "--outputFile",
-        path,
-        "--run",
-      ] as string[];
-      if (testFile) {
-        args.push(...testFile);
-      }
-      if (testNamePattern) {
-        args.push("-t", testNamePattern);
-      }
+    const path = getTempPath();
+    const args = [
+      "--reporter=json",
+      "--reporter=verbose",
+      "--outputFile",
+      path,
+      "--run",
+    ] as string[];
+    if (testFile) {
+      args.push(...testFile);
+    }
+    if (testNamePattern) {
+      args.push("-t", testNamePattern);
+    }
 
-      let child;
-      let error: any;
-      let outputs: string[] = [];
-      try {
-        // it will throw when test failed or the testing is failed to run
-        if (this.vitestPath) {
-          child = spawn(this.vitestPath, args, {
-            cwd: this.workspacePath,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-        } else {
-          child = spawn("npx", ["vitest"].concat(args), {
-            cwd: this.workspacePath,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-        }
-
-        for await (const line of chunksToLinesAsync(child.stdout)) {
-          log(line + "\r\n");
-          outputs.push(line);
-        }
-      } catch (e) {
-        error = e;
+    const workspacePath = this.workspacePath;
+    let child;
+    let error: any;
+    let outputs: string[] = [];
+    try {
+      // it will throw when test failed or the testing is failed to run
+      if (this.vitestPath) {
+        child = spawn(this.vitestPath, args, {
+          cwd: workspacePath,
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+      } else {
+        child = spawn("npx", ["vitest"].concat(args), {
+          cwd: this.workspacePath,
+          stdio: ["ignore", "pipe", "pipe"],
+        });
       }
 
-      if (!existsSync(path)) {
-        handleError();
+      for await (const line of chunksToLinesAsync(child.stdout)) {
+        log(line + "\r\n");
+        outputs.push(line);
+      }
+    } catch (e) {
+      error = e;
+    }
+
+    if (!existsSync(path)) {
+      handleError();
+    }
+
+    const file = await readFile(path, "utf-8");
+    const out = JSON.parse(file) as AggregatedResult;
+    if (out.testResults.length === 0) {
+      handleError();
+    }
+
+    return out;
+
+    function handleError() {
+      const prefix =
+        `When running:\n` +
+        `    npx vitest ${args.join(" ")}\n` +
+        `cwd: ${workspacePath}`;
+      if (error) {
+        console.error("scheduleRun error", error.toString());
+        console.error(error.stack);
+        const e = error;
+        error = new Error(prefix + "\n" + error.toString());
+        error.stack = e.stack;
+      } else {
+        error = new Error(prefix + "\nLog:\n" + outputs.join("\n"));
       }
 
-      const file = await readFile(path, "utf-8");
-      const out = JSON.parse(file) as AggregatedResult;
-      if (out.testResults.length === 0) {
-        handleError();
-      }
-
-      return out;
-
-      function handleError() {
-        if (error) {
-          console.error("scheduleRun error", error.toString());
-          console.error(error.stack);
-        } else {
-          error = new Error(outputs.join("\n"));
-        }
-
-        console.error(outputs.join("\n"));
-        return error as Error;
-      }
-    });
+      console.error(outputs.join("\n"));
+      throw error;
+    }
   }
 }
