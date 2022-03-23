@@ -65,6 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // vscode.commands.registerCommand("vitest-explorer.configureTest", () => {
     //   vscode.window.showInformationMessage("Not implemented");
     // }),
+    fileDiscoverer,
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e);
     }),

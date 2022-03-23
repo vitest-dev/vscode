@@ -17,6 +17,9 @@ import { debounce } from "mighty-promise";
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[];
+  private readonly workspacePaths = [] as string[];
+  private workspaceCommonPrefix: Map<string, string> = new Map();
+  private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map();
 
   constructor() {
     super(() => {
@@ -25,7 +28,11 @@ export class TestFileDiscoverer extends vscode.Disposable {
       }
 
       this.lastWatches = [];
+      this.workspaceItems.clear();
+      this.workspaceCommonPrefix.clear();
     });
+    this.workspacePaths =
+      vscode.workspace.workspaceFolders?.map((x) => x.uri.path) || [];
   }
 
   async discoverAllFilesInWorkspace(
@@ -111,13 +118,46 @@ export class TestFileDiscoverer extends vscode.Disposable {
       };
     }
 
-    const file = controller.createTestItem(
-      uri.toString(),
-      uri.path.split("/").pop()!,
-      uri
+    const workspacePath = this.workspacePaths.find((x) =>
+      uri.path.startsWith(x)
     );
-    controller.items.add(file);
+    let name;
+    if (workspacePath) {
+      if (!this.workspaceCommonPrefix.has(workspacePath)) {
+        const path = uri.path.split("/");
+        this.workspaceCommonPrefix.set(
+          workspacePath,
+          path.slice(0, -1).join("/") + "/"
+        );
+        this.workspaceItems.set(workspacePath, new Set());
+      }
 
+      let workspacePrefix = this.workspaceCommonPrefix.get(workspacePath)!;
+      if (!uri.path.startsWith(workspacePrefix)) {
+        console.log("NOT starts with!!!!!!!");
+        const p = uri.path;
+        for (let i = 0; i < workspacePrefix.length; i++) {
+          if (p[i] !== workspacePrefix[i]) {
+            workspacePrefix = workspacePrefix.slice(0, i);
+            break;
+          }
+        }
+
+        this.workspaceCommonPrefix.set(workspacePath, workspacePrefix);
+        const items = this.workspaceItems.get(workspacePath)!;
+        items.forEach((v) => {
+          v.label = v.uri!.path.substring(workspacePrefix.length);
+        });
+      }
+
+      name = uri.path.substring(workspacePrefix.length);
+    } else {
+      name = uri.path.split("/").pop()!;
+    }
+
+    const file = controller.createTestItem(uri.toString(), name, uri);
+    workspacePath && this.workspaceItems.get(workspacePath)!.add(file);
+    controller.items.add(file);
     const data = new TestFile(file);
     WEAKMAP_TEST_DATA.set(file, data);
 
