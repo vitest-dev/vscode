@@ -5,7 +5,6 @@ import { discoverAllFilesInWorkspace, discoverTestFromDoc } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
 import { debugHandler, runHandler } from "./runHandler";
 import { WEAKMAP_TEST_DATA, TestFile } from "./TestData";
-import { shouldIncludeFile } from "./vscodeUtils";
 
 export async function activate(context: vscode.ExtensionContext) {
   if (
@@ -22,6 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   ctrl.refreshHandler = async () => {
+    // TODO: should delete redundant tests here
     context.subscriptions.push(...(await discoverAllFilesInWorkspace(ctrl)));
   };
 

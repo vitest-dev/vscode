@@ -19,6 +19,6 @@ export function shouldIncludeFile(path: string) {
   const { include, exclude } = getConfig();
   return (
     include.some((x) => minimatch(path, x)) &&
-    exclude.every((x) => !minimatch(path, x))
+    exclude.every((x) => !minimatch(path, x, { dot: true }))
   );
 }

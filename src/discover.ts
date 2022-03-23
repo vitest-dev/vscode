@@ -161,7 +161,7 @@ export async function discoverAllFilesInWorkspace(
         );
         const watcher = vscode.workspace.createFileSystemWatcher(pattern);
         const filter = (v: vscode.Uri) =>
-          exclude.every((x) => !minimatch(v.path, x));
+          exclude.every((x) => !minimatch(v.path, x, { dot: true }));
         watcher.onDidCreate(
           (uri) => filter(uri) && getOrCreateFile(controller, uri)
         );
