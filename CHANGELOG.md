@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.6](https://github.com/zxch3n/vitest-explorer/compare/v0.1.5...v0.1.6) (2022-03-23)
+
+
+### Features
+
+* custom config ([05b06b4](https://github.com/zxch3n/vitest-explorer/commit/05b06b49ef3dea401bb5e4be1ab508051dc36b5e))
+
 ### [0.1.5](https://github.com/zxch3n/vitest-explorer/compare/v0.1.4...v0.1.5) (2022-03-23)
 
 
