@@ -22,6 +22,8 @@ export async function isVitestEnv(projectRoot: string) {
 
   return (
     execSync(path.join(projectRoot, "vite.config.js")) ||
-    execSync(path.join(projectRoot, "vite.config.ts"))
+    execSync(path.join(projectRoot, "vite.config.ts")) ||
+    execSync(path.join(projectRoot, "vitest.config.js")) ||
+    execSync(path.join(projectRoot, "vitest.config.ts"))
   );
 }
