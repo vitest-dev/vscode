@@ -10,6 +10,8 @@
   "typescript.tsc.autoDetect": "off",
   "cSpell.words": ["execa"],
   "vitest.exclude": [
+    "**/out/**",
+    "**/src/**",
     "**/samples/**",
     "**/node_modules/**",
     "**/dist/**",

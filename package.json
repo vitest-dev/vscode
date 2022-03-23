@@ -44,7 +44,7 @@
           "default": ""
         },
         "vitest.include": {
-          "description": "Include glob for test files",
+          "description": "Include glob for test files. Default: [\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]",
           "type": "array",
           "default": [
             "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
@@ -52,7 +52,7 @@
           "scope": "resource"
         },
         "vitest.exclude": {
-          "description": "Exclude globs for test files",
+          "description": "Exclude globs for test files. Default: [\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]",
           "type": "array",
           "default": [
             "**/node_modules/**",
