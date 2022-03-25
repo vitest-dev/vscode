@@ -18,6 +18,10 @@ export function getTestCaseId(
   if (data instanceof TestDescribe || data instanceof TestCase) {
     return `${data.fileItem.uri}/${name}`;
   } else {
+    if (childItem == null) {
+      return undefined;
+    }
+
     return `${childItem.uri}/${name}`;
   }
 }

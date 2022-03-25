@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { getVitestPath as getVitestPath, TestRunner } from "./pure/runner";
+import {
+  AggregatedResult,
+  getNodeVersion,
+  getTempPath,
+  getVitestPath as getVitestPath,
+  TestRunner,
+} from "./pure/runner";
 import groupBy = require("lodash.groupby");
 import {
   getAllTestCases,
@@ -8,70 +14,8 @@ import {
   TestFile,
 } from "./TestData";
 import { getConfig } from "./config";
-
-export async function debugHandler(
-  ctrl: vscode.TestController,
-  request: vscode.TestRunRequest
-) {
-  if (
-    vscode.workspace.workspaceFolders === undefined ||
-    vscode.workspace.workspaceFolders.length === 0
-  ) {
-    return;
-  }
-
-  const tests = request.include ?? [];
-  if (tests.length === 1) {
-    await debugTest(vscode.workspace.workspaceFolders[0], tests[0]);
-  } else {
-    await debugTest(vscode.workspace.workspaceFolders[0]);
-  }
-}
-
-async function debugTest(
-  workspaceFolder: vscode.WorkspaceFolder,
-  testItem?: vscode.TestItem
-) {
-  let config = {
-    type: "pwa-node",
-    request: "launch",
-    name: "Debug Current Test File",
-    autoAttachChildProcesses: true,
-    skipFiles: ["<node_internals>/**", "**/node_modules/**"],
-    program: getVitestPath(workspaceFolder.uri.path),
-    args: [] as string[],
-    smartStep: true,
-    console: "integratedTerminal",
-  };
-
-  if (testItem) {
-    const data = WEAKMAP_TEST_DATA.get(testItem);
-    if (!data) {
-      console.error("Item not found");
-      return;
-    }
-
-    config.args = [
-      "run",
-      data.getFilePath(),
-      "--testNamePattern",
-      data.getFullPattern(),
-    ];
-  } else {
-    config.args = ["run"];
-  }
-
-  if (config.program == null) {
-    vscode.window.showErrorMessage("Cannot find vitest");
-    return;
-  }
-
-  try {
-    vscode.debug.startDebugging(workspaceFolder, config);
-  } catch (e) {
-    console.error(`startDebugging error ${(e as any).toString()}`);
-  }
-}
+import { readFile } from "fs-extra";
+import { existsSync } from "fs";
 
 export async function runHandler(
   ctrl: vscode.TestController,
@@ -96,6 +40,23 @@ export async function runHandler(
   run.end();
 }
 
+export async function debugHandler(
+  ctrl: vscode.TestController,
+  request: vscode.TestRunRequest
+) {
+  if (
+    vscode.workspace.workspaceFolders === undefined ||
+    vscode.workspace.workspaceFolders.length === 0
+  ) {
+    return;
+  }
+
+  const tests = request.include ?? gatherTestItems(ctrl.items);
+  const run = ctrl.createTestRun(request);
+  await runTest(ctrl, undefined, run, tests, true);
+  run.end();
+}
+
 function gatherTestItems(collection: vscode.TestItemCollection) {
   const items: vscode.TestItem[] = [];
   collection.forEach((item) => items.push(item));
@@ -104,10 +65,15 @@ function gatherTestItems(collection: vscode.TestItemCollection) {
 
 async function runTest(
   ctrl: vscode.TestController,
-  runner: TestRunner,
+  runner: TestRunner | undefined,
   run: vscode.TestRun,
-  items: readonly vscode.TestItem[]
+  items: readonly vscode.TestItem[],
+  isDebug = false
 ) {
+  if (!isDebug && runner === undefined) {
+    throw new Error("should provide runner if not debug");
+  }
+
   const config = getConfig();
   const testCaseSet: Set<vscode.TestItem> = new Set();
   const testItemIdMap = new Map<string, vscode.TestItem>();
@@ -156,27 +122,38 @@ async function runTest(
     pathToFile.set(file.uri!.path, file);
   }
 
-  const out = await runner
-    .scheduleRun(
-      fileItems.map((x) => x.uri!.fsPath),
-      items.length === 1
-        ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
-        : "",
-      items.length === 1
-        ? (msg) => run.appendOutput(msg, undefined, items[0])
-        : (msg) => run.appendOutput(msg),
-      config.env || undefined,
-      config.commandLine ? config.commandLine.trim().split(" ") : undefined
-    )
-    .catch((e) => {
-      run.appendOutput("Run test failed \r\n" + (e as Error) + "\r\n");
-      run.appendOutput("" + (e as Error)?.stack + "\r\n");
-      testCaseSet.forEach((testCase) => {
-        run.errored(testCase, new vscode.TestMessage((e as Error)?.toString()));
-      });
+  let out;
+
+  try {
+    if (!isDebug) {
+      out = await runner!.scheduleRun(
+        fileItems.map((x) => x.uri!.fsPath),
+        items.length === 1
+          ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
+          : "",
+        items.length === 1
+          ? (msg) => run.appendOutput(msg, undefined, items[0])
+          : (msg) => run.appendOutput(msg),
+        config.env || undefined,
+        config.commandLine ? config.commandLine.trim().split(" ") : undefined
+      );
+    } else {
+      out = await debugTest(vscode.workspace.workspaceFolders![0], run, items);
+    }
+  } catch (e) {
+    console.error(e);
+    run.appendOutput("Run test failed \r\n" + (e as Error) + "\r\n");
+    run.appendOutput("" + (e as Error)?.stack + "\r\n");
+    testCaseSet.forEach((testCase) => {
+      run.errored(testCase, new vscode.TestMessage((e as Error)?.toString()));
     });
+    testCaseSet.clear();
+  }
 
   if (out === undefined) {
+    testCaseSet.forEach((testCase) => {
+      run.errored(testCase, new vscode.TestMessage("Internal Error"));
+    });
     return;
   }
 
@@ -186,7 +163,7 @@ async function runTest(
         results.forEach((result, index) => {
           const id =
             getTestCaseId(
-              pathToFile.get(result.testFilePath!)!,
+              pathToFile.get(result?.testFilePath || "")!,
               result.displayName!
             ) || "";
           const child = testItemIdMap.get(id)!;
@@ -234,4 +211,73 @@ async function runTest(
       );
     });
   }
+}
+
+async function debugTest(
+  workspaceFolder: vscode.WorkspaceFolder,
+  run: vscode.TestRun,
+  testItems: readonly vscode.TestItem[]
+) {
+  let config = {
+    type: "pwa-node",
+    request: "launch",
+    name: "Debug Current Test File",
+    autoAttachChildProcesses: true,
+    skipFiles: ["<node_internals>/**", "**/node_modules/**"],
+    program: getVitestPath(workspaceFolder.uri.path),
+    args: [] as string[],
+    smartStep: true,
+    console: "integratedTerminal",
+  };
+
+  const outputFilePath = getTempPath();
+  const testData = testItems.map((item) => WEAKMAP_TEST_DATA.get(item)!);
+  config.args = [
+    "run",
+    ...new Set(testData.map((x) => x.getFilePath())),
+    testData.length === 1 ? "--testNamePattern" : "",
+    testData.length === 1 ? testData[0].getFullPattern() : "",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile",
+    outputFilePath,
+  ];
+
+  if (config.program == null) {
+    vscode.window.showErrorMessage("Cannot find vitest");
+    return;
+  }
+
+  return new Promise<AggregatedResult>((resolve, reject) => {
+    vscode.debug.startDebugging(workspaceFolder, config).then(
+      () => {
+        vscode.debug.onDidChangeActiveDebugSession((e) => {
+          if (!e) {
+            console.log("DISCONNECTED");
+            setTimeout(async () => {
+              if (!existsSync(outputFilePath)) {
+                const prefix =
+                  `When running:\n` +
+                  `    ${config.program + " " + config.args.join(" ")}\n` +
+                  `cwd: ${workspaceFolder.uri.fsPath}\n` +
+                  `node: ${await getNodeVersion()}` +
+                  `env.PATH: ${process.env.PATH}`;
+                reject(new Error(prefix));
+                return;
+              }
+
+              const file = await readFile(outputFilePath, "utf-8");
+              const out = JSON.parse(file) as AggregatedResult;
+              resolve(out);
+            });
+          }
+        });
+      },
+      (err) => {
+        console.error(err);
+        console.log("START DEBUGGING FAILED");
+        reject();
+      }
+    );
+  });
 }

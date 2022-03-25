@@ -134,7 +134,6 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
       let workspacePrefix = this.workspaceCommonPrefix.get(workspacePath)!;
       if (!uri.path.startsWith(workspacePrefix)) {
-        console.log("NOT starts with!!!!!!!");
         const p = uri.path;
         for (let i = 0; i < workspacePrefix.length; i++) {
           if (p[i] !== workspacePrefix[i]) {

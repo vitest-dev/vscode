@@ -45,7 +45,7 @@ interface TestResult {
   };
 }
 
-interface AggregatedResult {
+export interface AggregatedResult {
   numFailedTests: number;
   numFailedTestSuites: number;
   numPassedTests: number;
@@ -145,7 +145,7 @@ export class TestRunner {
   }
 }
 
-async function getNodeVersion() {
+export async function getNodeVersion() {
   const process = spawn("node", ["-v"], {
     stdio: ["ignore", "pipe", "pipe"],
   });

@@ -1,4 +1,4 @@
-import { expect, describe, it } from "vitest";
+import { expect, describe, it, beforeAll } from "vitest";
 
 describe("addition", () => {
   it("run 1", () => {
