@@ -1,8 +1,9 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("addition", () => {
-  it("run 1", () => {
-    console.log("run");
+  it("run", () => {
+    console.log("=================");
+    console.log("Console Output");
     expect(1 + 1).toBe(2);
   });
 
@@ -20,9 +21,13 @@ describe("addition", () => {
 });
 
 describe("testing", () => {
-  it("run 2", () => {
+  it("run", () => {
     let a = 10;
     expect(a).toBe(10);
   });
   it("same name 2", () => {});
+
+  it("mul", () => {
+    expect(5 * 5).toBe(25);
+  });
 });
