@@ -105,7 +105,7 @@ export class TestRunner {
       });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
-        log(line + "\r\n");
+        log(line.trimEnd() + "\r\n");
         outputs.push(line);
       }
     } catch (e) {
