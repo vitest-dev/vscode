@@ -46,4 +46,10 @@ This plugin is based on [vscode testing api](https://code.visualstudio.com/api/e
 ![](https://i.ibb.co/gMZWXZQ/Screen-Recording-2022-03-29-at-20-59-31.gif)
 
 
+# TODOs
+
+- [ ] Dynamic test name and test.each are not supported yet
+- [ ] Support multi-root workspaces
+
+
 
