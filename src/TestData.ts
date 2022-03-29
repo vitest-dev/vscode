@@ -12,7 +12,7 @@ export type TestData = TestFile | TestDescribe | TestCase;
 
 export function getTestCaseId(
   childItem: vscode.TestItem,
-  name: string
+  name: string,
 ): string | undefined {
   const data = WEAKMAP_TEST_DATA.get(childItem);
   if (data instanceof TestDescribe || data instanceof TestCase) {
@@ -28,7 +28,7 @@ export function getTestCaseId(
 
 export function getAllTestCases(
   item: vscode.TestItem,
-  agg: vscode.TestItem[] = []
+  agg: vscode.TestItem[] = [],
 ) {
   if (item.children.size) {
     item.children.forEach((child) => {
@@ -44,7 +44,7 @@ export class TestDescribe {
   constructor(
     public pattern: string,
     public fileItem: vscode.TestItem,
-    public parent: TestDescribe | TestFile
+    public parent: TestDescribe | TestFile,
   ) {}
 
   getFullPattern(): string {
@@ -52,7 +52,7 @@ export class TestDescribe {
   }
 
   getFilePath(): string {
-    return this.fileItem.uri!.path;
+    return this.fileItem.uri!.fsPath;
   }
 }
 
@@ -61,7 +61,7 @@ export class TestCase {
     public pattern: string,
     public fileItem: vscode.TestItem,
     public parent: TestDescribe | TestFile,
-    public index: number
+    public index: number,
   ) {}
 
   getFullPattern(): string {
@@ -69,7 +69,7 @@ export class TestCase {
   }
 
   getFilePath(): string {
-    return this.fileItem.uri!.path;
+    return this.fileItem.uri!.fsPath;
   }
 }
 
@@ -102,7 +102,7 @@ export class TestFile {
   }
 
   getFilePath(): string {
-    return this.item.uri!.path;
+    return this.item.uri!.fsPath;
   }
 }
 

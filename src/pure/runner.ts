@@ -1,15 +1,18 @@
 import { spawn } from "child_process";
-import { existsSync, readFile } from "fs-extra";
+import { readFile } from "fs-extra";
 import { tmpdir } from "os";
+import { existsSync } from "fs";
 import * as path from "path";
 
 import { chunksToLinesAsync } from "@rauschma/stringio";
+import { isWindows } from "./platform";
 
 export function getDebuggerConfig() {}
 
 let i = 0;
+const suffix = (0 | (Math.random() * 1000000)).toString(36);
 export function getTempPath(): string {
-  return path.join(tmpdir(), `vitest-report-${i++}.json`);
+  return path.join(tmpdir(), `vitest-report-${suffix}${i++}.json`);
 }
 
 type Status = "passed" | "failed" | "skipped" | "pending" | "todo" | "disabled";
@@ -69,6 +72,10 @@ export class TestRunner {
       ? [this.vitestPath]
       : ["npx", "vitest"],
   ): Promise<FormattedTestResults> {
+    if (isWindows) {
+      testFile = testFile?.map(adaptWindowsFilePath);
+    }
+
     const path = getTempPath();
     const command = vitestCommand[0];
     const args = [
@@ -77,7 +84,7 @@ export class TestRunner {
       "--reporter=json",
       "--reporter=verbose",
       "--outputFile",
-      path,
+      isWindows ? `"${path.replace(/\\/g, "/")}"` : path,
       "--run",
     ] as string[];
     if (testNamePattern) {
@@ -94,6 +101,7 @@ export class TestRunner {
         cwd: workspacePath,
         stdio: ["ignore", "pipe", "pipe"],
         env,
+        shell: isWindows,
       });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
@@ -146,4 +154,12 @@ export async function getNodeVersion() {
   for await (const line of chunksToLinesAsync(process.stdout)) {
     return line;
   }
+}
+
+export function adaptWindowsFilePath(path: string) {
+  if (!isWindows) {
+    return path;
+  }
+
+  return path.replace(/\\/g, "/").replace(/^\w:/, "");
 }

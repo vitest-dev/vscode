@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import {
+  adaptWindowsFilePath,
   FormattedTestResults,
   getNodeVersion,
   getTempPath,
@@ -15,6 +16,7 @@ import {
 import { getConfig } from "./config";
 import { readFile } from "fs-extra";
 import { existsSync } from "fs";
+import { isWindows } from "./pure/platform";
 
 export async function runHandler(
   ctrl: vscode.TestController,
@@ -29,8 +31,8 @@ export async function runHandler(
   }
 
   const runner = new TestRunner(
-    vscode.workspace.workspaceFolders[0].uri.path,
-    getVitestPath(vscode.workspace.workspaceFolders[0].uri.path),
+    vscode.workspace.workspaceFolders[0].uri.fsPath,
+    getVitestPath(vscode.workspace.workspaceFolders[0].uri.fsPath),
   );
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
@@ -118,7 +120,10 @@ async function runTest(
 
   const pathToFile = new Map<string, vscode.TestItem>();
   for (const file of fileItems) {
-    pathToFile.set(file.uri!.path, file);
+    pathToFile.set(file.uri!.fsPath, file);
+    if (isWindows) {
+      pathToFile.set(file.uri!.fsPath.replace(/\\/g, "/"), file);
+    }
   }
 
   let out;
@@ -223,17 +228,16 @@ async function debugTest(
     name: "Debug Current Test File",
     autoAttachChildProcesses: true,
     skipFiles: ["<node_internals>/**", "**/node_modules/**"],
-    program: getVitestPath(workspaceFolder.uri.path),
+    program: getVitestPath(workspaceFolder.uri.fsPath),
     args: [] as string[],
     smartStep: true,
-    console: "integratedTerminal",
   };
 
   const outputFilePath = getTempPath();
   const testData = testItems.map((item) => WEAKMAP_TEST_DATA.get(item)!);
   config.args = [
     "run",
-    ...new Set(testData.map((x) => x.getFilePath())),
+    ...new Set(testData.map((x) => x.getFilePath()).map(adaptWindowsFilePath)),
     testData.length === 1 ? "--testNamePattern" : "",
     testData.length === 1 ? testData[0].getFullPattern() : "",
     "--reporter=default",

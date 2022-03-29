@@ -1,6 +1,7 @@
 import { chunksToLinesAsync } from "@rauschma/stringio";
 import { spawn } from "child_process";
 import { existsSync } from "fs-extra";
+import { isWindows } from "./platform";
 import * as path from "path";
 
 export function getVitestPath(projectRoot: string): string | undefined {
@@ -24,9 +25,16 @@ export function getVitestPath(projectRoot: string): string | undefined {
 }
 
 export async function getVitestVersion(vitestPath: string): Promise<string> {
-  const process = spawn(vitestPath, ["-v"], {
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  let process;
+  if (vitestPath.endsWith("js") && isWindows) {
+    process = spawn("node", [vitestPath, "-v"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } else {
+    process = spawn(vitestPath, ["-v"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
 
   for await (const line of chunksToLinesAsync(process.stdout)) {
     process.kill();

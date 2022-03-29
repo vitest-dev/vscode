@@ -12,7 +12,7 @@ export async function activate(context: vscode.ExtensionContext) {
   if (
     vscode.workspace.workspaceFolders == null ||
     vscode.workspace.workspaceFolders.length === 0 ||
-    !(await isVitestEnv(vscode.workspace.workspaceFolders[0].uri.path))
+    !(await isVitestEnv(vscode.workspace.workspaceFolders[0].uri.fsPath))
   ) {
     return;
   }
@@ -44,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const vitestPath = getVitestPath(
-    vscode.workspace.workspaceFolders[0].uri.path,
+    vscode.workspace.workspaceFolders[0].uri.fsPath,
   );
   if (vitestPath != null) {
     const vitestVersion = await getVitestVersion(vitestPath);

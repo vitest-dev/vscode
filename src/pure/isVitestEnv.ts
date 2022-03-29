@@ -1,4 +1,3 @@
-import { execSync } from "child_process";
 import { existsSync } from "fs";
 import { readFile } from "fs-extra";
 import path = require("path");
@@ -21,9 +20,9 @@ export async function isVitestEnv(projectRoot: string) {
   }
 
   return (
-    execSync(path.join(projectRoot, "vite.config.js")) ||
-    execSync(path.join(projectRoot, "vite.config.ts")) ||
-    execSync(path.join(projectRoot, "vitest.config.js")) ||
-    execSync(path.join(projectRoot, "vitest.config.ts"))
+    existsSync(path.join(projectRoot, "vite.config.js")) ||
+    existsSync(path.join(projectRoot, "vite.config.ts")) ||
+    existsSync(path.join(projectRoot, "vitest.config.js")) ||
+    existsSync(path.join(projectRoot, "vitest.config.ts"))
   );
 }

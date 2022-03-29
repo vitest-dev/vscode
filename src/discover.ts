@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { sep } from "path";
 import parse from "./pure/parsers";
 import { NamedBlock } from "./pure/parsers/parser_nodes";
 import {
@@ -32,7 +33,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       this.workspaceCommonPrefix.clear();
     });
     this.workspacePaths =
-      vscode.workspace.workspaceFolders?.map((x) => x.uri.path) || [];
+      vscode.workspace.workspaceFolders?.map((x) => x.uri.fsPath) || [];
   }
 
   async discoverAllFilesInWorkspace(
@@ -57,7 +58,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
           );
           const watcher = vscode.workspace.createFileSystemWatcher(pattern);
           const filter = (v: vscode.Uri) =>
-            exclude.every((x) => !minimatch(v.path, x, { dot: true }));
+            exclude.every((x) => !minimatch(v.fsPath, x, { dot: true }));
           watcher.onDidCreate(
             (uri) => filter(uri) && this.getOrCreateFile(controller, uri),
           );
@@ -119,22 +120,22 @@ export class TestFileDiscoverer extends vscode.Disposable {
     }
 
     const workspacePath = this.workspacePaths.find((x) =>
-      uri.path.startsWith(x)
+      uri.fsPath.startsWith(x)
     );
     let name;
     if (workspacePath) {
       if (!this.workspaceCommonPrefix.has(workspacePath)) {
-        const path = uri.path.split("/");
+        const path = uri.fsPath.split(sep);
         this.workspaceCommonPrefix.set(
           workspacePath,
-          path.slice(0, -1).join("/") + "/",
+          path.slice(0, -1).join(sep) + sep,
         );
         this.workspaceItems.set(workspacePath, new Set());
       }
 
       let workspacePrefix = this.workspaceCommonPrefix.get(workspacePath)!;
-      if (!uri.path.startsWith(workspacePrefix)) {
-        const p = uri.path;
+      if (!uri.fsPath.startsWith(workspacePrefix)) {
+        const p = uri.fsPath;
         for (let i = 0; i < workspacePrefix.length; i++) {
           if (p[i] !== workspacePrefix[i]) {
             workspacePrefix = workspacePrefix.slice(0, i);
@@ -145,13 +146,13 @@ export class TestFileDiscoverer extends vscode.Disposable {
         this.workspaceCommonPrefix.set(workspacePath, workspacePrefix);
         const items = this.workspaceItems.get(workspacePath)!;
         items.forEach((v) => {
-          v.label = v.uri!.path.substring(workspacePrefix.length);
+          v.label = v.uri!.fsPath.substring(workspacePrefix.length);
         });
       }
 
-      name = uri.path.substring(workspacePrefix.length);
+      name = uri.fsPath.substring(workspacePrefix.length);
     } else {
-      name = uri.path.split("/").pop()!;
+      name = uri.fsPath.split(sep).pop()!;
     }
 
     const file = controller.createTestItem(uri.toString(), name, uri);
