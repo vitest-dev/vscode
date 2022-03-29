@@ -36,7 +36,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
   }
 
   async discoverAllFilesInWorkspace(
-    controller: vscode.TestController
+    controller: vscode.TestController,
   ): Promise<vscode.FileSystemWatcher[]> {
     for (const watch of this.lastWatches) {
       watch.dispose();
@@ -53,13 +53,13 @@ export class TestFileDiscoverer extends vscode.Disposable {
         for (const include of getConfig().include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
-            include
+            include,
           );
           const watcher = vscode.workspace.createFileSystemWatcher(pattern);
           const filter = (v: vscode.Uri) =>
             exclude.every((x) => !minimatch(v.path, x, { dot: true }));
           watcher.onDidCreate(
-            (uri) => filter(uri) && this.getOrCreateFile(controller, uri)
+            (uri) => filter(uri) && this.getOrCreateFile(controller, uri),
           );
 
           watcher.onDidChange(
@@ -74,7 +74,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
               }
 
               data.updateFromDisk(controller);
-            }, 500)
+            }, 500),
           );
 
           watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
@@ -87,7 +87,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
         }
 
         return watchers;
-      })
+      }),
     );
     this.lastWatches = watchers.concat();
     return watchers;
@@ -95,7 +95,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
   public discoverTestFromDoc(
     ctrl: vscode.TestController,
-    e: vscode.TextDocument
+    e: vscode.TextDocument,
   ) {
     if (e.uri.scheme !== "file") {
       return;
@@ -127,7 +127,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
         const path = uri.path.split("/");
         this.workspaceCommonPrefix.set(
           workspacePath,
-          path.slice(0, -1).join("/") + "/"
+          path.slice(0, -1).join("/") + "/",
         );
         this.workspaceItems.set(workspacePath, new Set());
       }
@@ -169,7 +169,7 @@ export function discoverTestFromFileContent(
   controller: vscode.TestController,
   content: string,
   item: vscode.TestItem,
-  data: TestFile
+  data: TestFile,
 ) {
   if (testItemIdMap.get(controller) == null) {
     testItemIdMap.set(controller, new Map());
@@ -217,12 +217,15 @@ export function discoverTestFromFileContent(
   let index = 0;
   for (const block of arr) {
     const parent = getParent(block);
-    const id = `${item.uri}/${block.name}@${index++}`;
+    const fullName = ancestors.slice(1).map((x) => x.block?.name || "").concat([
+      block.name!,
+    ]).join(" ").trim();
+    const id = `${item.uri}/${fullName}@${index++}`;
     const caseItem = controller.createTestItem(id, block.name!, item.uri);
     idMap.set(id, caseItem);
     caseItem.range = new vscode.Range(
       new vscode.Position(block.start!.line - 1, block.start!.column),
-      new vscode.Position(block.end!.line - 1, block.end!.column)
+      new vscode.Position(block.end!.line - 1, block.end!.column),
     );
     parent.children.push(caseItem);
     if (block.type === "describe") {
@@ -234,7 +237,7 @@ export function discoverTestFromFileContent(
         block.name!,
         item,
         parent.data as TestFile | TestDescribe,
-        testCaseIndex++
+        testCaseIndex++,
       );
       WEAKMAP_TEST_DATA.set(caseItem, testCase);
     } else {

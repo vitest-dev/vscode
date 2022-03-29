@@ -5,26 +5,6 @@ import * as path from "path";
 
 import { chunksToLinesAsync } from "@rauschma/stringio";
 
-export function getVitestPath(projectRoot: string): string | undefined {
-  const node_modules = path.resolve(projectRoot, "node_modules");
-  if (!existsSync(node_modules)) {
-    return;
-  }
-
-  if (existsSync(path.resolve(node_modules, "vitest", "vitest.mjs"))) {
-    return path.resolve(node_modules, "vitest", "vitest.mjs");
-  }
-
-  const suffixes = [".js", "", ".cmd"];
-  for (const suffix of suffixes) {
-    if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
-      return path.resolve(node_modules, ".bin", "vitest" + suffix);
-    }
-  }
-
-  return;
-}
-
 export function getDebuggerConfig() {}
 
 let i = 0;
@@ -32,38 +12,52 @@ export function getTempPath(): string {
   return path.join(tmpdir(), `vitest-report-${i++}.json`);
 }
 
-interface TestResult {
-  displayName?: string;
-  failureMessage?: string | null;
-  skipped: boolean;
-  status?: string;
-  testFilePath?: string;
-  perfStats: {
-    end?: number;
-    runtime?: number;
-    start?: number;
-  };
+type Status = "passed" | "failed" | "skipped" | "pending" | "todo" | "disabled";
+type Milliseconds = number;
+interface FormattedAssertionResult {
+  ancestorTitles: Array<string>;
+  fullName: string;
+  status: Status;
+  title: string;
+  duration?: Milliseconds | null;
+  failureMessages: Array<string>;
+  // location?: Callsite | null
 }
 
-export interface AggregatedResult {
+interface FormattedTestResult {
+  message: string;
+  name: string;
+  status: "failed" | "passed";
+  startTime: number;
+  endTime: number;
+  assertionResults: Array<FormattedAssertionResult>;
+  // summary: string
+  // coverage: unknown
+}
+
+export interface FormattedTestResults {
   numFailedTests: number;
   numFailedTestSuites: number;
   numPassedTests: number;
   numPassedTestSuites: number;
   numPendingTests: number;
-  numTodoTests: number;
   numPendingTestSuites: number;
+  numTodoTests: number;
   numTotalTests: number;
   numTotalTestSuites: number;
   startTime: number;
   success: boolean;
-  testResults: Array<TestResult>;
+  testResults: Array<FormattedTestResult>;
+  // coverageMap?: CoverageMap | null | undefined
+  // numRuntimeErrorTestSuites: number
+  // snapshot: SnapshotSummary
+  // wasInterrupted: boolean
 }
 
 export class TestRunner {
   constructor(
     private workspacePath: string,
-    private vitestPath: string | undefined
+    private vitestPath: string | undefined,
   ) {}
 
   async scheduleRun(
@@ -73,8 +67,8 @@ export class TestRunner {
     workspaceEnv: Record<string, string> = {},
     vitestCommand: string[] = this.vitestPath
       ? [this.vitestPath]
-      : ["npx", "vitest"]
-  ): Promise<AggregatedResult> {
+      : ["npx", "vitest"],
+  ): Promise<FormattedTestResults> {
     const path = getTempPath();
     const command = vitestCommand[0];
     const args = [
@@ -115,7 +109,7 @@ export class TestRunner {
     }
 
     const file = await readFile(path, "utf-8");
-    const out = JSON.parse(file) as AggregatedResult;
+    const out = JSON.parse(file) as FormattedTestResults;
     if (out.testResults.length === 0) {
       await handleError();
     }
@@ -123,8 +117,7 @@ export class TestRunner {
     return out;
 
     async function handleError() {
-      const prefix =
-        `When running:\n` +
+      const prefix = `When running:\n` +
         `    ${command + " " + args.join(" ")}\n` +
         `cwd: ${workspacePath}\n` +
         `node: ${await getNodeVersion()}` +

@@ -10,6 +10,6 @@
   "license": "ISC",
   "devDependencies": {
     "vite": "^2.8.6",
-    "vitest": "^0.6.1"
+    "vitest": "^0.8.0"
   }
 }

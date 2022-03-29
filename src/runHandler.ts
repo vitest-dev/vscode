@@ -1,17 +1,16 @@
 import * as vscode from "vscode";
 import {
-  AggregatedResult,
+  FormattedTestResults,
   getNodeVersion,
   getTempPath,
-  getVitestPath as getVitestPath,
   TestRunner,
 } from "./pure/runner";
-import groupBy = require("lodash.groupby");
+import { getVitestPath as getVitestPath } from "./pure/utils";
 import {
   getAllTestCases,
-  WEAKMAP_TEST_DATA,
   getTestCaseId,
   TestFile,
+  WEAKMAP_TEST_DATA,
 } from "./TestData";
 import { getConfig } from "./config";
 import { readFile } from "fs-extra";
@@ -20,7 +19,7 @@ import { existsSync } from "fs";
 export async function runHandler(
   ctrl: vscode.TestController,
   request: vscode.TestRunRequest,
-  cancellation: vscode.CancellationToken
+  cancellation: vscode.CancellationToken,
 ) {
   if (
     vscode.workspace.workspaceFolders === undefined ||
@@ -31,7 +30,7 @@ export async function runHandler(
 
   const runner = new TestRunner(
     vscode.workspace.workspaceFolders[0].uri.path,
-    getVitestPath(vscode.workspace.workspaceFolders[0].uri.path)
+    getVitestPath(vscode.workspace.workspaceFolders[0].uri.path),
   );
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
@@ -42,7 +41,7 @@ export async function runHandler(
 
 export async function debugHandler(
   ctrl: vscode.TestController,
-  request: vscode.TestRunRequest
+  request: vscode.TestRunRequest,
 ) {
   if (
     vscode.workspace.workspaceFolders === undefined ||
@@ -68,7 +67,7 @@ async function runTest(
   runner: TestRunner | undefined,
   run: vscode.TestRun,
   items: readonly vscode.TestItem[],
-  isDebug = false
+  isDebug = false,
 ) {
   if (!isDebug && runner === undefined) {
     throw new Error("should provide runner if not debug");
@@ -135,7 +134,7 @@ async function runTest(
           ? (msg) => run.appendOutput(msg, undefined, items[0])
           : (msg) => run.appendOutput(msg),
         config.env || undefined,
-        config.commandLine ? config.commandLine.trim().split(" ") : undefined
+        config.commandLine ? config.commandLine.trim().split(" ") : undefined,
       );
     } else {
       out = await debugTest(vscode.workspace.workspaceFolders![0], run, items);
@@ -158,14 +157,13 @@ async function runTest(
   }
 
   if (out.testResults.length !== 0) {
-    Object.values(groupBy(out.testResults, (x) => x.testFilePath)).forEach(
-      (results) => {
-        results.forEach((result, index) => {
-          const id =
-            getTestCaseId(
-              pathToFile.get(result?.testFilePath || "")!,
-              result.displayName!
-            ) || "";
+    out.testResults.forEach(
+      (fileResult) => {
+        fileResult.assertionResults.forEach((result, index) => {
+          const id = getTestCaseId(
+            pathToFile.get(fileResult.name)!,
+            result.fullName.trim(),
+          ) || "";
           const child = testItemIdMap.get(id)!;
           if (!child || !testCaseSet.has(child)) {
             return;
@@ -173,31 +171,32 @@ async function runTest(
 
           testCaseSet.delete(child);
           switch (result.status) {
-            case "pass":
-              run.passed(child, result.perfStats?.runtime);
+            case "passed":
+              run.passed(child, result.duration ?? undefined);
               return;
-            case "fail":
+            case "failed":
               run.failed(
                 child,
-                new vscode.TestMessage(result.failureMessage || "")
+                new vscode.TestMessage(result.failureMessages.join("\n")),
               );
               return;
           }
 
-          if (result.skipped || result.status == null) {
+          if (result.status === "skipped" || result.status == null) {
             run.skipped(child);
           }
         });
-      }
+      },
     );
+
     testCaseSet.forEach((testCase) => {
       run.errored(
         testCase,
         new vscode.TestMessage(
           `Test result not found. \n` +
             `Can you run vitest successfully on this file? Does it need custom option to run?\n` +
-            `Does this file contain test case with the same name? \n`
-        )
+            `Does this file contain test case with the same name? \n`,
+        ),
       );
       run.appendOutput(`Cannot find test ${testCase.id}`);
     });
@@ -206,8 +205,8 @@ async function runTest(
       run.errored(
         testCase,
         new vscode.TestMessage(
-          "Unexpected condition. Please report the bug to https://github.com/zxch3n/vitest-explorer/issues"
-        )
+          "Unexpected condition. Please report the bug to https://github.com/zxch3n/vitest-explorer/issues",
+        ),
       );
     });
   }
@@ -216,7 +215,7 @@ async function runTest(
 async function debugTest(
   workspaceFolder: vscode.WorkspaceFolder,
   run: vscode.TestRun,
-  testItems: readonly vscode.TestItem[]
+  testItems: readonly vscode.TestItem[],
 ) {
   let config = {
     type: "pwa-node",
@@ -248,7 +247,7 @@ async function debugTest(
     return;
   }
 
-  return new Promise<AggregatedResult>((resolve, reject) => {
+  return new Promise<FormattedTestResults>((resolve, reject) => {
     vscode.debug.startDebugging(workspaceFolder, config).then(
       () => {
         vscode.debug.onDidChangeActiveDebugSession((e) => {
@@ -256,8 +255,7 @@ async function debugTest(
             console.log("DISCONNECTED");
             setTimeout(async () => {
               if (!existsSync(outputFilePath)) {
-                const prefix =
-                  `When running:\n` +
+                const prefix = `When running:\n` +
                   `    ${config.program + " " + config.args.join(" ")}\n` +
                   `cwd: ${workspaceFolder.uri.fsPath}\n` +
                   `node: ${await getNodeVersion()}` +
@@ -267,7 +265,7 @@ async function debugTest(
               }
 
               const file = await readFile(outputFilePath, "utf-8");
-              const out = JSON.parse(file) as AggregatedResult;
+              const out = JSON.parse(file) as FormattedTestResults;
               resolve(out);
             });
           }
@@ -277,7 +275,7 @@ async function debugTest(
         console.error(err);
         console.log("START DEBUGGING FAILED");
         reject();
-      }
+      },
     );
   });
 }
