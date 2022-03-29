@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.11](https://github.com/zxch3n/vitest-explorer/compare/v0.1.10...v0.1.11) (2022-03-29)
+
+
+### Bug Fixes
+
+* adapt vitest 0.8.0 json format ([7326dc2](https://github.com/zxch3n/vitest-explorer/commit/7326dc2c04b78edc8c5c82b8473dfdc360d2da03))
+
 ### [0.1.10](https://github.com/zxch3n/vitest-explorer/compare/v0.1.9...v0.1.10) (2022-03-25)
 
 
