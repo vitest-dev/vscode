@@ -1,9 +1,9 @@
 import { existsSync } from "fs";
-import { readFile } from "fs-extra";
+import { readdir, readFile } from "fs-extra";
 import path = require("path");
 import { getVitestPath } from "./utils";
 
-export async function isVitestEnv(projectRoot: string) {
+export async function isVitestEnv(projectRoot: string): Promise<boolean> {
   if (getVitestPath(projectRoot)) {
     return true;
   }
@@ -19,10 +19,24 @@ export async function isVitestEnv(projectRoot: string) {
     }
   }
 
-  return (
+  if (
     existsSync(path.join(projectRoot, "vite.config.js")) ||
     existsSync(path.join(projectRoot, "vite.config.ts")) ||
     existsSync(path.join(projectRoot, "vitest.config.js")) ||
     existsSync(path.join(projectRoot, "vitest.config.ts"))
-  );
+  ) {
+    return true;
+  }
+
+  if (existsSync(path.join(projectRoot, "jest.config.js"))) {
+    return false;
+  }
+
+  // monorepo
+  if (existsSync(path.join(projectRoot, "packages"))) {
+    const dirs = await readdir(path.join(projectRoot, "packages"));
+    return dirs.some((dir) => isVitestEnv(dir));
+  }
+
+  return false;
 }

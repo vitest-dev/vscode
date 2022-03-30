@@ -125,11 +125,13 @@ export class TestRunner {
     return out;
 
     async function handleError() {
-      const prefix = `When running:\n` +
-        `    ${command + " " + args.join(" ")}\n` +
+      const prefix = `\n` +
+        `( Vitest should be configured to be able to run from project root )\n\n` +
+        `Error when running\n` +
+        `    ${command + " " + args.join(" ")}\n\n` +
         `cwd: ${workspacePath}\n` +
-        `node: ${await getNodeVersion()}` +
-        `env.PATH: ${env.PATH}`;
+        `node: ${await getNodeVersion()}\n` +
+        `env.PATH: ${env.PATH}\n`;
       if (error) {
         console.error("scheduleRun error", error.toString());
         console.error(error.stack);

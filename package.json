@@ -37,14 +37,20 @@
     "configuration": {
       "title": "Vitest",
       "properties": {
+        "vitest.enable": {
+          "description": "This plugin will try to detect whether the current project is set up with Vitest to activate itself. When it failed, you can enable the plugin manually.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": false
+        },
         "vitest.commandLine": {
-          "description": "The command line to start vitest tests. It should be the same command line users run vitest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime). For example `npx vitest` or `yarn test -- --run`",
+          "markdownDescription": "The command line to start vitest tests. It should be the same command line users run vitest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime). For example `npx vitest` or `yarn test -- --run`",
           "type": "string",
           "scope": "resource",
           "default": ""
         },
         "vitest.include": {
-          "description": "Include glob for test files. Default: [\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]",
+          "markdownDescription": "Include glob for test files. Default: `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`",
           "type": "array",
           "default": [
             "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
@@ -52,7 +58,7 @@
           "scope": "resource"
         },
         "vitest.exclude": {
-          "description": "Exclude globs for test files. Default: [\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]",
+          "markdownDescription": "Exclude globs for test files. \nDefault: `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`",
           "type": "array",
           "default": [
             "**/node_modules/**",

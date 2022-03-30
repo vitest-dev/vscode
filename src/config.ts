@@ -8,5 +8,6 @@ export function getConfig() {
     commandLine: config.get("commandLine") as string,
     include: config.get("include") as string[],
     exclude: config.get("exclude") as string[],
+    enable: config.get("enable") as boolean,
   };
 }

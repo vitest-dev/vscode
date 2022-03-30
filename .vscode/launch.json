@@ -17,12 +17,12 @@
       "preLaunchTask": "${defaultBuildTask}"
     },
     {
-      "name": "Run Extension React Sample",
+      "name": "Run Extension Monorepo Sample",
       "type": "extensionHost",
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "${workspaceFolder}/samples/react"
+        "${workspaceFolder}/samples/monorepo"
       ],
       "outFiles": ["${workspaceFolder}/out/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}"

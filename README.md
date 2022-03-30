@@ -25,6 +25,7 @@ This plugin is based on [vscode testing api](https://code.visualstudio.com/api/e
 
 # Config
 
+- `vitest.enable`: This plugin will try to detect whether the current project is set up with Vitest to activate itself. When it failed, you can enable the plugin manually
 - `vitest.nodeEnv`: The env passed to runner process in addition to `process.env`
 - `vitest.commandLine`: The command line to start vitest tests. It should be the same command line users run vitest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime). For example `npx vitest` or `yarn test -- --run`
 - `vitest.include`: Include glob for test files. Default: `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`

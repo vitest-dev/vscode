@@ -24,9 +24,13 @@ export function getVitestPath(projectRoot: string): string | undefined {
   return;
 }
 
-export async function getVitestVersion(vitestPath: string): Promise<string> {
+export async function getVitestVersion(vitestPath?: string): Promise<string> {
   let process;
-  if (vitestPath.endsWith("js") && isWindows) {
+  if (vitestPath == null) {
+    process = spawn("npx", ["vitest", "-v"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } else if (vitestPath.endsWith("js") && isWindows) {
     process = spawn("node", [vitestPath, "-v"], {
       stdio: ["ignore", "pipe", "pipe"],
     });

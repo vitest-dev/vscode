@@ -1,6 +1,6 @@
 import { debounce } from "mighty-promise";
 import * as vscode from "vscode";
-import { extensionId } from "./config";
+import { extensionId, getConfig } from "./config";
 import { TestFileDiscoverer } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
 import { getVitestPath, getVitestVersion } from "./pure/utils";
@@ -11,7 +11,14 @@ import semver from "semver";
 export async function activate(context: vscode.ExtensionContext) {
   if (
     vscode.workspace.workspaceFolders == null ||
-    vscode.workspace.workspaceFolders.length === 0 ||
+    vscode.workspace.workspaceFolders.length === 0
+  ) {
+    return;
+  }
+
+  const config = getConfig();
+  if (
+    !config.enable &&
     !(await isVitestEnv(vscode.workspace.workspaceFolders[0].uri.fsPath))
   ) {
     return;
@@ -46,19 +53,18 @@ export async function activate(context: vscode.ExtensionContext) {
   const vitestPath = getVitestPath(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
   );
-  if (vitestPath != null) {
-    const vitestVersion = await getVitestVersion(vitestPath);
-    console.dir({ vitestVersion });
-    if (semver.gte(vitestVersion, "0.8.0")) {
-      registerRunHandler(ctrl);
-    } else {
-      // v0.8.0 introduce a breaking change in json format
-      // https://github.com/vitest-dev/vitest/pull/1034
-      // so we need to disable run & debug in version < 0.8.0
-      vscode.window.showWarningMessage(
-        "Because Vitest version < 0.8.0, run & debug tests from Vitest plugin disabled.\n",
-      );
-    }
+
+  const vitestVersion = await getVitestVersion(vitestPath);
+  console.dir({ vitestVersion });
+  if (semver.gte(vitestVersion, "0.8.0")) {
+    registerRunHandler(ctrl);
+  } else {
+    // v0.8.0 introduce a breaking change in json format
+    // https://github.com/vitest-dev/vitest/pull/1034
+    // so we need to disable run & debug in version < 0.8.0
+    vscode.window.showWarningMessage(
+      "Because Vitest version < 0.8.0, run & debug tests from Vitest plugin disabled.\n",
+    );
   }
 
   vscode.window.visibleTextEditors.forEach((x) =>
