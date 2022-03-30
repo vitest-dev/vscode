@@ -2,7 +2,7 @@
   "name": "vitest-explorer",
   "displayName": "Vitest",
   "description": "Run and debug Vitest test cases",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "icon": "img/icon.png",
   "preview": true,
   "author": "zxch3n",

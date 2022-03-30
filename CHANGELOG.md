@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.14](https://github.com/zxch3n/vitest-explorer/compare/v1.0.1...v0.1.14) (2022-03-30)
+
+
+### Bug Fixes
+
+* force spawn to use powershell on windows and fixed drive case match ([04538c6](https://github.com/zxch3n/vitest-explorer/commit/04538c69c86ba702d40e0861dc283bcaa0f55cc8))
+
 ### [0.1.13](https://github.com/zxch3n/vitest-explorer/compare/v0.1.12...v0.1.13) (2022-03-29)
 
 
