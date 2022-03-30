@@ -101,7 +101,7 @@ export class TestRunner {
         cwd: workspacePath,
         stdio: ["ignore", "pipe", "pipe"],
         env,
-        shell: isWindows,
+        shell: isWindows ? 'powershell' : false,
       });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
