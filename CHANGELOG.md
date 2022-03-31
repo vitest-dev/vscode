@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.15](https://github.com/zxch3n/vitest-explorer/compare/v0.1.14...v0.1.15) (2022-03-31)
+
+
+### Bug Fixes
+
+* replace pnpm with yarn ([7e59a60](https://github.com/zxch3n/vitest-explorer/commit/7e59a602b77baad7d0d00369667c27bd5487f76f))
+
 ### [0.1.14](https://github.com/zxch3n/vitest-explorer/compare/v1.0.1...v0.1.14) (2022-03-30)
 
 
