@@ -186,7 +186,7 @@ async function runTest(
             case "failed":
               run.failed(
                 child,
-                new vscode.TestMessage(result.failureMessages.join("\n")),
+                new vscode.TestMessage(result.failureMessages.join("\r\n")),
               );
               return;
           }
@@ -202,9 +202,9 @@ async function runTest(
       run.errored(
         testCase,
         new vscode.TestMessage(
-          `Test result not found. \n` +
-            `Can you run vitest successfully on this file? Does it need custom option to run?\n` +
-            `Does this file contain test case with the same name? \n`,
+          `Test result not found. \r\n` +
+            `Can you run vitest successfully on this file? Does it need custom option to run?\r\n` +
+            `Does this file contain test case with the same name? \r\n`,
         ),
       );
       run.appendOutput(`Cannot find test ${testCase.id}`);
@@ -263,9 +263,9 @@ async function debugTest(
             console.log("DISCONNECTED");
             setTimeout(async () => {
               if (!existsSync(outputFilePath)) {
-                const prefix = `When running:\n` +
-                  `    ${config.program + " " + config.args.join(" ")}\n` +
-                  `cwd: ${workspaceFolder.uri.fsPath}\n` +
+                const prefix = `When running:\r\n` +
+                  `    ${config.program + " " + config.args.join(" ")}\r\n` +
+                  `cwd: ${workspaceFolder.uri.fsPath}\r\n` +
                   `node: ${await getNodeVersion()}` +
                   `env.PATH: ${process.env.PATH}`;
                 reject(new Error(prefix));

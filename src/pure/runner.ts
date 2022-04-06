@@ -101,7 +101,7 @@ export class TestRunner {
         cwd: workspacePath,
         stdio: ["ignore", "pipe", "pipe"],
         env,
-        shell: isWindows ? 'powershell' : false,
+        shell: isWindows ? "powershell" : false,
       });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
@@ -127,19 +127,21 @@ export class TestRunner {
     async function handleError() {
       const prefix = `\n` +
         `( Vitest should be configured to be able to run from project root )\n\n` +
-        `Error when running\n` +
+        `Error when running\r\n` +
         `    ${command + " " + args.join(" ")}\n\n` +
-        `cwd: ${workspacePath}\n` +
-        `node: ${await getNodeVersion()}\n` +
-        `env.PATH: ${env.PATH}\n`;
+        `cwd: ${workspacePath}\r\n` +
+        `node: ${await getNodeVersion()}\r\n` +
+        `env.PATH: ${env.PATH}\r\n`;
       if (error) {
         console.error("scheduleRun error", error.toString());
         console.error(error.stack);
         const e = error;
-        error = new Error(prefix + "\n" + error.toString());
+        error = new Error(prefix + "\r\n" + error.toString());
         error.stack = e.stack;
       } else {
-        error = new Error(prefix + "\n\n------\n\nLog:\n" + outputs.join("\n"));
+        error = new Error(
+          prefix + "\n\n------\n\nLog:\n" + outputs.join("\r\n"),
+        );
       }
 
       console.error(outputs.join("\n"));
