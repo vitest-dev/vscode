@@ -69,7 +69,9 @@ export class TestRunner {
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
     vitestCommand: string[] = this.vitestPath
-      ? [this.vitestPath]
+      ? isWindows
+        ? ["node", this.vitestPath]
+        : [this.vitestPath]
       : ["npx", "vitest"],
   ): Promise<FormattedTestResults> {
     if (isWindows) {
