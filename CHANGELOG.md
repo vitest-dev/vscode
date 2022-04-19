@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.17](https://github.com/zxch3n/vitest-explorer/compare/v0.1.16...v0.1.17) (2022-04-19)
+
+
+### Bug Fixes
+
+* use 'node vitest' as vitest command on windows ([e3df7da](https://github.com/zxch3n/vitest-explorer/commit/e3df7dac2dfef6d9c75e79426b1d177ca6479511))
+
 ### [0.1.16](https://github.com/zxch3n/vitest-explorer/compare/v0.1.15...v0.1.16) (2022-04-06)
 
 

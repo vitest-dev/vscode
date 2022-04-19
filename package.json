@@ -2,7 +2,7 @@
   "name": "vitest-explorer",
   "displayName": "Vitest",
   "description": "Run and debug Vitest test cases",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "icon": "img/icon.png",
   "preview": true,
   "author": "zxch3n",
@@ -105,7 +105,7 @@
     "prettier": "^2.5.1",
     "typescript": "^4.5.5",
     "vite": "^2.8.6",
-    "vitest": "^0.6.2"
+    "vitest": "^0.8.0"
   },
   "dependencies": {
     "@babel/parser": "^7.17.3",
