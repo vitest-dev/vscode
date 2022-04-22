@@ -85,8 +85,8 @@ export class TestRunner {
       ...(testFile ? testFile : []),
       "--reporter=json",
       "--reporter=verbose",
-      "--outputFile",
-      isWindows ? `"${path.replace(/\\/g, "/")}"` : path,
+      "--outputFile",    
+      path,
       "--run",
     ] as string[];
     if (testNamePattern) {
@@ -101,24 +101,27 @@ export class TestRunner {
       // it will throw when test failed or the testing is failed to run
       const child = spawn(command, args, {
         cwd: workspacePath,
-        stdio: ["ignore", "pipe", "pipe"],
-        env,
-        shell: isWindows ? "powershell" : false,
+        stdio: ["ignore", "pipe", "pipe"],        
       });
 
-      for await (const line of chunksToLinesAsync(child.stdout)) {
+      console.log("Process finished.");
+   
+      for await (const line of chunksToLinesAsync(child.stdout)) {        
         log(line.trimEnd() + "\r\n");
         outputs.push(line);
-      }
+      }       
     } catch (e) {
       error = e;
     }
 
-    if (!existsSync(path)) {
+    const pathCleaned = isWindows? path.replace(/\\/g, "/"): path;
+
+    if (!existsSync(pathCleaned)) {
       await handleError();
     }
 
-    const file = await readFile(path, "utf-8");
+    const file = await readFile(pathCleaned, "utf-8");
+
     const out = JSON.parse(file) as FormattedTestResults;
     if (out.testResults.length === 0) {
       await handleError();
@@ -132,7 +135,7 @@ export class TestRunner {
         `Error when running\r\n` +
         `    ${command + " " + args.join(" ")}\n\n` +
         `cwd: ${workspacePath}\r\n` +
-        `node: ${await getNodeVersion()}\r\n` +
+        `node: ${await getNodeVersion()}\r\n` +      
         `env.PATH: ${env.PATH}\r\n`;
       if (error) {
         console.error("scheduleRun error", error.toString());
