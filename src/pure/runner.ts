@@ -104,10 +104,7 @@ export class TestRunner {
         stdio: ["ignore", "pipe", "pipe"],
         env,
         shell: isWindows? "powershell" : false,
-      });   
-      
-      console.log("Process finished.");
-   
+      });
       for await (const line of chunksToLinesAsync(child.stdout)) {
         log(line.trimEnd() + "\r\n");
         outputs.push(line);
