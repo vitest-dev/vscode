@@ -86,7 +86,7 @@ export class TestRunner {
       "--reporter=json",
       "--reporter=verbose",
       "--outputFile",
-      isWindows ? `"${path.replace(/\\/g, "/")}"` : path,
+      path,
       "--run",
     ] as string[];
     if (testNamePattern) {
@@ -114,11 +114,14 @@ export class TestRunner {
       error = e;
     }
 
-    if (!existsSync(path)) {
+    const pathCleaned = isWindows? path.replace(/\\/g, "/"): path;
+
+    if (!existsSync(pathCleaned)) {
       await handleError();
     }
 
-    const file = await readFile(path, "utf-8");
+    const file = await readFile(pathCleaned, "utf-8");
+
     const out = JSON.parse(file) as FormattedTestResults;
     if (out.testResults.length === 0) {
       await handleError();
