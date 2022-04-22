@@ -105,6 +105,7 @@ export class TestRunner {
         env,
         shell: isWindows? "powershell" : false,
       });
+      
       for await (const line of chunksToLinesAsync(child.stdout)) {
         log(line.trimEnd() + "\r\n");
         outputs.push(line);
