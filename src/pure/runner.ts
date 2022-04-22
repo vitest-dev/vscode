@@ -103,9 +103,9 @@ export class TestRunner {
         cwd: workspacePath,
         stdio: ["ignore", "pipe", "pipe"],
         env,
-        shell: isWindows? "powershell" : false,
+        shell: isWindows ? "powershell" : false,
       });
-      
+
       for await (const line of chunksToLinesAsync(child.stdout)) {
         log(line.trimEnd() + "\r\n");
         outputs.push(line);
