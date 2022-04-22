@@ -85,7 +85,7 @@ export class TestRunner {
       ...(testFile ? testFile : []),
       "--reporter=json",
       "--reporter=verbose",
-      "--outputFile",    
+      "--outputFile",
       path,
       "--run",
     ] as string[];
@@ -101,7 +101,7 @@ export class TestRunner {
       // it will throw when test failed or the testing is failed to run
       const child = spawn(command, args, {
         cwd: workspacePath,
-        stdio: ["ignore", "pipe", "pipe"],        
+        stdio: ["ignore", "pipe", "pipe"],
       });
 
       console.log("Process finished.");
@@ -135,7 +135,7 @@ export class TestRunner {
         `Error when running\r\n` +
         `    ${command + " " + args.join(" ")}\n\n` +
         `cwd: ${workspacePath}\r\n` +
-        `node: ${await getNodeVersion()}\r\n` +      
+        `node: ${await getNodeVersion()}\r\n` +
         `env.PATH: ${env.PATH}\r\n`;
       if (error) {
         console.error("scheduleRun error", error.toString());
