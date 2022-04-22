@@ -103,6 +103,7 @@ export class TestRunner {
         cwd: workspacePath,
         stdio: ["ignore", "pipe", "pipe"],
         env,
+        shell: isWindows? 'powershell' : false,
       });   
       
       console.log("Process finished.");
