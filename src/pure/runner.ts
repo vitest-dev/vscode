@@ -5,14 +5,14 @@ import { existsSync } from "fs";
 import * as path from "path";
 
 import { chunksToLinesAsync } from "@rauschma/stringio";
-import { isWindows } from "./platform";
+import { sanitizeFilePath } from "./utils";
 
 export function getDebuggerConfig() {}
 
 let i = 0;
 const suffix = (0 | (Math.random() * 1000000)).toString(36);
 export function getTempPath(): string {
-  return path.join(tmpdir(), `vitest-report-${suffix}${i++}.json`);
+  return sanitizeFilePath(path.join(tmpdir(), `vitest-report-${suffix}${i++}.json`));
 }
 
 type Status = "passed" | "failed" | "skipped" | "pending" | "todo" | "disabled";
@@ -69,20 +69,14 @@ export class TestRunner {
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
     vitestCommand: string[] = this.vitestPath
-      ? isWindows
-        ? ["node", this.vitestPath]
-        : [this.vitestPath]
+      ? [this.vitestPath]
       : ["npx", "vitest"],
   ): Promise<FormattedTestResults> {
-    if (isWindows) {
-      testFile = testFile?.map(adaptWindowsFilePath);
-    }
-
     const path = getTempPath();
     const command = vitestCommand[0];
     const args = [
       ...vitestCommand.slice(1),
-      ...(testFile ? testFile : []),
+      ...(testFile ? testFile.map(f=> sanitizeFilePath(f)) : []),
       "--reporter=json",
       "--reporter=verbose",
       "--outputFile",
@@ -93,7 +87,7 @@ export class TestRunner {
       args.push("-t", testNamePattern);
     }
 
-    const workspacePath = this.workspacePath;
+    const workspacePath = sanitizeFilePath(this.workspacePath);
     let error: any;
     let outputs: string[] = [];
     const env = { ...process.env, ...workspaceEnv };
@@ -101,9 +95,7 @@ export class TestRunner {
       // it will throw when test failed or the testing is failed to run
       const child = spawn(command, args, {
         cwd: workspacePath,
-        stdio: ["ignore", "pipe", "pipe"],
-        env,
-        shell: isWindows ? "powershell" : false,
+        shell: true,
       });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
@@ -114,13 +106,11 @@ export class TestRunner {
       error = e;
     }
 
-    const pathCleaned = isWindows? path.replace(/\\/g, "/"): path;
-
-    if (!existsSync(pathCleaned)) {
+    if (!existsSync(path)) {
       await handleError();
     }
 
-    const file = await readFile(pathCleaned, "utf-8");
+    const file = await readFile(path, "utf-8");
 
     const out = JSON.parse(file) as FormattedTestResults;
     if (out.testResults.length === 0) {
@@ -163,12 +153,4 @@ export async function getNodeVersion() {
   for await (const line of chunksToLinesAsync(process.stdout)) {
     return line;
   }
-}
-
-export function adaptWindowsFilePath(path: string) {
-  if (!isWindows) {
-    return path;
-  }
-
-  return path.replace(/\\/g, "/").replace(/^\w:/, "");
 }

@@ -47,3 +47,14 @@ export async function getVitestVersion(vitestPath?: string): Promise<string> {
 
   throw new Error(`Cannot get vitest version from "${vitestPath}"`);
 }
+
+const capitalizeFirstLetter = (string:string)=> string.charAt(0).toUpperCase() + string.slice(1);
+
+const replaceDoubleSlashes = (string:string)=> string.replace(/\\/g, "/");
+
+export function sanitizeFilePath(path: string) {
+  if(isWindows) {
+  return capitalizeFirstLetter(replaceDoubleSlashes(path));
+  }
+  return path;
+}

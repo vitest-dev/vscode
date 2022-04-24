@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
 import {
-  adaptWindowsFilePath,
   FormattedTestResults,
   getNodeVersion,
   getTempPath,
   TestRunner,
 } from "./pure/runner";
-import { getVitestPath as getVitestPath } from "./pure/utils";
+import { sanitizeFilePath, getVitestPath } from "./pure/utils";
 import {
   getAllTestCases,
   getTestCaseId,
@@ -16,7 +15,6 @@ import {
 import { getConfig } from "./config";
 import { readFile } from "fs-extra";
 import { existsSync } from "fs";
-import { isWindows } from "./pure/platform";
 
 export async function runHandler(
   ctrl: vscode.TestController,
@@ -120,16 +118,7 @@ async function runTest(
 
   const pathToFile = new Map<string, vscode.TestItem>();
   for (const file of fileItems) {
-    pathToFile.set(file.uri!.fsPath, file);
-    if (isWindows) {
-      let windowsPath = file.uri!.fsPath.replace(/\\/g, "/");
-      // vscode sends path with lowercase for drive, but tests report with uppercase
-      // so there are no matches unless this is adjusted
-      if(!isDebug) { 
-        windowsPath = windowsPath.charAt(0).toUpperCase() + windowsPath.slice(1);
-      }
-      pathToFile.set(windowsPath, file);
-    }
+    pathToFile.set(sanitizeFilePath(file.uri!.fsPath), file);
   }
 
   let out;
@@ -243,7 +232,7 @@ async function debugTest(
   const testData = testItems.map((item) => WEAKMAP_TEST_DATA.get(item)!);
   config.args = [
     "run",
-    ...new Set(testData.map((x) => x.getFilePath()).map(adaptWindowsFilePath)),
+    ...new Set(testData.map((x) => x.getFilePath())),
     testData.length === 1 ? "--testNamePattern" : "",
     testData.length === 1 ? testData[0].getFullPattern() : "",
     "--reporter=default",
