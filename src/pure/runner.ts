@@ -6,6 +6,7 @@ import * as path from "path";
 
 import { chunksToLinesAsync } from "@rauschma/stringio";
 import { sanitizeFilePath } from "./utils";
+import { isWindows } from "./platform";
 
 export function getDebuggerConfig() {}
 
@@ -95,7 +96,9 @@ export class TestRunner {
       // it will throw when test failed or the testing is failed to run
       const child = spawn(command, args, {
         cwd: workspacePath,
-        shell: true,
+        stdio: ["ignore", "pipe", "pipe"],
+        env,
+        shell: isWindows,
       });
 
       for await (const line of chunksToLinesAsync(child.stdout)) {
