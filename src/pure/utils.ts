@@ -11,13 +11,13 @@ export function getVitestPath(projectRoot: string): string | undefined {
   }
 
   if (existsSync(path.resolve(node_modules, "vitest", "vitest.mjs"))) {
-    return path.resolve(node_modules, "vitest", "vitest.mjs");
+    return sanitizeFilePath(path.resolve(node_modules, "vitest", "vitest.mjs"));
   }
 
   const suffixes = [".js", "", ".cmd"];
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
-      return path.resolve(node_modules, ".bin", "vitest" + suffix);
+      return sanitizeFilePath(path.resolve(node_modules, ".bin", "vitest" + suffix));
     }
   }
 
