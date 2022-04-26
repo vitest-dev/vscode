@@ -13,7 +13,9 @@ export function getDebuggerConfig() {}
 let i = 0;
 const suffix = (0 | (Math.random() * 1000000)).toString(36);
 export function getTempPath(): string {
-  return sanitizeFilePath(path.join(tmpdir(), `vitest-report-${suffix}${i++}.json`));
+  return sanitizeFilePath(
+    path.join(tmpdir(), `vitest-report-${suffix}${i++}.json`),
+  );
 }
 
 type Status = "passed" | "failed" | "skipped" | "pending" | "todo" | "disabled";
@@ -77,7 +79,7 @@ export class TestRunner {
     const command = vitestCommand[0];
     const args = [
       ...vitestCommand.slice(1),
-      ...(testFile ? testFile.map(f=> sanitizeFilePath(f)) : []),
+      ...(testFile ? testFile.map((f) => sanitizeFilePath(f)) : []),
       "--reporter=json",
       "--reporter=verbose",
       "--outputFile",
@@ -85,7 +87,7 @@ export class TestRunner {
       "--run",
     ] as string[];
     if (testNamePattern) {
-      args.push("-t", testNamePattern);
+      args.push("-t", '"' + testNamePattern + '"');
     }
 
     const workspacePath = sanitizeFilePath(this.workspacePath);
