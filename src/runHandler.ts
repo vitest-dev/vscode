@@ -5,7 +5,8 @@ import {
   getTempPath,
   TestRunner,
 } from "./pure/runner";
-import { sanitizeFilePath, getVitestPath } from "./pure/utils";
+import { getVitestPath, sanitizeFilePath } from "./pure/utils";
+import { relative } from "path";
 import {
   getAllTestCases,
   getTestCaseId,
@@ -161,7 +162,7 @@ async function runTest(
       (fileResult) => {
         fileResult.assertionResults.forEach((result, index) => {
           const id = getTestCaseId(
-            pathToFile.get(fileResult.name)!,
+            pathToFile.get(sanitizeFilePath(fileResult.name))!,
             result.fullName.trim(),
           ) || "";
           const child = testItemIdMap.get(id)!;
@@ -232,7 +233,14 @@ async function debugTest(
   const testData = testItems.map((item) => WEAKMAP_TEST_DATA.get(item)!);
   config.args = [
     "run",
-    ...new Set(testData.map((x) => x.getFilePath())),
+    ...new Set(
+      testData.map((x) =>
+        relative(workspaceFolder.uri.fsPath, x.getFilePath()).replace(
+          /\\/g,
+          "/",
+        )
+      ),
+    ),
     testData.length === 1 ? "--testNamePattern" : "",
     testData.length === 1 ? testData[0].getFullPattern() : "",
     "--reporter=default",
@@ -255,7 +263,9 @@ async function debugTest(
             setTimeout(async () => {
               if (!existsSync(outputFilePath)) {
                 const prefix = `When running:\r\n` +
-                  `    ${config.program + " " + config.args.join(" ")}\r\n` +
+                  `    node ${
+                    config.program + " " + config.args.join(" ")
+                  }\r\n` +
                   `cwd: ${workspaceFolder.uri.fsPath}\r\n` +
                   `node: ${await getNodeVersion()}` +
                   `env.PATH: ${process.env.PATH}`;
