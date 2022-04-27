@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.20](https://github.com/zxch3n/vitest-explorer/compare/v0.1.19...v0.1.20) (2022-04-27)
+
+
+### Bug Fixes
+
+* File path corrections for Windows ([#24](https://github.com/zxch3n/vitest-explorer/issues/24)) ([66ca70f](https://github.com/zxch3n/vitest-explorer/commit/66ca70f3894a61a5c2759e78f0ba552f6cebdea7))
+
 ### [0.1.19](https://github.com/zxch3n/vitest-explorer/compare/v0.1.18...v0.1.19) (2022-04-23)
 
 
