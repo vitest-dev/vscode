@@ -87,7 +87,11 @@ export class TestRunner {
       "--run",
     ] as string[];
     if (testNamePattern) {
-      args.push("-t", `"${testNamePattern}"`);
+      if (isWindows) {
+        args.push("-t", `"${testNamePattern}"`);
+      } else {
+        args.push("-t", testNamePattern);
+      }
     }
 
     const workspacePath = sanitizeFilePath(this.workspacePath);
