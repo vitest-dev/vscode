@@ -11,13 +11,13 @@ export function getVitestPath(projectRoot: string): string | undefined {
   }
 
   if (existsSync(path.resolve(node_modules, "vitest", "vitest.mjs"))) {
-    return path.resolve(node_modules, "vitest", "vitest.mjs");
+    return sanitizeFilePath(path.resolve(node_modules, "vitest", "vitest.mjs"));
   }
 
   const suffixes = [".js", "", ".cmd"];
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
-      return path.resolve(node_modules, ".bin", "vitest" + suffix);
+      return sanitizeFilePath(path.resolve(node_modules, ".bin", "vitest" + suffix));
     }
   }
 
@@ -46,4 +46,15 @@ export async function getVitestVersion(vitestPath?: string): Promise<string> {
   }
 
   throw new Error(`Cannot get vitest version from "${vitestPath}"`);
+}
+
+const capitalizeFirstLetter = (string:string)=> string.charAt(0).toUpperCase() + string.slice(1);
+
+const replaceDoubleSlashes = (string:string)=> string.replace(/\\/g, "/");
+
+export function sanitizeFilePath(path: string) {
+  if(isWindows) {
+  return capitalizeFirstLetter(replaceDoubleSlashes(path));
+  }
+  return path;
 }
