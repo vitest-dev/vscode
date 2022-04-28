@@ -195,8 +195,7 @@ async function runTest(
         testCase,
         new vscode.TestMessage(
           `Test result not found. \r\n` +
-            `Can you run vitest successfully on this file? Does it need custom option to run?\r\n` +
-            `Does this file contain test case with the same name? \r\n`,
+            `Can you run vitest successfully on this file? Does it need custom option to run?`,
         ),
       );
       run.appendOutput(`Cannot find test ${testCase.id}`);
