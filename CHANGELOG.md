@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.21](https://github.com/zxch3n/vitest-explorer/compare/v0.1.20...v0.1.21) (2022-04-28)
+
+
+### Bug Fixes
+
+* add logging for child.stderr [#20](https://github.com/zxch3n/vitest-explorer/issues/20) ([75d240f](https://github.com/zxch3n/vitest-explorer/commit/75d240f90a9853b82b04c3f50e691da9cd5875de))
+* use `npx vitest` as default vitest command ([d4d4f70](https://github.com/zxch3n/vitest-explorer/commit/d4d4f70ac97657948daad4af0d4e119cf5220d0d))
+
 ### [0.1.20](https://github.com/zxch3n/vitest-explorer/compare/v0.1.19...v0.1.20) (2022-04-27)
 
 
