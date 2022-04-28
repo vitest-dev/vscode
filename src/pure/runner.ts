@@ -72,9 +72,7 @@ export class TestRunner {
     testNamePattern: string | undefined,
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
-    vitestCommand: string[] = this.vitestPath
-      ? [this.vitestPath]
-      : ["npx", "vitest"],
+    vitestCommand: string[] = ["npx", "vitest"],
   ): Promise<FormattedTestResults> {
     const path = getTempPath();
     const command = vitestCommand[0];
