@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.22](https://github.com/zxch3n/vitest-explorer/compare/v0.1.21...v0.1.22) (2022-04-29)
+
+
+### Features
+
+* update snapshot from contextmenu ([#28](https://github.com/zxch3n/vitest-explorer/issues/28)) ([9228ecf](https://github.com/zxch3n/vitest-explorer/commit/9228ecf4e73ec179baf9bddeed21b55f0b659524))
+
+
+### Bug Fixes
+
+* filter ANSI color in the outpu ([816be56](https://github.com/zxch3n/vitest-explorer/commit/816be56fd82ff2c346d7b0bf30d4ff9e960329e6)), closes [#19](https://github.com/zxch3n/vitest-explorer/issues/19)
+
 ### [0.1.21](https://github.com/zxch3n/vitest-explorer/compare/v0.1.20...v0.1.21) (2022-04-28)
 
 
