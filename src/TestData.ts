@@ -3,6 +3,7 @@ import { discoverTestFromFileContent } from "./discover";
 import { getContentFromFilesystem } from "./vscodeUtils";
 
 export const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>();
+// FIXME: GC
 export const testItemIdMap = new WeakMap<
   vscode.TestController,
   Map<string, vscode.TestItem>
