@@ -3,10 +3,9 @@ import { readFile } from "fs-extra";
 import { tmpdir } from "os";
 import { existsSync } from "fs";
 import * as path from "path";
-import { Readable } from "stream";
 
 import { chunksToLinesAsync } from "@rauschma/stringio";
-import { sanitizeFilePath } from "./utils";
+import { filterColorFormatOutput, sanitizeFilePath } from "./utils";
 import { isWindows } from "./platform";
 
 export function getDebuggerConfig() {}
@@ -112,8 +111,8 @@ export class TestRunner {
           chunksToLinesAsync(child.stderr),
         )
       ) {
-        log(line.trimEnd() + "\r\n");
-        outputs.push(line);
+        log((line.trimEnd()) + "\r\n");
+        outputs.push(filterColorFormatOutput(line));
       }
     } catch (e) {
       error = e;
