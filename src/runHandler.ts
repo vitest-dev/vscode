@@ -11,6 +11,7 @@ import {
   getAllTestCases,
   getTestCaseId,
   TestFile,
+  testItemIdMap,
   WEAKMAP_TEST_DATA,
 } from "./TestData";
 import { getConfig } from "./config";
@@ -36,7 +37,32 @@ export async function runHandler(
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
   const run = ctrl.createTestRun(request);
-  await runTest(ctrl, runner, run, tests);
+  await runTest(ctrl, runner, run, tests, "run");
+  run.end();
+}
+
+export async function updateSnapshot(
+  ctrl: vscode.TestController,
+  test: vscode.TestItem,
+) {
+  if (
+    vscode.workspace.workspaceFolders === undefined ||
+    vscode.workspace.workspaceFolders.length === 0
+  ) {
+    return;
+  }
+
+  test = testItemIdMap.get(ctrl)!.get(test.id)!;
+  const runner = new TestRunner(
+    vscode.workspace.workspaceFolders[0].uri.fsPath,
+    getVitestPath(vscode.workspace.workspaceFolders[0].uri.fsPath),
+  );
+
+  const request = new vscode.TestRunRequest([test]);
+  const tests = [test];
+  const run = ctrl.createTestRun(request);
+  run.started(test);
+  await runTest(ctrl, runner, run, tests, "update");
   run.end();
 }
 
@@ -53,7 +79,7 @@ export async function debugHandler(
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
   const run = ctrl.createTestRun(request);
-  await runTest(ctrl, undefined, run, tests, true);
+  await runTest(ctrl, undefined, run, tests, "debug");
   run.end();
 }
 
@@ -63,14 +89,15 @@ function gatherTestItems(collection: vscode.TestItemCollection) {
   return items;
 }
 
+type Mode = "debug" | "run" | "update";
 async function runTest(
   ctrl: vscode.TestController,
   runner: TestRunner | undefined,
   run: vscode.TestRun,
   items: readonly vscode.TestItem[],
-  isDebug = false,
+  mode: Mode,
 ) {
-  if (!isDebug && runner === undefined) {
+  if (mode !== "debug" && runner === undefined) {
     throw new Error("should provide runner if not debug");
   }
 
@@ -125,7 +152,9 @@ async function runTest(
   let out;
 
   try {
-    if (!isDebug) {
+    if (mode === "debug") {
+      out = await debugTest(vscode.workspace.workspaceFolders![0], run, items);
+    } else {
       out = await runner!.scheduleRun(
         fileItems.map((x) => x.uri!.fsPath),
         items.length === 1
@@ -136,9 +165,8 @@ async function runTest(
           : (msg) => run.appendOutput(msg),
         config.env || undefined,
         config.commandLine ? config.commandLine.trim().split(" ") : undefined,
+        mode === "update",
       );
-    } else {
-      out = await debugTest(vscode.workspace.workspaceFolders![0], run, items);
     }
   } catch (e) {
     console.error(e);

@@ -34,6 +34,26 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "title": "Update Snapshot",
+        "command": "vitest.updateSnapshot",
+        "category": "Vitest"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "vitest.updateSnapshot",
+          "when": "false"
+        }
+      ],
+      "testing/item/context": [
+        {
+          "command": "vitest.updateSnapshot"
+        }
+      ]
+    },
     "configuration": {
       "title": "Vitest",
       "properties": {

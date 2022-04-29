@@ -4,7 +4,7 @@ import { extensionId, getConfig } from "./config";
 import { TestFileDiscoverer } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
 import { getVitestPath, getVitestVersion } from "./pure/utils";
-import { debugHandler, runHandler } from "./runHandler";
+import { debugHandler, runHandler, updateSnapshot } from "./runHandler";
 import { TestFile, WEAKMAP_TEST_DATA } from "./TestData";
 import semver from "semver";
 
@@ -86,6 +86,12 @@ export async function activate(context: vscode.ExtensionContext) {
         (e) => fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
         1000,
       ),
+    ),
+    vscode.commands.registerCommand(
+      "vitest.updateSnapshot",
+      (test) => {
+        updateSnapshot(ctrl, test);
+      },
     ),
   );
 }

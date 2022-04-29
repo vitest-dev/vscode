@@ -177,6 +177,7 @@ export function discoverTestFromFileContent(
   }
 
   const idMap = testItemIdMap.get(controller)!;
+  idMap.set(item.id, item);
   const ancestors = [
     {
       item,

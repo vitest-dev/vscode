@@ -73,6 +73,7 @@ export class TestRunner {
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
     vitestCommand: string[] = ["npx", "vitest"],
+    updateSnapshot = false,
   ): Promise<FormattedTestResults> {
     const path = getTempPath();
     const command = vitestCommand[0];
@@ -85,6 +86,10 @@ export class TestRunner {
       path,
       "--run",
     ] as string[];
+    if (updateSnapshot) {
+      args.push("--update");
+    }
+
     if (testNamePattern) {
       if (isWindows) {
         args.push("-t", `"${testNamePattern}"`);
