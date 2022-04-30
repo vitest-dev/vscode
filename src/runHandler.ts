@@ -233,7 +233,7 @@ async function runTest(
       run.errored(
         testCase,
         new vscode.TestMessage(
-          "Unexpected condition. Please report the bug to https://github.com/zxch3n/vitest-explorer/issues",
+          "Unexpected condition. Please report the bug to https://github.com/vitest-dev/vscode/issues",
         ),
       );
     });
