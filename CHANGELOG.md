@@ -1,8 +1,13 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See
-[standard-version](https://github.com/conventional-changelog/standard-version)
-for commit guidelines.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [0.1.23](https://github.com/vitest-dev/vscode/compare/v0.1.22...v0.1.23) (2022-05-01)
+
+
+### Bug Fixes
+
+* use decorator-legacy on ts file ([c04d4b9](https://github.com/vitest-dev/vscode/commit/c04d4b98c0e23bae765d9f447f43f076cb04406a))
 
 ### [0.1.22](https://github.com/vitest-dev/vscode/compare/v0.1.21...v0.1.22) (2022-04-29)
 
