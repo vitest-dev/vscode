@@ -1,19 +1,34 @@
-import { expect, describe, it } from "vitest";
-import { parse } from "../src/pure/parsers/babel_parser";
+import { describe, expect, it } from "vitest";
+import parse from "../src/pure/parsers";
 
 describe("parse", () => {
   it("parse", () => {
     const out = parse(
-      "x",
+      "x.js",
       "" +
         "let a = 10;\n" +
         "describe(`x ${a} sdf`, () => {\n" +
         "    for (let i = 0; i < 5; i++){it('run' + i, () => {})}\n" +
         "}); \n" +
-        "test('add', () => {})"
+        "test('add', () => {})",
     );
 
-    console.dir(out.describeBlocks);
-    console.dir(out.itBlocks);
+    expect(out.describeBlocks.length).toBe(1);
+    expect(out.itBlocks.length).toBe(1);
+  });
+
+  it("parse decorator", () => {
+    const out = parse(
+      "x.ts",
+      "" +
+        "let a = 10;\n" +
+        "describe(`x ${a} sdf`, () => {\n" +
+        "    class B { \n" +
+        "         constructor(@Inject(A) public a: A) {} \n" +
+        "    } " +
+        "});",
+    );
+
+    expect(out.describeBlocks.length).toBe(1);
   });
 });

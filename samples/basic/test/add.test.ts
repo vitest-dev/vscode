@@ -1,23 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 describe("addition", () => {
-  it("run", () => {
-    console.log("=================");
-    console.log("Console Output");
-    expect(1 + 1).toBe(2);
-  });
+  describe("haha", () => {
+    it("run", () => {
+      console.log("=================");
+      console.log("Console Output");
+      expect(1 + 1).toBe(2);
+    });
 
-  it("should failed", async () => {
-    await new Promise((r) => setTimeout(r, 100));
-    expect(1 + 2).toBe(2);
-  });
+    it("should failed", async () => {
+      await new Promise((r) => setTimeout(r, 100));
+      expect(1 + 2).toBe(2);
+    });
 
-  it.skip("skipped", () => {
-    expect(1 + 1).toBe(3);
-  });
+    it.skip("skipped", () => {
+      expect(1 + 1).toBe(3);
+    });
 
-  it.todo("todo");
-  it("same name", () => {});
+    it.todo("todo");
+    it("same name", () => {});
+  });
 });
 
 describe("testing", () => {
