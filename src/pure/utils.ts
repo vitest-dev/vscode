@@ -32,12 +32,8 @@ export async function getVitestVersion(vitestPath?: string): Promise<string> {
     process = spawn("npx", ["vitest", "-v"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
-  } else if (vitestPath.endsWith("js") && isWindows) {
-    process = spawn("node", [vitestPath, "-v"], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
   } else {
-    process = spawn(vitestPath, ["-v"], {
+    process = spawn("node", [vitestPath, "-v"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
   }
