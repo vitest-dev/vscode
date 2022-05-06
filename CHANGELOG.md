@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.24](https://github.com/vitest-dev/vscode/compare/v0.1.23...v0.1.24) (2022-05-06)
+
+
+### Bug Fixes
+
+* get vitest version on linux ([5735ceb](https://github.com/vitest-dev/vscode/commit/5735ceb4a25e899cda55ccc639491fdde14c6eae))
+
 ### [0.1.23](https://github.com/vitest-dev/vscode/compare/v0.1.22...v0.1.23) (2022-05-01)
 
 
