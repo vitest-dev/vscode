@@ -32,7 +32,10 @@ export function getVitestCommand(projectRoot: string): string | undefined {
     return;
   }
 
-  const suffixes = ["", ".cmd"];
+  const suffixes = [""];
+  if (isWindows) {
+    suffixes.unshift(".cmd", ".CMD");
+  }
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
       return path.resolve(node_modules, ".bin", "vitest" + suffix);
@@ -66,7 +69,7 @@ export async function getVitestVersion(
     return line.match(/vitest\/(\d+.\d+.\d+)/)![1];
   }
 
-  throw new Error(`Cannot get vitest version from "${vitestPath}"`);
+  throw new Error(`Cannot get vitest version from "${vitestCommand}"`);
 }
 
 const capitalizeFirstLetter = (string: string) =>
