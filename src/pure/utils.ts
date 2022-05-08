@@ -1,5 +1,5 @@
 import { chunksToLinesAsync } from "@rauschma/stringio";
-import { ChildProcessByStdio, fork, spawn } from "child_process";
+import { spawn } from "child_process";
 import { existsSync } from "fs-extra";
 import { isWindows } from "./platform";
 import * as path from "path";
@@ -33,13 +33,9 @@ export async function getVitestVersion(vitestPath?: string): Promise<string> {
       stdio: ["ignore", "pipe", "pipe"],
     });
   } else {
-    process = fork(vitestPath, ["-v"], {
-      stdio: ["ignore", "pipe", "pipe", "ipc"],
-      detached: true,
-      env: {
-        ELECTRON_RUN_AS_NODE: "1",
-      },
-    }) as any;
+    process = spawn("node", [vitestPath, "-v"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
   }
 
   for await (const line of chunksToLinesAsync(process.stdout)) {

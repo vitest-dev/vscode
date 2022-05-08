@@ -1,4 +1,4 @@
-import { fork, spawn } from "child_process";
+import { spawn } from "child_process";
 import { readFile } from "fs-extra";
 import { tmpdir } from "os";
 import { existsSync } from "fs";
@@ -7,7 +7,6 @@ import * as path from "path";
 import { chunksToLinesAsync } from "@rauschma/stringio";
 import { filterColorFormatOutput, sanitizeFilePath } from "./utils";
 import { isWindows } from "./platform";
-import { setFlagsFromString } from "v8";
 
 export function getDebuggerConfig() {}
 
@@ -72,9 +71,7 @@ export class TestRunner {
     testNamePattern: string | undefined,
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
-    vitestCommand: string[] = this.vitestPath
-      ? ["node", this.vitestPath]
-      : ["npx", "vitest"],
+    vitestCommand: string[] = ["npx", "vitest"],
     updateSnapshot = false,
   ): Promise<FormattedTestResults> {
     const path = getTempPath();
@@ -105,22 +102,13 @@ export class TestRunner {
     let outputs: string[] = [];
     const env = { ...process.env, ...workspaceEnv };
     try {
-      let child;
-      if (command === "node") {
-        child = fork(args[0], args.slice(1), {
-          cwd: workspacePath,
-          stdio: ["ignore", "pipe", "pipe"],
-          env: { ...env, ELECTRON_RUN_AS_NODE: "1" },
-        }) as any;
-      } else {
-        // it will throw when test failed or the testing is failed to run
-        child = spawn(command, args, {
-          cwd: workspacePath,
-          stdio: ["ignore", "pipe", "pipe"],
-          env,
-          shell: isWindows,
-        });
-      }
+      // it will throw when test failed or the testing is failed to run
+      const child = spawn(command, args, {
+        cwd: workspacePath,
+        stdio: ["ignore", "pipe", "pipe"],
+        env,
+        shell: isWindows,
+      });
 
       for await (
         const line of mergeAsyncIter(
