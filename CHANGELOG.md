@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.27](https://github.com/vitest-dev/vscode/compare/v0.1.26...v0.1.27) (2022-05-08)
+
+
+### Bug Fixes
+
+* priority on win ([93a6112](https://github.com/vitest-dev/vscode/commit/93a611242e37298d0e7b911b804062ae7f89b6e8))
+* use .bin/vitest by default ([852cb41](https://github.com/vitest-dev/vscode/commit/852cb41c4ae465734a5dbf14ce2aef0fc7600238))
+
 ### [0.1.26](https://github.com/vitest-dev/vscode/compare/v0.1.25...v0.1.26) (2022-05-08)
 
 ### [0.1.25](https://github.com/vitest-dev/vscode/compare/v0.1.24...v0.1.25) (2022-05-08)
