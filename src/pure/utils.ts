@@ -26,14 +26,37 @@ export function getVitestPath(projectRoot: string): string | undefined {
   return;
 }
 
-export async function getVitestVersion(vitestPath?: string): Promise<string> {
+export function getVitestCommand(projectRoot: string): string | undefined {
+  const node_modules = path.resolve(projectRoot, "node_modules");
+  if (!existsSync(node_modules)) {
+    return;
+  }
+
+  const suffixes = ["", ".cmd"];
+  for (const suffix of suffixes) {
+    if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
+      return path.resolve(node_modules, ".bin", "vitest" + suffix);
+    }
+  }
+
+  if (existsSync(path.resolve(node_modules, "vitest", "vitest.mjs"))) {
+    return "node " +
+      sanitizeFilePath(path.resolve(node_modules, "vitest", "vitest.mjs"));
+  }
+
+  return;
+}
+
+export async function getVitestVersion(
+  vitestCommand?: string,
+): Promise<string> {
   let process;
-  if (vitestPath == null) {
+  if (vitestCommand == null) {
     process = spawn("npx", ["vitest", "-v"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
   } else {
-    process = spawn("node", [vitestPath, "-v"], {
+    process = spawn(vitestCommand, ["-v"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
   }

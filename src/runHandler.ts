@@ -5,7 +5,11 @@ import {
   getTempPath,
   TestRunner,
 } from "./pure/runner";
-import { getVitestPath, sanitizeFilePath } from "./pure/utils";
+import {
+  getVitestCommand,
+  getVitestPath,
+  sanitizeFilePath,
+} from "./pure/utils";
 import { relative } from "path";
 import {
   getAllTestCases,
@@ -32,7 +36,7 @@ export async function runHandler(
 
   const runner = new TestRunner(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
-    getVitestPath(vscode.workspace.workspaceFolders[0].uri.fsPath),
+    getVitestCommand(vscode.workspace.workspaceFolders[0].uri.fsPath),
   );
 
   const tests = request.include ?? gatherTestItems(ctrl.items);
@@ -55,7 +59,7 @@ export async function updateSnapshot(
   test = testItemIdMap.get(ctrl)!.get(test.id)!;
   const runner = new TestRunner(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
-    getVitestPath(vscode.workspace.workspaceFolders[0].uri.fsPath),
+    getVitestCommand(vscode.workspace.workspaceFolders[0].uri.fsPath),
   );
 
   const request = new vscode.TestRunRequest([test]);

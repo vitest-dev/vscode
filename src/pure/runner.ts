@@ -63,7 +63,7 @@ export interface FormattedTestResults {
 export class TestRunner {
   constructor(
     private workspacePath: string,
-    private vitestPath: string | undefined,
+    private vitestCommand: string | undefined,
   ) {}
 
   async scheduleRun(
@@ -71,7 +71,9 @@ export class TestRunner {
     testNamePattern: string | undefined,
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
-    vitestCommand: string[] = ["npx", "vitest"],
+    vitestCommand: string[] = this.vitestCommand
+      ? [this.vitestCommand]
+      : ["npx", "vitest"],
     updateSnapshot = false,
   ): Promise<FormattedTestResults> {
     const path = getTempPath();
@@ -108,6 +110,8 @@ export class TestRunner {
         stdio: ["ignore", "pipe", "pipe"],
         env,
         shell: isWindows,
+        // https://nodejs.org/api/child_process.html#child_process_options_detached
+        detached: process.platform !== "win32",
       });
 
       for await (

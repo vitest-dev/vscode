@@ -3,7 +3,11 @@ import * as vscode from "vscode";
 import { extensionId, getConfig } from "./config";
 import { TestFileDiscoverer } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
-import { getVitestPath, getVitestVersion } from "./pure/utils";
+import {
+  getVitestCommand,
+  getVitestPath,
+  getVitestVersion,
+} from "./pure/utils";
 import { debugHandler, runHandler, updateSnapshot } from "./runHandler";
 import { TestFile, WEAKMAP_TEST_DATA } from "./TestData";
 import semver from "semver";
@@ -50,11 +54,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const vitestPath = getVitestPath(
+  const vitestVersion = await getVitestVersion(getVitestCommand(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
-  );
-
-  const vitestVersion = await getVitestVersion(vitestPath);
+  ));
   console.dir({ vitestVersion });
   if (semver.gte(vitestVersion, "0.8.0")) {
     registerRunHandler(ctrl);
