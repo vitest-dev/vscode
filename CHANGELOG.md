@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.25](https://github.com/vitest-dev/vscode/compare/v0.1.24...v0.1.25) (2022-05-08)
+
+
+### Bug Fixes
+
+* replace spawn with fork in some cases ([b0e36f9](https://github.com/vitest-dev/vscode/commit/b0e36f9895fffeabce3dd841bf111753b13b57f9))
+
 ### [0.1.24](https://github.com/vitest-dev/vscode/compare/v0.1.23...v0.1.24) (2022-05-06)
 
 
