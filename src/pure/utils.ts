@@ -26,7 +26,9 @@ export function getVitestPath(projectRoot: string): string | undefined {
   return;
 }
 
-export function getVitestCommand(projectRoot: string): string | undefined {
+export function getVitestCommand(
+  projectRoot: string,
+): { cmd: string; args: string[] } | undefined {
   const node_modules = path.resolve(projectRoot, "node_modules");
   if (!existsSync(node_modules)) {
     return;
@@ -36,22 +38,30 @@ export function getVitestCommand(projectRoot: string): string | undefined {
   if (isWindows) {
     suffixes.unshift(".cmd", ".CMD");
   }
+
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, ".bin", "vitest" + suffix))) {
-      return path.resolve(node_modules, ".bin", "vitest" + suffix);
+      return {
+        cmd: path.resolve(node_modules, ".bin", "vitest" + suffix),
+        args: [],
+      };
     }
   }
 
   if (existsSync(path.resolve(node_modules, "vitest", "vitest.mjs"))) {
-    return "node " +
-      sanitizeFilePath(path.resolve(node_modules, "vitest", "vitest.mjs"));
+    return {
+      cmd: "node",
+      args: [
+        sanitizeFilePath(path.resolve(node_modules, "vitest", "vitest.mjs")),
+      ],
+    };
   }
 
   return;
 }
 
 export async function getVitestVersion(
-  vitestCommand?: string,
+  vitestCommand?: { cmd: string; args: string[] },
 ): Promise<string> {
   let process;
   if (vitestCommand == null) {
@@ -59,7 +69,7 @@ export async function getVitestVersion(
       stdio: ["ignore", "pipe", "pipe"],
     });
   } else {
-    process = spawn(vitestCommand, ["-v"], {
+    process = spawn(vitestCommand.cmd, [...vitestCommand.args, "-v"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
   }
