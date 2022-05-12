@@ -159,6 +159,15 @@ async function runTest(
     if (mode === "debug") {
       out = await debugTest(vscode.workspace.workspaceFolders![0], run, items);
     } else {
+      let command = undefined;
+      if (config.commandLine) {
+        const commandLine = config.commandLine.trim();
+        command = {
+          cmd: commandLine.split(" ")[0],
+          args: commandLine.split(" ").slice(1),
+        };
+      }
+
       out = await runner!.scheduleRun(
         fileItems.map((x) => x.uri!.fsPath),
         items.length === 1
@@ -168,7 +177,7 @@ async function runTest(
           ? (msg) => run.appendOutput(msg, undefined, items[0])
           : (msg) => run.appendOutput(msg),
         config.env || undefined,
-        config.commandLine ? config.commandLine.trim().split(" ") : undefined,
+        command,
         mode === "update",
       );
     }

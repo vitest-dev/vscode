@@ -63,7 +63,7 @@ export interface FormattedTestResults {
 export class TestRunner {
   constructor(
     private workspacePath: string,
-    private vitestCommand: string | undefined,
+    private vitestCommand: { cmd: string; args: string[] } | undefined,
   ) {}
 
   async scheduleRun(
@@ -71,15 +71,15 @@ export class TestRunner {
     testNamePattern: string | undefined,
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
-    vitestCommand: string[] = this.vitestCommand
-      ? [this.vitestCommand]
-      : ["npx", "vitest"],
+    vitestCommand: { cmd: string; args: string[] } = this.vitestCommand
+      ? this.vitestCommand
+      : { cmd: "npx", args: ["vitest"] },
     updateSnapshot = false,
   ): Promise<FormattedTestResults> {
     const path = getTempPath();
-    const command = vitestCommand[0];
+    const command = vitestCommand.cmd;
     const args = [
-      ...vitestCommand.slice(1),
+      ...vitestCommand.args,
       ...(testFile ? testFile.map((f) => sanitizeFilePath(f)) : []),
       "--reporter=json",
       "--reporter=verbose",

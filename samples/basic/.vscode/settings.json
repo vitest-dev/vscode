@@ -1,6 +1,5 @@
 {
   "vitest.nodeEnv": {},
-  "vitest.commandLine": "npx vitest",
   "vitest.include": [
     "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
     "**/src/should_included_test.ts"
