@@ -21,6 +21,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
   private readonly workspacePaths = [] as string[];
   private workspaceCommonPrefix: Map<string, string> = new Map();
   private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map();
+  private pathToFileItem: Map<string, TestFile> = new Map();
 
   constructor() {
     super(() => {
@@ -30,6 +31,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
       this.lastWatches = [];
       this.workspaceItems.clear();
+      this.pathToFileItem.clear();
       this.workspaceCommonPrefix.clear();
     });
     this.workspacePaths =
@@ -110,6 +112,14 @@ export class TestFileDiscoverer extends vscode.Disposable {
     discoverTestFromFileContent(ctrl, e.getText(), file, data);
   }
 
+  discoverTestFromPath(
+    controller: vscode.TestController,
+    path: string,
+  ) {
+    const { data } = this.getOrCreateFile(controller, vscode.Uri.file(path));
+    data.updateFromDisk(controller);
+  }
+
   private getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
     const existing = controller.items.get(uri.toString());
     if (existing) {
@@ -160,6 +170,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
     controller.items.add(file);
     const data = new TestFile(file);
     WEAKMAP_TEST_DATA.set(file, data);
+    this.pathToFileItem.set(uri.fsPath, data);
 
     file.canResolveChildren = true;
     return { file, data };
@@ -183,6 +194,7 @@ export function discoverTestFromFileContent(
       item,
       block: undefined as NamedBlock | undefined,
       children: [] as vscode.TestItem[],
+      dataChildren: [] as (TestCase | TestDescribe)[],
       data: data as TestData,
     },
   ];
@@ -197,6 +209,7 @@ export function discoverTestFromFileContent(
       const top = ancestors.pop();
       if (top) {
         top.item.children.replace(top.children);
+        (top.data as (TestFile | TestDescribe)).children = top.dataChildren;
       }
 
       parent = ancestors[ancestors.length - 1];
@@ -232,8 +245,15 @@ export function discoverTestFromFileContent(
     parent.children.push(caseItem);
     if (block.type === "describe") {
       const data = new TestDescribe(block.name!, item, parent.data as TestFile);
+      parent.dataChildren.push(data);
       WEAKMAP_TEST_DATA.set(caseItem, data);
-      ancestors.push({ item: caseItem, block, children: [], data });
+      ancestors.push({
+        item: caseItem,
+        block,
+        children: [],
+        data,
+        dataChildren: [],
+      });
     } else if (block.type === "it") {
       const testCase = new TestCase(
         block.name!,
@@ -241,6 +261,7 @@ export function discoverTestFromFileContent(
         parent.data as TestFile | TestDescribe,
         testCaseIndex++,
       );
+      parent.dataChildren.push(testCase);
       WEAKMAP_TEST_DATA.set(caseItem, testCase);
     } else {
       throw new Error();

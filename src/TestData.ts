@@ -42,6 +42,7 @@ export function getAllTestCases(
 }
 
 export class TestDescribe {
+  children: (TestDescribe | TestCase)[] = [];
   constructor(
     public pattern: string,
     public fileItem: vscode.TestItem,
@@ -77,6 +78,7 @@ export class TestCase {
 export class TestFile {
   resolved = false;
   pattern = "";
+  children: (TestDescribe | TestCase)[] = [];
   constructor(public item: vscode.TestItem) {}
   public async updateFromDisk(controller: vscode.TestController) {
     const item = this.item;
