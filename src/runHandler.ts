@@ -21,9 +21,11 @@ import {
 import { getConfig } from "./config";
 import { readFile } from "fs-extra";
 import { existsSync } from "fs";
+import { TestWatcher } from "./watch";
 
 export async function runHandler(
   ctrl: vscode.TestController,
+  watcher: TestWatcher | undefined,
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken,
 ) {
@@ -34,12 +36,17 @@ export async function runHandler(
     return;
   }
 
+  if (TestWatcher.isWatching() && watcher) {
+    watcher.runTests(request.include);
+    return;
+  }
+
+  const tests = request.include ?? gatherTestItems(ctrl.items);
   const runner = new TestRunner(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
     getVitestCommand(vscode.workspace.workspaceFolders[0].uri.fsPath),
   );
 
-  const tests = request.include ?? gatherTestItems(ctrl.items);
   const run = ctrl.createTestRun(request);
   await runTest(ctrl, runner, run, tests, "run");
   run.end();
