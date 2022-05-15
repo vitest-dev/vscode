@@ -117,7 +117,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
     path: string,
   ) {
     const { data } = this.getOrCreateFile(controller, vscode.Uri.file(path));
-    data.updateFromDisk(controller);
+    if (!data.resolved) {
+      data.updateFromDisk(controller);
+    }
     return data;
   }
 
@@ -210,7 +212,9 @@ export function discoverTestFromFileContent(
       const top = ancestors.pop();
       if (top) {
         top.item.children.replace(top.children);
-        (top.data as (TestFile | TestDescribe)).children = top.dataChildren;
+        (top.data as (TestFile | TestDescribe)).children = [
+          ...top.dataChildren,
+        ];
       }
 
       parent = ancestors[ancestors.length - 1];
@@ -279,6 +283,9 @@ export function discoverTestFromFileContent(
     const top = ancestors.pop();
     if (top) {
       top.item.children.replace(top.children);
+      (top.data as (TestFile | TestDescribe)).children = [
+        ...top.dataChildren,
+      ];
     }
   }
 }

@@ -13,9 +13,15 @@ import { TestFileDiscoverer } from "./discover";
 import { effect, ref } from "@vue/reactivity";
 import { ChildProcess, spawn } from "child_process";
 import { getTasks } from "@vitest/ws-client";
-import { TestCase, TestDescribe, TestFile } from "./TestData";
+import {
+  TestCase,
+  TestDescribe,
+  TestFile,
+  WEAKMAP_TEST_DATA,
+} from "./TestData";
 import { chunksToLinesAsync } from "@rauschma/stringio";
 import { isWindows } from "./pure/platform";
+import { file } from "@babel/types";
 
 export class TestWatcher extends Disposable {
   static cache: undefined | TestWatcher;
@@ -63,6 +69,19 @@ export class TestWatcher extends Disposable {
       detached: !isWindows,
     });
 
+    this.process.on("error", (err) => {
+      console.error("WATCH PROCESS", err.toString());
+      console.log(err.stack);
+    });
+
+    this.process.on("close", () => {
+      console.log("WATCH PROCESS CLOSE");
+    });
+
+    this.process.on("exit", () => {
+      console.log("WATCH PROCESS EXIT");
+    });
+
     (async () => {
       for await (const line of chunksToLinesAsync(process.stdout)) {
         console.log("WATCH PROCESS", line);
@@ -74,25 +93,25 @@ export class TestWatcher extends Disposable {
       }
     })();
 
-    this.vitestState = buildWatchClient({
-      handlers: {
-        onCollected: this.onCollected,
-        onTaskUpdate: () => {
-          console.log("update");
-          if (!run) {
-            this.run = this.ctrl.createTestRun(new TestRunRequest());
-          }
-        },
-        onFinished: () => {
-          console.log("finished");
-          if (!this.run) {
-            return;
-          }
+    setTimeout(() => {
+      this.vitestState = buildWatchClient({
+        handlers: {
+          onFinished: (files) => {
+            console.log("finished");
+            this.onFinished(files);
+            if (!this.run) {
+              return;
+            }
 
-          this.run.end();
+            this.run.end();
+            this.run = undefined;
+          },
         },
-      },
-    });
+      });
+      effect(() => {
+        this.onFileUpdated(this.vitestState!.files.value);
+      });
+    }, 5000);
   }
 
   public runTests(tests?: readonly TestItem[]) {
@@ -105,11 +124,31 @@ export class TestWatcher extends Disposable {
       this.runFiles(files);
       return;
     }
+
+    this.runFiles(
+      this.vitestState.files.value.filter((file) =>
+        tests.some((test) =>
+          WEAKMAP_TEST_DATA.get(test)!.getFilePath().includes(file.filepath)
+        )
+      ),
+    );
   }
 
   private runFiles(files: File[]) {
     if (!this.vitestState) {
       return;
+    }
+
+    if (!this.run) {
+      this.run = this.ctrl.createTestRun(new TestRunRequest());
+      for (const file of files) {
+        const data = this.discover.discoverTestFromPath(
+          this.ctrl,
+          file.filepath,
+        );
+
+        this.run.enqueued(data.item);
+      }
     }
 
     files.forEach((f) => {
@@ -121,32 +160,44 @@ export class TestWatcher extends Disposable {
     return client.rpc.rerun(files.map((i) => i.filepath));
   }
 
-  private readonly onCollected = (files?: File[]) => {
-    console.log("on collect", files);
+  private readonly onFileUpdated = (files?: File[]) => {
     if (files == undefined) {
       this.discover.discoverAllFilesInWorkspace(this.ctrl);
     } else {
       for (const file of files) {
-        const data = this.discover.discoverTestFromPath(
+        this.discover.discoverTestFromPath(
           this.ctrl,
           file.filepath,
         );
-        this.attach(data, file);
       }
     }
   };
 
-  private attach(vscodeFile: TestFile, vitestFile: File) {
-    effect(() => {
-      const run = this.run;
-      if (!run) {
-        console.log("no run");
-        return;
-      }
+  private readonly onFinished = (files?: File[]) => {
+    if (!files) {
+      return;
+    }
+    if (!this.run) {
+      this.run = this.ctrl.createTestRun(new TestRunRequest());
+    }
 
-      console.log("running effect for", vitestFile.filepath);
-      attach(run, vscodeFile.children, vitestFile.tasks);
-    });
+    for (const file of files) {
+      const data = this.discover.discoverTestFromPath(
+        this.ctrl,
+        file.filepath,
+      );
+
+      this.attach(data, file);
+    }
+  };
+
+  private attach(vscodeFile: TestFile, vitestFile: File) {
+    const run = this.run;
+    if (!run) {
+      return;
+    }
+
+    attach(run, vscodeFile.children, vitestFile.tasks);
 
     function attach(
       run: TestRun,
