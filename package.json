@@ -117,13 +117,13 @@
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^7.2.0",
-    "@types/mocha": "^9.1.0",
     "@types/node": "14.x",
     "@types/semver": "^7.3.9",
     "@types/vscode": "^1.59.0",
     "@types/ws": "^8.5.3",
     "@typescript-eslint/eslint-plugin": "^5.12.1",
     "@typescript-eslint/parser": "^5.12.1",
+    "@vitest/ws-client": "^0.12.6",
     "@vscode/test-electron": "^2.1.2",
     "@vueuse/core": "^8.4.2",
     "eslint": "^8.9.0",
@@ -133,8 +133,7 @@
     "tsup": "^5.12.7",
     "typescript": "^4.5.5",
     "vite": "^2.8.6",
-    "vitest": "latest",
-    "@vitest/ws-client": "^0.12.6"
+    "vitest": "latest"
   },
   "dependencies": {
     "@babel/parser": "^7.17.3",

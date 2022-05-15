@@ -10,7 +10,7 @@ describe("addition", () => {
 
     it("should failed", async () => {
       await new Promise((r) => setTimeout(r, 100));
-      expect(1 + 2).toBe(2);
+      expect(1 + 2).toBe(3);
     });
 
     it.skip("skipped", () => {
