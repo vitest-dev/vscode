@@ -1,7 +1,5 @@
 /// <reference types="vitest" />
 
-// Configure Vitest (https://vitest.dev/config)
-
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -10,4 +8,5 @@ export default defineConfig({
     // globals: true,
     exclude: ["**/src/**", "**/node_modules/**", "**/samples/**", "out/**"],
   },
+  base: "./src/",
 });

@@ -13,8 +13,8 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/basic"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      // "preLaunchTask": "${defaultBuildTask}"
     },
     {
       "name": "Run Extension Monorepo Sample",

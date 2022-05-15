@@ -46,6 +46,7 @@ export class TestDescribe {
   constructor(
     public pattern: string,
     public fileItem: vscode.TestItem,
+    public item: vscode.TestItem,
     public parent: TestDescribe | TestFile,
   ) {}
 
@@ -62,6 +63,7 @@ export class TestCase {
   constructor(
     public pattern: string,
     public fileItem: vscode.TestItem,
+    public item: vscode.TestItem,
     public parent: TestDescribe | TestFile,
     public index: number,
   ) {}

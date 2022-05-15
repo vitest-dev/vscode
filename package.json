@@ -32,12 +32,17 @@
     "workspaceContains:**/vitest.config.*s",
     "workspaceContains:**/vite.config.*s"
   ],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "title": "Update Snapshot",
         "command": "vitest.updateSnapshot",
+        "category": "Vitest"
+      },
+      {
+        "title": "Start Watch Mode",
+        "command": "vitest.startWatching",
         "category": "Vitest"
       }
     ],
@@ -102,8 +107,8 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "tsup ./src/extension.ts --external vscode",
+    "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
     "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
@@ -125,15 +130,16 @@
     "glob": "^7.2.0",
     "mocha": "^9.2.1",
     "prettier": "^2.5.1",
+    "tsup": "^5.12.7",
     "typescript": "^4.5.5",
     "vite": "^2.8.6",
-    "vitest": "latest"
+    "vitest": "latest",
+    "@vitest/ws-client": "^0.12.6"
   },
   "dependencies": {
     "@babel/parser": "^7.17.3",
     "@babel/types": "^7.17.0",
     "@rauschma/stringio": "^1.4.0",
-    "@vitest/ws-client": "^0.12.6",
     "@vue/reactivity": "^3.2.33",
     "fs-extra": "^10.0.1",
     "mighty-promise": "^0.0.8",

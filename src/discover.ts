@@ -118,6 +118,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
   ) {
     const { data } = this.getOrCreateFile(controller, vscode.Uri.file(path));
     data.updateFromDisk(controller);
+    return data;
   }
 
   private getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
@@ -180,7 +181,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
 export function discoverTestFromFileContent(
   controller: vscode.TestController,
   content: string,
-  item: vscode.TestItem,
+  fileItem: vscode.TestItem,
   data: TestFile,
 ) {
   if (testItemIdMap.get(controller) == null) {
@@ -188,10 +189,10 @@ export function discoverTestFromFileContent(
   }
 
   const idMap = testItemIdMap.get(controller)!;
-  idMap.set(item.id, item);
+  idMap.set(fileItem.id, fileItem);
   const ancestors = [
     {
-      item,
+      item: fileItem,
       block: undefined as NamedBlock | undefined,
       children: [] as vscode.TestItem[],
       dataChildren: [] as (TestCase | TestDescribe)[],
@@ -220,7 +221,7 @@ export function discoverTestFromFileContent(
 
   let result: ReturnType<typeof parse>;
   try {
-    result = parse(item.id, content);
+    result = parse(fileItem.id, content);
   } catch (e) {
     console.log("parse error");
     return;
@@ -235,8 +236,8 @@ export function discoverTestFromFileContent(
     const fullName = ancestors.slice(1).map((x) => x.block?.name || "").concat([
       block.name!,
     ]).join(" ").trim();
-    const id = `${item.uri}/${fullName}@${index++}`;
-    const caseItem = controller.createTestItem(id, block.name!, item.uri);
+    const id = `${fileItem.uri}/${fullName}@${index++}`;
+    const caseItem = controller.createTestItem(id, block.name!, fileItem.uri);
     idMap.set(id, caseItem);
     caseItem.range = new vscode.Range(
       new vscode.Position(block.start!.line - 1, block.start!.column),
@@ -244,7 +245,12 @@ export function discoverTestFromFileContent(
     );
     parent.children.push(caseItem);
     if (block.type === "describe") {
-      const data = new TestDescribe(block.name!, item, parent.data as TestFile);
+      const data = new TestDescribe(
+        block.name!,
+        fileItem,
+        caseItem,
+        parent.data as TestFile,
+      );
       parent.dataChildren.push(data);
       WEAKMAP_TEST_DATA.set(caseItem, data);
       ancestors.push({
@@ -257,7 +263,8 @@ export function discoverTestFromFileContent(
     } else if (block.type === "it") {
       const testCase = new TestCase(
         block.name!,
-        item,
+        fileItem,
+        caseItem,
         parent.data as TestFile | TestDescribe,
         testCaseIndex++,
       );

@@ -3,14 +3,11 @@ import * as vscode from "vscode";
 import { extensionId, getConfig } from "./config";
 import { TestFileDiscoverer } from "./discover";
 import { isVitestEnv } from "./pure/isVitestEnv";
-import {
-  getVitestCommand,
-  getVitestPath,
-  getVitestVersion,
-} from "./pure/utils";
+import { getVitestCommand, getVitestVersion } from "./pure/utils";
 import { debugHandler, runHandler, updateSnapshot } from "./runHandler";
 import { TestFile, WEAKMAP_TEST_DATA } from "./TestData";
 import semver from "semver";
+import { TestWatcher } from "./watch";
 
 export async function activate(context: vscode.ExtensionContext) {
   if (
@@ -54,12 +51,30 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const vitestVersion = await getVitestVersion(getVitestCommand(
+  const vitest = getVitestCommand(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
-  ));
+  );
+  const vitestVersion = await getVitestVersion(vitest);
   console.dir({ vitestVersion });
+  let testWatcher: undefined | TestWatcher;
+  if (vitest) {
+    testWatcher = TestWatcher.create(ctrl, fileDiscoverer, vitest);
+    context.subscriptions.push(
+      testWatcher,
+      vscode.commands.registerCommand(
+        "vitest.startWatching",
+        () => {
+          testWatcher!.watch();
+        },
+      ),
+    );
+  }
+
+  //FIXME: REMOVE
+  testWatcher!.watch();
+
   if (semver.gte(vitestVersion, "0.8.0")) {
-    registerRunHandler(ctrl);
+    registerRunHandler(ctrl, testWatcher);
   } else {
     // v0.8.0 introduce a breaking change in json format
     // https://github.com/vitest-dev/vitest/pull/1034
@@ -72,7 +87,6 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.window.visibleTextEditors.forEach((x) =>
     fileDiscoverer.discoverTestFromDoc(ctrl, x.document)
   );
-
   context.subscriptions.push(
     ctrl,
     // TODO
@@ -98,11 +112,14 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
-function registerRunHandler(ctrl: vscode.TestController) {
+function registerRunHandler(
+  ctrl: vscode.TestController,
+  testWatcher?: TestWatcher,
+) {
   ctrl.createRunProfile(
     "Run Tests",
     vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl),
+    runHandler.bind(null, ctrl, testWatcher),
     true,
   );
 
