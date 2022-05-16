@@ -8,3 +8,12 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
+node_modeuls/**
+samples/**
+dist/extension.js.map
+test/**
+*.vsix
+CHANGELOG.md
+vite.config.ts
+tsconfig.json
+.github/**
