@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/vitest-dev/vscode/compare/v0.2.0...v0.2.1) (2022-05-16)
+
+
+### Features
+
+* add toggle watch mode to command palette ([7b17988](https://github.com/vitest-dev/vscode/commit/7b179886a873782bb437f5588b6343e5c06b5cab))
+
 ## [0.2.0](https://github.com/vitest-dev/vscode/compare/v0.1.27...v0.2.0) (2022-05-16)
 
 
