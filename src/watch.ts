@@ -62,6 +62,10 @@ export class TestWatcher extends Disposable {
   }
 
   public watch() {
+    if (this.isWatching.value) {
+      return;
+    }
+
     this.isRunning.value = true;
     this.isWatching.value = true;
     const logs = [] as string[];
@@ -142,13 +146,12 @@ export class TestWatcher extends Disposable {
       });
     }
 
-    this.vitestState.loadingPromise.then(() => {
-      this.updateStatus();
-      this.isRunning.value = false;
-    });
-
     effect(() => {
       this.onFileUpdated(this.vitestState!.files.value);
+    });
+    return this.vitestState.loadingPromise.then(() => {
+      this.updateStatus();
+      this.isRunning.value = false;
     });
   }
 
@@ -259,7 +262,6 @@ export class TestWatcher extends Disposable {
       return;
     }
 
-    let shouldReloadFileContent = true;
     if (!this.run) {
       this.run = this.ctrl.createTestRun(new TestRunRequest());
     }
@@ -268,7 +270,6 @@ export class TestWatcher extends Disposable {
       const data = this.discover.discoverTestFromPath(
         this.ctrl,
         file.filepath,
-        shouldReloadFileContent,
       );
 
       this.syncTestStatusToVsCode(data, file, finished);

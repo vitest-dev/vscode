@@ -128,6 +128,7 @@ function registerWatchHandler(
 
     statusBarItem.toDefaultMode();
   });
+
   context.subscriptions.push(
     testWatcher,
     statusBarItem,
@@ -144,6 +145,28 @@ function registerWatchHandler(
       },
     ),
   );
+
+  ctrl.createRunProfile(
+    "Run Tests (Watch Mode)",
+    vscode.TestRunProfileKind.Run,
+    runHandler,
+    false,
+  );
+
+  async function runHandler(
+    request: vscode.TestRunRequest,
+    cancellation: vscode.CancellationToken,
+  ) {
+    if (
+      vscode.workspace.workspaceFolders === undefined ||
+      vscode.workspace.workspaceFolders.length === 0
+    ) {
+      return;
+    }
+
+    await testWatcher.watch();
+    testWatcher.runTests(request.include);
+  }
 
   return testWatcher;
 }
