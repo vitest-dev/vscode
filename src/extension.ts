@@ -144,6 +144,16 @@ function registerWatchHandler(
         testWatcher!.dispose();
       },
     ),
+    vscode.commands.registerCommand(
+      Command.ToggleWatching,
+      () => {
+        if (testWatcher.isWatching.value) {
+          testWatcher.dispose();
+        } else {
+          testWatcher.watch();
+        }
+      },
+    ),
   );
 
   ctrl.createRunProfile(
