@@ -8,6 +8,8 @@ import { TestFile, WEAKMAP_TEST_DATA } from "./TestData";
 import semver from "semver";
 import { TestWatcher } from "./watch";
 import { Command } from "./command";
+import { StatusBarItem } from "./StatusBarItem";
+import { effect } from "@vue/reactivity";
 
 export async function activate(context: vscode.ExtensionContext) {
   if (
@@ -58,20 +60,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (semver.gte(vitestVersion, "0.8.0")) {
     // enable run/debug/watch tests only if vitest version >= 0.8.0
-    let testWatcher: undefined | TestWatcher;
-    if (vitestCmd) {
-      testWatcher = TestWatcher.create(ctrl, fileDiscoverer, vitestCmd);
-      context.subscriptions.push(
-        testWatcher,
-        vscode.commands.registerCommand(
-          Command.StartWatching,
-          () => {
-            testWatcher!.watch();
-          },
-        ),
-      );
-    }
-
+    let testWatcher: undefined | TestWatcher = registerWatchHandler(
+      vitestCmd,
+      ctrl,
+      fileDiscoverer,
+      context,
+    );
     registerRunHandler(ctrl, testWatcher);
   } else {
     // v0.8.0 introduce a breaking change in json format
@@ -106,6 +100,52 @@ export async function activate(context: vscode.ExtensionContext) {
       },
     ),
   );
+}
+
+let statusBarItem: StatusBarItem;
+function registerWatchHandler(
+  vitestCmd: { cmd: string; args: string[] } | undefined,
+  ctrl: vscode.TestController,
+  fileDiscoverer: TestFileDiscoverer,
+  context: vscode.ExtensionContext,
+) {
+  if (!vitestCmd) {
+    return;
+  }
+
+  const testWatcher = TestWatcher.create(ctrl, fileDiscoverer, vitestCmd);
+  statusBarItem = new StatusBarItem();
+  effect(() => {
+    if (testWatcher.isRunning.value) {
+      statusBarItem.toRunningMode();
+      return;
+    }
+
+    if (testWatcher.isWatching.value) {
+      statusBarItem.toWatchMode(testWatcher.testStatus.value);
+      return;
+    }
+
+    statusBarItem.toDefaultMode();
+  });
+  context.subscriptions.push(
+    testWatcher,
+    statusBarItem,
+    vscode.commands.registerCommand(
+      Command.StartWatching,
+      () => {
+        testWatcher!.watch();
+      },
+    ),
+    vscode.commands.registerCommand(
+      Command.StopWatching,
+      () => {
+        testWatcher!.dispose();
+      },
+    ),
+  );
+
+  return testWatcher;
 }
 
 function registerRunHandler(

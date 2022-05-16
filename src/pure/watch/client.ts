@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { computed, effect, reactive, ref, shallowRef } from "@vue/reactivity";
-import type { ResolvedConfig, WebSocketEvents } from "vitest";
+import type { ResolvedConfig, Task, TaskResult, WebSocketEvents } from "vitest";
 import { createClient } from "./ws-client";
 
 type WebSocketStatus = "OPEN" | "CONNECTING" | "CLOSED";
@@ -48,10 +48,32 @@ export function buildWatchClient(
     });
   });
 
+  // load result from first run manually
+  // otherwise those record will not be recorded to client.state
+  const loadingPromise = client.waitForConnection().then(async () => {
+    const files = await client.rpc.getFiles();
+    const idResultPairs: [string, TaskResult][] = [];
+    files && travel(files);
+    function travel(tasks: Task[]) {
+      for (const task of tasks) {
+        if (task.type === "test") {
+          if (task.result) {
+            idResultPairs.push([task.id, task.result]);
+          }
+        } else {
+          travel(task.tasks);
+        }
+      }
+    }
+
+    client.state.updateTasks(idResultPairs);
+  });
+
   return {
     client,
     config,
     status,
     files,
+    loadingPromise,
   };
 }

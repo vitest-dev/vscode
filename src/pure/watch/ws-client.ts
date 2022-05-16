@@ -1,8 +1,10 @@
 // this file is copied from vitest with a few modifications;
+// it should be patched back to the original files
 import { shallowReactive } from "@vue/reactivity";
 import type { BirpcReturn } from "birpc";
 import { createBirpc } from "birpc";
 import { parse, stringify } from "flatted";
+import { resolve } from "path";
 // eslint-disable-next-line no-restricted-imports
 import type { WebSocketEvents, WebSocketHandlers } from "vitest";
 import type {
@@ -119,7 +121,7 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     ws: shallowReactive(new WebSocketConstructor(url)),
     state: new StateManager(),
     waitForConnection,
-    reconnect,
+    reconnect: () => reconnect(true),
   }) as VitestClient;
 
   ctx.state.filesMap = reactive(ctx.state.filesMap);
@@ -151,22 +153,26 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     },
   );
 
-  let openPromise: Promise<void>;
+  let openResolve: () => void;
+  let openPromise: Promise<void> = new Promise((resolve) => {
+    openResolve = resolve;
+  });
 
   function reconnect(reset = false) {
     if (reset) {
       tries = reconnectTries;
+      openPromise = new Promise((resolve) => {
+        openResolve = resolve;
+      });
     }
     ctx.ws = shallowReactive(new WebSocketConstructor(url));
     registerWS();
   }
 
   function registerWS() {
-    openPromise = new Promise((resolve) => {
-      ctx.ws.addEventListener("open", () => {
-        tries = reconnectTries;
-        resolve();
-      });
+    ctx.ws.addEventListener("open", () => {
+      tries = reconnectTries;
+      openResolve();
     });
     ctx.ws.addEventListener("message", (v) => {
       onMessage(v.data);

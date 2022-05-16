@@ -9,7 +9,7 @@ import {
 } from "vscode";
 import Fuse from "fuse.js";
 import { buildWatchClient } from "./pure/watch/client";
-import type { File, Task } from "vitest";
+import type { File, Task, TaskResult } from "vitest";
 import { TestFileDiscoverer } from "./discover";
 import { effect, ref } from "@vue/reactivity";
 import { ChildProcess } from "child_process";
@@ -43,7 +43,9 @@ export class TestWatcher extends Disposable {
     return TestWatcher.cache;
   }
 
-  private isWatching = ref(false);
+  public isWatching = ref(false);
+  public isRunning = ref(false);
+  public testStatus = ref({ passed: 0, failed: 0, skipped: 0 });
   private process?: ChildProcess;
   private vitestState?: ReturnType<typeof buildWatchClient>;
   private run: TestRun | undefined;
@@ -54,12 +56,16 @@ export class TestWatcher extends Disposable {
   ) {
     super(() => {
       this.dispose();
+      this.vitestState?.client.ws.close();
+      this.vitestState = undefined;
     });
   }
 
   public watch() {
-    console.log("Start watch mode");
+    this.isRunning.value = true;
     this.isWatching.value = true;
+    const logs = [] as string[];
+    let timer: any;
     this.process = execWithLog(
       this.vitest.cmd,
       [...this.vitest.args, "--api"],
@@ -67,52 +73,112 @@ export class TestWatcher extends Disposable {
         cwd: workspace.workspaceFolders?.[0].uri.fsPath,
         env: { ...process.env, ...getConfig().env },
       },
-      console.log,
-      console.error,
+      (line) => {
+        logs.push(line);
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          console.log(logs.join("\n"));
+          logs.length = 0;
+        }, 200);
+      },
+      (line) => {
+        logs.push(line);
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          console.log(logs.join("\n"));
+          logs.length = 0;
+        }, 200);
+      },
     ).child;
 
-    this.vitestState = buildWatchClient({
-      handlers: {
-        onTaskUpdate: (packs) => {
-          try {
-            if (!this.vitestState) {
-              return;
-            }
+    this.process.on("exit", () => {
+      console.log("VITEST WATCH PROCESS EXIT");
+    });
 
-            const idMap = this.vitestState.client.state.idMap;
-            const fileSet = new Set<File>();
-            for (const [id, _] of packs) {
-              const task = idMap.get(id);
-              if (!task) {
-                continue;
+    if (this.vitestState) {
+      this.vitestState.client.reconnect();
+    } else {
+      this.vitestState = buildWatchClient({
+        handlers: {
+          onTaskUpdate: (packs) => {
+            try {
+              if (!this.vitestState) {
+                return;
               }
 
-              task.file && fileSet.add(task.file);
-            }
+              this.isRunning.value = true;
+              const idMap = this.vitestState.client.state.idMap;
+              const fileSet = new Set<File>();
+              for (const [id, _] of packs) {
+                const task = idMap.get(id);
+                if (!task) {
+                  continue;
+                }
 
-            this.onUpdated(Array.from(fileSet), false);
-          } catch (e) {
-            console.error(e);
-          }
-        },
-        onFinished: (files) => {
-          try {
-            this.onUpdated(files, true);
-            if (!this.run) {
-              return;
-            }
+                task.file && fileSet.add(task.file);
+              }
 
-            this.run.end();
-            this.run = undefined;
-          } catch (e) {
-            console.error(e);
-          }
+              this.onUpdated(Array.from(fileSet), false);
+            } catch (e) {
+              console.error(e);
+            }
+          },
+          onFinished: (files) => {
+            try {
+              this.isRunning.value = false;
+              this.onUpdated(files, true);
+              if (!this.run) {
+                return;
+              }
+
+              this.run.end();
+              this.run = undefined;
+              this.updateStatus();
+            } catch (e) {
+              console.error(e);
+            }
+          },
         },
-      },
+      });
+    }
+
+    this.vitestState.loadingPromise.then(() => {
+      this.updateStatus();
+      this.isRunning.value = false;
     });
+
     effect(() => {
       this.onFileUpdated(this.vitestState!.files.value);
     });
+  }
+
+  updateStatus() {
+    if (!this.vitestState) {
+      return;
+    }
+
+    let passed = 0;
+    let failed = 0;
+    let skipped = 0;
+    const idMap = this.vitestState.client.state.idMap;
+    for (const task of idMap.values()) {
+      if (task.type !== "test") {
+        continue;
+      }
+
+      if (!task.result) {
+        skipped++;
+        continue;
+      }
+      if (task.result.state === "pass") {
+        passed++;
+      }
+      if (task.result.state === "fail") {
+        failed++;
+      }
+    }
+
+    this.testStatus.value = { passed, failed, skipped };
   }
 
   public runTests(tests?: readonly TestItem[]) {
@@ -288,6 +354,7 @@ export class TestWatcher extends Disposable {
           task.name,
         )[0]?.item;
         // should not delete ans from candidates here, because there are usages like `test.each`
+        // TODO: should we create new TestCase here?
       }
 
       return ans;
@@ -299,7 +366,5 @@ export class TestWatcher extends Disposable {
     this.isWatching.value = false;
     this.process?.kill();
     this.process = undefined;
-    this.vitestState?.client.ws.close();
-    this.vitestState = undefined;
   }
 }
