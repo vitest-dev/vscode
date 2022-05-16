@@ -98,10 +98,7 @@ export async function activate(context: vscode.ExtensionContext) {
       fileDiscoverer.discoverTestFromDoc(ctrl, e);
     }),
     vscode.workspace.onDidChangeTextDocument(
-      debounce(
-        (e) => fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
-        1000,
-      ),
+      (e) => fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
     ),
     vscode.commands.registerCommand(
       "vitest.updateSnapshot",
