@@ -14,7 +14,6 @@ import { shouldIncludeFile } from "./vscodeUtils";
 
 import minimatch from "minimatch";
 import { getConfig } from "./config";
-import { debounce } from "mighty-promise";
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[];
@@ -66,7 +65,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
           );
 
           watcher.onDidChange(
-            debounce((uri) => {
+            (uri) => {
               if (!filter(uri)) {
                 return;
               }
@@ -77,7 +76,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
               }
 
               data.updateFromDisk(controller);
-            }, 500),
+            },
           );
 
           watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
@@ -115,9 +114,10 @@ export class TestFileDiscoverer extends vscode.Disposable {
   discoverTestFromPath(
     controller: vscode.TestController,
     path: string,
+    forceReload = false,
   ) {
     const { data } = this.getOrCreateFile(controller, vscode.Uri.file(path));
-    if (!data.resolved) {
+    if (!data.resolved || forceReload) {
       data.updateFromDisk(controller);
     }
     return data;

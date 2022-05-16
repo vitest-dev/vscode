@@ -214,6 +214,8 @@ export class TestWatcher extends Disposable {
     if (!files) {
       return;
     }
+
+    let shouldReloadFileContent = true;
     if (!this.run) {
       this.run = this.ctrl.createTestRun(new TestRunRequest());
     }
@@ -222,6 +224,7 @@ export class TestWatcher extends Disposable {
       const data = this.discover.discoverTestFromPath(
         this.ctrl,
         file.filepath,
+        shouldReloadFileContent,
       );
 
       this.attach(data, file, finished);
