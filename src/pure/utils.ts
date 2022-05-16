@@ -1,5 +1,10 @@
 import { chunksToLinesAsync } from "@rauschma/stringio";
-import { spawn } from "child_process";
+import {
+  spawn,
+  SpawnOptionsWithStdioTuple,
+  StdioNull,
+  StdioPipe,
+} from "child_process";
 import { existsSync } from "fs-extra";
 import { isWindows } from "./platform";
 import * as path from "path";
@@ -96,4 +101,44 @@ export function sanitizeFilePath(path: string) {
 
 export function filterColorFormatOutput(s: string): string {
   return s.replace(/\u001b\[\d+m/g, "");
+}
+
+export function execWithLog(
+  command: string,
+  args: string[],
+  option: Partial<SpawnOptionsWithStdioTuple<StdioNull, StdioPipe, StdioPipe>> =
+    {},
+  log?: (s: string) => void,
+  error?: (s: string) => void,
+) {
+  const child = spawn(command, args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: isWindows,
+    // https://nodejs.org/api/child_process.html#child_process_options_detached
+    detached: process.platform !== "win32",
+    ...option,
+  });
+
+  const promise = Promise.allSettled([
+    (async () => {
+      for await (
+        const line of chunksToLinesAsync(child.stdout)
+      ) {
+        if (log) {
+          log(line);
+        }
+      }
+    })(),
+    (async () => {
+      for await (
+        const line of chunksToLinesAsync(child.stderr)
+      ) {
+        if (error) {
+          error(line);
+        }
+      }
+    })(),
+  ]);
+
+  return { child, promise };
 }

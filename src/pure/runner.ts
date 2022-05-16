@@ -5,7 +5,11 @@ import { existsSync } from "fs";
 import * as path from "path";
 
 import { chunksToLinesAsync } from "@rauschma/stringio";
-import { filterColorFormatOutput, sanitizeFilePath } from "./utils";
+import {
+  execWithLog,
+  filterColorFormatOutput,
+  sanitizeFilePath,
+} from "./utils";
 import { isWindows } from "./platform";
 
 export function getDebuggerConfig() {}
@@ -105,24 +109,16 @@ export class TestRunner {
     const env = { ...process.env, ...workspaceEnv };
     try {
       // it will throw when test failed or the testing is failed to run
-      const child = spawn(command, args, {
-        cwd: workspacePath,
-        stdio: ["ignore", "pipe", "pipe"],
+      await execWithLog(command, args, {
         env,
-        shell: isWindows,
-        // https://nodejs.org/api/child_process.html#child_process_options_detached
-        detached: process.platform !== "win32",
-      });
-
-      for await (
-        const line of mergeAsyncIter(
-          chunksToLinesAsync(child.stdout),
-          chunksToLinesAsync(child.stderr),
-        )
-      ) {
+        cwd: workspacePath,
+      }, (line) => {
         log((line.trimEnd()) + "\r\n");
         outputs.push(filterColorFormatOutput(line));
-      }
+      }, (line) => {
+        log((line.trimEnd()) + "\r\n");
+        outputs.push(filterColorFormatOutput(line));
+      }).promise;
     } catch (e) {
       error = e;
     }
@@ -175,45 +171,3 @@ export async function getNodeVersion() {
     return line;
   }
 }
-
-const mergeAsyncIter = async function* <T>(
-  ...gens: AsyncIterable<T>[]
-): AsyncIterable<T> {
-  // Worker function to queue up the next result
-  const queueNext = async (
-    e: {
-      key: AsyncIterable<T>;
-      it: AsyncIterator<T>;
-      result?: IteratorResult<T, any> | null;
-    },
-  ) => {
-    e.result = null; // Release previous one as soon as possible
-    e.result = await e.it.next();
-    return e;
-  };
-  // Map the generators to source objects in a map, get and start their
-  // first iteration
-  const sources = new Map(gens.map((gen) => [
-    gen,
-    queueNext({
-      key: gen,
-      it: gen[Symbol.asyncIterator](),
-    }),
-  ]));
-  // While we still have any sources, race the current promise of
-  // the sources we have left
-  while (sources.size) {
-    const winner = await Promise.race(sources.values());
-    // Completed the sequence?
-    if (winner.result?.done) {
-      // Yes, drop it from sources
-      sources.delete(winner.key);
-    } else {
-      // No, grab the value to yield and queue up the next
-      // Then yield the value
-      const { value } = winner.result!;
-      sources.set(winner.key, queueNext(winner));
-      yield value;
-    }
-  }
-};

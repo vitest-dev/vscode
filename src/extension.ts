@@ -1,4 +1,3 @@
-import { debounce } from "mighty-promise";
 import * as vscode from "vscode";
 import { extensionId, getConfig } from "./config";
 import { TestFileDiscoverer } from "./discover";
@@ -69,9 +68,6 @@ export async function activate(context: vscode.ExtensionContext) {
       ),
     );
   }
-
-  //FIXME: REMOVE
-  testWatcher!.watch();
 
   if (semver.gte(vitestVersion, "0.8.0")) {
     registerRunHandler(ctrl, testWatcher);
