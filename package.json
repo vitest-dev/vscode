@@ -141,6 +141,7 @@
     "@rauschma/stringio": "^1.4.0",
     "@vue/reactivity": "^3.2.33",
     "fs-extra": "^10.0.1",
+    "fuse.js": "^6.6.2",
     "mighty-promise": "^0.0.8",
     "minimatch": "^3.1.1",
     "semver": "^7.3.5",
