@@ -17,8 +17,8 @@
 
 # Features
 
-- Run/debug tests directly from vscode
-- Watch mode. Test reruns are blazing fast
+- Run/debug vitest tests in vscode
+- Watch mode is supported 🎊. Test reruns are blazing fast
 
 ![Watch Mode](https://i.ibb.co/xMVqXPk/vitest-watch.gif)
 
@@ -56,8 +56,3 @@
 **Inspect console output**
 
 ![](https://i.ibb.co/gMZWXZQ/Screen-Recording-2022-03-29-at-20-59-31.gif)
-
-# TODOs
-
-- [ ] Dynamic test name and test.each are not supported yet
-- [ ] Support multi-root workspaces
