@@ -271,19 +271,23 @@ export class TestWatcher extends Disposable {
         shouldReloadFileContent,
       );
 
-      this.attach(data, file, finished);
+      this.syncTestStatusToVsCode(data, file, finished);
     }
   };
 
-  private attach(vscodeFile: TestFile, vitestFile: File, finished: boolean) {
+  private syncTestStatusToVsCode(
+    vscodeFile: TestFile,
+    vitestFile: File,
+    finished: boolean,
+  ) {
     const run = this.run;
     if (!run) {
       return;
     }
 
-    attach(run, vscodeFile.children, vitestFile.tasks);
+    sync(run, vscodeFile.children, vitestFile.tasks);
 
-    function attach(
+    function sync(
       run: TestRun,
       vscode: (TestDescribe | TestCase)[],
       vitest: Task[],
@@ -321,7 +325,7 @@ export class TestWatcher extends Disposable {
             }
           }
         } else {
-          attach(run, (data as TestDescribe).children, task.tasks);
+          sync(run, (data as TestDescribe).children, task.tasks);
         }
       }
     }
