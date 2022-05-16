@@ -7,6 +7,7 @@ import { debugHandler, runHandler, updateSnapshot } from "./runHandler";
 import { TestFile, WEAKMAP_TEST_DATA } from "./TestData";
 import semver from "semver";
 import { TestWatcher } from "./watch";
+import { Command } from "./commands";
 
 export async function activate(context: vscode.ExtensionContext) {
   if (
@@ -26,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const ctrl = vscode.tests.createTestController(
     `${extensionId}`,
-    "Vitest Test Provider",
+    "Vitest",
   );
 
   const fileDiscoverer = new TestFileDiscoverer();
@@ -61,7 +62,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       testWatcher,
       vscode.commands.registerCommand(
-        "vitest.startWatching",
+        Command.StartWatching,
         () => {
           testWatcher!.watch();
         },
@@ -97,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext) {
       (e) => fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
     ),
     vscode.commands.registerCommand(
-      "vitest.updateSnapshot",
+      Command.UpdateSnapshot,
       (test) => {
         updateSnapshot(ctrl, test);
       },
