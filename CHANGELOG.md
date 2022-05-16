@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.0](https://github.com/vitest-dev/vscode/compare/v0.1.27...v0.2.0) (2022-05-16)
+
+
+### Features
+
+* add fuzzy match for tests ([ce91117](https://github.com/vitest-dev/vscode/commit/ce911178d1d567de3a32f0818f59e00bab2be3dc))
+* add watch mode run profile ([4ce6163](https://github.com/vitest-dev/vscode/commit/4ce6163dbb06909eaf2ddb4868a40694e74b1624))
+* add watcher ([6a28047](https://github.com/vitest-dev/vscode/commit/6a2804737f30744ec122dd572ef2a2fdc0781843))
+* introducing status bar item ([2ad2440](https://github.com/vitest-dev/vscode/commit/2ad2440ce9f20678d94984ed182c7b28233c1b21))
+* watcher works. now ([87071ee](https://github.com/vitest-dev/vscode/commit/87071ee518b2c8416642f56cca96eacca4ebfe3a))
+
+
+### Bug Fixes
+
+* fix spawn cmd ([296f2da](https://github.com/vitest-dev/vscode/commit/296f2da1fa61985f05b0fef612e5c15622e1b65a))
+* fix spawn cmd ([25f1dc8](https://github.com/vitest-dev/vscode/commit/25f1dc81ccf7293b691bc3970193e0d37d73fcd5))
+* make test run more visible ([3e7d37d](https://github.com/vitest-dev/vscode/commit/3e7d37da29dca8e7c04a9d52766402d133fbf032))
+* remove debounce to avoid watch mode error ([b7fbd85](https://github.com/vitest-dev/vscode/commit/b7fbd85000f1982b43081bd90b433db530035829))
+
 ### [0.1.27](https://github.com/vitest-dev/vscode/compare/v0.1.26...v0.1.27) (2022-05-08)
 
 
