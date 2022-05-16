@@ -133,9 +133,7 @@
     "tsup": "^5.12.7",
     "typescript": "^4.5.5",
     "vite": "^2.8.6",
-    "vitest": "latest"
-  },
-  "dependencies": {
+    "vitest": "latest",
     "@babel/parser": "^7.17.3",
     "@babel/types": "^7.17.0",
     "@rauschma/stringio": "^1.4.0",
@@ -146,5 +144,6 @@
     "minimatch": "^3.1.1",
     "semver": "^7.3.5",
     "ws": "^8.6.0"
-  }
+  },
+  "dependencies": {}
 }
