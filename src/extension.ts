@@ -17,9 +17,8 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  const config = getConfig();
   if (
-    !config.enable &&
+    !getConfig().enable &&
     !(await isVitestEnv(vscode.workspace.workspaceFolders[0].uri.fsPath))
   ) {
     return;
@@ -86,6 +85,7 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.window.visibleTextEditors.forEach((x) =>
     fileDiscoverer.discoverTestFromDoc(ctrl, x.document)
   );
+
   context.subscriptions.push(
     ctrl,
     // TODO

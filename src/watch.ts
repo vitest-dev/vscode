@@ -7,6 +7,7 @@ import {
   TestRunRequest,
   workspace,
 } from "vscode";
+import Fuse from "fuse.js";
 import { buildWatchClient } from "./pure/watch/client";
 import type { File, Task } from "vitest";
 import { TestFileDiscoverer } from "./discover";
@@ -283,8 +284,10 @@ export class TestWatcher extends Disposable {
       if (ans) {
         candidates.delete(ans);
       } else {
-        // TODO: blur match;
-        throw new Error("not implemented");
+        ans = new Fuse(Array.from(candidates), { keys: ["pattern"] }).search(
+          task.name,
+        )[0]?.item;
+        // should not delete ans from candidates here, because there are usages like `test.each`
       }
 
       return ans;
