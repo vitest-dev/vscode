@@ -19,9 +19,8 @@ import {
   TestFile,
   WEAKMAP_TEST_DATA,
 } from "./TestData";
-import { chunksToLinesAsync } from "@rauschma/stringio";
-import { isWindows } from "./pure/platform";
-import { file } from "@babel/types";
+import { execWithLog } from "./pure/utils";
+import { getConfig } from "./config";
 
 export class TestWatcher extends Disposable {
   static cache: undefined | TestWatcher;
@@ -60,38 +59,16 @@ export class TestWatcher extends Disposable {
   public watch() {
     console.log("Start watch mode");
     this.isWatching.value = true;
-    this.process = spawn(this.vitest.cmd, [...this.vitest.args, "--api"], {
-      stdio: ["ignore", "pipe", "pipe"],
-      cwd: workspace.workspaceFolders?.[0].uri.fsPath,
-      // env,
-      shell: isWindows,
-      // https://nodejs.org/api/child_process.html#child_process_options_detached
-      detached: !isWindows,
-    });
-
-    this.process.on("error", (err) => {
-      console.error("WATCH PROCESS", err.toString());
-      console.log(err.stack);
-    });
-
-    this.process.on("close", () => {
-      console.log("WATCH PROCESS CLOSE");
-    });
-
-    this.process.on("exit", () => {
-      console.log("WATCH PROCESS EXIT");
-    });
-
-    (async () => {
-      for await (const line of chunksToLinesAsync(process.stdout)) {
-        console.log("WATCH PROCESS", line);
-      }
-    })();
-    (async () => {
-      for await (const line of chunksToLinesAsync(process.stderr)) {
-        console.error("WATCH PROCESS", line);
-      }
-    })();
+    this.process = execWithLog(
+      this.vitest.cmd,
+      [...this.vitest.args, "--api"],
+      {
+        cwd: workspace.workspaceFolders?.[0].uri.fsPath,
+        env: { ...process.env, ...getConfig().env },
+      },
+      console.log,
+      console.error,
+    ).child;
 
     this.vitestState = buildWatchClient({
       handlers: {
