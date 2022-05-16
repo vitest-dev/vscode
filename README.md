@@ -12,11 +12,20 @@
 
 ![](https://i.ibb.co/bJCbCf2/202203292020.gif)
 
+> This extension is powered by
+> [vscode testing api](https://code.visualstudio.com/api/extension-guides/testing).
+
+# Features
+
+- Run/debug tests directly from vscode
+- Watch mode. Test reruns are blazing fast
+
+![Watch Mode](https://i.ibb.co/xMVqXPk/vitest-watch.gif)
+
+# Requirements
+
 - Require VSCode's version >= July 2021 (version 1.59).
 - Require Vitest's version >= v0.8.0
-
-This plugin is based on
-[vscode testing api](https://code.visualstudio.com/api/extension-guides/testing).
 
 # Config
 
