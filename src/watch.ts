@@ -11,7 +11,7 @@ import { buildWatchClient } from "./pure/watch/client";
 import type { File, Task } from "vitest";
 import { TestFileDiscoverer } from "./discover";
 import { effect, ref } from "@vue/reactivity";
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess } from "child_process";
 import { getTasks } from "@vitest/ws-client";
 import {
   TestCase,
@@ -173,7 +173,7 @@ export class TestWatcher extends Disposable {
 
   private readonly onFileUpdated = (files?: File[]) => {
     if (files == undefined) {
-      this.discover.discoverAllFilesInWorkspace(this.ctrl);
+      this.discover.watchAllTestFilesInWorkspace(this.ctrl);
     } else {
       for (const file of files) {
         this.discover.discoverTestFromPath(

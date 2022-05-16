@@ -7,7 +7,7 @@ import { debugHandler, runHandler, updateSnapshot } from "./runHandler";
 import { TestFile, WEAKMAP_TEST_DATA } from "./TestData";
 import semver from "semver";
 import { TestWatcher } from "./watch";
-import { Command } from "./commands";
+import { Command } from "./command";
 
 export async function activate(context: vscode.ExtensionContext) {
   if (
@@ -31,17 +31,17 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   const fileDiscoverer = new TestFileDiscoverer();
+  // run on refreshing test list
   ctrl.refreshHandler = async () => {
-    // TODO: should delete redundant tests here
-    context.subscriptions.push(
-      ...(await fileDiscoverer.discoverAllFilesInWorkspace(ctrl)),
-    );
+    await fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl);
   };
 
   ctrl.resolveHandler = async (item) => {
     if (!item) {
+      // item == null, when user opened the testing panel
+      // in this case, we should discover and watch all the testing files
       context.subscriptions.push(
-        ...(await fileDiscoverer.discoverAllFilesInWorkspace(ctrl)),
+        ...(await fileDiscoverer.watchAllTestFilesInWorkspace(ctrl)),
       );
     } else {
       const data = WEAKMAP_TEST_DATA.get(item);
@@ -51,26 +51,28 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const vitest = getVitestCommand(
+  const vitestCmd = getVitestCommand(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
   );
-  const vitestVersion = await getVitestVersion(vitest);
+  const vitestVersion = await getVitestVersion(vitestCmd);
   console.dir({ vitestVersion });
-  let testWatcher: undefined | TestWatcher;
-  if (vitest) {
-    testWatcher = TestWatcher.create(ctrl, fileDiscoverer, vitest);
-    context.subscriptions.push(
-      testWatcher,
-      vscode.commands.registerCommand(
-        Command.StartWatching,
-        () => {
-          testWatcher!.watch();
-        },
-      ),
-    );
-  }
 
   if (semver.gte(vitestVersion, "0.8.0")) {
+    // enable run/debug/watch tests only if vitest version >= 0.8.0
+    let testWatcher: undefined | TestWatcher;
+    if (vitestCmd) {
+      testWatcher = TestWatcher.create(ctrl, fileDiscoverer, vitestCmd);
+      context.subscriptions.push(
+        testWatcher,
+        vscode.commands.registerCommand(
+          Command.StartWatching,
+          () => {
+            testWatcher!.watch();
+          },
+        ),
+      );
+    }
+
     registerRunHandler(ctrl, testWatcher);
   } else {
     // v0.8.0 introduce a breaking change in json format

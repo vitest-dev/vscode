@@ -37,7 +37,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       vscode.workspace.workspaceFolders?.map((x) => x.uri.fsPath) || [];
   }
 
-  async discoverAllFilesInWorkspace(
+  async watchAllTestFilesInWorkspace(
     controller: vscode.TestController,
   ): Promise<vscode.FileSystemWatcher[]> {
     for (const watch of this.lastWatches) {
@@ -45,7 +45,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
     }
 
     if (!vscode.workspace.workspaceFolders) {
-      return []; // handle the case of no open folders
+      return []; // handle the case of no opened folders
     }
 
     const watchers = [] as vscode.FileSystemWatcher[];
@@ -70,7 +70,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
                 return;
               }
 
-              const { data, file } = this.getOrCreateFile(controller, uri);
+              const { data } = this.getOrCreateFile(controller, uri);
               if (!data.resolved) {
                 return;
               }
@@ -82,7 +82,10 @@ export class TestFileDiscoverer extends vscode.Disposable {
           watcher.onDidDelete((uri) => controller.items.delete(uri.toString()));
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
-            filter(file) && this.getOrCreateFile(controller, file);
+            filter(file) &&
+              this.getOrCreateFile(controller, file).data.updateFromDisk(
+                controller,
+              );
           }
 
           watchers.push(watcher);
@@ -93,6 +96,35 @@ export class TestFileDiscoverer extends vscode.Disposable {
     );
     this.lastWatches = watchers.concat();
     return watchers;
+  }
+
+  async discoverAllTestFilesInWorkspace(
+    controller: vscode.TestController,
+  ): Promise<void> {
+    if (!vscode.workspace.workspaceFolders) {
+      return;
+    }
+
+    await Promise.all(
+      vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
+        const exclude = getConfig().exclude;
+        for (const include of getConfig().include) {
+          const pattern = new vscode.RelativePattern(
+            workspaceFolder.uri,
+            include,
+          );
+          const filter = (v: vscode.Uri) =>
+            exclude.every((x) => !minimatch(v.fsPath, x, { dot: true }));
+
+          for (const file of await vscode.workspace.findFiles(pattern)) {
+            filter(file) &&
+              this.getOrCreateFile(controller, file).data.updateFromDisk(
+                controller,
+              );
+          }
+        }
+      }),
+    );
   }
 
   public discoverTestFromDoc(
