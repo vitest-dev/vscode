@@ -1,3 +1,4 @@
+import { a } from "../src/a";
 import { describe, expect, it } from "vitest";
 
 describe("addition", () => {
@@ -6,6 +7,7 @@ describe("addition", () => {
       console.log("=================");
       console.log("Console Output");
       expect(1 + 1).toBe(2);
+      expect(a).toBe(5);
     });
 
     it("should failed", async () => {
