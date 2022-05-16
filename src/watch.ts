@@ -93,25 +93,48 @@ export class TestWatcher extends Disposable {
       }
     })();
 
-    setTimeout(() => {
-      this.vitestState = buildWatchClient({
-        handlers: {
-          onFinished: (files) => {
-            console.log("finished");
-            this.onFinished(files);
+    this.vitestState = buildWatchClient({
+      handlers: {
+        onTaskUpdate: (packs) => {
+          try {
+            if (!this.vitestState) {
+              return;
+            }
+
+            const idMap = this.vitestState.client.state.idMap;
+            const fileSet = new Set<File>();
+            for (const [id, _] of packs) {
+              const task = idMap.get(id);
+              if (!task) {
+                continue;
+              }
+
+              task.file && fileSet.add(task.file);
+            }
+
+            this.onUpdated(Array.from(fileSet), false);
+          } catch (e) {
+            console.error(e);
+          }
+        },
+        onFinished: (files) => {
+          try {
+            this.onUpdated(files, true);
             if (!this.run) {
               return;
             }
 
             this.run.end();
             this.run = undefined;
-          },
+          } catch (e) {
+            console.error(e);
+          }
         },
-      });
-      effect(() => {
-        this.onFileUpdated(this.vitestState!.files.value);
-      });
-    }, 5000);
+      },
+    });
+    effect(() => {
+      this.onFileUpdated(this.vitestState!.files.value);
+    });
   }
 
   public runTests(tests?: readonly TestItem[]) {
@@ -141,13 +164,24 @@ export class TestWatcher extends Disposable {
 
     if (!this.run) {
       this.run = this.ctrl.createTestRun(new TestRunRequest());
-      for (const file of files) {
-        const data = this.discover.discoverTestFromPath(
-          this.ctrl,
-          file.filepath,
-        );
+    }
 
-        this.run.enqueued(data.item);
+    for (const file of files) {
+      const data = this.discover.discoverTestFromPath(
+        this.ctrl,
+        file.filepath,
+      );
+
+      const run = this.run;
+      started(data.item);
+
+      function started(item: TestItem) {
+        run.started(item);
+        if (item.children) {
+          item.children.forEach((child) => {
+            started(child);
+          });
+        }
       }
     }
 
@@ -173,7 +207,10 @@ export class TestWatcher extends Disposable {
     }
   };
 
-  private readonly onFinished = (files?: File[]) => {
+  private readonly onUpdated = (
+    files: File[] | undefined,
+    finished: boolean,
+  ) => {
     if (!files) {
       return;
     }
@@ -187,11 +224,11 @@ export class TestWatcher extends Disposable {
         file.filepath,
       );
 
-      this.attach(data, file);
+      this.attach(data, file, finished);
     }
   };
 
-  private attach(vscodeFile: TestFile, vitestFile: File) {
+  private attach(vscodeFile: TestFile, vitestFile: File, finished: boolean) {
     const run = this.run;
     if (!run) {
       return;
@@ -207,20 +244,34 @@ export class TestWatcher extends Disposable {
       const set = new Set(vscode);
       for (const task of vitest) {
         const data = matchTask(task, set, task.type);
-        console.log("OUT", data.getFullPattern(), task.result);
         if (task.type === "test") {
           if (task.result == null) {
-            run.enqueued(data.item);
-          } else if (task.result.state === "pass") {
-            run.passed(data.item, task.result.duration);
-          } else if (task.result.state === "fail") {
-            run.failed(
-              data.item,
-              new TestMessage(task.result.error?.message ?? ""),
-            );
+            if (finished) {
+              run.skipped(data.item);
+            }
           } else {
-            console.log("unhandled skipped", data.getFullPattern());
-            // TODO: handle skipped and error
+            switch (task.result?.state) {
+              case "pass":
+                run.passed(data.item, task.result.duration);
+                break;
+              case "fail":
+                run.failed(
+                  data.item,
+                  new TestMessage(task.result.error?.message ?? ""),
+                );
+                break;
+              case "skip":
+              case "todo":
+                run.skipped(data.item);
+                break;
+              case "run":
+                run.started(data.item);
+                break;
+              case "only":
+                break;
+              default:
+                console.error("unexpected result state", task.result);
+            }
           }
         } else {
           attach(run, (data as TestDescribe).children, task.tasks);
@@ -249,7 +300,9 @@ export class TestWatcher extends Disposable {
         }
       }
 
-      if (ans == null) {
+      if (ans) {
+        candidates.delete(ans);
+      } else {
         // TODO: blur match;
         throw new Error("not implemented");
       }
