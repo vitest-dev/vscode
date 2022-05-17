@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.3](https://github.com/vitest-dev/vscode/compare/v0.2.2...v0.2.3) (2022-05-17)
+
+
+### Bug Fixes
+
+* filter color char from testing output ([730ae97](https://github.com/vitest-dev/vscode/commit/730ae971a3b8c3e09bc01edfd7822ee5b968a718)), closes [#34](https://github.com/vitest-dev/vscode/issues/34)
+* turn off auto error peek in watch mode ([0447fee](https://github.com/vitest-dev/vscode/commit/0447fee541e9eea4c84b44185df5aaf312556e12))
+
 ### [0.2.2](https://github.com/vitest-dev/vscode/compare/v0.2.1...v0.2.2) (2022-05-16)
 
 ### [0.2.1](https://github.com/vitest-dev/vscode/compare/v0.2.0...v0.2.1) (2022-05-16)
