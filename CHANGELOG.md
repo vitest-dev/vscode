@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.4](https://github.com/vitest-dev/vscode/compare/v0.2.3...v0.2.4) (2022-05-17)
+
+
+### Bug Fixes
+
+* add duration to failed tests ([923ea3f](https://github.com/vitest-dev/vscode/commit/923ea3f7df8cd074b774d4466075ac4ad770a09b))
+* dispose state after turning off watch mode ([a89e61b](https://github.com/vitest-dev/vscode/commit/a89e61b149a96907a0f2f96c295c0a5624e2216f))
+* use current available port for watch mode ([761b9d4](https://github.com/vitest-dev/vscode/commit/761b9d42972e9d503ba995029e28dad2296d77dd))
+
 ### [0.2.3](https://github.com/vitest-dev/vscode/compare/v0.2.2...v0.2.3) (2022-05-17)
 
 
