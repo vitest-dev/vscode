@@ -26,10 +26,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  const ctrl = vscode.tests.createTestController(
-    `${extensionId}`,
-    "Vitest",
-  );
+  const ctrl = vscode.tests.createTestController(`${extensionId}`, "Vitest");
 
   const fileDiscoverer = new TestFileDiscoverer();
   // run on refreshing test list
@@ -42,7 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // item == null, when user opened the testing panel
       // in this case, we should discover and watch all the testing files
       context.subscriptions.push(
-        ...(await fileDiscoverer.watchAllTestFilesInWorkspace(ctrl)),
+        ...(await fileDiscoverer.watchAllTestFilesInWorkspace(ctrl))
       );
     } else {
       const data = WEAKMAP_TEST_DATA.get(item);
@@ -53,7 +50,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const vitestCmd = getVitestCommand(
-    vscode.workspace.workspaceFolders[0].uri.fsPath,
+    vscode.workspace.workspaceFolders[0].uri.fsPath
   );
   const vitestVersion = await getVitestVersion(vitestCmd);
   console.dir({ vitestVersion });
@@ -64,7 +61,7 @@ export async function activate(context: vscode.ExtensionContext) {
       vitestCmd,
       ctrl,
       fileDiscoverer,
-      context,
+      context
     );
     registerRunHandler(ctrl, testWatcher);
   } else {
@@ -72,7 +69,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // https://github.com/vitest-dev/vitest/pull/1034
     // so we need to disable run & debug in version < 0.8.0
     vscode.window.showWarningMessage(
-      "Because Vitest version < 0.8.0, run & debug tests from Vitest plugin disabled.\n",
+      "Because Vitest version < 0.8.0, run & debug tests from Vitest plugin disabled.\n"
     );
   }
 
@@ -90,15 +87,12 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e);
     }),
-    vscode.workspace.onDidChangeTextDocument(
-      (e) => fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
+    vscode.workspace.onDidChangeTextDocument((e) =>
+      fileDiscoverer.discoverTestFromDoc(ctrl, e.document)
     ),
-    vscode.commands.registerCommand(
-      Command.UpdateSnapshot,
-      (test) => {
-        updateSnapshot(ctrl, test);
-      },
-    ),
+    vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
+      updateSnapshot(ctrl, test);
+    })
   );
 }
 
@@ -107,7 +101,7 @@ function registerWatchHandler(
   vitestCmd: { cmd: string; args: string[] } | undefined,
   ctrl: vscode.TestController,
   fileDiscoverer: TestFileDiscoverer,
-  context: vscode.ExtensionContext,
+  context: vscode.ExtensionContext
 ) {
   if (!vitestCmd) {
     return;
@@ -129,43 +123,46 @@ function registerWatchHandler(
     statusBarItem.toDefaultMode();
   });
 
+  const stopWatching = () => {
+    testWatcher!.dispose();
+    vscode.workspace
+      .getConfiguration("testing")
+      .update("automaticallyOpenPeekView", undefined);
+  };
+  const startWatching = () => {
+    testWatcher!.watch();
+    vscode.workspace
+      .getConfiguration("testing")
+      .update("automaticallyOpenPeekView", "never");
+  };
+
   context.subscriptions.push(
+    {
+      dispose: stopWatching,
+    },
     testWatcher,
     statusBarItem,
-    vscode.commands.registerCommand(
-      Command.StartWatching,
-      () => {
-        testWatcher!.watch();
-      },
-    ),
-    vscode.commands.registerCommand(
-      Command.StopWatching,
-      () => {
-        testWatcher!.dispose();
-      },
-    ),
-    vscode.commands.registerCommand(
-      Command.ToggleWatching,
-      () => {
-        if (testWatcher.isWatching.value) {
-          testWatcher.dispose();
-        } else {
-          testWatcher.watch();
-        }
-      },
-    ),
+    vscode.commands.registerCommand(Command.StartWatching, startWatching),
+    vscode.commands.registerCommand(Command.StopWatching, stopWatching),
+    vscode.commands.registerCommand(Command.ToggleWatching, () => {
+      if (testWatcher.isWatching.value) {
+        stopWatching();
+      } else {
+        startWatching;
+      }
+    })
   );
 
   ctrl.createRunProfile(
     "Run Tests (Watch Mode)",
     vscode.TestRunProfileKind.Run,
     runHandler,
-    false,
+    false
   );
 
   async function runHandler(
     request: vscode.TestRunRequest,
-    cancellation: vscode.CancellationToken,
+    cancellation: vscode.CancellationToken
   ) {
     if (
       vscode.workspace.workspaceFolders === undefined ||
@@ -183,20 +180,20 @@ function registerWatchHandler(
 
 function registerRunHandler(
   ctrl: vscode.TestController,
-  testWatcher?: TestWatcher,
+  testWatcher?: TestWatcher
 ) {
   ctrl.createRunProfile(
     "Run Tests",
     vscode.TestRunProfileKind.Run,
     runHandler.bind(null, ctrl, testWatcher),
-    true,
+    true
   );
 
   ctrl.createRunProfile(
     "Debug Tests",
     vscode.TestRunProfileKind.Debug,
     debugHandler.bind(null, ctrl),
-    true,
+    true
   );
 }
 
