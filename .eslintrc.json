@@ -1,18 +1,38 @@
 {
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "ecmaVersion": 6,
-    "sourceType": "module"
-  },
-  "plugins": ["@typescript-eslint"],
+  "extends": "@antfu",
   "rules": {
-    "@typescript-eslint/naming-convention": "off",
-    "@typescript-eslint/semi": "warn",
-    "curly": "warn",
-    "eqeqeq": "off",
-    "no-throw-literal": "warn",
-    "semi": "off"
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": ["path"]
+      }
+    ],
+    "import/no-named-as-default": "off"
   },
-  "ignorePatterns": ["out", "dist", "**/*.d.ts", "samples"]
+  "overrides": [
+    {
+      "files": "packages/**/*.*",
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": ["vitest", "path"]
+          }
+        ]
+      }
+    },
+    {
+      "files": "packages/vitest/**/*.*",
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          "setTimeout",
+          "clearTimeout",
+          "setInterval",
+          "clearInterval",
+          "performance"
+        ]
+      }
+    }
+  ]
 }
