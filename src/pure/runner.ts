@@ -108,17 +108,17 @@ export class TestRunner {
     let outputs: string[] = [];
     const env = { ...process.env, ...workspaceEnv };
     try {
+      function _log(line: string) {
+        log(filterColorFormatOutput(line.trimEnd()) + "\r\n");
+        outputs.push(filterColorFormatOutput(line));
+      }
+
       // it will throw when test failed or the testing is failed to run
       await execWithLog(command, args, {
         env,
         cwd: workspacePath,
-      }, (line) => {
-        log((line.trimEnd()) + "\r\n");
-        outputs.push(filterColorFormatOutput(line));
-      }, (line) => {
-        log((line.trimEnd()) + "\r\n");
-        outputs.push(filterColorFormatOutput(line));
-      }).promise;
+      }, _log, _log).promise;
+
     } catch (e) {
       error = e;
     }
