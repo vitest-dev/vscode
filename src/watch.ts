@@ -57,8 +57,6 @@ export class TestWatcher extends Disposable {
   ) {
     super(() => {
       this.dispose()
-      this.vitestState?.client.ws.close()
-      this.vitestState = undefined
     })
   }
 
@@ -99,52 +97,47 @@ export class TestWatcher extends Disposable {
       console.log('VITEST WATCH PROCESS EXIT')
     })
 
-    if (this.vitestState) {
-      this.vitestState.client.reconnect()
-    }
-    else {
-      this.vitestState = buildWatchClient({
-        handlers: {
-          onTaskUpdate: (packs) => {
-            try {
-              if (!this.vitestState)
-                return
+    this.vitestState = buildWatchClient({
+      handlers: {
+        onTaskUpdate: (packs) => {
+          try {
+            if (!this.vitestState)
+              return
 
-              this.isRunning.value = true
-              const idMap = this.vitestState.client.state.idMap
-              const fileSet = new Set<File>()
-              for (const [id] of packs) {
-                const task = idMap.get(id)
-                if (!task)
-                  continue
+            this.isRunning.value = true
+            const idMap = this.vitestState.client.state.idMap
+            const fileSet = new Set<File>()
+            for (const [id] of packs) {
+              const task = idMap.get(id)
+              if (!task)
+                continue
 
-                task.file && fileSet.add(task.file)
-              }
+              task.file && fileSet.add(task.file)
+            }
 
-              this.onUpdated(Array.from(fileSet), false)
-            }
-            catch (e) {
-              console.error(e)
-            }
-          },
-          onFinished: (files) => {
-            try {
-              this.isRunning.value = false
-              this.onUpdated(files, true)
-              if (!this.run)
-                return
-
-              this.run.end()
-              this.run = undefined
-              this.updateStatus()
-            }
-            catch (e) {
-              console.error(e)
-            }
-          },
+            this.onUpdated(Array.from(fileSet), false)
+          }
+          catch (e) {
+            console.error(e)
+          }
         },
-      })
-    }
+        onFinished: (files) => {
+          try {
+            this.isRunning.value = false
+            this.onUpdated(files, true)
+            if (!this.run)
+              return
+
+            this.run.end()
+            this.run = undefined
+            this.updateStatus()
+          }
+          catch (e) {
+            console.error(e)
+          }
+        },
+      },
+    })
 
     effect(() => {
       this.onFileUpdated(this.vitestState!.files.value)
@@ -361,7 +354,9 @@ export class TestWatcher extends Disposable {
   public dispose() {
     console.log('Stop watch mode')
     this.isWatching.value = false
+    this.vitestState?.client.dispose()
     this.process?.kill()
     this.process = undefined
+    this.vitestState = undefined
   }
 }

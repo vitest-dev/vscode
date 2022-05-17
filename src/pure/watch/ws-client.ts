@@ -100,6 +100,7 @@ export interface VitestClient {
   rpc: BirpcReturn<WebSocketHandlers>
   waitForConnection(): Promise<void>
   reconnect(): Promise<void>
+  dispose(): void
 }
 
 export function createClient(url: string, options: VitestClientOptions = {}) {
@@ -118,6 +119,10 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     state: new StateManager(),
     waitForConnection,
     reconnect: () => reconnect(true),
+    dispose: () => {
+      tries = 0
+      ctx.ws.close()
+    },
   }) as VitestClient
 
   ctx.state.filesMap = reactive(ctx.state.filesMap)
