@@ -84,7 +84,7 @@ export async function getVitestVersion(
     return line.match(/vitest\/(\d+.\d+.\d+)/)![1];
   }
 
-  throw new Error(`Cannot get vitest version from "${vitestCommand}"`);
+  throw new Error(`Cannot get vitest version from "${JSON.stringify(vitestCommand)}"`);
 }
 
 const capitalizeFirstLetter = (string: string) =>
@@ -106,7 +106,7 @@ export function filterColorFormatOutput(s: string): string {
 export function execWithLog(
   command: string,
   args: string[],
-  option: Partial<SpawnOptionsWithStdioTuple<StdioNull, StdioPipe, StdioPipe>> =
+  options: Partial<SpawnOptionsWithStdioTuple<StdioNull, StdioPipe, StdioPipe>> =
     {},
   log?: (s: string) => void,
   error?: (s: string) => void,
@@ -116,7 +116,7 @@ export function execWithLog(
     shell: isWindows,
     // https://nodejs.org/api/child_process.html#child_process_options_detached
     detached: process.platform !== "win32",
-    ...option,
+    ...options,
   });
 
   const promise = Promise.allSettled([
