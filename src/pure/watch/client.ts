@@ -8,9 +8,10 @@ type WebSocketStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
 export type RunState = 'idle' | 'running'
 
 export function buildWatchClient(
-  { url = 'ws://localhost:51204/__vitest_api__', handlers }: {
+  { port, url = `ws://localhost:${port}/__vitest_api__`, handlers }: {
     url?: string
     handlers?: Partial<WebSocketEvents>
+    port: number
   },
 ) {
   const client = createClient(url, {

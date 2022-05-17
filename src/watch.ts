@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'child_process'
+import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
@@ -14,6 +15,7 @@ import {
   TestRunRequest,
   workspace,
 } from 'vscode'
+import { Lock } from 'mighty-promise'
 import { getConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
 import { execWithLog } from './pure/utils'
@@ -47,6 +49,7 @@ export class TestWatcher extends Disposable {
   public isWatching = ref(false)
   public isRunning = ref(false)
   public testStatus = ref({ passed: 0, failed: 0, skipped: 0 })
+  private lock = new Lock()
   private process?: ChildProcess
   private vitestState?: ReturnType<typeof buildWatchClient>
   private run: TestRun | undefined
@@ -60,92 +63,100 @@ export class TestWatcher extends Disposable {
     })
   }
 
-  public watch() {
-    if (this.isWatching.value)
-      return
+  public async watch() {
+    const release = await this.lock.acquire()
+    try {
+      if (this.isWatching.value)
+        return
 
-    this.isRunning.value = true
-    this.isWatching.value = true
-    const logs = [] as string[]
-    let timer: any
-    this.process = execWithLog(
-      this.vitest.cmd,
-      [...this.vitest.args, '--api'],
-      {
-        cwd: workspace.workspaceFolders?.[0].uri.fsPath,
-        env: { ...process.env, ...getConfig().env },
-      },
-      (line) => {
-        logs.push(line)
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-          console.log(logs.join('\n'))
-          logs.length = 0
-        }, 200)
-      },
-      (line) => {
-        logs.push(line)
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-          console.log(logs.join('\n'))
-          logs.length = 0
-        }, 200)
-      },
-    ).child
+      this.isRunning.value = true
+      this.isWatching.value = true
+      const logs = [] as string[]
+      const port = await getPort({ port: 51204 })
+      let timer: any
+      this.process = execWithLog(
+        this.vitest.cmd,
+        [...this.vitest.args, '--api', port.toString()],
+        {
+          cwd: workspace.workspaceFolders?.[0].uri.fsPath,
+          env: { ...process.env, ...getConfig().env },
+        },
+        (line) => {
+          logs.push(line)
+          clearTimeout(timer)
+          timer = setTimeout(() => {
+            console.log(logs.join('\n'))
+            logs.length = 0
+          }, 200)
+        },
+        (line) => {
+          logs.push(line)
+          clearTimeout(timer)
+          timer = setTimeout(() => {
+            console.log(logs.join('\n'))
+            logs.length = 0
+          }, 200)
+        },
+      ).child
 
-    this.process.on('exit', () => {
-      console.log('VITEST WATCH PROCESS EXIT')
-    })
+      this.process.on('exit', () => {
+        console.log('VITEST WATCH PROCESS EXIT')
+      })
 
-    this.vitestState = buildWatchClient({
-      handlers: {
-        onTaskUpdate: (packs) => {
-          try {
-            if (!this.vitestState)
-              return
+      this.vitestState = buildWatchClient({
+        port,
+        handlers: {
+          onTaskUpdate: (packs) => {
+            try {
+              if (!this.vitestState)
+                return
 
-            this.isRunning.value = true
-            const idMap = this.vitestState.client.state.idMap
-            const fileSet = new Set<File>()
-            for (const [id] of packs) {
-              const task = idMap.get(id)
-              if (!task)
-                continue
+              this.isRunning.value = true
+              const idMap = this.vitestState.client.state.idMap
+              const fileSet = new Set<File>()
+              for (const [id] of packs) {
+                const task = idMap.get(id)
+                if (!task)
+                  continue
 
-              task.file && fileSet.add(task.file)
+                task.file && fileSet.add(task.file)
+              }
+
+              this.onUpdated(Array.from(fileSet), false)
             }
+            catch (e) {
+              console.error(e)
+            }
+          },
+          onFinished: (files) => {
+            try {
+              this.isRunning.value = false
+              this.onUpdated(files, true)
+              if (!this.run)
+                return
 
-            this.onUpdated(Array.from(fileSet), false)
-          }
-          catch (e) {
-            console.error(e)
-          }
+              this.run.end()
+              this.run = undefined
+              this.updateStatus()
+            }
+            catch (e) {
+              console.error(e)
+            }
+          },
         },
-        onFinished: (files) => {
-          try {
-            this.isRunning.value = false
-            this.onUpdated(files, true)
-            if (!this.run)
-              return
+      })
 
-            this.run.end()
-            this.run = undefined
-            this.updateStatus()
-          }
-          catch (e) {
-            console.error(e)
-          }
-        },
-      },
-    })
-
-    effect(() => {
-      this.onFileUpdated(this.vitestState!.files.value)
-    })
-    return this.vitestState.loadingPromise.then(() => {
-      this.updateStatus()
-      this.isRunning.value = false
-    })
+      effect(() => {
+        this.onFileUpdated(this.vitestState!.files.value)
+      })
+      return this.vitestState.loadingPromise.then(() => {
+        this.updateStatus()
+        this.isRunning.value = false
+      })
+    }
+    finally {
+      release()
+    }
   }
 
   updateStatus() {
@@ -351,12 +362,19 @@ export class TestWatcher extends Disposable {
     }
   }
 
-  public dispose() {
-    console.log('Stop watch mode')
-    this.isWatching.value = false
-    this.vitestState?.client.dispose()
-    this.process?.kill()
-    this.process = undefined
-    this.vitestState = undefined
+  public async dispose() {
+    const release = await this.lock.acquire()
+    try {
+      console.log('Stop watch mode')
+      this.isWatching.value = false
+      this.isRunning.value = false
+      this.vitestState?.client.dispose()
+      this.process?.kill()
+      this.process = undefined
+      this.vitestState = undefined
+    }
+    finally {
+      release()
+    }
   }
 }
