@@ -221,6 +221,7 @@ async function runTest(
               run.failed(
                 child,
                 new vscode.TestMessage(result.failureMessages.join('\r\n')),
+                result.duration ?? undefined,
               )
               return
           }

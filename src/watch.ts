@@ -306,6 +306,7 @@ export class TestWatcher extends Disposable {
                 run.failed(
                   data.item,
                   new TestMessage(task.result.error?.message ?? ''),
+                  task.result.duration,
                 )
                 break
               case 'skip':
