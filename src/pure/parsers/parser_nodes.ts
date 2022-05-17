@@ -8,183 +8,183 @@
  * @flow
  */
 
-import type { Location } from "../../types";
+import type { Location } from '../../types'
 
 /**
  * range and location here are 1-based position.
  */
 export class ParsedRange {
-  start: Location;
+  start: Location
 
-  end: Location;
+  end: Location
 
   constructor(
     startLine: number,
     startCol: number,
     endLine: number,
-    endCol: number
+    endCol: number,
   ) {
-    this.start = { column: startCol, line: startLine };
-    this.end = { column: endCol, line: endLine };
+    this.start = { column: startCol, line: startLine }
+    this.end = { column: endCol, line: endLine }
   }
 }
 
 // export type ParsedNodeType = 'expect' | 'describe' | 'it' | 'ROOT';
 
 export const ParsedNodeTypes = {
-  describe: "describe",
-  expect: "expect",
-  it: "it",
-  root: "root",
-} as const;
+  describe: 'describe',
+  expect: 'expect',
+  it: 'it',
+  root: 'root',
+} as const
 
-export type ParsedNodeType = keyof typeof ParsedNodeTypes;
+export type ParsedNodeType = keyof typeof ParsedNodeTypes
 
 export class ParsedNode {
-  type: ParsedNodeType;
+  type: ParsedNodeType
 
-  start?: Location;
+  start?: Location
 
-  end?: Location;
+  end?: Location
 
-  file: string;
+  file: string
 
-  children?: Array<ParsedNode>;
+  children?: Array<ParsedNode>
 
   constructor(type: ParsedNodeType, file: string) {
-    this.type = type;
-    this.file = file;
+    this.type = type
+    this.file = file
   }
 
   addChild(type: ParsedNodeType): ParsedNode {
-    let child: ParsedNode;
+    let child: ParsedNode
 
     switch (type) {
       case ParsedNodeTypes.describe:
-        child = new DescribeBlock(this.file);
-        break;
+        child = new DescribeBlock(this.file)
+        break
       case ParsedNodeTypes.it:
-        child = new ItBlock(this.file);
-        break;
+        child = new ItBlock(this.file)
+        break
       case ParsedNodeTypes.expect:
-        child = new Expect(this.file);
-        break;
+        child = new Expect(this.file)
+        break
       default:
-        throw TypeError(`unexpected child node type: ${type}`);
+        throw new TypeError(`unexpected child node type: ${type}`)
     }
-    if (!this.children) {
-      this.children = [child];
-    } else {
-      this.children.push(child);
-    }
-    return child;
+    if (!this.children)
+      this.children = [child]
+    else
+      this.children.push(child)
+
+    return child
   }
 
   filter(
     f: (node: ParsedNode) => boolean,
-    filterSelf: boolean = false
+    filterSelf = false,
   ): Array<ParsedNode> {
-    const filtered: Array<ParsedNode> = [];
+    const filtered: Array<ParsedNode> = []
 
     const _filter = (node: ParsedNode, _filterSelf: boolean) => {
-      if (_filterSelf && f(node)) {
-        filtered.push(node);
-      }
+      if (_filterSelf && f(node))
+        filtered.push(node)
 
-      if (node.children) {
-        node.children.forEach((c) => _filter(c, true));
-      }
-    };
+      if (node.children)
+        node.children.forEach(c => _filter(c, true))
+    }
 
-    _filter(this, filterSelf);
-    return filtered;
+    _filter(this, filterSelf)
+    return filtered
   }
 }
 
 export class Expect extends ParsedNode {
   constructor(file: string) {
-    super(ParsedNodeTypes.expect, file);
+    super(ParsedNodeTypes.expect, file)
   }
 }
 
 export class NamedBlock extends ParsedNode {
-  name?: string;
+  name?: string
 
-  nameRange?: ParsedRange;
+  nameRange?: ParsedRange
 
-  lastProperty?: string;
+  lastProperty?: string
 
   /**
    * type of the name, it's the babel Node["type"], such as "Literal", "TemplateLiteral" etc
    *
    * TODO babel parser currently returns "Literal" for the it/describe name argument, which is not part of its "type" definition, therefore declare a string type for now until it is fixed in babel.
    * */
-  nameType?: string;
+  nameType?: string
 
   constructor(type: ParsedNodeType, file: string, name?: string) {
-    super(type, file);
-    if (name) {
-      this.name = name;
-    }
+    super(type, file)
+    if (name)
+      this.name = name
   }
 }
 
 export class ItBlock extends NamedBlock {
   constructor(file: string, name?: string) {
-    super(ParsedNodeTypes.it, file, name);
+    super(ParsedNodeTypes.it, file, name)
   }
 }
 export class DescribeBlock extends NamedBlock {
   constructor(file: string, name?: string) {
-    super(ParsedNodeTypes.describe, file, name);
+    super(ParsedNodeTypes.describe, file, name)
   }
 }
 
 // export type NodeClass = Node | Expect | ItBlock | DescribeBlock;
 
 export class ParseResult {
-  describeBlocks: Array<DescribeBlock>;
+  describeBlocks: Array<DescribeBlock>
 
-  expects: Array<Expect>;
+  expects: Array<Expect>
 
-  itBlocks: Array<ItBlock>;
+  itBlocks: Array<ItBlock>
 
-  root: ParsedNode;
+  root: ParsedNode
 
-  file: string;
+  file: string
 
   constructor(file: string) {
-    this.file = file;
-    this.root = new ParsedNode(ParsedNodeTypes.root, file);
+    this.file = file
+    this.root = new ParsedNode(ParsedNodeTypes.root, file)
 
-    this.describeBlocks = [];
-    this.expects = [];
-    this.itBlocks = [];
+    this.describeBlocks = []
+    this.expects = []
+    this.itBlocks = []
   }
 
-  addNode(node: ParsedNode, dedup: boolean = false) {
+  addNode(node: ParsedNode, dedup = false) {
     if (node instanceof DescribeBlock) {
-      this.describeBlocks.push(node);
-    } else if (node instanceof ItBlock) {
-      this.itBlocks.push(node);
-    } else if (node instanceof Expect) {
+      this.describeBlocks.push(node)
+    }
+    else if (node instanceof ItBlock) {
+      this.itBlocks.push(node)
+    }
+    else if (node instanceof Expect) {
       if (
-        dedup &&
-        this.expects.some(
-          (e) =>
-            e.start?.line === node.start?.line &&
-            e.start?.column === node.start?.column
+        dedup
+        && this.expects.some(
+          e =>
+            e.start?.line === node.start?.line
+            && e.start?.column === node.start?.column,
         )
       ) {
         // found dup, return
-        return;
+        return
       }
 
-      this.expects.push(node);
-    } else {
+      this.expects.push(node)
+    }
+    else {
       throw new TypeError(
-        `unexpected node class '${typeof node}': ${JSON.stringify(node)}`
-      );
+        `unexpected node class '${typeof node}': ${JSON.stringify(node)}`,
+      )
     }
   }
 }

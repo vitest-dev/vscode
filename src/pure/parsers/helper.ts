@@ -5,70 +5,67 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ParserOptions, ParserPlugin } from "@babel/parser";
+import type { ParserOptions, ParserPlugin } from '@babel/parser'
 
 const commonPlugins: ParserPlugin[] = [
-  "asyncGenerators",
-  "bigInt",
-  "classPrivateMethods",
-  "classPrivateProperties",
-  "classProperties",
-  "doExpressions",
-  "dynamicImport",
-  "estree",
-  "exportDefaultFrom",
-  "exportNamespaceFrom", // deprecated
-  "functionBind",
-  "functionSent",
-  "importMeta",
-  "logicalAssignment",
-  "nullishCoalescingOperator",
-  "numericSeparator",
-  "objectRestSpread",
-  "optionalCatchBinding",
-  "optionalChaining",
-  "partialApplication",
-  "throwExpressions",
-  "topLevelAwait",
-  ["pipelineOperator", { proposal: "smart" }],
-];
+  'asyncGenerators',
+  'bigInt',
+  'classPrivateMethods',
+  'classPrivateProperties',
+  'classProperties',
+  'doExpressions',
+  'dynamicImport',
+  'estree',
+  'exportDefaultFrom',
+  'exportNamespaceFrom', // deprecated
+  'functionBind',
+  'functionSent',
+  'importMeta',
+  'logicalAssignment',
+  'nullishCoalescingOperator',
+  'numericSeparator',
+  'objectRestSpread',
+  'optionalCatchBinding',
+  'optionalChaining',
+  'partialApplication',
+  'throwExpressions',
+  'topLevelAwait',
+  ['pipelineOperator', { proposal: 'smart' }],
+]
 
 export const jsPlugins: ParserPlugin[] = [
   ...commonPlugins,
-  ["decorators", { decoratorsBeforeExport: true }],
-  "flow",
-  "jsx",
-];
+  ['decorators', { decoratorsBeforeExport: true }],
+  'flow',
+  'jsx',
+]
 export const tsPlugins: ParserPlugin[] = [
   ...commonPlugins,
-  "decorators-legacy",
-  "typescript",
-];
+  'decorators-legacy',
+  'typescript',
+]
 export const tsxPlugins: ParserPlugin[] = [
   ...commonPlugins,
-  "decorators-legacy",
-  "typescript",
-  "jsx",
-];
+  'decorators-legacy',
+  'typescript',
+  'jsx',
+]
 
 export const parseOptions = (
   filePath: string,
   strictMode = false,
 ): ParserOptions => {
-  if (filePath.match(/\.ts$/i)) {
-    return { plugins: [...tsPlugins] };
-  }
+  if (filePath.match(/\.ts$/i))
+    return { plugins: [...tsPlugins] }
 
-  if (filePath.match(/\.tsx$/i)) {
-    return { plugins: [...tsxPlugins] };
-  }
+  if (filePath.match(/\.tsx$/i))
+    return { plugins: [...tsxPlugins] }
 
   // for backward compatibility, use js parser as default unless in strict mode
-  if (!strictMode || filePath.match(/\.m?jsx?$/i)) {
-    return { plugins: [...jsPlugins] };
-  }
+  if (!strictMode || filePath.match(/\.m?jsx?$/i))
+    return { plugins: [...jsPlugins] }
 
   throw new TypeError(
     `unable to find parser options for unrecognized file extension: ${filePath}`,
-  );
-};
+  )
+}

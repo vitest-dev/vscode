@@ -1,38 +1,8 @@
 {
   "extends": "@antfu",
   "rules": {
-    "no-restricted-imports": [
-      "error",
-      {
-        "paths": ["path"]
-      }
-    ],
-    "import/no-named-as-default": "off"
-  },
-  "overrides": [
-    {
-      "files": "packages/**/*.*",
-      "rules": {
-        "no-restricted-imports": [
-          "error",
-          {
-            "paths": ["vitest", "path"]
-          }
-        ]
-      }
-    },
-    {
-      "files": "packages/vitest/**/*.*",
-      "rules": {
-        "no-restricted-globals": [
-          "error",
-          "setTimeout",
-          "clearTimeout",
-          "setInterval",
-          "clearInterval",
-          "performance"
-        ]
-      }
-    }
-  ]
+    "import/no-named-as-default": "off",
+    "no-console": "off",
+    "@typescript-eslint/ban-ts-comment": "off"
+  }
 }

@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest'
 
-describe("snapshots", () => {
-  it("string", () => {
-    expect("abc").toMatchSnapshot();
-  });
-});
+describe('snapshots', () => {
+  it('string', () => {
+    expect('abc').toMatchSnapshot()
+  })
+})
