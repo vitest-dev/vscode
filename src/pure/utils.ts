@@ -33,34 +33,46 @@ export function getVitestCommand(
   projectRoot: string,
 ): { cmd: string; args: string[] } | undefined {
   const node_modules = path.resolve(projectRoot, 'node_modules')
-  if (!existsSync(node_modules))
-    return
+  try {
+    if (!existsSync(node_modules))
+      return getVitestCommand(path.dirname(projectRoot))
 
-  const suffixes = ['']
-  if (isWindows)
-    suffixes.unshift('.cmd', '.CMD')
+    const suffixes = ['']
+    if (isWindows)
+      suffixes.unshift('.cmd', '.CMD')
 
-  for (const suffix of suffixes) {
-    if (existsSync(path.resolve(node_modules, '.bin', `vitest${suffix}`))) {
-      return {
-        cmd: path.resolve(node_modules, '.bin', `vitest${suffix}`),
-        args: [],
+    for (const suffix of suffixes) {
+      if (existsSync(path.resolve(node_modules, '.bin', `vitest${suffix}`))) {
+        return {
+          cmd: path.resolve(node_modules, '.bin', `vitest${suffix}`),
+          args: [],
+        }
       }
     }
-  }
 
-  if (existsSync(path.resolve(node_modules, 'vitest', 'vitest.mjs'))) {
-    return {
-      cmd: 'node',
-      args: [
-        sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs')),
-      ],
+    if (existsSync(path.resolve(node_modules, 'vitest', 'vitest.mjs'))) {
+      return {
+        cmd: 'node',
+        args: [
+          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs')),
+        ],
+      }
     }
+
+    return getVitestCommand(path.dirname(projectRoot))
+  }
+  catch (e) {
+    console.error(e)
   }
 }
 
+export interface Cmd {
+  cmd: string
+  args: string[]
+}
+
 export async function getVitestVersion(
-  vitestCommand?: { cmd: string; args: string[] },
+  vitestCommand?: Cmd,
 ): Promise<string> {
   let process
   if (vitestCommand == null) {
@@ -136,4 +148,12 @@ export function execWithLog(
   ])
 
   return { child, promise }
+}
+
+export function stringToCmd(cmdStr: string): Cmd {
+  const list = cmdStr.split(' ')
+  return {
+    cmd: list[0],
+    args: list.slice(1),
+  }
 }

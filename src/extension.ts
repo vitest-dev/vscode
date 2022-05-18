@@ -4,7 +4,7 @@ import { effect } from '@vue/reactivity'
 import { extensionId, getConfig } from './config'
 import { TestFileDiscoverer } from './discover'
 import { isVitestEnv } from './pure/isVitestEnv'
-import { getVitestCommand, getVitestVersion } from './pure/utils'
+import { getVitestCommand, getVitestVersion, stringToCmd } from './pure/utils'
 import { debugHandler, runHandler, updateSnapshot } from './runHandler'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
@@ -53,10 +53,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const vitestVersion = await getVitestVersion(vitestCmd)
   console.dir({ vitestVersion })
 
-  if (semver.gte(vitestVersion, '0.8.0')) {
+  const customTestCmd = getConfig().commandLine
+  if (semver.gte(vitestVersion, '0.8.0') || customTestCmd) {
     // enable run/debug/watch tests only if vitest version >= 0.8.0
     const testWatcher: undefined | TestWatcher = registerWatchHandler(
-      vitestCmd,
+      vitestCmd ?? stringToCmd(customTestCmd!),
       ctrl,
       fileDiscoverer,
       context,

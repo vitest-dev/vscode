@@ -67,7 +67,7 @@ export interface FormattedTestResults {
 export class TestRunner {
   constructor(
     private workspacePath: string,
-    private vitestCommand: { cmd: string; args: string[] } | undefined,
+    private defaultVitestCommand: { cmd: string; args: string[] } | undefined,
   ) {}
 
   async scheduleRun(
@@ -75,8 +75,8 @@ export class TestRunner {
     testNamePattern: string | undefined,
     log: (msg: string) => void = () => {},
     workspaceEnv: Record<string, string> = {},
-    vitestCommand: { cmd: string; args: string[] } = this.vitestCommand
-      ? this.vitestCommand
+    vitestCommand: { cmd: string; args: string[] } = this.defaultVitestCommand
+      ? this.defaultVitestCommand
       : { cmd: 'npx', args: ['vitest'] },
     updateSnapshot = false,
   ): Promise<FormattedTestResults> {
