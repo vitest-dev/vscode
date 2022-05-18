@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.7](https://github.com/vitest-dev/vscode/compare/v0.2.6...v0.2.7) (2022-05-18)
+
+
+### Bug Fixes
+
+* tests running state in watch mode ([4b36b31](https://github.com/vitest-dev/vscode/commit/4b36b3135036a07aee7f8a211b8988015a41b8f2))
+
 ### [0.2.6](https://github.com/vitest-dev/vscode/compare/v0.2.5...v0.2.6) (2022-05-18)
 
 
