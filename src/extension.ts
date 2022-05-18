@@ -49,7 +49,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const vitestCmd = getVitestCommand(
     vscode.workspace.workspaceFolders[0].uri.fsPath,
-  )
+  ) ?? {
+    cmd: 'npx',
+    args: ['vitest'],
+  }
   const vitestVersion = await getVitestVersion(vitestCmd)
   console.dir({ vitestVersion })
 
@@ -63,14 +66,26 @@ export async function activate(context: vscode.ExtensionContext) {
       context,
     )
     registerRunHandler(ctrl, testWatcher)
+    context.subscriptions.push(
+      vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
+        updateSnapshot(ctrl, test)
+      }),
+    )
   }
   else {
+    const msg = 'Because Vitest version < 0.8.0, run/debug/watch tests from Vitest extension disabled.\n'
+    context.subscriptions.push(
+      vscode.commands.registerCommand(Command.ToggleWatching, () => {
+        vscode.window.showWarningMessage(msg)
+      }),
+      vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
+        vscode.window.showWarningMessage(msg)
+      }),
+    )
     // v0.8.0 introduce a breaking change in json format
     // https://github.com/vitest-dev/vitest/pull/1034
     // so we need to disable run & debug in version < 0.8.0
-    vscode.window.showWarningMessage(
-      'Because Vitest version < 0.8.0, run & debug tests from Vitest plugin disabled.\n',
-    )
+    vscode.window.showWarningMessage(msg)
   }
 
   vscode.window.visibleTextEditors.forEach(x =>
@@ -90,9 +105,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeTextDocument(e =>
       fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
     ),
-    vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
-      updateSnapshot(ctrl, test)
-    }),
   )
 }
 

@@ -32,6 +32,9 @@ export function getVitestPath(projectRoot: string): string | undefined {
 export function getVitestCommand(
   projectRoot: string,
 ): { cmd: string; args: string[] } | undefined {
+  if (!projectRoot)
+    return
+
   const node_modules = path.resolve(projectRoot, 'node_modules')
   try {
     if (!existsSync(node_modules))
