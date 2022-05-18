@@ -76,26 +76,47 @@ export interface Cmd {
 
 export async function getVitestVersion(
   vitestCommand?: Cmd,
+  env?: Record<string, string>,
 ): Promise<string> {
-  let process
+  let child
   if (vitestCommand == null) {
-    process = spawn('npx', ['vitest', '-v'], {
+    child = spawn('npx', ['vitest', '-v'], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, ...env },
     })
   }
   else {
-    process = spawn(vitestCommand.cmd, [...vitestCommand.args, '-v'], {
+    child = spawn(vitestCommand.cmd, [...vitestCommand.args, '-v'], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, ...env },
     })
   }
 
   // eslint-disable-next-line no-unreachable-loop
-  for await (const line of chunksToLinesAsync(process.stdout)) {
-    process.kill()
+  for await (const line of chunksToLinesAsync(child.stdout)) {
+    child.kill()
     return line.match(/vitest\/(\d+.\d+.\d+)/)![1]
   }
 
   throw new Error(`Cannot get vitest version from "${JSON.stringify(vitestCommand)}"`)
+}
+
+export function isNodeAvailable(
+
+  env?: Record<string, string>,
+
+): Promise<boolean> {
+  const child = spawn('node', {
+    env: { ...process.env, ...env },
+  })
+
+  return new Promise((resolve) => {
+    child.on('error', () => resolve(false))
+    setTimeout(() => {
+      resolve(true)
+      child.kill()
+    }, 1000)
+  })
 }
 
 const capitalizeFirstLetter = (string: string) =>

@@ -4,13 +4,14 @@ import { effect } from '@vue/reactivity'
 import { extensionId, getConfig } from './config'
 import { TestFileDiscoverer } from './discover'
 import { isVitestEnv } from './pure/isVitestEnv'
-import { getVitestCommand, getVitestVersion, stringToCmd } from './pure/utils'
+import { getVitestCommand, getVitestVersion, isNodeAvailable, stringToCmd } from './pure/utils'
 import { debugHandler, runHandler, updateSnapshot } from './runHandler'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 import { Command } from './command'
 import { StatusBarItem } from './StatusBarItem'
 
+const log = vscode.window.createOutputChannel('Vitest')
 export async function activate(context: vscode.ExtensionContext) {
   if (
     vscode.workspace.workspaceFolders == null
@@ -53,11 +54,24 @@ export async function activate(context: vscode.ExtensionContext) {
     cmd: 'npx',
     args: ['vitest'],
   }
-  const vitestVersion = await getVitestVersion(vitestCmd)
+
+  const vitestVersion = await getVitestVersion(vitestCmd, getConfig().env || undefined).catch(async (e) => {
+    log.appendLine(e.toString())
+    log.appendLine(`process.env.PATH = ${process.env.PATH}`)
+    log.appendLine(`vitest.nodeEnv = ${JSON.stringify(getConfig().env)}`)
+    let errorMsg = e.toString()
+    if (!isNodeAvailable(getConfig().env || undefined)) {
+      log.appendLine('Cannot spawn node process')
+      errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
+    }
+
+    vscode.window.showErrorMessage(errorMsg)
+  })
+
   console.dir({ vitestVersion })
 
   const customTestCmd = getConfig().commandLine
-  if (semver.gte(vitestVersion, '0.8.0') || customTestCmd) {
+  if ((vitestVersion && semver.gte(vitestVersion, '0.8.0')) || customTestCmd) {
     // enable run/debug/watch tests only if vitest version >= 0.8.0
     const testWatcher: undefined | TestWatcher = registerWatchHandler(
       vitestCmd ?? stringToCmd(customTestCmd!),
