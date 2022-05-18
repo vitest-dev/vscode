@@ -4,28 +4,15 @@ import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
 import type { File, Task } from 'vitest'
-import type {
-  TestController,
-  TestItem,
-  TestRun,
-} from 'vscode'
-import {
-  Disposable,
-  TestMessage,
-  TestRunRequest,
-  workspace,
-} from 'vscode'
+import type { TestController, TestItem, TestRun } from 'vscode'
+import { Disposable, TestMessage, TestRunRequest, workspace } from 'vscode'
 import { Lock } from 'mighty-promise'
 import { getConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
 import { execWithLog } from './pure/utils'
 import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
-import {
-  TestCase,
-  TestDescribe,
-  WEAKMAP_TEST_DATA,
-} from './TestData'
+import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 
 export class TestWatcher extends Disposable {
   static cache: undefined | TestWatcher
@@ -212,10 +199,7 @@ export class TestWatcher extends Disposable {
       this.run = this.ctrl.createTestRun(new TestRunRequest())
 
     for (const file of files) {
-      const data = this.discover.discoverTestFromPath(
-        this.ctrl,
-        file.filepath,
-      )
+      const data = this.discover.discoverTestFromPath(this.ctrl, file.filepath)
 
       const run = this.run
       started(data.item)
@@ -244,12 +228,8 @@ export class TestWatcher extends Disposable {
       this.discover.watchAllTestFilesInWorkspace(this.ctrl)
     }
     else {
-      for (const file of files) {
-        this.discover.discoverTestFromPath(
-          this.ctrl,
-          file.filepath,
-        )
-      }
+      for (const file of files)
+        this.discover.discoverTestFromPath(this.ctrl, file.filepath)
     }
   }
 
@@ -260,16 +240,13 @@ export class TestWatcher extends Disposable {
     if (!files)
       return
 
-    if (!this.run)
+    const isFirstUpdate = !this.run
+    if (isFirstUpdate)
       this.run = this.ctrl.createTestRun(new TestRunRequest())
 
     for (const file of files) {
-      const data = this.discover.discoverTestFromPath(
-        this.ctrl,
-        file.filepath,
-      )
-
-      this.syncTestStatusToVsCode(data, file, finished)
+      const data = this.discover.discoverTestFromPath(this.ctrl, file.filepath)
+      this.syncTestStatusToVsCode(data, file, finished, isFirstUpdate)
     }
   }
 
@@ -277,6 +254,7 @@ export class TestWatcher extends Disposable {
     vscodeFile: TestFile,
     vitestFile: File,
     finished: boolean,
+    isFirstUpdate: boolean,
   ) {
     const run = this.run
     if (!run)
@@ -296,6 +274,8 @@ export class TestWatcher extends Disposable {
           if (task.result == null) {
             if (finished)
               run.skipped(data.item)
+            else if (isFirstUpdate)
+              run.started(data.item)
           }
           else {
             switch (task.result?.state) {
@@ -333,7 +313,7 @@ export class TestWatcher extends Disposable {
       task: Task,
       candidates: Set<TestDescribe | TestCase>,
       type: 'suite' | 'test',
-    ): (TestDescribe | TestCase) {
+    ): TestDescribe | TestCase {
       let ans: (TestDescribe | TestCase) | undefined
       for (const candidate of candidates) {
         if (type === 'suite' && !(candidate instanceof TestDescribe))

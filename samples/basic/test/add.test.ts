@@ -10,11 +10,21 @@ describe('addition', () => {
     })
 
     it.skip('skipped', () => {
-      expect(1 + 1).toBe(3)
+      expect(1 + 2).toBe(3)
     })
 
     it.todo('todo')
-    it('same name', () => {})
+    it('async task', async () => {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    })
+
+    it('long task', () => {
+      let sum = 0
+      for (let i = 0; i < 2e8; i++)
+        sum += i
+
+      expect(sum).toBeGreaterThan(1)
+    })
   })
 })
 
