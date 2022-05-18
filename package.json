@@ -87,7 +87,7 @@
           "default": false
         },
         "vitest.commandLine": {
-          "markdownDescription": "The command line to start vitest tests. It should be the same command line users run vitest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime). For example `npx vitest` or `yarn test -- --run`",
+          "markdownDescription": "The command line to start vitest tests. **It should have with the ability to append extra arguments**. For example `npx vitest` or `yarn test --`\n\nThis is a workspace setting. Do not change it in the user setting directly, which will affect all the projects you open",
           "type": "string",
           "scope": "resource",
           "default": ""
@@ -118,7 +118,7 @@
             "null"
           ],
           "default": null,
-          "scope": "resource"
+          "scope": "machine"
         }
       }
     }
