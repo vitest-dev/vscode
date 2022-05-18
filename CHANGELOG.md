@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.6](https://github.com/vitest-dev/vscode/compare/v0.2.5...v0.2.6) (2022-05-18)
+
+
+### Bug Fixes
+
+* potential extension activation error ([e5cdae5](https://github.com/vitest-dev/vscode/commit/e5cdae59f1dd3d1f8dddd71e53a0e165275ae9fc))
+
 ### [0.2.5](https://github.com/vitest-dev/vscode/compare/v0.2.4...v0.2.5) (2022-05-18)
 
 
