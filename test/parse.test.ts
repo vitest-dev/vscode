@@ -18,6 +18,17 @@ describe('parse', () => {
     expect(out.itBlocks.length).toBe(1)
   })
 
+  it('parse skipIf with concurrent #36', () => {
+    const out = parse(
+      'x.js',
+      ''
+        + 'describe.skipIf(true).concurrent(`test`, () => {\n'
+        + '}); \n',
+    )
+
+    expect(out.describeBlocks.length).toBe(1)
+  })
+
   it('parse decorator', () => {
     const out = parse(
       'x.ts',

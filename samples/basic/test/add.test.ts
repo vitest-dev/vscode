@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { add } from '../src/add'
 
+const skip = true
+describe.runIf(skip).concurrent('runIf', () => {
+  it.skipIf(skip)('test case', () => {
+
+  })
+})
+
 describe('addition', () => {
   describe('test suit', () => {
     it('add', () => {

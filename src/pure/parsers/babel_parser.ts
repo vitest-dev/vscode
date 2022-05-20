@@ -128,6 +128,8 @@ export const parse = (
         || deepGet(rootCallee, 'object').name
         // handle cases where it's part of a tag (e.g. .each`table`)
         || deepGet(rootCallee, 'tag', 'object').name
+        // handle cases like .skipIf(true).concurrent
+        || deepGet(rootCallee, 'object', 'callee', 'object').name
 
       return [name, property]
     }
