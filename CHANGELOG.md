@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.10](https://github.com/vitest-dev/vscode/compare/v0.2.9...v0.2.10) (2022-05-20)
+
+
+### Bug Fixes
+
+* runIf().concurrent [#36](https://github.com/vitest-dev/vscode/issues/36) ([e4c0dfe](https://github.com/vitest-dev/vscode/commit/e4c0dfef30fe0fcbea298fce4a87897248ae972b))
+
 ### [0.2.9](https://github.com/vitest-dev/vscode/compare/v0.2.8...v0.2.9) (2022-05-18)
 
 ### [0.2.8](https://github.com/vitest-dev/vscode/compare/v0.2.7...v0.2.8) (2022-05-18)
