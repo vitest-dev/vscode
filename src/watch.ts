@@ -1,11 +1,13 @@
 import type { ChildProcess } from 'child_process'
+import path from 'path'
 import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
-import type { File, Task } from 'vitest'
+import StackUtils from 'stack-utils'
+import type { ErrorWithDiff, File, Task } from 'vitest'
 import type { TestController, TestItem, TestRun } from 'vscode'
-import { Disposable, TestMessage, TestRunRequest, workspace } from 'vscode'
+import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri, workspace } from 'vscode'
 import { Lock } from 'mighty-promise'
 import { getConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
@@ -14,6 +16,10 @@ import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 
+const stackUtils = new StackUtils({
+  cwd: '/ensure_absolute_paths',
+})
+export interface DebuggerLocation { path: string; line: number; column: number }
 export class TestWatcher extends Disposable {
   static cache: undefined | TestWatcher
   static isWatching() {
@@ -283,20 +289,11 @@ export class TestWatcher extends Disposable {
                 run.passed(data.item, task.result.duration)
                 break
               case 'fail':
-                if (task.result.error?.actual != null && task.result.error?.expected != null) {
-                  run.failed(
-                    data.item,
-                    TestMessage.diff(task.result.error?.message ?? '', task.result?.error.expected, task.result?.error.actual),
-                    task.result.duration,
-                  )
-                }
-                else {
-                  run.failed(
-                    data.item,
-                    new TestMessage(task.result.error?.message ?? ''),
-                    task.result.duration,
-                  )
-                }
+                run.failed(
+                  data.item,
+                  testMessageForTestError(data.item, task.result.error),
+                  task.result.duration,
+                )
                 break
               case 'skip':
               case 'todo':
@@ -367,4 +364,36 @@ export class TestWatcher extends Disposable {
       release()
     }
   }
+}
+
+function parseLocationFromStack(testItem: TestItem, stack: string | undefined): DebuggerLocation | undefined {
+  const lines = stack?.split('\n') || []
+  for (const line of lines) {
+    const frame = stackUtils.parseLine(line)
+    if (!frame || !frame.file || !frame.line || !frame.column)
+      continue
+    frame.file = frame.file.replace(/\//g, path.sep)
+    if (testItem.uri!.fsPath === frame.file) {
+      return {
+        path: frame.file,
+        line: frame.line,
+        column: frame.column,
+      }
+    }
+  }
+}
+
+function testMessageForTestError(testItem: TestItem, error: ErrorWithDiff | undefined): TestMessage {
+  let testMessage
+  if (error?.actual != null && error?.expected != null)
+    testMessage = TestMessage.diff(error?.message ?? '', error.expected, error.actual)
+  else
+    testMessage = new TestMessage(error?.message ?? '')
+
+  const location = parseLocationFromStack(testItem, error?.stack)
+  if (location) {
+    const position = new Position(location.line - 1, location.column - 1)
+    testMessage.location = new Location(Uri.file(location.path), position)
+  }
+  return testMessage
 }
