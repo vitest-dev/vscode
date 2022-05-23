@@ -283,11 +283,20 @@ export class TestWatcher extends Disposable {
                 run.passed(data.item, task.result.duration)
                 break
               case 'fail':
-                run.failed(
-                  data.item,
-                  new TestMessage(task.result.error?.message ?? ''),
-                  task.result.duration,
-                )
+                if (task.result.error?.actual != null && task.result.error?.expected != null) {
+                  run.failed(
+                    data.item,
+                    TestMessage.diff(task.result.error?.message ?? '', task.result?.error.expected, task.result?.error.actual),
+                    task.result.duration,
+                  )
+                }
+                else {
+                  run.failed(
+                    data.item,
+                    new TestMessage(task.result.error?.message ?? ''),
+                    task.result.duration,
+                  )
+                }
                 break
               case 'skip':
               case 'todo':
