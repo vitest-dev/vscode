@@ -6,11 +6,11 @@ import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
 import StackUtils from 'stack-utils'
 import type { ErrorWithDiff, File, Task } from 'vitest'
-import type { TestController, TestItem, TestRun } from 'vscode'
-import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri, workspace } from 'vscode'
+import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
+import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
 import * as vscode from 'vscode'
-import { getConfig } from './config'
+import { getConfig, getRootConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
 import { execWithLog } from './pure/utils'
 import { buildWatchClient } from './pure/watch/client'
@@ -22,22 +22,24 @@ const stackUtils = new StackUtils({
 })
 export interface DebuggerLocation { path: string; line: number; column: number }
 export class TestWatcher extends Disposable {
-  static cache: undefined | TestWatcher
-  static isWatching() {
-    return !!this.cache?.isWatching.value
+  static cache: Record<number, TestWatcher> = {}
+  static isWatching(id: number) {
+    return !!this.cache[id]?.isWatching.value
   }
 
   static create(
     ctrl: TestController,
     discover: TestFileDiscoverer,
     vitest: { cmd: string; args: string[] },
+    workspace: WorkspaceFolder,
+    id: number,
   ) {
-    if (this.cache)
-      return this.cache
+    if (this.cache[id])
+      return this.cache[id]
 
-    TestWatcher.cache = new TestWatcher(ctrl, discover, vitest)
+    TestWatcher.cache[id] = new TestWatcher(id, ctrl, discover, vitest, workspace)
 
-    return TestWatcher.cache
+    return TestWatcher.cache[id]
   }
 
   public isWatching = ref(false)
@@ -48,9 +50,11 @@ export class TestWatcher extends Disposable {
   private vitestState?: ReturnType<typeof buildWatchClient>
   private run: TestRun | undefined
   private constructor(
+    readonly id: number,
     private ctrl: TestController,
     private discover: TestFileDiscoverer,
     private vitest: { cmd: string; args: string[] },
+    readonly workspace: WorkspaceFolder,
   ) {
     super(() => {
       this.dispose()
@@ -70,10 +74,10 @@ export class TestWatcher extends Disposable {
       let timer: any
       this.process = execWithLog(
         this.vitest.cmd,
-        [...this.vitest.args, '--api', port.toString()],
+        [...this.vitest.args, '--api.port', port.toString()],
         {
-          cwd: workspace.workspaceFolders?.[0].uri.fsPath,
-          env: { ...process.env, ...getConfig().env },
+          cwd: this.workspace.uri.fsPath,
+          env: { ...process.env, ...getConfig(this.workspace).env },
         },
         (line) => {
           logs.push(line)
@@ -177,7 +181,7 @@ export class TestWatcher extends Disposable {
     }
 
     this.testStatus.value = { passed, failed, skipped }
-    if (getConfig().showFailMessages && failed > 0)
+    if (getRootConfig().showFailMessages && failed > 0)
       vscode.window.showErrorMessage(`Vitest: You have ${failed} failing Unit Test(s).`)
   }
 

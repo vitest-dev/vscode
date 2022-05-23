@@ -48,8 +48,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const exclude = getConfig().exclude
-        for (const include of getConfig().include) {
+        const exclude = getConfig(workspaceFolder).exclude
+        for (const include of getConfig(workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
@@ -101,8 +101,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const exclude = getConfig().exclude
-        for (const include of getConfig().include) {
+        const exclude = getConfig(workspaceFolder).exclude
+        for (const include of getConfig(workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,

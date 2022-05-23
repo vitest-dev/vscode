@@ -181,3 +181,7 @@ export function stringToCmd(cmdStr: string): Cmd {
     args: list.slice(1),
   }
 }
+
+export function negate(func: Function): (...args: typeof func.arguments) => Boolean {
+  return (...args: typeof func.arguments) => !func(...args)
+}
