@@ -9,6 +9,7 @@ import type { ErrorWithDiff, File, Task } from 'vitest'
 import type { TestController, TestItem, TestRun } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri, workspace } from 'vscode'
 import { Lock } from 'mighty-promise'
+import * as vscode from 'vscode'
 import { getConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
 import { execWithLog } from './pure/utils'
@@ -176,6 +177,8 @@ export class TestWatcher extends Disposable {
     }
 
     this.testStatus.value = { passed, failed, skipped }
+    if (getConfig().showFailMessages && failed > 0)
+      vscode.window.showErrorMessage(`Vitest: You have ${failed} failing Unit Test(s).`)
   }
 
   public runTests(tests?: readonly TestItem[]) {

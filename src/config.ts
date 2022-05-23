@@ -9,5 +9,6 @@ export function getConfig() {
     include: config.get('include') as string[],
     exclude: config.get('exclude') as string[],
     enable: config.get('enable') as boolean,
+    showFailMessages: config.get('showFailMessages') as boolean,
   }
 }
