@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "basic",
+      "path": "../basic"
+    },
+    {
+      "name": "react",
+      "path": "../monorepo/packages/react"
+    }
+  ],
+  "settings": {
+    "testing.automaticallyOpenPeekView": "never"
+  }
+}

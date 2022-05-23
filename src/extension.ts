@@ -4,8 +4,8 @@ import { effect } from '@vue/reactivity'
 import { extensionId, getConfig } from './config'
 import { TestFileDiscoverer } from './discover'
 import { isVitestEnv } from './pure/isVitestEnv'
-import { getVitestCommand, getVitestVersion, isNodeAvailable, stringToCmd } from './pure/utils'
-import { debugHandler, runHandler, updateSnapshot } from './runHandler'
+import { getVitestCommand, getVitestVersion, isNodeAvailable, negate } from './pure/utils'
+import { debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot } from './runHandler'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 import { Command } from './command'
@@ -19,10 +19,10 @@ export async function activate(context: vscode.ExtensionContext) {
   )
     return
 
-  if (
-    !getConfig().enable
-    && !(await isVitestEnv(vscode.workspace.workspaceFolders[0].uri.fsPath))
-  )
+  const vitestEnvironmentFolders = vscode.workspace.workspaceFolders.filter(async folder =>
+    await isVitestEnv(folder) || getConfig(folder).enable)
+
+  if (vitestEnvironmentFolders.length === 0)
     return
 
   const ctrl = vscode.tests.createTestController(`${extensionId}`, 'Vitest')
@@ -48,46 +48,56 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  const vitestCmd = getVitestCommand(
-    vscode.workspace.workspaceFolders[0].uri.fsPath,
-  ) ?? {
-    cmd: 'npx',
-    args: ['vitest'],
-  }
+  const vitestRunConfigs: {
+    workspace: vscode.WorkspaceFolder
+    cmd: string
+    args: string[]
+    version: string | null
+  }[] = await Promise.all(vitestEnvironmentFolders.map(async (folder) => {
+    const cmd = getVitestCommand(folder.uri.fsPath)
 
-  const vitestVersion = await getVitestVersion(vitestCmd, getConfig().env || undefined).catch(async (e) => {
-    log.appendLine(e.toString())
-    log.appendLine(`process.env.PATH = ${process.env.PATH}`)
-    log.appendLine(`vitest.nodeEnv = ${JSON.stringify(getConfig().env)}`)
-    let errorMsg = e.toString()
-    if (!isNodeAvailable(getConfig().env || undefined)) {
-      log.appendLine('Cannot spawn node process')
-      errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
-    }
+    const version = await getVitestVersion(cmd, getConfig(folder).env || undefined).catch(async (e) => {
+      log.appendLine(e.toString())
+      log.appendLine(`process.env.PATH = ${process.env.PATH}`)
+      log.appendLine(`vitest.nodeEnv = ${JSON.stringify(getConfig(folder).env)}`)
+      let errorMsg = e.toString()
+      if (!isNodeAvailable(getConfig(folder).env || undefined)) {
+        log.appendLine('Cannot spawn node process')
+        errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
+      }
 
-    vscode.window.showErrorMessage(errorMsg)
+      vscode.window.showErrorMessage(errorMsg)
+    })
+
+    return cmd
+      ? {
+          cmd: cmd.cmd,
+          args: cmd.args,
+          workspace: folder,
+          version: version ?? null,
+        }
+      : {
+          cmd: 'npx',
+          args: ['vitest'],
+          workspace: folder,
+          version: version ?? null,
+        }
+  }))
+
+  vitestRunConfigs.forEach((vitest) => {
+    console.log(`Vitest Workspace: [${vitest.workspace.name}] Version: ${vitest.version}`)
   })
 
-  console.dir({ vitestVersion })
+  const isCompatibleVitestConfig = (config: typeof vitestRunConfigs[number]) =>
+    (config.version && semver.gte(config.version, '0.8.0')) || getConfig(config.workspace).commandLine
 
-  const customTestCmd = getConfig().commandLine
-  if ((vitestVersion && semver.gte(vitestVersion, '0.8.0')) || customTestCmd) {
-    // enable run/debug/watch tests only if vitest version >= 0.8.0
-    const testWatcher: undefined | TestWatcher = registerWatchHandler(
-      vitestCmd ?? stringToCmd(customTestCmd!),
-      ctrl,
-      fileDiscoverer,
-      context,
-    )
-    registerRunHandler(ctrl, testWatcher)
-    context.subscriptions.push(
-      vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
-        updateSnapshot(ctrl, test)
-      }),
-    )
-  }
-  else {
-    const msg = 'Because Vitest version < 0.8.0, run/debug/watch tests from Vitest extension disabled.\n'
+  vitestRunConfigs.filter(negate(isCompatibleVitestConfig)).forEach((config) => {
+    vscode.window.showWarningMessage(`Because Vitest version < 0.8.0 for ${config.workspace.name} `
+    + ', run/debug/watch tests from Vitest extension disabled for that workspace.\n')
+  })
+
+  if (vitestRunConfigs.every(negate(isCompatibleVitestConfig))) {
+    const msg = 'Because Vitest version < 0.8.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
     context.subscriptions.push(
       vscode.commands.registerCommand(Command.ToggleWatching, () => {
         vscode.window.showWarningMessage(msg)
@@ -101,6 +111,20 @@ export async function activate(context: vscode.ExtensionContext) {
     // so we need to disable run & debug in version < 0.8.0
     vscode.window.showWarningMessage(msg)
   }
+
+  // enable run/debug/watch tests only if vitest version >= 0.8.0
+  const testWatchers = registerWatchHandlers(
+    vitestRunConfigs.filter(isCompatibleVitestConfig),
+    ctrl,
+    fileDiscoverer,
+    context,
+  ) ?? []
+  registerRunHandler(ctrl, testWatchers)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
+      updateSnapshot(ctrl, test)
+    }),
+  )
 
   vscode.window.visibleTextEditors.forEach(x =>
     fileDiscoverer.discoverTestFromDoc(ctrl, x.document),
@@ -122,26 +146,39 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 }
 
+function aggregateTestWatcherStatuses(testWatchers: TestWatcher[]) {
+  return testWatchers.reduce((aggregate, watcher) => {
+    return {
+      passed: aggregate.passed + watcher.testStatus.value.passed,
+      failed: aggregate.failed + watcher.testStatus.value.failed,
+      skipped: aggregate.skipped + watcher.testStatus.value.skipped,
+    }
+  }, {
+    passed: 0,
+    failed: 0,
+    skipped: 0,
+  })
+}
+
 let statusBarItem: StatusBarItem
-function registerWatchHandler(
-  vitestCmd: { cmd: string; args: string[] } | undefined,
+function registerWatchHandlers(
+  vitestConfigs: { cmd: string; args: string[]; workspace: vscode.WorkspaceFolder }[],
   ctrl: vscode.TestController,
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
 ) {
-  if (!vitestCmd)
-    return
+  const testWatchers = vitestConfigs.map((vitestConfig, index) =>
+    TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index),
+  ) ?? []
 
-  const testWatcher = TestWatcher.create(ctrl, fileDiscoverer, vitestCmd)
   statusBarItem = new StatusBarItem()
   effect(() => {
-    if (testWatcher.isRunning.value) {
+    if (testWatchers.some(watcher => watcher.isRunning.value)) {
       statusBarItem.toRunningMode()
       return
     }
-
-    if (testWatcher.isWatching.value) {
-      statusBarItem.toWatchMode(testWatcher.testStatus.value)
+    else if (testWatchers.some(watcher => watcher.isWatching.value)) {
+      statusBarItem.toWatchMode(aggregateTestWatcherStatuses(testWatchers))
       return
     }
 
@@ -149,13 +186,13 @@ function registerWatchHandler(
   })
 
   const stopWatching = () => {
-    testWatcher!.dispose()
+    testWatchers.forEach(watcher => watcher.dispose())
     vscode.workspace
       .getConfiguration('testing')
       .update('automaticallyOpenPeekView', undefined)
   }
   const startWatching = () => {
-    testWatcher!.watch()
+    testWatchers.forEach(watcher => watcher.watch())
     vscode.workspace
       .getConfiguration('testing')
       .update('automaticallyOpenPeekView', 'never')
@@ -165,12 +202,13 @@ function registerWatchHandler(
     {
       dispose: stopWatching,
     },
-    testWatcher,
+    ...testWatchers,
     statusBarItem,
     vscode.commands.registerCommand(Command.StartWatching, startWatching),
     vscode.commands.registerCommand(Command.StopWatching, stopWatching),
     vscode.commands.registerCommand(Command.ToggleWatching, () => {
-      if (testWatcher.isWatching.value)
+      const anyWatching = testWatchers.some(watcher => watcher.isWatching.value)
+      if (anyWatching)
         stopWatching()
       else
         startWatching()
@@ -194,21 +232,23 @@ function registerWatchHandler(
     )
       return
 
-    await testWatcher.watch()
-    testWatcher.runTests(request.include)
+    await Promise.all(testWatchers.map(watcher => watcher.watch()))
+    testWatchers.forEach((watcher) => {
+      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
+    })
   }
 
-  return testWatcher
+  return testWatchers
 }
 
 function registerRunHandler(
   ctrl: vscode.TestController,
-  testWatcher?: TestWatcher,
+  testWatchers: TestWatcher[],
 ) {
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl, testWatcher),
+    runHandler.bind(null, ctrl, testWatchers),
     true,
   )
 

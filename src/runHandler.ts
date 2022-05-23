@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { isAbsolute, relative } from 'path'
 import { existsSync } from 'fs'
 import * as vscode from 'vscode'
 import { readFile } from 'fs-extra'
@@ -25,7 +25,7 @@ import { TestWatcher } from './watch'
 
 export async function runHandler(
   ctrl: vscode.TestController,
-  watcher: TestWatcher | undefined,
+  watchers: TestWatcher[],
   request: vscode.TestRunRequest,
   _cancellation: vscode.CancellationToken,
 ) {
@@ -35,19 +35,31 @@ export async function runHandler(
   )
     return
 
-  if (TestWatcher.isWatching() && watcher) {
-    watcher.runTests(request.include)
+  if (watchers.some(watcher => TestWatcher.isWatching(watcher.id)) && watchers.length > 0) {
+    watchers.forEach((watcher) => {
+      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
+    })
+
     return
   }
 
-  const tests = request.include ?? gatherTestItems(ctrl.items)
-  const runner = new TestRunner(
-    vscode.workspace.workspaceFolders[0].uri.fsPath,
-    getVitestCommand(vscode.workspace.workspaceFolders[0].uri.fsPath),
-  )
-
   const run = ctrl.createTestRun(request)
-  await runTest(ctrl, runner, run, tests, 'run')
+
+  await Promise.all(vscode.workspace.workspaceFolders.map((folder) => {
+    const runner = new TestRunner(
+      folder.uri.fsPath,
+      getVitestCommand(folder.uri.fsPath),
+    )
+
+    const items = request.include ?? ctrl.items
+
+    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+    if (testForThisWorkspace.length)
+      return runTest(ctrl, runner, run, testForThisWorkspace, 'run')
+
+    return Promise.resolve()
+  }))
+
   run.end()
 }
 
@@ -63,7 +75,7 @@ export async function updateSnapshot(
 
   test = testItemIdMap.get(ctrl)!.get(test.id)!
   const runner = new TestRunner(
-    vscode.workspace.workspaceFolders[0].uri.fsPath,
+    determineWorkspaceForTestItems([test], vscode.workspace.workspaceFolders).uri.fsPath,
     getVitestCommand(vscode.workspace.workspaceFolders[0].uri.fsPath),
   )
 
@@ -91,10 +103,39 @@ export async function debugHandler(
   run.end()
 }
 
-function gatherTestItems(collection: vscode.TestItemCollection) {
+function gatherTestItems(collection: readonly vscode.TestItem[] | vscode.TestItemCollection): vscode.TestItem[] {
+  if (Array.isArray(collection))
+    return collection
+
   const items: vscode.TestItem[] = []
   collection.forEach(item => items.push(item))
   return items
+}
+
+function isPathASubdirectory(parent: string, testPath: string): boolean {
+  const relativePath = relative(parent, testPath)
+  return (!relativePath.startsWith('..') && !isAbsolute(relativePath))
+}
+
+export function gatherTestItemsFromWorkspace(collection: readonly vscode.TestItem[] | vscode.TestItemCollection, workspace: string) {
+  return gatherTestItems(collection).filter((item: vscode.TestItem) => item.uri && isPathASubdirectory(workspace, item.uri.fsPath))
+}
+
+function determineWorkspaceForTestItems(collection: readonly vscode.TestItem[] | vscode.TestItemCollection, workspaces: readonly vscode.WorkspaceFolder[]) {
+  if (workspaces.length === 1)
+    return workspaces[0]
+
+  const testItems = gatherTestItems(collection)
+
+  if (testItems.length < 1)
+    return workspaces[0]
+
+  const workspace = workspaces.find(workspace => testItems[0].uri && isPathASubdirectory(workspace.uri.fsPath, testItems[0].uri.fsPath))
+
+  if (!workspace)
+    throw new Error('Multiple workspace roots are found; cannot deduce workspace to which these tests belong to')
+
+  return workspace
 }
 
 type Mode = 'debug' | 'run' | 'update'
@@ -108,7 +149,8 @@ async function runTest(
   if (mode !== 'debug' && runner === undefined)
     throw new Error('should provide runner if not debug')
 
-  const config = getConfig()
+  const workspaceFolder = determineWorkspaceForTestItems(items, vscode.workspace.workspaceFolders!)
+  const config = getConfig(workspaceFolder)
   const testCaseSet: Set<vscode.TestItem> = new Set()
   const testItemIdMap = new Map<string, vscode.TestItem>()
   const fileItems: vscode.TestItem[] = []
@@ -157,7 +199,7 @@ async function runTest(
 
   try {
     if (mode === 'debug') {
-      out = await debugTest(vscode.workspace.workspaceFolders![0], run, items)
+      out = await debugTest(workspaceFolder, run, items)
     }
     else {
       let command
