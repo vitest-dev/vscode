@@ -119,6 +119,12 @@
           ],
           "default": null,
           "scope": "machine"
+        },
+        "vitest.showFailMessages": {
+          "description": "Get instant feedback when using Watch Mode. Pop-ups an error when a test fails.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": false
         }
       }
     }
