@@ -19,8 +19,12 @@ export async function activate(context: vscode.ExtensionContext) {
   )
     return
 
-  const vitestEnvironmentFolders = vscode.workspace.workspaceFolders.filter(async folder =>
-    await isVitestEnv(folder) || getConfig(folder).enable)
+  const vitestEnvironmentFolders: Array<vscode.WorkspaceFolder> = []
+
+  for (const folder of vscode.workspace.workspaceFolders) {
+    if (await isVitestEnv(folder) || getConfig(folder).enable)
+      vitestEnvironmentFolders.push(folder)
+  }
 
   if (vitestEnvironmentFolders.length === 0)
     return
