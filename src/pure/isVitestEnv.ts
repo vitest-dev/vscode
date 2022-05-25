@@ -11,6 +11,9 @@ export async function isVitestEnv(projectRoot: string | WorkspaceFolder): Promis
   if (getVitestPath(projectRoot))
     return true
 
+  if (!existsSync(path.join(projectRoot, 'package.json')))
+    return false
+
   const pkgPath = path.join(projectRoot, 'package.json') as string
   const pkg = JSON.parse(await readFile(pkgPath, 'utf-8')) as any
   if (existsSync(pkg)) {
