@@ -1,6 +1,10 @@
 {
   "folders": [
     {
+      "name": "rust",
+      "path": "./rust-project"
+    },
+    {
       "name": "basic",
       "path": "../basic"
     },
@@ -9,7 +13,5 @@
       "path": "../monorepo/packages/react"
     }
   ],
-  "settings": {
-    "testing.automaticallyOpenPeekView": "never"
-  }
+  "settings": {}
 }
