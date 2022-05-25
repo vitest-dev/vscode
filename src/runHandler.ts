@@ -94,9 +94,16 @@ export async function debugHandler(
   )
     return
 
-  const tests = request.include ?? gatherTestItems(ctrl.items)
   const run = ctrl.createTestRun(request)
-  await runTest(ctrl, undefined, run, tests, 'debug')
+
+  for (const folder of vscode.workspace.workspaceFolders) {
+    const items = request.include ?? ctrl.items
+
+    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+    if (testForThisWorkspace.length)
+      await runTest(ctrl, undefined, run, testForThisWorkspace, 'debug')
+  }
+
   run.end()
 }
 
