@@ -8,11 +8,7 @@ export function getConfigValue<T>(
   key: string,
   defaultValue: T,
 ): T {
-  return folderConfig.has(key)
-    ? folderConfig.get<T>(key)!
-    : rootConfig.has(key)
-      ? rootConfig.get<T>(key)!
-      : defaultValue
+  return folderConfig.get(key) ?? rootConfig.get(key) ?? defaultValue
 }
 
 export function getConfig(workspaceFolder: WorkspaceFolder) {
