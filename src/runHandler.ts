@@ -45,7 +45,7 @@ export async function runHandler(
 
   const run = ctrl.createTestRun(request)
 
-  await Promise.all(vscode.workspace.workspaceFolders.map((folder) => {
+  for (const folder of vscode.workspace.workspaceFolders) {
     const runner = new TestRunner(
       folder.uri.fsPath,
       getVitestCommand(folder.uri.fsPath),
@@ -55,10 +55,8 @@ export async function runHandler(
 
     const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
     if (testForThisWorkspace.length)
-      return runTest(ctrl, runner, run, testForThisWorkspace, 'run')
-
-    return Promise.resolve()
-  }))
+      await runTest(ctrl, runner, run, testForThisWorkspace, 'run')
+  }
 
   run.end()
 }
