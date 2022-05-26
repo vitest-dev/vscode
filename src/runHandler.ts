@@ -237,6 +237,7 @@ async function runTest(
         testCase,
         new vscode.TestMessage(
           'Test result not found. \r\n'
+            + 'Are there tests with the same name?'
             + 'Can you run vitest successfully on this file? Does it need custom option to run?',
         ),
       )
