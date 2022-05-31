@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.12](https://github.com/vitest-dev/vscode/compare/v0.2.11...v0.2.12) (2022-05-31)
+
+
+### Bug Fixes
+
+* udpate test error message ([4b89bb3](https://github.com/vitest-dev/vscode/commit/4b89bb359f2466c66991ab7a3065be3284a4f606))
+
 ### [0.2.11](https://github.com/vitest-dev/vscode/compare/v0.2.10...v0.2.11) (2022-05-23)
 
 
