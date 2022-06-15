@@ -2,6 +2,7 @@ import { existsSync } from 'fs'
 import path = require('path')
 import { readFile, readdir } from 'fs-extra'
 import { getVitestPath } from './utils'
+import { getConfig } from './config'
 
 export async function isVitestEnv(projectRoot: string): Promise<boolean> {
   if (getVitestPath(projectRoot))
@@ -22,6 +23,7 @@ export async function isVitestEnv(projectRoot: string): Promise<boolean> {
     || existsSync(path.join(projectRoot, 'vite.config.ts'))
     || existsSync(path.join(projectRoot, 'vitest.config.js'))
     || existsSync(path.join(projectRoot, 'vitest.config.ts'))
+    || existsSync(path.join(projectRoot, getConfig().configFile))
   )
     return true
 

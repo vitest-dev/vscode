@@ -7,6 +7,7 @@ export function getConfig() {
     env: config.get('nodeEnv') as null | Record<string, string>,
     commandLine: (config.get('commandLine') || undefined) as string | undefined,
     include: config.get('include') as string[],
+    configFile: config.get('configFile') as string,
     exclude: config.get('exclude') as string[],
     enable: config.get('enable') as boolean,
     showFailMessages: config.get('showFailMessages') as boolean,

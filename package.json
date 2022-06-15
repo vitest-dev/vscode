@@ -92,6 +92,14 @@
           "scope": "resource",
           "default": ""
         },
+        "vitest.configFile": {
+          "markdownDescription": "Name or path to the config file, defaults to `./vite.config.ts`",
+          "type": "string",
+          "default": [
+            "./vite.config.ts"
+          ],
+          "scope": "resource"
+        },
         "vitest.include": {
           "markdownDescription": "Include glob for test files. Default: `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`",
           "type": "array",
