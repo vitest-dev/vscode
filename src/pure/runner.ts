@@ -1,16 +1,15 @@
 import { spawn } from 'child_process'
 import { tmpdir } from 'os'
-import { existsSync } from 'fs'
 import * as path from 'path'
-import { readFile } from 'fs-extra'
 
 import { chunksToLinesAsync } from '@rauschma/stringio'
+import type { File } from 'vitest'
 import {
-  execWithLog,
   filterColorFormatOutput,
   sanitizeFilePath,
 } from './utils'
 import { isWindows } from './platform'
+import { runVitestWithApi } from './ApiProcess'
 
 export function getDebuggerConfig() {}
 
@@ -79,17 +78,11 @@ export class TestRunner {
       ? this.defaultVitestCommand
       : { cmd: 'npx', args: ['vitest'] },
     updateSnapshot = false,
-  ): Promise<FormattedTestResults> {
-    const path = getTempPath()
+  ): Promise<File[]> {
     const command = vitestCommand.cmd
     const args = [
       ...vitestCommand.args,
       ...(testFile ? testFile.map(f => sanitizeFilePath(f)) : []),
-      '--reporter=json',
-      '--reporter=verbose',
-      '--outputFile',
-      path,
-      '--run',
     ] as string[]
     if (updateSnapshot)
       args.push('--update')
@@ -105,32 +98,27 @@ export class TestRunner {
     let error: any
     const outputs: string[] = []
     const env = { ...process.env, ...workspaceEnv }
+    let ans = [] as File[]
     try {
-      function _log(line: string) {
-        log(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
-        outputs.push(filterColorFormatOutput(line))
-      }
+      await runVitestWithApi({ cmd: command, args }, this.workspacePath, {
+        log: (line) => {
+          log(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
+          outputs.push(filterColorFormatOutput(line))
+        },
+        onFinished: (files) => {
+          if (files == null)
+            throw new Error('Vitest failed to return any files')
 
-      // it will throw when test failed or the testing is failed to run
-      await execWithLog(command, args, {
-        env,
-        cwd: workspacePath,
-      }, _log, _log).promise
+          ans = files
+        },
+      })
     }
     catch (e) {
       error = e
+      handleError()
     }
 
-    if (!existsSync(path))
-      await handleError()
-
-    const file = await readFile(path, 'utf-8')
-
-    const out = JSON.parse(file) as FormattedTestResults
-    if (out.testResults.length === 0)
-      await handleError()
-
-    return out
+    return ans
 
     async function handleError() {
       const prefix = '\n'

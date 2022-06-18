@@ -75,7 +75,7 @@ export class TestWatcher extends Disposable {
       let timer: any
       this.process = execWithLog(
         this.vitest.cmd,
-        [...this.vitest.args, '--api.port', port.toString()],
+        [...this.vitest.args, '--api', port.toString()],
         {
           cwd: this.workspace.uri.fsPath,
           env: { ...process.env, ...getConfig(this.workspace).env },
@@ -258,103 +258,10 @@ export class TestWatcher extends Disposable {
     if (isFirstUpdate)
       this.run = this.ctrl.createTestRun(new TestRunRequest())
 
-    for (const file of files) {
-      const data = this.discover.discoverTestFromPath(this.ctrl, file.filepath)
-      this.syncTestStatusToVsCode(data, file, finished, isFirstUpdate)
-    }
-  }
-
-  private syncTestStatusToVsCode(
-    vscodeFile: TestFile,
-    vitestFile: File,
-    finished: boolean,
-    isFirstUpdate: boolean,
-  ) {
+    const discover = this.discover
+    const ctrl = this.ctrl
     const run = this.run
-    if (!run)
-      return
-
-    sync(run, vscodeFile.children, vitestFile.tasks)
-
-    function sync(
-      run: TestRun,
-      vscode: (TestDescribe | TestCase)[],
-      vitest: Task[],
-    ) {
-      const set = new Set(vscode)
-      for (const task of vitest) {
-        const data = matchTask(task, set, task.type)
-        if (task.type === 'test') {
-          if (task.result == null) {
-            if (finished)
-              run.skipped(data.item)
-            else if (isFirstUpdate)
-              run.started(data.item)
-          }
-          else {
-            switch (task.result?.state) {
-              case 'pass':
-                run.passed(data.item, task.result.duration)
-                break
-              case 'fail':
-                run.failed(
-                  data.item,
-                  testMessageForTestError(data.item, task.result.error),
-                  task.result.duration,
-                )
-                break
-              case 'skip':
-              case 'todo':
-                run.skipped(data.item)
-                break
-              case 'run':
-                run.started(data.item)
-                break
-              case 'only':
-                break
-              default:
-                console.error('unexpected result state', task.result)
-            }
-          }
-        }
-        else {
-          sync(run, (data as TestDescribe).children, task.tasks)
-        }
-      }
-    }
-
-    function matchTask(
-      task: Task,
-      candidates: Set<TestDescribe | TestCase>,
-      type: 'suite' | 'test',
-    ): TestDescribe | TestCase {
-      let ans: (TestDescribe | TestCase) | undefined
-      for (const candidate of candidates) {
-        if (type === 'suite' && !(candidate instanceof TestDescribe))
-          continue
-
-        if (type === 'test' && !(candidate instanceof TestCase))
-          continue
-
-        if (candidate.pattern === task.name) {
-          ans = candidate
-          break
-        }
-      }
-
-      if (ans) {
-        candidates.delete(ans)
-      }
-      else {
-        ans = new Fuse(Array.from(candidates), { keys: ['pattern'] }).search(
-          task.name,
-        )[0]?.item
-        // should not delete ans from candidates here, because there are usages like `test.each`
-        // TODO: should we create new TestCase here?
-      }
-
-      return ans
-    }
+    syncFilesTestStatus(files, discover, ctrl, run, finished, isFirstUpdate)
   }
 
   public async dispose() {
@@ -404,4 +311,108 @@ function testMessageForTestError(testItem: TestItem, error: ErrorWithDiff | unde
     testMessage.location = new Location(Uri.file(location.path), position)
   }
   return testMessage
+}
+
+export function syncFilesTestStatus(
+  files: File[],
+  discover: TestFileDiscoverer,
+  ctrl: TestController,
+  run: TestRun | undefined,
+  finished: boolean,
+  isFirstUpdate: boolean,
+) {
+  for (const file of files) {
+    const data = discover.discoverTestFromPath(ctrl, file.filepath)
+    run && syncTestStatusToVsCode(run, data, file, finished, isFirstUpdate)
+  }
+}
+
+export function syncTestStatusToVsCode(
+  run: TestRun,
+  vscodeFile: TestFile,
+  vitestFile: File,
+  finished: boolean,
+  isFirstUpdate: boolean,
+) {
+  sync(run, vscodeFile.children, vitestFile.tasks)
+
+  function sync(
+    run: TestRun,
+    vscode: (TestDescribe | TestCase)[],
+    vitest: Task[],
+  ) {
+    const set = new Set(vscode)
+    for (const task of vitest) {
+      const data = matchTask(task, set, task.type)
+      if (task.type === 'test') {
+        if (task.result == null) {
+          if (finished)
+            run.skipped(data.item)
+          else if (isFirstUpdate)
+            run.started(data.item)
+        }
+        else {
+          switch (task.result?.state) {
+            case 'pass':
+              run.passed(data.item, task.result.duration)
+              break
+            case 'fail':
+              run.failed(
+                data.item,
+                testMessageForTestError(data.item, task.result.error),
+                task.result.duration,
+              )
+              break
+            case 'skip':
+            case 'todo':
+              run.skipped(data.item)
+              break
+            case 'run':
+              run.started(data.item)
+              break
+            case 'only':
+              break
+            default:
+              console.error('unexpected result state', task.result)
+          }
+        }
+      }
+      else {
+        sync(run, (data as TestDescribe).children, task.tasks)
+      }
+    }
+  }
+
+  function matchTask(
+    task: Task,
+    candidates: Set<TestDescribe | TestCase>,
+    type: 'suite' | 'test',
+  ): TestDescribe | TestCase {
+    let ans: (TestDescribe | TestCase) | undefined
+    for (const candidate of candidates) {
+      if (type === 'suite' && !(candidate instanceof TestDescribe))
+        continue
+
+      if (type === 'test' && !(candidate instanceof TestCase))
+        continue
+
+      if (candidate.pattern === task.name) {
+        ans = candidate
+        break
+      }
+    }
+
+    if (ans) {
+      candidates.delete(ans)
+    }
+    else {
+      ans = new Fuse(Array.from(candidates), { keys: ['pattern'] }).search(
+        task.name,
+      )[0]?.item
+      // should not delete ans from candidates here, because there are usages like `test.each`
+      // TODO: should we create new TestCase here?
+    }
+
+    return ans
+  }
 }

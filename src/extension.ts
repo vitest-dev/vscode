@@ -38,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ctrl,
     fileDiscoverer,
     vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
-      updateSnapshot(ctrl, test)
+      updateSnapshot(ctrl, fileDiscoverer, test)
     }),
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e)
@@ -219,14 +219,14 @@ function registerRunDebugWatchHandler(
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl, testWatchers),
+    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers),
     true,
   )
 
   ctrl.createRunProfile(
     'Debug Tests',
     vscode.TestRunProfileKind.Debug,
-    debugHandler.bind(null, ctrl),
+    debugHandler.bind(null, ctrl, fileDiscoverer),
     true,
   )
 }

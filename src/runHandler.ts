@@ -21,11 +21,13 @@ import {
   testItemIdMap,
 } from './TestData'
 import { getConfig } from './config'
-import { TestWatcher } from './watch'
+import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
+import type { TestFileDiscoverer } from './discover'
 
 export async function runHandler(
   ctrl: vscode.TestController,
+  discover: TestFileDiscoverer,
   watchers: TestWatcher[],
   request: vscode.TestRunRequest,
   _cancellation: vscode.CancellationToken,
@@ -64,7 +66,7 @@ export async function runHandler(
 
     log.info(`[Workspace "${folder.name}] Run tests from workspace`)
     try {
-      await runTest(ctrl, runner, run, testForThisWorkspace, 'run')
+      await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover)
       log.info(`[Workspace "${folder.name}] Test run finished`)
     }
     catch (e) {
@@ -84,6 +86,7 @@ export async function runHandler(
 
 export async function updateSnapshot(
   ctrl: vscode.TestController,
+  discover: TestFileDiscoverer,
   test: vscode.TestItem,
 ) {
   if (
@@ -101,12 +104,13 @@ export async function updateSnapshot(
   const tests = [test]
   const run = ctrl.createTestRun(request)
   run.started(test)
-  await runTest(ctrl, runner, run, tests, 'update')
+  await runTest(ctrl, runner, run, tests, 'update', discover)
   run.end()
 }
 
 export async function debugHandler(
   ctrl: vscode.TestController,
+  discover: TestFileDiscoverer,
   request: vscode.TestRunRequest,
 ) {
   if (
@@ -123,7 +127,7 @@ export async function debugHandler(
     if (testsInThisWorkspace.length === 0)
       return
     try {
-      await runTest(ctrl, undefined, run, testsInThisWorkspace, 'debug')
+      await runTest(ctrl, undefined, run, testsInThisWorkspace, 'debug', discover)
     }
     catch (e) {
       if (e instanceof Error) {
@@ -180,6 +184,7 @@ async function runTest(
   run: vscode.TestRun,
   items: readonly vscode.TestItem[],
   mode: Mode,
+  discover: TestFileDiscoverer,
 ) {
   if (mode !== 'debug' && runner === undefined)
     throw new Error('should provide runner if not debug')
@@ -230,6 +235,33 @@ async function runTest(
     run.started(testCase)
   })
 
+  if (mode === 'run' || mode === 'update') {
+    let command
+    if (config.commandLine) {
+      const commandLine = config.commandLine.trim()
+      command = {
+        cmd: commandLine.split(' ')[0],
+        args: commandLine.split(' ').slice(1),
+      }
+    }
+
+    const files = await runner!.scheduleRun(
+      fileItems.map(x => x.uri!.fsPath),
+      items.length === 1
+        ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
+        : '',
+      items.length === 1
+        ? msg => run.appendOutput(msg, undefined, items[0])
+        : msg => run.appendOutput(msg),
+      config.env || undefined,
+      command,
+      mode === 'update',
+    )
+
+    syncFilesTestStatus(files, discover, ctrl, run, true, false)
+    return
+  }
+
   const pathToFile = new Map<string, vscode.TestItem>()
   for (const file of fileItems)
     pathToFile.set(sanitizeFilePath(file.uri!.fsPath), file)
@@ -237,32 +269,7 @@ async function runTest(
   let out
 
   try {
-    if (mode === 'debug') {
-      out = await debugTest(workspaceFolder, run, items)
-    }
-    else {
-      let command
-      if (config.commandLine) {
-        const commandLine = config.commandLine.trim()
-        command = {
-          cmd: commandLine.split(' ')[0],
-          args: commandLine.split(' ').slice(1),
-        }
-      }
-
-      out = await runner!.scheduleRun(
-        fileItems.map(x => x.uri!.fsPath),
-        items.length === 1
-          ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
-          : '',
-        items.length === 1
-          ? msg => run.appendOutput(msg, undefined, items[0])
-          : msg => run.appendOutput(msg),
-        config.env || undefined,
-        command,
-        mode === 'update',
-      )
-    }
+    out = await debugTest(workspaceFolder, run, items)
   }
   catch (e) {
     console.error(e)
@@ -274,7 +281,7 @@ async function runTest(
     testCaseSet.clear()
   }
 
-  if (out === undefined) {
+  if (out == null) {
     testCaseSet.forEach((testCase) => {
       run.errored(testCase, new vscode.TestMessage('Internal Error'))
     })

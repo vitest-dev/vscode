@@ -54,12 +54,15 @@ export function buildWatchClient(
   const loadingPromise = client.waitForConnection().then(async () => {
     const files = await client.rpc.getFiles()
     const idResultPairs: [string, TaskResult][] = []
+    let isRunning = false
     files && travel(files)
     function travel(tasks: Task[]) {
       for (const task of tasks) {
         if (task.type === 'test') {
           if (task.result)
             idResultPairs.push([task.id, task.result])
+          else if (task.mode === 'run')
+            isRunning = true
         }
         else {
           travel(task.tasks)
@@ -68,6 +71,7 @@ export function buildWatchClient(
     }
 
     client.state.updateTasks(idResultPairs)
+    return isRunning
   })
 
   return {

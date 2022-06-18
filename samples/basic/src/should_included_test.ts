@@ -1,5 +1,5 @@
-import { expect, describe, it } from "vitest";
+import { describe, expect, it } from 'vitest'
 
-describe("should included", () => {
-  it("is included because of workspace plugin setting", () => {});
-});
+describe('should included', () => {
+  it('is included because of workspace plugin setting', () => {})
+})
