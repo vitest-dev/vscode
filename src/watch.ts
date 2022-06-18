@@ -16,6 +16,7 @@ import { execWithLog } from './pure/utils'
 import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
+import { log } from './log'
 
 const stackUtils = new StackUtils({
   cwd: '/ensure_absolute_paths',
@@ -83,7 +84,7 @@ export class TestWatcher extends Disposable {
           logs.push(line)
           clearTimeout(timer)
           timer = setTimeout(() => {
-            console.log(logs.join('\n'))
+            log.info(logs.join('\n'))
             logs.length = 0
           }, 200)
         },
@@ -91,14 +92,14 @@ export class TestWatcher extends Disposable {
           logs.push(line)
           clearTimeout(timer)
           timer = setTimeout(() => {
-            console.log(logs.join('\n'))
+            log.info(logs.join('\n'))
             logs.length = 0
           }, 200)
         },
       ).child
 
       this.process.on('exit', () => {
-        console.log('VITEST WATCH PROCESS EXIT')
+        log.info('VITEST WATCH PROCESS EXIT')
       })
 
       this.vitestState = buildWatchClient({
@@ -204,7 +205,7 @@ export class TestWatcher extends Disposable {
     )
   }
 
-  private runFiles(files: File[]) {
+  private runFiles(files: File[]): Promise<void> | undefined {
     if (!this.vitestState)
       return
 
@@ -359,7 +360,7 @@ export class TestWatcher extends Disposable {
   public async dispose() {
     const release = await this.lock.acquire()
     try {
-      console.log('Stop watch mode')
+      log.info('Stop watch mode')
       this.isWatching.value = false
       this.isRunning.value = false
       this.vitestState?.client.dispose()

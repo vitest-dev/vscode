@@ -1,33 +1,22 @@
 import * as vscode from 'vscode'
 import semver from 'semver'
 import { effect } from '@vue/reactivity'
-import { extensionId, getConfig } from './config'
+import { detectVitestEnvironmentFolders, extensionId, getConfig, vitestEnvironmentFolders } from './config'
 import { TestFileDiscoverer } from './discover'
-import { isVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable, negate } from './pure/utils'
 import { debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot } from './runHandler'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 import { Command } from './command'
 import { StatusBarItem } from './StatusBarItem'
+import { log } from './log'
 
-const log = vscode.window.createOutputChannel('Vitest')
 export async function activate(context: vscode.ExtensionContext) {
-  if (
-    vscode.workspace.workspaceFolders == null
-    || vscode.workspace.workspaceFolders.length === 0
-  )
+  await detectVitestEnvironmentFolders()
+  if (vitestEnvironmentFolders.length === 0) {
+    log.info('The extension is not activated because no Vitest environment was detected.')
     return
-
-  const vitestEnvironmentFolders: Array<vscode.WorkspaceFolder> = []
-
-  for (const folder of vscode.workspace.workspaceFolders) {
-    if (await isVitestEnv(folder) || getConfig(folder).enable)
-      vitestEnvironmentFolders.push(folder)
   }
-
-  if (vitestEnvironmentFolders.length === 0)
-    return
 
   const ctrl = vscode.tests.createTestController(`${extensionId}`, 'Vitest')
 
@@ -61,12 +50,12 @@ export async function activate(context: vscode.ExtensionContext) {
     const cmd = getVitestCommand(folder.uri.fsPath)
 
     const version = await getVitestVersion(cmd, getConfig(folder).env || undefined).catch(async (e) => {
-      log.appendLine(e.toString())
-      log.appendLine(`process.env.PATH = ${process.env.PATH}`)
-      log.appendLine(`vitest.nodeEnv = ${JSON.stringify(getConfig(folder).env)}`)
+      log.info(e.toString())
+      log.info(`process.env.PATH = ${process.env.PATH}`)
+      log.info(`vitest.nodeEnv = ${JSON.stringify(getConfig(folder).env)}`)
       let errorMsg = e.toString()
       if (!isNodeAvailable(getConfig(folder).env || undefined)) {
-        log.appendLine('Cannot spawn node process')
+        log.info('Cannot spawn node process')
         errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
       }
 
@@ -89,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }))
 
   vitestRunConfigs.forEach((vitest) => {
-    console.log(`Vitest Workspace: [${vitest.workspace.name}] Version: ${vitest.version}`)
+    log.info(`Vitest Workspace [${vitest.workspace.name}]: Vitest version = ${vitest.version}`)
   })
 
   const isCompatibleVitestConfig = (config: typeof vitestRunConfigs[number]) =>

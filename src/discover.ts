@@ -14,6 +14,7 @@ import {
 import { shouldIncludeFile } from './vscodeUtils'
 
 import { getConfig } from './config'
+import { log } from './log'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -251,7 +252,7 @@ export function discoverTestFromFileContent(
     result = parse(fileItem.id, content)
   }
   catch (e) {
-    console.log('parse error')
+    log.error('parse error')
     return
   }
 

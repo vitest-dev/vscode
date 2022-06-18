@@ -22,6 +22,7 @@ import {
 } from './TestData'
 import { getConfig } from './config'
 import { TestWatcher } from './watch'
+import { log } from './log'
 
 export async function runHandler(
   ctrl: vscode.TestController,
@@ -32,20 +33,24 @@ export async function runHandler(
   if (
     vscode.workspace.workspaceFolders === undefined
     || vscode.workspace.workspaceFolders.length === 0
-  )
-    return
-
-  if (watchers.some(watcher => TestWatcher.isWatching(watcher.id)) && watchers.length > 0) {
-    watchers.forEach((watcher) => {
-      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
-    })
-
+  ) {
+    log.info('ERROR: No workspace folder found')
+    vscode.window.showErrorMessage('Cannot run tests: No workspace folder found')
     return
   }
 
+  if (watchers.some(watcher => TestWatcher.isWatching(watcher.id)) && watchers.length > 0) {
+    log.info('Use watchers to run tests')
+    watchers.forEach((watcher) => {
+      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
+    })
+    return
+  }
+
+  log.info('Tests run start')
   const run = ctrl.createTestRun(request)
 
-  for (const folder of vscode.workspace.workspaceFolders) {
+  await Promise.allSettled(vscode.workspace.workspaceFolders.map(async (folder) => {
     const runner = new TestRunner(
       folder.uri.fsPath,
       getVitestCommand(folder.uri.fsPath),
@@ -54,11 +59,27 @@ export async function runHandler(
     const items = request.include ?? ctrl.items
 
     const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
-    if (testForThisWorkspace.length)
+    if (testForThisWorkspace.length === 0)
+      return
+
+    log.info(`[Workspace "${folder.name}] Run tests from workspace`)
+    try {
       await runTest(ctrl, runner, run, testForThisWorkspace, 'run')
-  }
+      log.info(`[Workspace "${folder.name}] Test run finished"`)
+    }
+    catch (e) {
+      log.error(`[Workspace "${folder.name}] Run error`)
+      if (e instanceof Error) {
+        const err = e
+        console.error(e)
+        log.info(`[Workspace ${folder.name}] Error: ${e.toString()}`)
+        testForThisWorkspace.forEach(test => run.errored(test, new vscode.TestMessage(err.toString())))
+      }
+    }
+  }))
 
   run.end()
+  log.info('Tests run end')
 }
 
 export async function updateSnapshot(
@@ -98,10 +119,20 @@ export async function debugHandler(
 
   for (const folder of vscode.workspace.workspaceFolders) {
     const items = request.include ?? ctrl.items
-
-    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
-    if (testForThisWorkspace.length)
-      await runTest(ctrl, undefined, run, testForThisWorkspace, 'debug')
+    const testsInThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+    if (testsInThisWorkspace.length === 0)
+      return
+    try {
+      await runTest(ctrl, undefined, run, testsInThisWorkspace, 'debug')
+    }
+    catch (e) {
+      if (e instanceof Error) {
+        const err = e
+        console.error(e)
+        log.info(`Error in ${folder.name}: ${e.toString()}`)
+        testsInThisWorkspace.forEach(test => run.errored(test, new vscode.TestMessage(err.toString())))
+      }
+    }
   }
 
   run.end()
@@ -125,7 +156,7 @@ export function gatherTestItemsFromWorkspace(collection: readonly vscode.TestIte
   return gatherTestItems(collection).filter((item: vscode.TestItem) => item.uri && isPathASubdirectory(workspace, item.uri.fsPath))
 }
 
-function determineWorkspaceForTestItems(collection: readonly vscode.TestItem[] | vscode.TestItemCollection, workspaces: readonly vscode.WorkspaceFolder[]) {
+function determineWorkspaceForTestItems(collection: readonly vscode.TestItem[] | vscode.TestItemCollection, workspaces: readonly vscode.WorkspaceFolder[]): vscode.WorkspaceFolder {
   if (workspaces.length === 1)
     return workspaces[0]
 
@@ -161,8 +192,9 @@ async function runTest(
   for (const item of items) {
     const testingData = WEAKMAP_TEST_DATA.get(item)
     if (!testingData) {
-      console.error('Item not found')
-      throw new Error('Item not found')
+      log.workspaceError(workspaceFolder.name, `Item not found ${item.uri?.fsPath}`)
+      run.errored(item, new vscode.TestMessage('Item not found'))
+      continue
     }
 
     if (testingData instanceof TestFile)
@@ -174,8 +206,11 @@ async function runTest(
     }
     else {
       file = testingData.fileItem
-      if (!file)
-        throw new Error('file item not found')
+      if (!file) {
+        log.workspaceError(workspaceFolder.name, `File item not found for item ${item.uri?.fsPath}`)
+        run.errored(item, new vscode.TestMessage('Item not found'))
+        continue
+      }
     }
 
     fileItems.push(file)
@@ -348,7 +383,7 @@ async function debugTest(
       () => {
         vscode.debug.onDidChangeActiveDebugSession((e) => {
           if (!e) {
-            console.log('DISCONNECTED')
+            log.info('DISCONNECTED')
             setTimeout(async () => {
               if (!existsSync(outputFilePath)) {
                 const prefix = 'When running:\r\n'
@@ -371,7 +406,7 @@ async function debugTest(
       },
       (err) => {
         console.error(err)
-        console.log('START DEBUGGING FAILED')
+        log.error('START DEBUGGING FAILED', err)
         reject(new Error('START DEBUGGING FAILED'))
       },
     )

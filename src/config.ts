@@ -1,5 +1,6 @@
-import { workspace } from 'vscode'
+import * as vscode from 'vscode'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
+import { isVitestEnv } from './pure/isVitestEnv'
 export const extensionId = 'zxch3n.vitest-explorer'
 
 export function getConfigValue<T>(
@@ -12,6 +13,7 @@ export function getConfigValue<T>(
 }
 
 export function getConfig(workspaceFolder: WorkspaceFolder) {
+  const workspace = vscode.workspace
   const folderConfig = workspace.getConfiguration('vitest', workspaceFolder)
   const rootConfig = workspace.getConfiguration('vitest')
 
@@ -27,9 +29,26 @@ export function getConfig(workspaceFolder: WorkspaceFolder) {
 }
 
 export function getRootConfig() {
-  const rootConfig = workspace.getConfiguration('vitest')
+  const rootConfig = vscode.workspace.getConfiguration('vitest')
 
   return {
     showFailMessages: rootConfig.get('showFailMessages', false),
+  }
+}
+
+export const vitestEnvironmentFolders: ReadonlyArray<WorkspaceFolder> = []
+
+export async function detectVitestEnvironmentFolders() {
+  const vitestFolders = vitestEnvironmentFolders as WorkspaceFolder[]
+  vitestFolders.splice(0, vitestFolders.length)
+  if (
+    vscode.workspace.workspaceFolders == null
+    || vscode.workspace.workspaceFolders.length === 0
+  )
+    return
+
+  for (const folder of vscode.workspace.workspaceFolders) {
+    if (await isVitestEnv(folder) || getConfig(folder).enable)
+      vitestFolders.push(folder)
   }
 }

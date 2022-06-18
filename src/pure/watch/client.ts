@@ -1,6 +1,7 @@
 import WebSocket from 'ws'
 import { computed, effect, reactive, ref, shallowRef } from '@vue/reactivity'
 import type { ResolvedConfig, Task, TaskResult, WebSocketEvents } from 'vitest'
+import { log } from '../../log'
 import { createClient } from './ws-client'
 
 type WebSocketStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
@@ -28,7 +29,7 @@ export function buildWatchClient(
     const ws = client.ws
     status.value = 'CONNECTING'
     ws.addEventListener('open', () => {
-      console.log('WS Opened')
+      log.info('WS Opened')
       status.value = 'OPEN'
       client.state.filesMap.clear()
       client.rpc.getFiles().then(files => client.state.collectFiles(files))
@@ -40,7 +41,7 @@ export function buildWatchClient(
     })
 
     ws.addEventListener('close', () => {
-      console.log('WS Close')
+      log.info('WS Close')
       setTimeout(() => {
         if (status.value === 'CONNECTING')
           status.value = 'CLOSED'
