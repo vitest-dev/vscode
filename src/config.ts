@@ -15,7 +15,7 @@ export function getConfigValue<T>(
   return folderConfig.get(key) ?? rootConfig.get(key) ?? defaultValue
 }
 
-export function getConfig(workspaceFolder: WorkspaceFolder) {
+export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const workspace = vscode.workspace
   const folderConfig = workspace.getConfiguration('vitest', workspaceFolder)
   const rootConfig = workspace.getConfiguration('vitest')

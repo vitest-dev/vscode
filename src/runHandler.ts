@@ -65,7 +65,7 @@ export async function runHandler(
     log.info(`[Workspace "${folder.name}] Run tests from workspace`)
     try {
       await runTest(ctrl, runner, run, testForThisWorkspace, 'run')
-      log.info(`[Workspace "${folder.name}] Test run finished"`)
+      log.info(`[Workspace "${folder.name}] Test run finished`)
     }
     catch (e) {
       log.error(`[Workspace "${folder.name}] Run error`)
