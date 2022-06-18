@@ -20,6 +20,9 @@ export async function isVitestEnv(projectRoot: string | WorkspaceFolder): Promis
     if (pkg.devDependencies && pkg.devDependencies.vitest)
       return true
 
+    if (pkg.dependencies && pkg.dependencies.vitest)
+      return true
+
     if (pkg.devDependencies && pkg.devDependencies.jest)
       return false
   }
