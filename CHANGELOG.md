@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.14](https://github.com/vitest-dev/vscode/compare/v0.2.13...v0.2.14) (2022-06-18)
+
+
+### Features
+
+* use --api to get result from test run ([8e31504](https://github.com/vitest-dev/vscode/commit/8e31504db788db4ef5052dec49a1811e1ba86bf3))
+
+
+### Bug Fixes
+
+* trivial error ([7cb5a87](https://github.com/vitest-dev/vscode/commit/7cb5a8743137517b730e46b2069b11e6b1242924))
+
 ### [0.2.13](https://github.com/vitest-dev/vscode/compare/v0.2.12...v0.2.13) (2022-06-18)
 
 
