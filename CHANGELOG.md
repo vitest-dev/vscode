@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.13](https://github.com/vitest-dev/vscode/compare/v0.2.12...v0.2.13) (2022-06-18)
+
+
+### Features
+
+* add multi-root workspace run/debug support ([27951ad](https://github.com/vitest-dev/vscode/commit/27951ad148b29996d6a7b3e7e005bd235b86206f))
+
+
+### Bug Fixes
+
+* add log & fix potential error cause [#44](https://github.com/vitest-dev/vscode/issues/44) ([080b5b8](https://github.com/vitest-dev/vscode/commit/080b5b86c3d7e3137dbe26034a72ec6e06a69d90))
+* consider workspace folder with no package.json not vitest env ([be4d4c3](https://github.com/vitest-dev/vscode/commit/be4d4c34beba029058bb869459f642fb8d94acc1))
+* loop over workspace folders for debugging ([690a880](https://github.com/vitest-dev/vscode/commit/690a880c4060009663029f874915121d1add8762))
+* loop to filter w/ async ([a63778f](https://github.com/vitest-dev/vscode/commit/a63778fdc246d00635fe11be6f3e1d53d2a89a2c))
+* sequentially debug separate workspace folders ([2239de7](https://github.com/vitest-dev/vscode/commit/2239de74f4db6466af2cd54239a5bf696858e877))
+* use specific workspace folder's vitest exe ([da560fc](https://github.com/vitest-dev/vscode/commit/da560fcedead5012fe752770bd37ed4d6c0688be))
+
 ### [0.2.12](https://github.com/vitest-dev/vscode/compare/v0.2.11...v0.2.12) (2022-05-31)
 
 
