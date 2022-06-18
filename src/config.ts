@@ -1,6 +1,9 @@
 import * as vscode from 'vscode'
+import semver from 'semver'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import { isVitestEnv } from './pure/isVitestEnv'
+import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
+import { log } from './log'
 export const extensionId = 'zxch3n.vitest-explorer'
 
 export function getConfigValue<T>(
@@ -51,4 +54,53 @@ export async function detectVitestEnvironmentFolders() {
     if (await isVitestEnv(folder) || getConfig(folder).enable)
       vitestFolders.push(folder)
   }
+}
+
+export interface VitestWorkspaceConfig {
+  workspace: vscode.WorkspaceFolder
+  cmd: string
+  args: string[]
+  version?: string
+  isCompatible: boolean
+}
+
+export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig[]> {
+  return await Promise.all(vitestEnvironmentFolders.map(async (workspace) => {
+    const cmd = getVitestCommand(workspace.uri.fsPath)
+
+    const version = await getVitestVersion(cmd, getConfig(workspace).env || undefined).catch(async (e) => {
+      log.info(e.toString())
+      log.info(`process.env.PATH = ${process.env.PATH}`)
+      log.info(`vitest.nodeEnv = ${JSON.stringify(getConfig(workspace).env)}`)
+      let errorMsg = e.toString()
+      if (!isNodeAvailable(getConfig(workspace).env || undefined)) {
+        log.info('Cannot spawn node process')
+        errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
+      }
+
+      vscode.window.showErrorMessage(errorMsg)
+      return undefined
+    })
+
+    const out: VitestWorkspaceConfig = cmd
+      ? {
+          workspace,
+          version,
+          cmd: cmd.cmd,
+          args: cmd.args,
+          isCompatible: isCompatibleVitestConfig({ version, workspace }),
+        }
+      : {
+          version,
+          workspace,
+          cmd: 'npx',
+          args: ['vitest'],
+          isCompatible: isCompatibleVitestConfig({ version, workspace }),
+        }
+    return out
+  }))
+}
+
+function isCompatibleVitestConfig(config: Pick<VitestWorkspaceConfig, 'version' | 'workspace'>) {
+  return !!((config.version && semver.gte(config.version, '0.8.0')) || getConfig(config.workspace).commandLine)
 }

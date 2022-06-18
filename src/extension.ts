@@ -1,15 +1,22 @@
 import * as vscode from 'vscode'
-import semver from 'semver'
+
 import { effect } from '@vue/reactivity'
-import { detectVitestEnvironmentFolders, extensionId, getConfig, vitestEnvironmentFolders } from './config'
+
+import { Command } from './command'
+import {
+  detectVitestEnvironmentFolders, extensionId, getVitestWorkspaceConfigs,
+  vitestEnvironmentFolders,
+} from './config'
 import { TestFileDiscoverer } from './discover'
-import { getVitestCommand, getVitestVersion, isNodeAvailable, negate } from './pure/utils'
-import { debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot } from './runHandler'
+import { log } from './log'
+import {
+  debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot,
+} from './runHandler'
+import { StatusBarItem } from './StatusBarItem'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
-import { Command } from './command'
-import { StatusBarItem } from './StatusBarItem'
-import { log } from './log'
+
+import type { VitestWorkspaceConfig } from './config'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -19,7 +26,60 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   const ctrl = vscode.tests.createTestController(`${extensionId}`, 'Vitest')
+  const fileDiscoverer = registerDiscovery(ctrl, context)
 
+  const workspaceConfigs = await getVitestWorkspaceConfigs()
+  // enable run/debug/watch tests only if vitest version >= 0.8.0
+  if (!workspacesCompatibilityCheck(workspaceConfigs, context))
+    return
+
+  registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context)
+  context.subscriptions.push(
+    ctrl,
+    fileDiscoverer,
+    vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
+      updateSnapshot(ctrl, test)
+    }),
+    vscode.workspace.onDidOpenTextDocument((e) => {
+      fileDiscoverer.discoverTestFromDoc(ctrl, e)
+    }),
+    vscode.workspace.onDidChangeTextDocument(e =>
+      fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
+    ),
+  )
+}
+
+function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[], context: vscode.ExtensionContext) {
+  workspaceConfigs.forEach((vitest) => {
+    log.info(`Vitest Workspace [${vitest.workspace.name}]: Vitest version = ${vitest.version}`)
+  })
+
+  workspaceConfigs.filter(x => !x.isCompatible).forEach((config) => {
+    vscode.window.showWarningMessage(`Because Vitest version < 0.8.0 for ${config.workspace.name} `
+      + ', run/debug/watch tests from Vitest extension disabled for that workspace.\n')
+  })
+
+  if (workspaceConfigs.every(x => !x.isCompatible)) {
+    const msg = 'Because Vitest version < 0.8.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
+    context.subscriptions.push(
+      vscode.commands.registerCommand(Command.ToggleWatching, () => {
+        vscode.window.showWarningMessage(msg)
+      }),
+      vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
+        vscode.window.showWarningMessage(msg)
+      }),
+    )
+    // v0.8.0 introduce a breaking change in json format
+    // https://github.com/vitest-dev/vitest/pull/1034
+    // so we need to disable run & debug in version < 0.8.0
+    vscode.window.showWarningMessage(msg)
+    return false
+  }
+
+  return true
+}
+
+function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext) {
   const fileDiscoverer = new TestFileDiscoverer()
   // run on refreshing test list
   ctrl.refreshHandler = async () => {
@@ -41,102 +101,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  const vitestRunConfigs: {
-    workspace: vscode.WorkspaceFolder
-    cmd: string
-    args: string[]
-    version: string | null
-  }[] = await Promise.all(vitestEnvironmentFolders.map(async (folder) => {
-    const cmd = getVitestCommand(folder.uri.fsPath)
-
-    const version = await getVitestVersion(cmd, getConfig(folder).env || undefined).catch(async (e) => {
-      log.info(e.toString())
-      log.info(`process.env.PATH = ${process.env.PATH}`)
-      log.info(`vitest.nodeEnv = ${JSON.stringify(getConfig(folder).env)}`)
-      let errorMsg = e.toString()
-      if (!isNodeAvailable(getConfig(folder).env || undefined)) {
-        log.info('Cannot spawn node process')
-        errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
-      }
-
-      vscode.window.showErrorMessage(errorMsg)
-    })
-
-    return cmd
-      ? {
-          cmd: cmd.cmd,
-          args: cmd.args,
-          workspace: folder,
-          version: version ?? null,
-        }
-      : {
-          cmd: 'npx',
-          args: ['vitest'],
-          workspace: folder,
-          version: version ?? null,
-        }
-  }))
-
-  vitestRunConfigs.forEach((vitest) => {
-    log.info(`Vitest Workspace [${vitest.workspace.name}]: Vitest version = ${vitest.version}`)
-  })
-
-  const isCompatibleVitestConfig = (config: typeof vitestRunConfigs[number]) =>
-    (config.version && semver.gte(config.version, '0.8.0')) || getConfig(config.workspace).commandLine
-
-  vitestRunConfigs.filter(negate(isCompatibleVitestConfig)).forEach((config) => {
-    vscode.window.showWarningMessage(`Because Vitest version < 0.8.0 for ${config.workspace.name} `
-    + ', run/debug/watch tests from Vitest extension disabled for that workspace.\n')
-  })
-
-  if (vitestRunConfigs.every(negate(isCompatibleVitestConfig))) {
-    const msg = 'Because Vitest version < 0.8.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
-    context.subscriptions.push(
-      vscode.commands.registerCommand(Command.ToggleWatching, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
-      vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
-    )
-    // v0.8.0 introduce a breaking change in json format
-    // https://github.com/vitest-dev/vitest/pull/1034
-    // so we need to disable run & debug in version < 0.8.0
-    vscode.window.showWarningMessage(msg)
-  }
-
-  // enable run/debug/watch tests only if vitest version >= 0.8.0
-  const testWatchers = registerWatchHandlers(
-    vitestRunConfigs.filter(isCompatibleVitestConfig),
-    ctrl,
-    fileDiscoverer,
-    context,
-  ) ?? []
-  registerRunHandler(ctrl, testWatchers)
-  context.subscriptions.push(
-    vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
-      updateSnapshot(ctrl, test)
-    }),
-  )
-
   vscode.window.visibleTextEditors.forEach(x =>
     fileDiscoverer.discoverTestFromDoc(ctrl, x.document),
   )
 
-  context.subscriptions.push(
-    ctrl,
-    // TODO
-    // vscode.commands.registerCommand("vitest-explorer.configureTest", () => {
-    //   vscode.window.showInformationMessage("Not implemented");
-    // }),
-    fileDiscoverer,
-    vscode.workspace.onDidOpenTextDocument((e) => {
-      fileDiscoverer.discoverTestFromDoc(ctrl, e)
-    }),
-    vscode.workspace.onDidChangeTextDocument(e =>
-      fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
-    ),
-  )
+  return fileDiscoverer
 }
 
 function aggregateTestWatcherStatuses(testWatchers: TestWatcher[]) {
@@ -234,10 +203,19 @@ function registerWatchHandlers(
   return testWatchers
 }
 
-function registerRunHandler(
+function registerRunDebugWatchHandler(
   ctrl: vscode.TestController,
-  testWatchers: TestWatcher[],
+  workspaceConfigs: VitestWorkspaceConfig[],
+  fileDiscoverer: TestFileDiscoverer,
+  context: vscode.ExtensionContext,
 ) {
+  const testWatchers = registerWatchHandlers(
+    workspaceConfigs.filter(x => x.isCompatible),
+    ctrl,
+    fileDiscoverer,
+    context,
+  ) ?? []
+
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,

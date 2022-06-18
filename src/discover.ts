@@ -13,7 +13,7 @@ import {
 } from './TestData'
 import { shouldIncludeFile } from './vscodeUtils'
 
-import { getConfig } from './config'
+import { getConfig, vitestEnvironmentFolders } from './config'
 import { log } from './log'
 
 export class TestFileDiscoverer extends vscode.Disposable {
@@ -43,12 +43,12 @@ export class TestFileDiscoverer extends vscode.Disposable {
     for (const watch of this.lastWatches)
       watch.dispose()
 
-    if (!vscode.workspace.workspaceFolders)
+    if (!vitestEnvironmentFolders)
       return [] // handle the case of no opened folders
 
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
-      vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
+      vitestEnvironmentFolders.map(async (workspaceFolder) => {
         const exclude = getConfig(workspaceFolder).exclude
         for (const include of getConfig(workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
