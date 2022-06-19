@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.16](https://github.com/vitest-dev/vscode/compare/v0.2.15...v0.2.16) (2022-06-19)
+
+
+### Features
+
+* show enqueue status, show test result faster ([ff2ad74](https://github.com/vitest-dev/vscode/commit/ff2ad744cd96dc064102559d1c64348054cf968e))
+
+
+### Bug Fixes
+
+* update required minimal vitest version ([3f8c817](https://github.com/vitest-dev/vscode/commit/3f8c817fbd28be8ddbfeadcb8c9109e81b937d1a))
+
 ### [0.2.15](https://github.com/vitest-dev/vscode/compare/v0.2.14...v0.2.15) (2022-06-19)
 
 
