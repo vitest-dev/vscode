@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.17](https://github.com/vitest-dev/vscode/compare/v0.2.16...v0.2.17) (2022-06-19)
+
+
+### Bug Fixes
+
+* invoke onCollect when ws connected ([40bdd0a](https://github.com/vitest-dev/vscode/commit/40bdd0a8acecec682c9214cb71d965b716bca3ff))
+
 ### [0.2.16](https://github.com/vitest-dev/vscode/compare/v0.2.15...v0.2.16) (2022-06-19)
 
 
