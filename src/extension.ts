@@ -29,7 +29,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const fileDiscoverer = registerDiscovery(ctrl, context)
 
   const workspaceConfigs = await getVitestWorkspaceConfigs()
-  // enable run/debug/watch tests only if vitest version >= 0.8.0
+  // enable run/debug/watch tests only if vitest version >= 0.12.0
   if (!workspacesCompatibilityCheck(workspaceConfigs, context))
     return
 
@@ -55,12 +55,12 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[],
   })
 
   workspaceConfigs.filter(x => !x.isCompatible).forEach((config) => {
-    vscode.window.showWarningMessage(`Because Vitest version < 0.8.0 for ${config.workspace.name} `
+    vscode.window.showWarningMessage(`Because Vitest version < 0.12.0 for ${config.workspace.name} `
       + ', run/debug/watch tests from Vitest extension disabled for that workspace.\n')
   })
 
   if (workspaceConfigs.every(x => !x.isCompatible)) {
-    const msg = 'Because Vitest version < 0.8.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
+    const msg = 'Because Vitest version < 0.12.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
     context.subscriptions.push(
       vscode.commands.registerCommand(Command.ToggleWatching, () => {
         vscode.window.showWarningMessage(msg)
@@ -69,9 +69,7 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[],
         vscode.window.showWarningMessage(msg)
       }),
     )
-    // v0.8.0 introduce a breaking change in json format
-    // https://github.com/vitest-dev/vitest/pull/1034
-    // so we need to disable run & debug in version < 0.8.0
+
     vscode.window.showWarningMessage(msg)
     return false
   }

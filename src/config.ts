@@ -107,5 +107,5 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
 }
 
 function isCompatibleVitestConfig(config: Pick<VitestWorkspaceConfig, 'version' | 'workspace'>) {
-  return !!((config.version && semver.gte(config.version, '0.8.0')) || getConfig(config.workspace).commandLine)
+  return !!((config.version && semver.gte(config.version, '0.12.0')) || getConfig(config.workspace).commandLine)
 }

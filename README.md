@@ -25,7 +25,7 @@
 # Requirements
 
 - Require VSCode's version >= July 2021 (version 1.59).
-- Require Vitest's version >= v0.8.0
+- Require Vitest's version >= v0.12.0
 
 # Config
 
