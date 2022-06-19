@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.18](https://github.com/vitest-dev/vscode/compare/v0.2.17...v0.2.18) (2022-06-19)
+
+
+### Features
+
+* use --api on debug mode ([77fd7b3](https://github.com/vitest-dev/vscode/commit/77fd7b3b7273a47d369f90babc816b351cd69561))
+
 ### [0.2.17](https://github.com/vitest-dev/vscode/compare/v0.2.16...v0.2.17) (2022-06-19)
 
 
