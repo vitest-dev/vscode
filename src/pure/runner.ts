@@ -1,6 +1,4 @@
 import { spawn } from 'child_process'
-import { tmpdir } from 'os'
-import * as path from 'path'
 
 import { chunksToLinesAsync } from '@rauschma/stringio'
 import type { File } from 'vitest'
@@ -11,16 +9,6 @@ import {
 import { isWindows } from './platform'
 import type { StartConfig } from './ApiProcess'
 import { runVitestWithApi } from './ApiProcess'
-
-export function getDebuggerConfig() {}
-
-let i = 0
-const suffix = (0 | (Math.random() * 1000000)).toString(36)
-export function getTempPath(): string {
-  return sanitizeFilePath(
-    path.join(tmpdir(), `vitest-report-${suffix}${i++}.json`),
-  )
-}
 
 type Status = 'passed' | 'failed' | 'skipped' | 'pending' | 'todo' | 'disabled'
 type Milliseconds = number
