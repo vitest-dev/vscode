@@ -72,13 +72,13 @@ export class TestRunner {
   async scheduleRun(
     testFile: string[] | undefined,
     testNamePattern: string | undefined,
-    log: (msg: string) => void = () => {},
+    log: { info: (msg: string) => void; error: (line: string) => void } = { info: () => {}, error: console.error },
     workspaceEnv: Record<string, string> = {},
     vitestCommand: { cmd: string; args: string[] } = this.defaultVitestCommand
       ? this.defaultVitestCommand
       : { cmd: 'npx', args: ['vitest'] },
     updateSnapshot = false,
-  ): Promise<File[]> {
+  ): Promise<{ testResultFiles: File[]; output: string }> {
     const command = vitestCommand.cmd
     const args = [
       ...vitestCommand.args,
@@ -95,54 +95,38 @@ export class TestRunner {
     }
 
     const workspacePath = sanitizeFilePath(this.workspacePath)
-    let error: any
     const outputs: string[] = []
     const env = { ...process.env, ...workspaceEnv }
-    let ans = [] as File[]
-    try {
-      await runVitestWithApi({ cmd: command, args }, this.workspacePath, {
-        log: (line) => {
-          log(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
-          outputs.push(filterColorFormatOutput(line))
-        },
-        onFinished: (files) => {
-          if (files == null)
-            throw new Error('Vitest failed to return any files')
+    let testResultFiles = [] as File[]
+    const output = await runVitestWithApi({ cmd: command, args }, this.workspacePath, {
+      log: (line) => {
+        log.info(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
+        outputs.push(filterColorFormatOutput(line))
+      },
+      onFinished: (files) => {
+        if (files == null) {
+          handleError()
+          return
+        }
 
-          ans = files
-        },
-      })
-    }
-    catch (e) {
-      error = e
-      handleError()
-    }
+        testResultFiles = files
+      },
+    })
 
-    return ans
+    return { testResultFiles, output }
 
     async function handleError() {
       const prefix = '\n'
+        + 'Failed to get any result\n'
         + '( Vitest should be configured to be able to run from project root )\n\n'
         + 'Error when running\r\n'
         + `    ${`${command} ${args.join(' ')}`}\n\n`
         + `cwd: ${workspacePath}\r\n`
         + `node: ${await getNodeVersion()}\r\n`
         + `env.PATH: ${env.PATH}\r\n`
-      if (error) {
-        console.error('scheduleRun error', error.toString())
-        console.error(error.stack)
-        const e = error
-        error = new Error(`${prefix}\r\n${error.toString()}`)
-        error.stack = e.stack
-      }
-      else {
-        error = new Error(
-          `${prefix}\n\n------\n\nLog:\n${outputs.join('\r\n')}`,
-        )
-      }
 
-      console.error(outputs.join('\n'))
-      throw error
+      log.error(prefix)
+      log.error(outputs.join('\n'))
     }
   }
 }

@@ -283,12 +283,13 @@ export class TestWatcher extends Disposable {
 
 function parseLocationFromStack(testItem: TestItem, stack: string | undefined): DebuggerLocation | undefined {
   const lines = stack?.split('\n') || []
+  const target = testItem.uri!.fsPath.toLowerCase()
   for (const line of lines) {
     const frame = stackUtils.parseLine(line)
     if (!frame || !frame.file || !frame.line || !frame.column)
       continue
-    frame.file = frame.file.replace(/\//g, path.sep)
-    if (testItem.uri!.fsPath === frame.file) {
+    frame.file = frame.file.replace(/\//g, path.sep).toLowerCase()
+    if (target === frame.file) {
       return {
         path: frame.file,
         line: frame.line,
@@ -321,10 +322,12 @@ export function syncFilesTestStatus(
   finished: boolean,
   isFirstUpdate: boolean,
 ) {
+  const finishedTest: Set<TestItem> = new Set()
   for (const file of files) {
     const data = discover.discoverTestFromPath(ctrl, file.filepath)
-    run && syncTestStatusToVsCode(run, data, file, finished, isFirstUpdate)
+    run && syncTestStatusToVsCode(run, data, file, finished, isFirstUpdate, finishedTest)
   }
+  return finishedTest
 }
 
 export function syncTestStatusToVsCode(
@@ -333,6 +336,7 @@ export function syncTestStatusToVsCode(
   vitestFile: File,
   finished: boolean,
   isFirstUpdate: boolean,
+  finishedTest?: Set<TestItem>,
 ) {
   sync(run, vscodeFile.children, vitestFile.tasks)
 
@@ -346,12 +350,16 @@ export function syncTestStatusToVsCode(
       const data = matchTask(task, set, task.type)
       if (task.type === 'test') {
         if (task.result == null) {
-          if (finished)
+          if (finished) {
+            finishedTest && finishedTest.add(data.item)
             run.skipped(data.item)
-          else if (isFirstUpdate)
-            run.started(data.item)
+          }
+          else if (isFirstUpdate) { run.started(data.item) }
         }
         else {
+          if (finishedTest)
+            finishedTest.add(data.item)
+
           switch (task.result?.state) {
             case 'pass':
               run.passed(data.item, task.result.duration)

@@ -14,7 +14,6 @@
         "${workspaceFolder}/samples/basic"
       ],
       "outFiles": ["${workspaceFolder}/out/**/*.js"]
-      // "preLaunchTask": "${defaultBuildTask}"
     },
     {
       "name": "Run Extension Multi-Root Workspace Sample",
@@ -24,8 +23,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/multi-root-workspace/sample.code-workspace"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
     },
     {
       "name": "Run Extension Monorepo Sample",
@@ -35,8 +33,17 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+    },
+    {
+      "name": "Run Extension React Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/monorepo/packages/react"
+      ],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
     },
     {
       "name": "Run Extension Vue Sample",
@@ -46,8 +53,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/vue"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
     },
     {
       "name": "Extension Tests",
@@ -57,8 +63,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
       ],
-      "outFiles": ["${workspaceFolder}/out/test/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "outFiles": ["${workspaceFolder}/out/test/**/*.js"]
     }
   ]
 }

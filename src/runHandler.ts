@@ -9,6 +9,7 @@ import {
   getTempPath,
 } from './pure/runner'
 import {
+  filterColorFormatOutput,
   getVitestCommand,
   getVitestPath,
   sanitizeFilePath,
@@ -125,7 +126,7 @@ export async function debugHandler(
     const items = request.include ?? ctrl.items
     const testsInThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
     if (testsInThisWorkspace.length === 0)
-      return
+      continue
     try {
       await runTest(ctrl, undefined, run, testsInThisWorkspace, 'debug', discover)
     }
@@ -178,6 +179,10 @@ function determineWorkspaceForTestItems(collection: readonly vscode.TestItem[] |
 }
 
 type Mode = 'debug' | 'run' | 'update'
+const TEST_NOT_FOUND_MESSAGE
+= 'Test result not found. \r\n'
+    + 'Are there tests with the same name?\r\n'
+    + 'Can you run vitest successfully on this file? Does it need custom option to run?'
 async function runTest(
   ctrl: vscode.TestController,
   runner: TestRunner | undefined,
@@ -245,20 +250,32 @@ async function runTest(
       }
     }
 
-    const files = await runner!.scheduleRun(
+    const { output, testResultFiles } = await runner!.scheduleRun(
       fileItems.map(x => x.uri!.fsPath),
       items.length === 1
         ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
         : '',
-      items.length === 1
-        ? msg => run.appendOutput(msg, undefined, items[0])
-        : msg => run.appendOutput(msg),
+      {
+        info: (msg: string) => {
+          if (items.length === 1)
+            run.appendOutput(msg, undefined, items[0])
+          else
+            run.appendOutput(msg)
+        },
+        error: log.error,
+      },
       config.env || undefined,
       command,
       mode === 'update',
     )
 
-    syncFilesTestStatus(files, discover, ctrl, run, true, false)
+    const finishedTests = syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false)
+    for (const item of testCaseSet) {
+      if (!finishedTests.has(item)) {
+        run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))
+        log.error(`Test not found: ${item.id}`)
+      }
+    }
     return
   }
 
@@ -323,11 +340,7 @@ async function runTest(
     testCaseSet.forEach((testCase) => {
       run.errored(
         testCase,
-        new vscode.TestMessage(
-          'Test result not found. \r\n'
-            + 'Are there tests with the same name?'
-            + 'Can you run vitest successfully on this file? Does it need custom option to run?',
-        ),
+        new vscode.TestMessage(TEST_NOT_FOUND_MESSAGE),
       )
       run.appendOutput(`Cannot find test ${testCase.id}`)
     })
