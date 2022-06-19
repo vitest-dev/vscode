@@ -36,7 +36,10 @@ export function buildWatchClient(
       log.info('WS Opened')
       status.value = 'OPEN'
       client.state.filesMap.clear()
-      client.rpc.getFiles().then(files => client.state.collectFiles(files))
+      client.rpc.getFiles().then((files) => {
+        client.state.collectFiles(files)
+        handlers?.onCollected?.(files)
+      })
       client.rpc.getConfig().then(_config => config.value = _config)
     })
 
