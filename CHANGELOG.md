@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.15](https://github.com/vitest-dev/vscode/compare/v0.2.14...v0.2.15) (2022-06-19)
+
+
+### Bug Fixes
+
+* windows path issue & improve error message ([8e2a3db](https://github.com/vitest-dev/vscode/commit/8e2a3db9963ae0999d5abf1e449dd42bd2a8710b))
+
 ### [0.2.14](https://github.com/vitest-dev/vscode/compare/v0.2.13...v0.2.14) (2022-06-18)
 
 
