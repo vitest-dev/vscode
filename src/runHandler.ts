@@ -1,31 +1,25 @@
 import { isAbsolute, relative } from 'path'
-import { existsSync } from 'fs'
 import * as vscode from 'vscode'
 import type { File } from 'vitest'
-import { readFile } from 'fs-extra'
-import type { FormattedTestResults } from './pure/runner'
 import {
   TestRunner,
-  getNodeVersion,
-  getTempPath,
 } from './pure/runner'
 import {
   filterColorFormatOutput,
   getVitestCommand,
   getVitestPath,
-  sanitizeFilePath,
 } from './pure/utils'
 import {
   TestFile,
   WEAKMAP_TEST_DATA,
   getAllTestCases,
-  getTestCaseId,
   testItemIdMap,
 } from './TestData'
 import { getConfig } from './config'
 import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
 import type { TestFileDiscoverer } from './discover'
+import type { StartConfig } from './pure/ApiProcess'
 
 export async function runHandler(
   ctrl: vscode.TestController,
@@ -129,7 +123,8 @@ export async function debugHandler(
     if (testsInThisWorkspace.length === 0)
       continue
     try {
-      await runTest(ctrl, undefined, run, testsInThisWorkspace, 'debug', discover)
+      const runner = new TestRunner(folder.uri.fsPath, getVitestCommand(folder.uri.fsPath))
+      await runTest(ctrl, runner, run, testsInThisWorkspace, 'debug', discover)
     }
     catch (e) {
       if (e instanceof Error) {
@@ -241,202 +236,79 @@ async function runTest(
     run.enqueued(testCase)
   })
 
-  if (mode === 'run' || mode === 'update') {
-    let command
-    if (config.commandLine) {
-      const commandLine = config.commandLine.trim()
-      command = {
-        cmd: commandLine.split(' ')[0],
-        args: commandLine.split(' ').slice(1),
-      }
+  let command
+  if (config.commandLine) {
+    const commandLine = config.commandLine.trim()
+    command = {
+      cmd: commandLine.split(' ')[0],
+      args: commandLine.split(' ').slice(1),
     }
+  }
 
-    const { output, testResultFiles } = await runner!.scheduleRun(
-      fileItems.map(x => x.uri!.fsPath),
-      items.length === 1
-        ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
-        : '',
-      {
-        info: (msg: string) => {
-          if (items.length === 1)
-            run.appendOutput(msg, undefined, items[0])
-          else
-            run.appendOutput(msg)
-        },
-        error: log.error,
-      },
-      config.env || undefined,
-      command,
-      mode === 'update',
-      (files: File[]) => {
-        syncFilesTestStatus(files, discover, ctrl, run, false, false)
-      },
-    )
+  const startDebugProcess
+    = async ({ args, cfg, log, onProcessEnd: onFinished, registerOnTestFinished }: StartConfig) => {
+      let thisSession: vscode.DebugSession | undefined
+      const dispose1 = vscode.debug.onDidStartDebugSession((session) => {
+        thisSession = session
+        dispose1.dispose()
+      })
+      const dispose2 = vscode.debug.onDidTerminateDebugSession((session) => {
+        if (thisSession === session)
+          onFinished()
 
-    const finishedTests = syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false)
-    for (const item of testCaseSet) {
-      if (!finishedTests.has(item)) {
-        run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))
-        log.error(`Test not found: ${item.id}`)
-      }
+        dispose2.dispose()
+      })
+      registerOnTestFinished(() => {
+        vscode.debug.stopDebugging(thisSession)
+      })
+      vscode.debug.startDebugging(workspaceFolder, {
+        type: 'pwa-node',
+        request: 'launch',
+        name: 'Debug Current Test File',
+        autoAttachChildProcesses: true,
+        skipFiles: ['<node_internals>/**', '**/node_modules/**'],
+        program: getVitestPath(workspaceFolder.uri.fsPath),
+        args,
+        smartStep: true,
+        env: cfg.env,
+      }).then(() => {
+        log('Debugging started')
+      }, (err) => {
+        log('Start debugging failed')
+        log(err.toString())
+        dispose1.dispose()
+        dispose2.dispose()
+      })
     }
-    return
-  }
-
-  testCaseSet.forEach((testCase) => {
-    run.started(testCase)
-  })
-
-  const pathToFile = new Map<string, vscode.TestItem>()
-  for (const file of fileItems)
-    pathToFile.set(sanitizeFilePath(file.uri!.fsPath), file)
-
-  let out
-
-  try {
-    out = await debugTest(workspaceFolder, run, items)
-  }
-  catch (e) {
-    console.error(e)
-    run.appendOutput(`Run test failed \r\n${e as Error}\r\n`)
-    run.appendOutput(`${(e as Error)?.stack}\r\n`)
-    testCaseSet.forEach((testCase) => {
-      run.errored(testCase, new vscode.TestMessage((e as Error)?.toString()))
-    })
-    testCaseSet.clear()
-  }
-
-  if (out == null) {
-    testCaseSet.forEach((testCase) => {
-      run.errored(testCase, new vscode.TestMessage('Internal Error'))
-    })
-    return
-  }
-
-  if (out.testResults.length !== 0) {
-    out.testResults.forEach(
-      (fileResult) => {
-        fileResult.assertionResults.forEach((result) => {
-          const id = getTestCaseId(
-            pathToFile.get(sanitizeFilePath(fileResult.name))!,
-            result.fullName.trim(),
-          ) || ''
-          const child = testItemIdMap.get(id)!
-          if (!child || !testCaseSet.has(child))
-            return
-
-          testCaseSet.delete(child)
-          switch (result.status) {
-            case 'passed':
-              run.passed(child, result.duration ?? undefined)
-              return
-            case 'failed':
-              run.failed(
-                child,
-                new vscode.TestMessage(result.failureMessages.join('\r\n')),
-                result.duration ?? undefined,
-              )
-              return
-          }
-
-          if (result.status === 'skipped' || result.status == null)
-            run.skipped(child)
-        })
+  const { output, testResultFiles } = await runner!.scheduleRun(
+    fileItems.map(x => x.uri!.fsPath),
+    items.length === 1
+      ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
+      : '',
+    {
+      info: (msg: string) => {
+        if (items.length === 1)
+          run.appendOutput(msg, undefined, items[0])
+        else
+          run.appendOutput(msg)
       },
-    )
+      error: log.error,
+    },
+    config.env || undefined,
+    command,
+    mode === 'update',
+    (files: File[]) => {
+      syncFilesTestStatus(files, discover, ctrl, run, false, false)
+    },
+    mode === 'debug' ? startDebugProcess : undefined,
+  )
 
-    testCaseSet.forEach((testCase) => {
-      run.errored(
-        testCase,
-        new vscode.TestMessage(TEST_NOT_FOUND_MESSAGE),
-      )
-      run.appendOutput(`Cannot find test ${testCase.id}`)
-    })
-  }
-  else {
-    testCaseSet.forEach((testCase) => {
-      run.errored(
-        testCase,
-        new vscode.TestMessage(
-          'Unexpected condition. Please report the bug to https://github.com/vitest-dev/vscode/issues',
-        ),
-      )
-    })
+  const finishedTests = syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false)
+  for (const item of testCaseSet) {
+    if (!finishedTests.has(item)) {
+      run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))
+      log.error(`Test not found: ${item.id}`)
+    }
   }
 }
 
-async function debugTest(
-  workspaceFolder: vscode.WorkspaceFolder,
-  run: vscode.TestRun,
-  testItems: readonly vscode.TestItem[],
-) {
-  const config = {
-    type: 'pwa-node',
-    request: 'launch',
-    name: 'Debug Current Test File',
-    autoAttachChildProcesses: true,
-    skipFiles: ['<node_internals>/**', '**/node_modules/**'],
-    program: getVitestPath(workspaceFolder.uri.fsPath),
-    args: [] as string[],
-    smartStep: true,
-  }
-
-  const outputFilePath = getTempPath()
-  const testData = testItems.map(item => WEAKMAP_TEST_DATA.get(item)!)
-  config.args = [
-    'run',
-    ...new Set(
-      testData.map(x =>
-        relative(workspaceFolder.uri.fsPath, x.getFilePath()).replace(
-          /\\/g,
-          '/',
-        ),
-      ),
-    ),
-    testData.length === 1 ? '--testNamePattern' : '',
-    testData.length === 1 ? testData[0].getFullPattern() : '',
-    '--reporter=default',
-    '--reporter=json',
-    '--outputFile',
-    outputFilePath,
-  ]
-
-  if (config.program == null) {
-    vscode.window.showErrorMessage('Cannot find vitest')
-    return
-  }
-
-  return new Promise<FormattedTestResults>((resolve, reject) => {
-    vscode.debug.startDebugging(workspaceFolder, config).then(
-      () => {
-        vscode.debug.onDidChangeActiveDebugSession((e) => {
-          if (!e) {
-            log.info('DISCONNECTED')
-            setTimeout(async () => {
-              if (!existsSync(outputFilePath)) {
-                const prefix = 'When running:\r\n'
-                  + `    node ${
-                    `${config.program} ${config.args.join(' ')}`
-                  }\r\n`
-                  + `cwd: ${workspaceFolder.uri.fsPath}\r\n`
-                  + `node: ${await getNodeVersion()}`
-                  + `env.PATH: ${process.env.PATH}`
-                reject(new Error(prefix))
-                return
-              }
-
-              const file = await readFile(outputFilePath, 'utf-8')
-              const out = JSON.parse(file) as FormattedTestResults
-              resolve(out)
-            })
-          }
-        })
-      },
-      (err) => {
-        console.error(err)
-        log.error('START DEBUGGING FAILED', err)
-        reject(new Error('START DEBUGGING FAILED'))
-      },
-    )
-  })
-}

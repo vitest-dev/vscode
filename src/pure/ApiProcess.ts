@@ -1,4 +1,4 @@
-import type { ChildProcess } from 'child_process'
+import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } from 'child_process'
 import getPort from 'get-port'
 import type { File, WebSocketEvents } from 'vitest'
 import { getConfig } from '../config'
@@ -7,6 +7,14 @@ import { execWithLog, filterColorFormatOutput, sanitizeFilePath } from './utils'
 import { buildWatchClient } from './watch/client'
 
 type Handlers = Partial<WebSocketEvents> & { log?: (msg: string) => void; onUpdate?: (files: File[]) => void }
+export interface StartConfig {
+  cmd: string
+  args: string[]
+  cfg: Partial<SpawnOptionsWithStdioTuple<StdioNull, StdioPipe, StdioPipe>>
+  log: (line: string) => void
+  onProcessEnd: () => void
+  registerOnTestFinished: (onTestFinished: () => void) => void
+}
 
 export class ApiProcess {
   private process?: ChildProcess
@@ -20,6 +28,7 @@ export class ApiProcess {
     private workspace: string,
     private handlers: Handlers = {},
     private recordOutput = false,
+    private customStartProcess?: (config: StartConfig) => void,
   ) {
     if (this.handlers.log && !this.handlers.onUserConsoleLog) {
       this.handlers.onUserConsoleLog = ({ content }) => {
@@ -55,8 +64,6 @@ export class ApiProcess {
     this.started = true
     const port = await getPort()
 
-    const logs = [] as string[]
-    let timer: any
     const _log = (line: string) => {
       line = filterColorFormatOutput(line)
       log.info(line)
@@ -67,6 +74,9 @@ export class ApiProcess {
     log.info('[RUN]', `${this.vitest.cmd} ${this.vitest.args.join(' ')}`)
     const cwd = sanitizeFilePath(this.workspace)
     log.info('[RUN.cwd]', cwd)
+
+    const logs = [] as string[]
+    let timer: any
     const debouncedLog = (line: string) => {
       logs.push(line)
       if (this.recordOutput)
@@ -78,22 +88,32 @@ export class ApiProcess {
         logs.length = 0
       }, 200)
     }
-    this.process = execWithLog(
-      this.vitest.cmd,
-      [...this.vitest.args, '--api', port.toString()],
-      {
-        cwd,
-        env: { ...process.env, ...getConfig(this.workspace).env },
-      },
-      debouncedLog,
-      debouncedLog,
-    ).child
-
-    this.process.on('exit', () => {
-      log.info('API PROCESS EXIT')
-      this.handlers.onFinished?.()
-      this.dispose()
-    })
+    if (!this.customStartProcess) {
+      this._start(debouncedLog, port, cwd)
+    }
+    else {
+      this.customStartProcess({
+        cmd: this.vitest.cmd,
+        args: [...this.vitest.args, '--api', port.toString()],
+        cfg: {
+          cwd,
+          env: { ...process.env, ...getConfig(this.workspace).env },
+        },
+        log: debouncedLog,
+        onProcessEnd: () => {
+          log.info('API PROCESS EXIT')
+          this.handlers.onFinished?.()
+          this.dispose()
+        },
+        registerOnTestFinished: (onTestFinished: () => void) => {
+          const onFinished = this.handlers.onFinished
+          this.handlers.onFinished = (...args) => {
+            onFinished?.(...args)
+            onTestFinished()
+          }
+        },
+      })
+    }
 
     setTimeout(() => {
       this.vitestState = buildWatchClient({
@@ -110,6 +130,25 @@ export class ApiProcess {
         }
       })
     }, 50)
+  }
+
+  private _start(debouncedLog: (line: string) => void, port: number, cwd: string) {
+    this.process = execWithLog(
+      this.vitest.cmd,
+      [...this.vitest.args, '--api', port.toString()],
+      {
+        cwd,
+        env: { ...process.env, ...getConfig(this.workspace).env },
+      },
+      debouncedLog,
+      debouncedLog,
+    ).child
+
+    this.process.on('exit', () => {
+      log.info('API PROCESS EXIT')
+      this.handlers.onFinished?.()
+      this.dispose()
+    })
   }
 
   get client() {
@@ -129,6 +168,7 @@ export function runVitestWithApi(
   vitest: { cmd: string; args: string[] },
   workspace: string,
   handlers: Handlers,
+  customStartProcess?: (config: StartConfig) => void,
 ): Promise<string> {
   log.info('[Execute Vitest]', vitest.cmd, vitest.args.join(' '))
   return new Promise<string>((resolve) => {
@@ -144,7 +184,7 @@ export function runVitestWithApi(
           resolve(process.output.join(''))
         }
       },
-    }, true)
+    }, true, customStartProcess)
     process.start()
   })
 }

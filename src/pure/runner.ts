@@ -9,6 +9,7 @@ import {
   sanitizeFilePath,
 } from './utils'
 import { isWindows } from './platform'
+import type { StartConfig } from './ApiProcess'
 import { runVitestWithApi } from './ApiProcess'
 
 export function getDebuggerConfig() {}
@@ -79,6 +80,7 @@ export class TestRunner {
       : { cmd: 'npx', args: ['vitest'] },
     updateSnapshot = false,
     onUpdate?: (files: File[]) => void,
+    customStartProcess?: (config: StartConfig) => void,
   ): Promise<{ testResultFiles: File[]; output: string }> {
     const command = vitestCommand.cmd
     const args = [
@@ -116,7 +118,7 @@ export class TestRunner {
         files && onUpdate && onUpdate(files)
       },
       onUpdate,
-    })
+    }, customStartProcess)
 
     return { testResultFiles, output }
 
