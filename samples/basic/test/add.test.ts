@@ -19,6 +19,14 @@ describe('addition', () => {
     await new Promise(resolve => setTimeout(resolve, 100))
   })
 
+  it('async task 0.5s', async () => {
+    await new Promise(resolve => setTimeout(resolve, 500))
+  })
+
+  it('async task 1s', async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+  })
+
   it('long task', () => {
     let sum = 0
     for (let i = 0; i < 2e8; i++)

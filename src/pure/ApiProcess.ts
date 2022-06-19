@@ -1,12 +1,12 @@
 import type { ChildProcess } from 'child_process'
 import getPort from 'get-port'
-import type { WebSocketEvents } from 'vitest'
+import type { File, WebSocketEvents } from 'vitest'
 import { getConfig } from '../config'
 import { log } from '../log'
 import { execWithLog, filterColorFormatOutput, sanitizeFilePath } from './utils'
 import { buildWatchClient } from './watch/client'
 
-type Handlers = Partial<WebSocketEvents> & { log?: (msg: string) => void }
+type Handlers = Partial<WebSocketEvents> & { log?: (msg: string) => void; onUpdate?: (files: File[]) => void }
 
 export class ApiProcess {
   private process?: ChildProcess
@@ -24,6 +24,26 @@ export class ApiProcess {
     if (this.handlers.log && !this.handlers.onUserConsoleLog) {
       this.handlers.onUserConsoleLog = ({ content }) => {
         this.handlers.log?.(content)
+      }
+    }
+    if (this.handlers.onUpdate) {
+      const taskUpdateHandler = this.handlers.onTaskUpdate
+      this.handlers.onTaskUpdate = (packs) => {
+        taskUpdateHandler && taskUpdateHandler(packs)
+        if (!this.vitestState)
+          return
+
+        const idMap = this.vitestState.client.state.idMap
+        const fileSet = new Set<File>()
+        for (const [id] of packs) {
+          const task = idMap.get(id)
+          if (!task)
+            continue
+
+          task.file && fileSet.add(task.file)
+        }
+
+        this.handlers.onUpdate && this.handlers.onUpdate(Array.from(fileSet))
       }
     }
   }
@@ -75,17 +95,21 @@ export class ApiProcess {
       this.dispose()
     })
 
-    this.vitestState = buildWatchClient({
-      port,
-      handlers: this.handlers,
-    })
+    setTimeout(() => {
+      this.vitestState = buildWatchClient({
+        port,
+        handlers: this.handlers,
+        reconnectInterval: 100,
+        reconnectTries: 100,
+      })
 
-    this.vitestState.loadingPromise.then((isRunning) => {
-      if (!isRunning) {
-        const files = this.vitestState!.files.value
-        files && this.handlers?.onFinished?.(files)
-      }
-    })
+      this.vitestState.loadingPromise.then((isRunning) => {
+        if (!isRunning) {
+          const files = this.vitestState!.files.value
+          files && this.handlers?.onFinished?.(files)
+        }
+      })
+    }, 50)
   }
 
   get client() {

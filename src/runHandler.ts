@@ -1,6 +1,7 @@
 import { isAbsolute, relative } from 'path'
 import { existsSync } from 'fs'
 import * as vscode from 'vscode'
+import type { File } from 'vitest'
 import { readFile } from 'fs-extra'
 import type { FormattedTestResults } from './pure/runner'
 import {
@@ -237,7 +238,7 @@ async function runTest(
   }
 
   testCaseSet.forEach((testCase) => {
-    run.started(testCase)
+    run.enqueued(testCase)
   })
 
   if (mode === 'run' || mode === 'update') {
@@ -267,6 +268,9 @@ async function runTest(
       config.env || undefined,
       command,
       mode === 'update',
+      (files: File[]) => {
+        syncFilesTestStatus(files, discover, ctrl, run, false, false)
+      },
     )
 
     const finishedTests = syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false)
@@ -278,6 +282,10 @@ async function runTest(
     }
     return
   }
+
+  testCaseSet.forEach((testCase) => {
+    run.started(testCase)
+  })
 
   const pathToFile = new Map<string, vscode.TestItem>()
   for (const file of fileItems)

@@ -9,16 +9,20 @@ type WebSocketStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
 export type RunState = 'idle' | 'running'
 
 export function buildWatchClient(
-  { port, url = `ws://localhost:${port}/__vitest_api__`, handlers }: {
+  { port, url = `ws://localhost:${port}/__vitest_api__`, handlers, reconnectInterval, reconnectTries }: {
     url?: string
     handlers?: Partial<WebSocketEvents>
     port: number
+    reconnectInterval?: number
+    reconnectTries?: number
   },
 ) {
   const client = createClient(url, {
     handlers,
     WebSocketConstructor: WebSocket as any,
     reactive: reactive as any,
+    reconnectInterval,
+    reconnectTries,
   })
 
   const config = shallowRef<ResolvedConfig>({} as any)
@@ -54,7 +58,7 @@ export function buildWatchClient(
   const loadingPromise = client.waitForConnection().then(async () => {
     const files = await client.rpc.getFiles()
     const idResultPairs: [string, TaskResult][] = []
-    let isRunning = false
+    let isRunning = files.length === 0
     files && travel(files)
     function travel(tasks: Task[]) {
       for (const task of tasks) {

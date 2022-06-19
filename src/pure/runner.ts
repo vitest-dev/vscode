@@ -78,6 +78,7 @@ export class TestRunner {
       ? this.defaultVitestCommand
       : { cmd: 'npx', args: ['vitest'] },
     updateSnapshot = false,
+    onUpdate?: (files: File[]) => void,
   ): Promise<{ testResultFiles: File[]; output: string }> {
     const command = vitestCommand.cmd
     const args = [
@@ -111,6 +112,10 @@ export class TestRunner {
 
         testResultFiles = files
       },
+      onCollected: (files) => {
+        files && onUpdate && onUpdate(files)
+      },
+      onUpdate,
     })
 
     return { testResultFiles, output }
