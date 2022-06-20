@@ -260,10 +260,28 @@ async function runTest(
         dispose1.dispose()
       })
       const dispose2 = vscode.debug.onDidTerminateDebugSession((session) => {
-        if (thisSession === session) {
-          onFinished()
-          dispose2.dispose()
-        }
+        if (thisSession !== session)
+          return
+
+        let timeout = false
+        let restarted = false
+        const newDispose = vscode.debug.onDidStartDebugSession((session) => {
+          newDispose.dispose()
+          if (timeout)
+            return
+
+          restarted = true
+          thisSession = session
+        })
+
+        setTimeout(() => {
+          if (!restarted) {
+            timeout = true
+            onFinished()
+            dispose2.dispose()
+            newDispose.dispose()
+          }
+        }, 200)
       })
       registerOnTestFinished(() => {
         vscode.debug.stopDebugging(thisSession)
@@ -311,10 +329,12 @@ async function runTest(
   )
 
   const finishedTests = syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false)
-  for (const item of testCaseSet) {
-    if (!finishedTests.has(item)) {
-      run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))
-      log.error(`Test not found: ${item.id}`)
+  if (mode !== 'debug') {
+    for (const item of testCaseSet) {
+      if (!finishedTests.has(item)) {
+        run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))
+        log.error(`Test not found: ${item.id}`)
+      }
     }
   }
 }
