@@ -26,7 +26,7 @@ export async function runHandler(
   discover: TestFileDiscoverer,
   watchers: TestWatcher[],
   request: vscode.TestRunRequest,
-  _cancellation: vscode.CancellationToken,
+  cancellation: vscode.CancellationToken,
 ) {
   if (
     vscode.workspace.workspaceFolders === undefined
@@ -47,6 +47,9 @@ export async function runHandler(
 
   log.info('Tests run start')
   const run = ctrl.createTestRun(request)
+  cancellation.onCancellationRequested(() => {
+    run.end()
+  })
 
   await Promise.allSettled(vscode.workspace.workspaceFolders.map(async (folder) => {
     const runner = new TestRunner(
@@ -108,6 +111,7 @@ export async function debugHandler(
   ctrl: vscode.TestController,
   discover: TestFileDiscoverer,
   request: vscode.TestRunRequest,
+  cancellation: vscode.CancellationToken,
 ) {
   if (
     vscode.workspace.workspaceFolders === undefined
@@ -116,6 +120,9 @@ export async function debugHandler(
     return
 
   const run = ctrl.createTestRun(request)
+  cancellation.onCancellationRequested(() => {
+    run.end()
+  })
 
   for (const folder of vscode.workspace.workspaceFolders) {
     const items = request.include ?? ctrl.items
@@ -253,10 +260,10 @@ async function runTest(
         dispose1.dispose()
       })
       const dispose2 = vscode.debug.onDidTerminateDebugSession((session) => {
-        if (thisSession === session)
+        if (thisSession === session) {
           onFinished()
-
-        dispose2.dispose()
+          dispose2.dispose()
+        }
       })
       registerOnTestFinished(() => {
         vscode.debug.stopDebugging(thisSession)
