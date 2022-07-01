@@ -15,7 +15,7 @@ import {
   getAllTestCases,
   testItemIdMap,
 } from './TestData'
-import { getConfig } from './config'
+import { getConfig, getRootConfig } from './config'
 import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
 import type { TestFileDiscoverer } from './discover'
@@ -51,33 +51,36 @@ export async function runHandler(
     run.end()
   })
 
-  await Promise.allSettled(vscode.workspace.workspaceFolders.map(async (folder) => {
-    const runner = new TestRunner(
-      folder.uri.fsPath,
-      getVitestCommand(folder.uri.fsPath),
-    )
+  const { disabledWorkspaceFolders } = getRootConfig()
+  await Promise.allSettled(vscode.workspace.workspaceFolders
+    .filter(folder => !disabledWorkspaceFolders.includes(folder.name))
+    .map(async (folder) => {
+      const runner = new TestRunner(
+        folder.uri.fsPath,
+        getVitestCommand(folder.uri.fsPath),
+      )
 
-    const items = request.include ?? ctrl.items
+      const items = request.include ?? ctrl.items
 
-    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
-    if (testForThisWorkspace.length === 0)
-      return
+      const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+      if (testForThisWorkspace.length === 0)
+        return
 
-    log.info(`[Workspace "${folder.name}] Run tests from workspace`)
-    try {
-      await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover)
-      log.info(`[Workspace "${folder.name}] Test run finished`)
-    }
-    catch (e) {
-      log.error(`[Workspace "${folder.name}] Run error`)
-      if (e instanceof Error) {
-        const err = e
-        console.error(e)
-        log.info(`[Workspace ${folder.name}] Error: ${e.toString()}`)
-        testForThisWorkspace.forEach(test => run.errored(test, new vscode.TestMessage(err.toString())))
+      log.info(`[Workspace "${folder.name}] Run tests from workspace`)
+      try {
+        await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover)
+        log.info(`[Workspace "${folder.name}] Test run finished`)
       }
-    }
-  }))
+      catch (e) {
+        log.error(`[Workspace "${folder.name}] Run error`)
+        if (e instanceof Error) {
+          const err = e
+          console.error(e)
+          log.info(`[Workspace ${folder.name}] Error: ${e.toString()}`)
+          testForThisWorkspace.forEach(test => run.errored(test, new vscode.TestMessage(err.toString())))
+        }
+      }
+    }))
 
   run.end()
   log.info('Tests run end')

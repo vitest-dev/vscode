@@ -125,6 +125,12 @@
           "type": "boolean",
           "scope": "window",
           "default": false
+        },
+        "vitest.disabledWorkspaceFolders": {
+          "description": "Disabled workspace folders names in multiroot environment",
+          "type": "array",
+          "scope": "resource",
+          "default": []
         }
       }
     }

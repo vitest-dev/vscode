@@ -41,6 +41,7 @@ export function getRootConfig() {
 
   return {
     showFailMessages: rootConfig.get('showFailMessages', false),
+    disabledWorkspaceFolders: rootConfig.get<string[]>('disabledWorkspaceFolders', []),
   }
 }
 

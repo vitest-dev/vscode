@@ -11,7 +11,17 @@
     {
       "name": "react",
       "path": "../monorepo/packages/react"
+    },
+    {
+      "name": "no-root-config",
+      "path": "../monorepo-no-root"
+    },
+    {
+      "name": "react-no-root",
+      "path": "../monorepo-no-root/packages/react"
     }
   ],
-  "settings": {}
+  "settings": {
+    "vitest.disabledWorkspaceFolders": ["no-root-config"]
+  }
 }
