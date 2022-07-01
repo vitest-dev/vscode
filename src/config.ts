@@ -57,7 +57,7 @@ export async function detectVitestEnvironmentFolders() {
     return
 
   for (const folder of vscode.workspace.workspaceFolders) {
-    if (await isVitestEnv(folder) || getConfig(folder).enable)
+    if ((await isVitestEnv(folder) || getConfig(folder).enable) && !getRootConfig().disabledWorkspaceFolders.includes(folder.name))
       vitestFolders.push(folder)
   }
 }
