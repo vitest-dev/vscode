@@ -240,7 +240,7 @@ async function runTest(
   }
 
   testCaseSet.forEach((testCase) => {
-    run.enqueued(testCase)
+    run.started(testCase)
   })
 
   let command
