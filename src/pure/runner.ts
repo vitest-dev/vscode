@@ -89,7 +89,7 @@ export class TestRunner {
     const outputs: string[] = []
     const env = { ...process.env, ...workspaceEnv }
     let testResultFiles = [] as File[]
-    const output = await runVitestWithApi({ cmd: command, args }, this.workspacePath, {
+    const output = await runVitestWithApi({ cmd: sanitizeFilePath(command), args }, this.workspacePath, {
       log: (line) => {
         log.info(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
         outputs.push(filterColorFormatOutput(line))
