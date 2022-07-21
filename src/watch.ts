@@ -283,12 +283,12 @@ export class TestWatcher extends Disposable {
 
 function parseLocationFromStack(testItem: TestItem, stack: string | undefined): DebuggerLocation | undefined {
   const lines = stack?.split('\n') || []
-  const target = testItem.uri!.fsPath.toLowerCase()
+  const target = testItem.uri!.fsPath
   for (const line of lines) {
     const frame = stackUtils.parseLine(line)
     if (!frame || !frame.file || !frame.line || !frame.column)
       continue
-    frame.file = frame.file.replace(/\//g, path.sep).toLowerCase()
+    frame.file = frame.file.replace(/\//g, path.sep)
     if (target === frame.file) {
       return {
         path: frame.file,
