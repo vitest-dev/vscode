@@ -15,7 +15,7 @@ import {
   getAllTestCases,
   testItemIdMap,
 } from './TestData'
-import { getConfig, getRootConfig } from './config'
+import { getConfig } from './config'
 import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
 import type { TestFileDiscoverer } from './discover'
@@ -25,13 +25,11 @@ export async function runHandler(
   ctrl: vscode.TestController,
   discover: TestFileDiscoverer,
   watchers: TestWatcher[],
+  workspaces: vscode.WorkspaceFolder[],
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken,
 ) {
-  if (
-    vscode.workspace.workspaceFolders === undefined
-    || vscode.workspace.workspaceFolders.length === 0
-  ) {
+  if (workspaces.length === 0) {
     log.info('ERROR: No workspace folder found')
     vscode.window.showErrorMessage('Cannot run tests: No workspace folder found')
     return
@@ -51,36 +49,33 @@ export async function runHandler(
     run.end()
   })
 
-  const { disabledWorkspaceFolders } = getRootConfig()
-  await Promise.allSettled(vscode.workspace.workspaceFolders
-    .filter(folder => !disabledWorkspaceFolders.includes(folder.name))
-    .map(async (folder) => {
-      const runner = new TestRunner(
-        folder.uri.fsPath,
-        getVitestCommand(folder.uri.fsPath),
-      )
+  await Promise.allSettled(workspaces.map(async (folder) => {
+    const runner = new TestRunner(
+      folder.uri.fsPath,
+      getVitestCommand(folder.uri.fsPath),
+    )
 
-      const items = request.include ?? ctrl.items
+    const items = request.include ?? ctrl.items
 
-      const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
-      if (testForThisWorkspace.length === 0)
-        return
+    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+    if (testForThisWorkspace.length === 0)
+      return
 
-      log.info(`[Workspace "${folder.name}] Run tests from workspace`)
-      try {
-        await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover)
-        log.info(`[Workspace "${folder.name}] Test run finished`)
+    log.info(`[Workspace "${folder.name}] Run tests from workspace`)
+    try {
+      await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover)
+      log.info(`[Workspace "${folder.name}] Test run finished`)
+    }
+    catch (e) {
+      log.error(`[Workspace "${folder.name}] Run error`)
+      if (e instanceof Error) {
+        const err = e
+        console.error(e)
+        log.info(`[Workspace ${folder.name}] Error: ${e.toString()}`)
+        testForThisWorkspace.forEach(test => run.errored(test, new vscode.TestMessage(err.toString())))
       }
-      catch (e) {
-        log.error(`[Workspace "${folder.name}] Run error`)
-        if (e instanceof Error) {
-          const err = e
-          console.error(e)
-          log.info(`[Workspace ${folder.name}] Error: ${e.toString()}`)
-          testForThisWorkspace.forEach(test => run.errored(test, new vscode.TestMessage(err.toString())))
-        }
-      }
-    }))
+    }
+  }))
 
   run.end()
   log.info('Tests run end')
@@ -113,13 +108,11 @@ export async function updateSnapshot(
 export async function debugHandler(
   ctrl: vscode.TestController,
   discover: TestFileDiscoverer,
+  workspaces: vscode.WorkspaceFolder[],
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken,
 ) {
-  if (
-    vscode.workspace.workspaceFolders === undefined
-    || vscode.workspace.workspaceFolders.length === 0
-  )
+  if (workspaces.length === 0)
     return
 
   const run = ctrl.createTestRun(request)
@@ -127,7 +120,7 @@ export async function debugHandler(
     run.end()
   })
 
-  for (const folder of vscode.workspace.workspaceFolders) {
+  for (const folder of workspaces) {
     const items = request.include ?? ctrl.items
     const testsInThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
     if (testsInThisWorkspace.length === 0)

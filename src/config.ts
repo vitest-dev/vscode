@@ -68,6 +68,7 @@ export interface VitestWorkspaceConfig {
   args: string[]
   version?: string
   isCompatible: boolean
+  isDisabled: boolean
 }
 
 export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig[]> {
@@ -88,6 +89,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
       return undefined
     })
 
+    const disabled = getRootConfig().disabledWorkspaceFolders
     const out: VitestWorkspaceConfig = cmd
       ? {
           workspace,
@@ -95,6 +97,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
           cmd: cmd.cmd,
           args: cmd.args,
           isCompatible: isCompatibleVitestConfig({ version, workspace }),
+          isDisabled: disabled.includes(workspace.name),
         }
       : {
           version,
@@ -102,6 +105,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
           cmd: 'npx',
           args: ['vitest'],
           isCompatible: isCompatibleVitestConfig({ version, workspace }),
+          isDisabled: disabled.includes(workspace.name),
         }
     return out
   }))
@@ -109,4 +113,12 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
 
 function isCompatibleVitestConfig(config: Pick<VitestWorkspaceConfig, 'version' | 'workspace'>) {
   return !!((config.version && semver.gte(config.version, '0.12.0')) || getConfig(config.workspace).commandLine)
+}
+
+/**
+ * @returns vitest workspaces filtered by `disabledWorkspaceFolders`
+ */
+export function getValidWorkspaces(workspaces: vscode.WorkspaceFolder[]): vscode.WorkspaceFolder[] {
+  const { disabledWorkspaceFolders } = getRootConfig()
+  return workspaces.filter(workspace => !disabledWorkspaceFolders.includes(workspace.name)) || []
 }

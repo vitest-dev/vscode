@@ -55,8 +55,8 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[],
   })
 
   workspaceConfigs.filter(x => !x.isCompatible).forEach((config) => {
-    vscode.window.showWarningMessage(`Because Vitest version < 0.12.0 for ${config.workspace.name} `
-      + ', run/debug/watch tests from Vitest extension disabled for that workspace.\n')
+    vscode.window.showWarningMessage('Because Vitest version < 0.12.0'
+      + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
   })
 
   if (workspaceConfigs.every(x => !x.isCompatible)) {
@@ -208,23 +208,24 @@ function registerRunDebugWatchHandler(
   context: vscode.ExtensionContext,
 ) {
   const testWatchers = registerWatchHandlers(
-    workspaceConfigs.filter(x => x.isCompatible),
+    workspaceConfigs.filter(x => x.isCompatible && !x.isDisabled),
     ctrl,
     fileDiscoverer,
     context,
   ) ?? []
 
+  const workspaces = workspaceConfigs.filter(x => x.isCompatible && !x.isDisabled).map(x => x.workspace)
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers),
+    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, workspaces),
     true,
   )
 
   ctrl.createRunProfile(
     'Debug Tests',
     vscode.TestRunProfileKind.Debug,
-    debugHandler.bind(null, ctrl, fileDiscoverer),
+    debugHandler.bind(null, ctrl, fileDiscoverer, workspaces),
     true,
   )
 }
