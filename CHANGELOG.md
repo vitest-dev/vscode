@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.22](https://github.com/vitest-dev/vscode/compare/v0.2.21...v0.2.22) (2022-07-23)
+
+
+### Features
+
+* **runhandler:** add disabledWorkspaceFolders configuration ([67ba85c](https://github.com/vitest-dev/vscode/commit/67ba85c6772cb7bc2c340732a1d2ddb58a02bec3)), closes [#13](https://github.com/vitest-dev/vscode/issues/13)
+
+
+### Bug Fixes
+
+* filter disabled workspace upfront ([a4fc22b](https://github.com/vitest-dev/vscode/commit/a4fc22b2b48f9d26cc25bfea1f9931a1e954df2d))
+* hidden test in side panel ([f89ce2f](https://github.com/vitest-dev/vscode/commit/f89ce2f34d66af3c2f677dc140256c75dbc771e4))
+* vitest.exclude not working  [#60](https://github.com/vitest-dev/vscode/issues/60) ([9cd3218](https://github.com/vitest-dev/vscode/commit/9cd3218a0b430fd4d4a2deb565e6ac343f24470d))
+
 ### [0.2.21](https://github.com/vitest-dev/vscode/compare/v0.2.20...v0.2.21) (2022-07-23)
 
 
