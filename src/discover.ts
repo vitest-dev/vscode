@@ -1,4 +1,4 @@
-import { sep } from 'path'
+import path, { sep } from 'path'
 import * as vscode from 'vscode'
 import minimatch from 'minimatch'
 import parse from './pure/parsers'
@@ -55,9 +55,10 @@ export class TestFileDiscoverer extends vscode.Disposable {
             workspaceFolder.uri,
             include,
           )
+          const workspacePath = workspaceFolder.uri.fsPath
           const watcher = vscode.workspace.createFileSystemWatcher(pattern)
           const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(v.fsPath, x, { dot: true }))
+            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
           watcher.onDidCreate(
             uri => filter(uri) && this.getOrCreateFile(controller, uri),
           )
