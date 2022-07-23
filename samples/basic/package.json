@@ -10,7 +10,7 @@
   "license": "ISC",
   "devDependencies": {
     "vite": "^2.8.6",
-    "vitest": "latest"
+    "vitest": "^0.18.0"
   },
   "dependencies": {
     "birpc": "^0.2.2"
