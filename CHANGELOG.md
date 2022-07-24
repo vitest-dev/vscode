@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.23](https://github.com/vitest-dev/vscode/compare/v0.2.22...v0.2.23) (2022-07-24)
+
+
+### Bug Fixes
+
+* should try activate if contains package.json ([6d17b9f](https://github.com/vitest-dev/vscode/commit/6d17b9fa50330d56d159d29d35958c20d44219c6))
+
 ### [0.2.22](https://github.com/vitest-dev/vscode/compare/v0.2.21...v0.2.22) (2022-07-23)
 
 
