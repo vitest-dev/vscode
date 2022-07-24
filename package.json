@@ -30,7 +30,8 @@
   "activationEvents": [
     "onCommand:vitest-explorer.configureTest",
     "workspaceContains:**/vitest.config.*s",
-    "workspaceContains:**/vite.config.*s"
+    "workspaceContains:**/vite.config.*s",
+    "workspaceContains:**/package.json"
   ],
   "main": "./dist/extension.js",
   "contributes": {
