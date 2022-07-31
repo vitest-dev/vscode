@@ -4,8 +4,7 @@ import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
-import StackUtils from 'stack-utils'
-import type { ErrorWithDiff, File, Task } from 'vitest'
+import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
@@ -18,9 +17,6 @@ import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 import { log } from './log'
 
-const stackUtils = new StackUtils({
-  cwd: '/ensure_absolute_paths',
-})
 export interface DebuggerLocation { path: string; line: number; column: number }
 export class TestWatcher extends Disposable {
   static cache: Record<number, TestWatcher> = {}
@@ -281,20 +277,23 @@ export class TestWatcher extends Disposable {
   }
 }
 
-function parseLocationFromStack(testItem: TestItem, stack: string | undefined): DebuggerLocation | undefined {
-  const lines = stack?.split('\n') || []
-  const target = testItem.uri!.fsPath
-  for (const line of lines) {
-    const frame = stackUtils.parseLine(line)
-    if (!frame || !frame.file || !frame.line || !frame.column)
+function parseLocationFromStacks(testItem: TestItem, stacks: ParsedStack[]): DebuggerLocation | undefined {
+  if (stacks.length === 0)
+    return undefined
+
+  const targetFilepath = testItem.uri!.fsPath
+  for (const { sourcePos } of stacks) {
+    if (!sourcePos)
       continue
-    frame.file = frame.file.replace(/\//g, path.sep)
-    if (target === frame.file) {
-      return {
-        path: frame.file,
-        line: frame.line,
-        column: frame.column,
-      }
+
+    const sourceFilepath = sourcePos.source?.replace(/\//g, path.sep)
+    if (sourceFilepath !== targetFilepath || isNaN(sourcePos.column) || isNaN(sourcePos.line))
+      continue
+
+    return {
+      path: sourceFilepath,
+      line: sourcePos.line,
+      column: sourcePos.column,
     }
   }
 }
@@ -306,7 +305,7 @@ function testMessageForTestError(testItem: TestItem, error: ErrorWithDiff | unde
   else
     testMessage = new TestMessage(error?.message ?? '')
 
-  const location = parseLocationFromStack(testItem, error?.stack)
+  const location = parseLocationFromStacks(testItem, error?.stacks ?? [])
   if (location) {
     const position = new Position(location.line - 1, location.column - 1)
     testMessage.location = new Location(Uri.file(location.path), position)
