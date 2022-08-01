@@ -6,7 +6,6 @@ import {
   filterColorFormatOutput,
   sanitizeFilePath,
 } from './utils'
-import { isWindows } from './platform'
 import type { StartConfig } from './ApiProcess'
 import { runVitestWithApi } from './ApiProcess'
 
@@ -78,12 +77,8 @@ export class TestRunner {
     if (updateSnapshot)
       args.push('--update')
 
-    if (testNamePattern) {
-      if (isWindows)
-        args.push('-t', `"${testNamePattern}"`)
-      else
-        args.push('-t', testNamePattern)
-    }
+    if (testNamePattern)
+      args.push('-t', testNamePattern)
 
     const workspacePath = sanitizeFilePath(this.workspacePath)
     const outputs: string[] = []
