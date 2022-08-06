@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.26](https://github.com/vitest-dev/vscode/compare/v0.2.25...v0.2.26) (2022-08-06)
+
+
+### Bug Fixes
+
+* conservatively display window error ([1312f2e](https://github.com/vitest-dev/vscode/commit/1312f2e98063b086c7bfcb4fc4bafed15dde3c4b))
+
 ### [0.2.25](https://github.com/vitest-dev/vscode/compare/v0.2.24...v0.2.25) (2022-08-06)
 
 
