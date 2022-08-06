@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.27](https://github.com/vitest-dev/vscode/compare/v0.2.26...v0.2.27) (2022-08-06)
+
+
+### Bug Fixes
+
+* vitest env detect error [#61](https://github.com/vitest-dev/vscode/issues/61) ([9edf4c1](https://github.com/vitest-dev/vscode/commit/9edf4c1d6de56daafc44bebfad8fb7e47de98a02))
+
 ### [0.2.26](https://github.com/vitest-dev/vscode/compare/v0.2.25...v0.2.26) (2022-08-06)
 
 
