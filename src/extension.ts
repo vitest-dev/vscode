@@ -35,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
     log.error(msg)
     // if the vitest detection is false positive, we may still reach here.
     // but we can still use `.version` to filter some false positive
-    if (workspaceConfigs.some(x => x.version))
+    if (workspaceConfigs.some(x => x.isUsingVitestForSure))
       vscode.window.showWarningMessage(msg)
 
     context.subscriptions.push(
@@ -72,7 +72,7 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[])
   })
 
   // prompt error message if we can get the version from vitest, but it's not compatible with the extension
-  workspaceConfigs.filter(x => !x.isCompatible && x.version).forEach((config) => {
+  workspaceConfigs.filter(x => !x.isCompatible && x.isUsingVitestForSure).forEach((config) => {
     vscode.window.showWarningMessage('Because Vitest version < 0.12.0'
       + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
   })

@@ -29,10 +29,15 @@ export function getVitestPath(projectRoot: string): string | undefined {
   }
 }
 
+/**
+ * if this function return a cmd, then this project is definitely using vitest
+ * @param projectRoot
+ * @returns
+ */
 export function getVitestCommand(
   projectRoot: string,
 ): { cmd: string; args: string[] } | undefined {
-  if (!projectRoot)
+  if (!projectRoot || projectRoot.length < 5)
     return
 
   const node_modules = path.resolve(projectRoot, 'node_modules')

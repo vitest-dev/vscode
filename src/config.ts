@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import semver from 'semver'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
-import { isVitestEnv } from './pure/isVitestEnv'
+import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
 import { log } from './log'
 export const extensionId = 'zxch3n.vitest-explorer'
@@ -57,13 +57,14 @@ export async function detectVitestEnvironmentFolders() {
     return
 
   for (const folder of vscode.workspace.workspaceFolders) {
-    if ((await isVitestEnv(folder) || getConfig(folder).enable) && !getRootConfig().disabledWorkspaceFolders.includes(folder.name))
+    if ((await mayBeVitestEnv(folder) || getConfig(folder).enable) && !getRootConfig().disabledWorkspaceFolders.includes(folder.name))
       vitestFolders.push(folder)
   }
 }
 
 export interface VitestWorkspaceConfig {
   workspace: vscode.WorkspaceFolder
+  isUsingVitestForSure: boolean
   cmd: string
   args: string[]
   version?: string
@@ -74,6 +75,7 @@ export interface VitestWorkspaceConfig {
 export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig[]> {
   return await Promise.all(vitestEnvironmentFolders.map(async (workspace) => {
     const cmd = getVitestCommand(workspace.uri.fsPath)
+    const isUsingVitestForSure = getConfig(workspace).enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)
 
     const version = await getVitestVersion(cmd, getConfig(workspace).env || undefined).catch(async (e) => {
       log.info(e.toString())
@@ -94,6 +96,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
       ? {
           workspace,
           version,
+          isUsingVitestForSure,
           cmd: cmd.cmd,
           args: cmd.args,
           isCompatible: isCompatibleVitestConfig({ version, workspace }),
@@ -102,6 +105,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
       : {
           version,
           workspace,
+          isUsingVitestForSure,
           cmd: 'npx',
           args: ['vitest'],
           isCompatible: isCompatibleVitestConfig({ version, workspace }),
