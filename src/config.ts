@@ -85,7 +85,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
         errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
       }
 
-      vscode.window.showErrorMessage(errorMsg)
+      log.error(errorMsg)
       return undefined
     })
 

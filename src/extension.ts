@@ -30,8 +30,25 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const workspaceConfigs = await getVitestWorkspaceConfigs()
   // enable run/debug/watch tests only if vitest version >= 0.12.0
-  if (!workspacesCompatibilityCheck(workspaceConfigs, context))
+  if (!workspacesCompatibilityCheck(workspaceConfigs)) {
+    const msg = 'Because Vitest version < 0.12.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
+    log.error(msg)
+    // if the vitest detection is false positive, we may still reach here.
+    // but we can still use `.version` to filter some false positive
+    if (workspaceConfigs.some(x => x.version))
+      vscode.window.showWarningMessage(msg)
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand(Command.ToggleWatching, () => {
+        vscode.window.showWarningMessage(msg)
+      }),
+      vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
+        vscode.window.showWarningMessage(msg)
+      }),
+    )
+
     return
+  }
 
   registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context)
   context.subscriptions.push(
@@ -49,30 +66,19 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 }
 
-function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[], context: vscode.ExtensionContext) {
+function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[]) {
   workspaceConfigs.forEach((vitest) => {
     log.info(`Vitest Workspace [${vitest.workspace.name}]: Vitest version = ${vitest.version}`)
   })
 
-  workspaceConfigs.filter(x => !x.isCompatible).forEach((config) => {
+  // prompt error message if we can get the version from vitest, but it's not compatible with the extension
+  workspaceConfigs.filter(x => !x.isCompatible && x.version).forEach((config) => {
     vscode.window.showWarningMessage('Because Vitest version < 0.12.0'
       + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
   })
 
-  if (workspaceConfigs.every(x => !x.isCompatible)) {
-    const msg = 'Because Vitest version < 0.12.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
-    context.subscriptions.push(
-      vscode.commands.registerCommand(Command.ToggleWatching, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
-      vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
-    )
-
-    vscode.window.showWarningMessage(msg)
+  if (workspaceConfigs.every(x => !x.isCompatible))
     return false
-  }
 
   return true
 }
