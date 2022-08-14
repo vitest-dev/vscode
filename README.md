@@ -42,6 +42,7 @@
   `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`
 - `vitest.exclude`: Exclude globs for test files. Default:
   `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`
+- `vitest.additionalDebugConfiguration`: Properties overlayed onto the run configuration to launch the vitest for debugging. For example: `{"trace": true}`
 
 # Screenshots
 

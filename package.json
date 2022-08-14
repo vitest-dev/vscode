@@ -132,6 +132,12 @@
           "type": "array",
           "scope": "resource",
           "default": []
+        },
+        "vitest.additionalDebugConfiguration": {
+          "markdownDescription": "Properties overlayed onto the run configuration to launch the vitest for debugging. For example: `{\"trace\": true}`",
+          "type": "object",
+          "scope": "resource",
+          "default": {}
         }
       }
     }

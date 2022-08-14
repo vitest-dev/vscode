@@ -292,6 +292,7 @@ async function runTest(
         args,
         smartStep: true,
         env: cfg.env,
+        ...(getConfig(workspaceFolder).additionalDebugConfiguration)
       }).then(() => {
         log('Debugging started')
       }, (err) => {
