@@ -127,6 +127,13 @@
           "scope": "window",
           "default": false
         },
+        "vitest.changeBackgroundColor": {
+          "description": "Change background color of status bar item on failing tests.",
+          "type": "boolean",
+          "scope": "window",
+          "default": true
+
+        },
         "vitest.disabledWorkspaceFolders": {
           "description": "Disabled workspace folders names in multiroot environment",
           "type": "array",
