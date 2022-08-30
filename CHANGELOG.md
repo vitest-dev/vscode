@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.29](https://github.com/vitest-dev/vscode/compare/v0.2.28...v0.2.29) (2022-08-30)
+
+
+### Bug Fixes
+
+* add more error message in when test not found ([dfdb154](https://github.com/vitest-dev/vscode/commit/dfdb1549dc99768cddb4bec798c1d7f5574bd752))
+* enrich error context around test not found ([443ed52](https://github.com/vitest-dev/vscode/commit/443ed52a263142258e68a358254e4543a2a82ce1))
+
 ### [0.2.28](https://github.com/vitest-dev/vscode/compare/v0.2.27...v0.2.28) (2022-08-26)
 
 ### [0.2.27](https://github.com/vitest-dev/vscode/compare/v0.2.26...v0.2.27) (2022-08-06)
