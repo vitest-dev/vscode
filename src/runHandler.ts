@@ -180,8 +180,9 @@ function determineWorkspaceForTestItems(collection: readonly vscode.TestItem[] |
 type Mode = 'debug' | 'run' | 'update'
 const TEST_NOT_FOUND_MESSAGE
 = 'Test result not found. \r\n'
+    + 'Did you set `vitest.commandLine` to `run` mode? (This extension requires `watch` mode to get the results from Vitest api)\r\n'
     + 'Are there tests with the same name?\r\n'
-    + 'Can you run vitest successfully on this file? Does it need custom option to run?'
+    + 'Can you run vitest successfully on this file? Does it need custom option to run?\r\n'
 async function runTest(
   ctrl: vscode.TestController,
   runner: TestRunner | undefined,
