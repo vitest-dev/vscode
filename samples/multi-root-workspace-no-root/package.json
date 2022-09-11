@@ -1,0 +1,15 @@
+{
+  "name": "monorepo",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "packageManager": "yarn@3.2.3"
+}

@@ -26,6 +26,16 @@
       "outFiles": ["${workspaceFolder}/out/**/*.js"]
     },
     {
+      "name": "Run Extension Multi-Root Workspace No Root Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/multi-root-workspace-no-root/sample.code-workspace"
+      ],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+    },
+    {
       "name": "Run Extension Monorepo Sample",
       "type": "extensionHost",
       "request": "launch",

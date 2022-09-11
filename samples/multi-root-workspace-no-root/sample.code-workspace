@@ -1,0 +1,25 @@
+{
+  "folders": [
+    {
+      "name": "react",
+      "path": "./packages/react"
+    },
+    {
+      "name": "root",
+      "path": "."
+    },
+  ],
+  "settings": {
+    "vitest.disabledWorkspaceFolders": ["root"],
+    "vitest.commandLine": "yarn vitest",
+    "files.exclude": {
+      "**/.git": true,
+      "**/.svn": true,
+      "**/.hg": true,
+      "**/CVS": true,
+      "**/.DS_Store": true,
+      "**/Thumbs.db": true,
+      "packages": true
+    }
+  }
+}
