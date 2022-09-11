@@ -7,7 +7,7 @@ import {
 import {
   filterColorFormatOutput,
   getVitestCommand,
-  getVitestPath,
+  getVitestPathRecursively,
 } from './pure/utils'
 import {
   TestFile,
@@ -291,7 +291,7 @@ async function runTest(
         name: 'Debug Current Test File',
         autoAttachChildProcesses: true,
         skipFiles: ['<node_internals>/**', '**/node_modules/**'],
-        program: getVitestPath(workspaceFolder.uri.fsPath),
+        program: getVitestPathRecursively(workspaceFolder.uri.fsPath),
         args,
         smartStep: true,
         env: cfg.env,
@@ -337,4 +337,3 @@ async function runTest(
     }
   }
 }
-

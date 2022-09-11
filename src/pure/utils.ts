@@ -30,6 +30,24 @@ export function getVitestPath(projectRoot: string): string | undefined {
 }
 
 /**
+ * Return the path to the vitest executable. In most configurations, it is present in
+ * the `node_modules` folder of the current workspace.
+ *
+ * When using `yarn 3` with workspaces though, the vitest executable can be present
+ * only in the project's root `node_modules` folder.
+ *
+ * Thus we iterate recursively on parent directories until we find the vitest executable.
+ */
+export function getVitestPathRecursively(
+  projectRoot: string,
+): string | undefined {
+  const result = getVitestPath(projectRoot)
+  if (result !== undefined)
+    return result
+  return getVitestPathRecursively(path.resolve(projectRoot, '..'))
+}
+
+/**
  * if this function return a cmd, then this project is definitely using vitest
  * @param projectRoot
  * @returns
