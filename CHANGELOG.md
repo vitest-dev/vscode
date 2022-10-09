@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.30](https://github.com/vitest-dev/vscode/compare/v0.2.29...v0.2.30) (2022-08-30)
+
+### Bug Fixes
+
+* Allow overwriting of the host parameter to solve the [issue 55](https://github.com/vitest-dev/vscode/issues/55).
+
 ### [0.2.29](https://github.com/vitest-dev/vscode/compare/v0.2.28...v0.2.29) (2022-08-30)
 
 
