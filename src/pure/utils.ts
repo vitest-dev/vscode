@@ -131,7 +131,7 @@ const replaceDoubleSlashes = (string: string) => string.replace(/\\/g, '/')
 
 export function sanitizeFilePath(path: string) {
   if (isWindows)
-    return capitalizeFirstLetter(replaceDoubleSlashes(path))
+    return replaceDoubleSlashes(path)
 
   return path
 }
