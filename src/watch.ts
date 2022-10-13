@@ -71,7 +71,7 @@ export class TestWatcher extends Disposable {
       let timer: any
       this.process = execWithLog(
         this.vitest.cmd,
-        [...this.vitest.args, '--api.port', port.toString()],
+        [...this.vitest.args, '--api.port', port.toString(), '--api.host', '127.0.0.1'],
         {
           cwd: this.workspace.uri.fsPath,
           env: { ...process.env, ...getConfig(this.workspace).env },
