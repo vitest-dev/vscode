@@ -78,7 +78,7 @@ export class TestRunner {
       args.push('--update')
 
     if (testNamePattern)
-      args.push('-t', testNamePattern)
+      args.push('-t', testNamePattern.replace(/[$^+?()[\]]/g, '\\$&'))
 
     const workspacePath = sanitizeFilePath(this.workspacePath)
     const outputs: string[] = []
