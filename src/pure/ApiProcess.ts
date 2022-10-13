@@ -94,7 +94,7 @@ export class ApiProcess {
     else {
       this.customStartProcess({
         cmd: this.vitest.cmd,
-        args: [...this.vitest.args, '--api', port.toString()],
+        args: [...this.vitest.args, '--api.port', port.toString()],
         cfg: {
           cwd,
           env: { ...process.env, ...getConfig(this.workspace).env },
@@ -135,7 +135,7 @@ export class ApiProcess {
   private _start(debouncedLog: (line: string) => void, port: number, cwd: string) {
     this.process = execWithLog(
       this.vitest.cmd,
-      [...this.vitest.args, '--api', port.toString()],
+      [...this.vitest.args, '--api.port', port.toString()],
       {
         cwd,
         env: { ...process.env, ...getConfig(this.workspace).env },
