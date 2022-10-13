@@ -1,7 +1,7 @@
 {
   "name": "vitest-explorer",
   "displayName": "Vitest",
-  "version": "0.2.31",
+  "version": "0.2.32",
   "description": "Run and debug Vitest test cases",
   "icon": "img/icon.png",
   "preview": true,
@@ -132,7 +132,6 @@
           "type": "boolean",
           "scope": "window",
           "default": true
-
         },
         "vitest.disabledWorkspaceFolders": {
           "description": "Disabled workspace folders names in multiroot environment",
