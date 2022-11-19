@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.34](https://github.com/vitest-dev/vscode/compare/v0.2.33...v0.2.34) (2022-11-19)
+
+
+### Bug Fixes
+
+* don't raise version warning if vitest is not installed yet ([744032c](https://github.com/vitest-dev/vscode/commit/744032c46cffec24aad8d3817063f07329284c62))
+* only collect test result once ([f330530](https://github.com/vitest-dev/vscode/commit/f330530b0f895f5834da08f5fbebe7f287a82497))
+
 ### [0.2.33](https://github.com/vitest-dev/vscode/compare/v0.2.32...v0.2.33) (2022-11-19)
 
 
