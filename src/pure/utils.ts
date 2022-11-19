@@ -108,9 +108,7 @@ export async function getVitestVersion(
 }
 
 export function isNodeAvailable(
-
   env?: Record<string, string>,
-
 ): Promise<boolean> {
   const child = spawn('node', {
     env: { ...process.env, ...env },
