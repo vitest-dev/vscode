@@ -78,19 +78,21 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
     const cmd = getVitestCommand(workspace.uri.fsPath)
     const isUsingVitestForSure = getConfig(workspace).enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)
 
-    const version = await getVitestVersion(cmd, getConfig(workspace).env || undefined).catch(async (e) => {
-      log.info(e.toString())
-      log.info(`process.env.PATH = ${process.env.PATH}`)
-      log.info(`vitest.nodeEnv = ${JSON.stringify(getConfig(workspace).env)}`)
-      let errorMsg = e.toString()
-      if (!isNodeAvailable(getConfig(workspace).env || undefined)) {
-        log.info('Cannot spawn node process')
-        errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
-      }
+    const version = cmd == null
+      ? undefined
+      : await getVitestVersion(cmd, getConfig(workspace).env || undefined).catch(async (e) => {
+        log.info(e.toString())
+        log.info(`process.env.PATH = ${process.env.PATH}`)
+        log.info(`vitest.nodeEnv = ${JSON.stringify(getConfig(workspace).env)}`)
+        let errorMsg = e.toString()
+        if (!isNodeAvailable(getConfig(workspace).env || undefined)) {
+          log.info('Cannot spawn node process')
+          errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
+        }
 
-      log.error(errorMsg)
-      return undefined
-    })
+        log.error(errorMsg)
+        return undefined
+      })
 
     const disabled = getRootConfig().disabledWorkspaceFolders
     const out: VitestWorkspaceConfig = cmd
