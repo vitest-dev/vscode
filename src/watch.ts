@@ -139,6 +139,8 @@ export class TestWatcher extends Disposable {
             }
           },
         },
+        reconnectInterval: 200,
+        reconnectTries: 10,
       })
 
       effect(() => {
@@ -320,8 +322,8 @@ export function syncFilesTestStatus(
   run: TestRun | undefined,
   finished: boolean,
   isFirstUpdate: boolean,
+  finishedTest: Set<TestItem> = new Set(),
 ) {
-  const finishedTest: Set<TestItem> = new Set()
   for (const file of files) {
     const data = discover.discoverTestFromPath(ctrl, file.filepath)
     run && syncTestStatusToVsCode(run, data, file, finished, isFirstUpdate, finishedTest)
@@ -356,12 +358,15 @@ export function syncTestStatusToVsCode(
           else if (isFirstUpdate) { run.started(data.item) }
         }
         else {
-          if (finishedTest)
-            finishedTest.add(data.item)
+          if (finishedTest) {
+            if (finishedTest.has(data.item))
+              continue
+          }
 
           switch (task.result?.state) {
             case 'pass':
               run.passed(data.item, task.result.duration)
+              finishedTest && finishedTest.add(data.item)
               break
             case 'fail':
               run.failed(
@@ -369,10 +374,12 @@ export function syncTestStatusToVsCode(
                 testMessageForTestError(data.item, task.result.error),
                 task.result.duration,
               )
+              finishedTest && finishedTest.add(data.item)
               break
             case 'skip':
             case 'todo':
               run.skipped(data.item)
+              finishedTest && finishedTest.add(data.item)
               break
             case 'run':
               run.started(data.item)

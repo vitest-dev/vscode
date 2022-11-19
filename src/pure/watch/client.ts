@@ -29,31 +29,35 @@ export function buildWatchClient(
   const status = ref<WebSocketStatus>('CONNECTING')
   const files = computed(() => client.state.getFiles())
 
+  const handled = new WeakSet()
   effect(() => {
     const ws = client.ws
-    status.value = 'CONNECTING'
-    ws.addEventListener('open', () => {
-      log.info('WS Opened')
-      status.value = 'OPEN'
-      client.state.filesMap.clear()
-      client.rpc.getFiles().then((files) => {
-        client.state.collectFiles(files)
-        handlers?.onCollected?.(files)
+    if (!handled.has(ws)) {
+      handled.add(ws)
+      status.value = 'CONNECTING'
+      ws.addEventListener('open', () => {
+        log.info('WS Opened')
+        status.value = 'OPEN'
+        client.state.filesMap.clear()
+        client.rpc.getFiles().then((files) => {
+          client.state.collectFiles(files)
+          handlers?.onCollected?.(files)
+        })
+        client.rpc.getConfig().then(_config => config.value = _config)
       })
-      client.rpc.getConfig().then(_config => config.value = _config)
-    })
 
-    ws.addEventListener('error', (e) => {
-      console.error('WS ERROR', e)
-    })
+      ws.addEventListener('error', (e) => {
+        console.error('WS ERROR', e)
+      })
 
-    ws.addEventListener('close', () => {
-      log.info('WS Close')
-      setTimeout(() => {
-        if (status.value === 'CONNECTING')
-          status.value = 'CLOSED'
-      }, 1000)
-    })
+      ws.addEventListener('close', () => {
+        log.info('WS Close')
+        setTimeout(() => {
+          if (status.value === 'CONNECTING')
+            status.value = 'CLOSED'
+        }, 1000)
+      })
+    }
   })
 
   // load result from first run manually

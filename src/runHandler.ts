@@ -304,6 +304,7 @@ async function runTest(
         dispose2.dispose()
       })
     }
+  const finishedTests: Set<vscode.TestItem> = new Set()
   const { output, testResultFiles } = await runner!.scheduleRun(
     fileItems.map(x => x.uri!.fsPath),
     items.length === 1
@@ -322,12 +323,12 @@ async function runTest(
     command,
     mode === 'update',
     (files: File[]) => {
-      syncFilesTestStatus(files, discover, ctrl, run, false, false)
+      syncFilesTestStatus(files, discover, ctrl, run, false, false, finishedTests)
     },
     mode === 'debug' ? startDebugProcess : undefined,
   )
 
-  const finishedTests = syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false)
+  syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false, finishedTests)
   if (mode !== 'debug') {
     for (const item of testCaseSet) {
       if (!finishedTests.has(item)) {

@@ -120,7 +120,7 @@ export class ApiProcess {
         port,
         handlers: this.handlers,
         reconnectInterval: 100,
-        reconnectTries: 100,
+        reconnectTries: 10,
       })
 
       this.vitestState.loadingPromise.then((isRunning) => {
@@ -144,7 +144,17 @@ export class ApiProcess {
       debouncedLog,
     ).child
 
-    this.process.on('exit', () => {
+    this.process.on('error', (err) => {
+      log.error(`Process Error: ${err}`)
+    })
+
+    this.process.on('exit', (code) => {
+      if (code !== 0) {
+        this.dispose()
+        log.error(`Process exited with code ${code}`)
+        return
+      }
+
       log.info('API PROCESS EXIT')
       this.handlers.onFinished?.()
       this.dispose()

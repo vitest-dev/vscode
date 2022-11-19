@@ -11,6 +11,7 @@ import type {
   TaskResultPack,
   UserConsoleLog, WebSocketEvents, WebSocketHandlers,
 } from 'vitest'
+import { log } from '../../log'
 
 class StateManager {
   filesMap = new Map<string, File>()
@@ -159,13 +160,20 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     openResolve = resolve
   })
 
+  let opened = false
   function reconnect(reset = false) {
     if (reset) {
+      opened = false
       tries = reconnectTries
       openPromise = new Promise((resolve) => {
         openResolve = resolve
       })
     }
+
+    if (opened)
+      return
+
+    log.info('RECONNECT')
     ctx.ws = shallowReactive(new WebSocketConstructor(url))
     registerWS()
   }
@@ -180,7 +188,7 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     })
     ctx.ws.addEventListener('close', () => {
       tries -= 1
-      if (autoReconnect && tries > 0)
+      if (!opened && autoReconnect && tries > 0)
         setTimeout(reconnect, reconnectInterval)
     })
   }
