@@ -17,13 +17,14 @@ export function getVitestPath(projectRoot: string): string | undefined {
     return
 
   if (existsSync(path.resolve(node_modules, 'vitest', 'vitest.mjs')))
-    return sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'))
+    return sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'), false)
 
   const suffixes = ['.js', '', '.cmd']
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, '.bin', `vitest${suffix}`))) {
       return sanitizeFilePath(
         path.resolve(node_modules, '.bin', `vitest${suffix}`),
+        false,
       )
     }
   }
@@ -62,7 +63,7 @@ export function getVitestCommand(
       return {
         cmd: 'node',
         args: [
-          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs')),
+          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'), false),
         ],
       }
     }
@@ -124,14 +125,21 @@ export function isNodeAvailable(
   })
 }
 
-const capitalizeFirstLetter = (string: string) =>
-  string.charAt(0).toUpperCase() + string.slice(1)
+const removeDriveLetter = (string: string) => {
+  if (string.match(/^[a-zA-Z]:/))
+    return string.slice(2)
 
+  return string
+}
 const replaceDoubleSlashes = (string: string) => string.replace(/\\/g, '/')
 
-export function sanitizeFilePath(path: string) {
-  if (isWindows)
-    return replaceDoubleSlashes(path)
+export function sanitizeFilePath(path: string, isTestPattern: boolean) {
+  if (isWindows) {
+    if (isTestPattern)
+      return replaceDoubleSlashes(removeDriveLetter(path))
+    else
+      return replaceDoubleSlashes(path)
+  }
 
   return path
 }
