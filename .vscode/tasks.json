@@ -4,9 +4,9 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "watch",
       "type": "npm",
       "script": "watch",
-      "problemMatcher": "$tsc-watch",
       "isBackground": true,
       "presentation": {
         "reveal": "never"
@@ -14,7 +14,28 @@
       "group": {
         "kind": "build",
         "isDefault": true
-      }
+      },
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": {
+              "regexp": "Build start"
+            },
+            "endsPattern": {
+              "regexp": "Build success"
+            }
+          }
+        }
+      ]
     }
   ]
 }
