@@ -84,7 +84,7 @@ export class ApiProcess {
 
       clearTimeout(timer)
       timer = setTimeout(() => {
-        _log(logs.join('\r\n'))
+        _log(logs.join(''))
         logs.length = 0
       }, 200)
     }
