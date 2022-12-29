@@ -279,23 +279,36 @@ export class TestWatcher extends Disposable {
   }
 }
 
+function getSourceFilepathAndLocationFromStack(stack: ParsedStack): { sourceFilepath?: string; line: number; column: number } {
+  if (stack.sourcePos) {
+    return {
+      sourceFilepath: stack.sourcePos.source?.replace(/\//g, path.sep),
+      line: stack.sourcePos.line,
+      column: stack.sourcePos.column,
+    }
+  }
+
+  return {
+    sourceFilepath: stack.file.replace(/\//g, path.sep),
+    line: stack.line,
+    column: stack.column,
+  }
+}
+
 function parseLocationFromStacks(testItem: TestItem, stacks: ParsedStack[]): DebuggerLocation | undefined {
   if (stacks.length === 0)
     return undefined
 
   const targetFilepath = testItem.uri!.fsPath
-  for (const { sourcePos } of stacks) {
-    if (!sourcePos)
-      continue
-
-    const sourceFilepath = sourcePos.source?.replace(/\//g, path.sep)
-    if (sourceFilepath !== targetFilepath || isNaN(sourcePos.column) || isNaN(sourcePos.line))
+  for (const stack of stacks) {
+    const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
+    if (sourceFilepath !== targetFilepath || isNaN(column) || isNaN(line))
       continue
 
     return {
       path: sourceFilepath,
-      line: sourcePos.line,
-      column: sourcePos.column,
+      line,
+      column,
     }
   }
 }
