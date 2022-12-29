@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.35](https://github.com/vitest-dev/vscode/compare/v0.2.34...v0.2.35) (2022-12-29)
+
+
+### Bug Fixes
+
+* map error to correct position when no sourcePos ([9d47d7d](https://github.com/vitest-dev/vscode/commit/9d47d7de20f021c933ba4b32dd05ffdf0a961875))
+
 ### [0.2.34](https://github.com/vitest-dev/vscode/compare/v0.2.33...v0.2.34) (2022-11-19)
 
 
