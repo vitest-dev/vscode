@@ -45,9 +45,6 @@ export async function runHandler(
 
   log.info('Tests run start')
   const run = ctrl.createTestRun(request)
-  cancellation.onCancellationRequested(() => {
-    run.end()
-  })
 
   await Promise.allSettled(workspaces.map(async (folder) => {
     const runner = new TestRunner(
@@ -63,7 +60,7 @@ export async function runHandler(
 
     log.info(`[Workspace "${folder.name}] Run tests from workspace`)
     try {
-      await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover)
+      await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover, cancellation)
       log.info(`[Workspace "${folder.name}] Test run finished`)
     }
     catch (e) {
@@ -116,9 +113,6 @@ export async function debugHandler(
     return
 
   const run = ctrl.createTestRun(request)
-  cancellation.onCancellationRequested(() => {
-    run.end()
-  })
 
   for (const folder of workspaces) {
     const items = request.include ?? ctrl.items
@@ -127,7 +121,7 @@ export async function debugHandler(
       continue
     try {
       const runner = new TestRunner(folder.uri.fsPath, getVitestCommand(folder.uri.fsPath))
-      await runTest(ctrl, runner, run, testsInThisWorkspace, 'debug', discover)
+      await runTest(ctrl, runner, run, testsInThisWorkspace, 'debug', discover, cancellation)
     }
     catch (e) {
       if (e instanceof Error) {
@@ -192,6 +186,7 @@ async function runTest(
   items: readonly vscode.TestItem[],
   mode: Mode,
   discover: TestFileDiscoverer,
+  cancellation?: vscode.CancellationToken,
 ) {
   if (mode !== 'debug' && runner === undefined)
     throw new Error('should provide runner if not debug')
@@ -326,10 +321,11 @@ async function runTest(
       syncFilesTestStatus(files, discover, ctrl, run, false, false, finishedTests)
     },
     mode === 'debug' ? startDebugProcess : undefined,
+    cancellation,
   )
 
   syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false, finishedTests)
-  if (mode !== 'debug') {
+  if (mode !== 'debug' && !cancellation?.isCancellationRequested) {
     for (const item of testCaseSet) {
       if (!finishedTests.has(item)) {
         run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))

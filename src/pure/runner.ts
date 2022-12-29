@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 
 import { chunksToLinesAsync } from '@rauschma/stringio'
 import type { File } from 'vitest'
+import type { CancellationToken } from 'vscode'
 import {
   filterColorFormatOutput,
   sanitizeFilePath,
@@ -68,6 +69,7 @@ export class TestRunner {
     updateSnapshot = false,
     onUpdate?: (files: File[]) => void,
     customStartProcess?: (config: StartConfig) => void,
+    cancellation?: CancellationToken,
   ): Promise<{ testResultFiles: File[]; output: string }> {
     const command = vitestCommand.cmd
     const args = [
@@ -91,7 +93,8 @@ export class TestRunner {
       },
       onFinished: (files) => {
         if (files == null) {
-          handleError()
+          if (!cancellation?.isCancellationRequested)
+            handleError()
           return
         }
 
@@ -101,7 +104,7 @@ export class TestRunner {
         files && onUpdate && onUpdate(files)
       },
       onUpdate,
-    }, customStartProcess)
+    }, customStartProcess, cancellation)
 
     return { testResultFiles, output }
 
