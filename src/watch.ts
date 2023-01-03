@@ -139,8 +139,9 @@ export class TestWatcher extends Disposable {
             }
           },
         },
-        reconnectInterval: 200,
-        reconnectTries: 10,
+        // vitest could take up to 10 seconds to start up on some computers, so reconnects need to be long enough to handle that
+        reconnectInterval: 500,
+        reconnectTries: 20,
       })
 
       effect(() => {
