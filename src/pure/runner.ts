@@ -6,6 +6,7 @@ import {
   filterColorFormatOutput,
   sanitizeFilePath,
 } from './utils'
+import { isWindows } from './platform'
 import type { StartConfig } from './ApiProcess'
 import { runVitestWithApi } from './ApiProcess'
 
@@ -77,8 +78,15 @@ export class TestRunner {
     if (updateSnapshot)
       args.push('--update')
 
-    if (testNamePattern)
-      args.push('-t', testNamePattern.replace(/[$^+?()[\]]/g, '\\$&'))
+    if (testNamePattern) {
+      // Vitest's test name pattern is a regex, so we need to escape any special regex characters.
+      // Additionally, when a custom start process is not used on Windows, child_process.spawn is used with shell: true.
+      // That disables automatic quoting/escaping of arguments, requiring us to manually perform that here as well.
+      if (isWindows && !customStartProcess)
+        args.push('-t', `"${testNamePattern.replace(/[$^+?()[\]"]/g, '\\$&')}"`)
+      else
+        args.push('-t', testNamePattern.replace(/[$^+?()[\]"]/g, '\\$&'))
+    }
 
     const workspacePath = sanitizeFilePath(this.workspacePath, false)
     const outputs: string[] = []
