@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.36](https://github.com/vitest-dev/vscode/compare/v0.2.35...v0.2.36) (2023-01-03)
+
+
+### Bug Fixes
+
+* read package.json to check if a folder is a Vitest env ([df13127](https://github.com/vitest-dev/vscode/commit/df1312719887af6a89630a0e6bbd58a0da0629d7))
+* run single test on Windows not working properly ([c037333](https://github.com/vitest-dev/vscode/commit/c03733336b36dec6cde3b6da85c4be5da7f8284d))
+* tests still say Running after test run finishes ([ef2d017](https://github.com/vitest-dev/vscode/commit/ef2d01794a3fcba293126c3c5a42a1ec239b8b0c))
+* unable to cancel in-progress test runs ([7ca7f4a](https://github.com/vitest-dev/vscode/commit/7ca7f4a9f38a6cf3df2707d4bc5a1763f5e528e2))
+
 ### [0.2.35](https://github.com/vitest-dev/vscode/compare/v0.2.34...v0.2.35) (2022-12-29)
 
 
