@@ -1,6 +1,8 @@
 import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } from 'child_process'
 import getPort from 'get-port'
 import type { File, WebSocketEvents } from 'vitest'
+import type { CancellationToken } from 'vscode'
+import kill from 'tree-kill'
 import { getConfig } from '../config'
 import { log } from '../log'
 import { execWithLog, filterColorFormatOutput, sanitizeFilePath } from './utils'
@@ -133,6 +135,14 @@ export class ApiProcess {
     }, 50)
   }
 
+  kill() {
+    // Kill using tree-kill to ensure all child processes are killed.
+    // Especially necessary on Windows, due to shell: true being passed to spawn.
+    if (this.process)
+      kill(this.process?.pid)
+      this.handlers.onFinished?.()
+  }
+
   private _start(debouncedLog: (line: string) => void, port: number, cwd: string) {
     this.process = execWithLog(
       this.vitest.cmd,
@@ -150,6 +160,9 @@ export class ApiProcess {
     })
 
     this.process.on('exit', (code) => {
+      if (this.disposed)
+        return
+
       if (code !== 0) {
         this.dispose()
         log.error(`Process exited with code ${code}`)
@@ -169,7 +182,8 @@ export class ApiProcess {
   dispose() {
     this.disposed = true
     this.vitestState?.client.dispose()
-    this.process?.kill()
+    if (this.process)
+      kill(this.process?.pid)
     this.vitestState = undefined
     this.process = undefined
   }
@@ -180,6 +194,7 @@ export function runVitestWithApi(
   workspace: string,
   handlers: Handlers,
   customStartProcess?: (config: StartConfig) => void,
+  cancellationToken?: CancellationToken,
 ): Promise<string> {
   log.info('[Execute Vitest]', vitest.cmd, vitest.args.join(' '))
   return new Promise<string>((resolve) => {
@@ -197,5 +212,9 @@ export function runVitestWithApi(
       },
     }, true, customStartProcess)
     process.start()
+
+    cancellationToken?.onCancellationRequested(() => {
+      process.kill()
+    })
   })
 }
