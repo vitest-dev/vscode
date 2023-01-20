@@ -140,7 +140,7 @@ export class ApiProcess {
     // Especially necessary on Windows, due to shell: true being passed to spawn.
     if (this.process)
       kill(this.process?.pid)
-      this.handlers.onFinished?.()
+    this.handlers.onFinished?.()
   }
 
   private _start(debouncedLog: (line: string) => void, port: number, cwd: string) {
