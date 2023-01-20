@@ -92,7 +92,7 @@ export async function getVitestVersion(
     })
   }
   else {
-    child = spawn(vitestCommand.cmd, [...vitestCommand.args, '-v'], {
+    child = spawn(process.execPath, [vitestCommand.cmd, ...vitestCommand.args, '-v'], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, ...env },
     })
