@@ -80,31 +80,46 @@ export interface Cmd {
   args: string[]
 }
 
-export async function getVitestVersion(
-  vitestCommand?: Cmd,
-  env?: Record<string, string>,
-): Promise<string> {
-  let child
-  if (vitestCommand == null) {
-    child = spawn('npx', ['vitest', '-v'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
-    })
-  }
-  else {
-    child = spawn(process.execPath, [vitestCommand.cmd, ...vitestCommand.args, '-v'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
-    })
-  }
+const spawnVitestVersion = async (
+  command: string,
+  args: string[],
+  env: Record<string, string | undefined>,
+): Promise<string | undefined> => {
+  const child = spawn(command, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env,
+  })
 
   // eslint-disable-next-line no-unreachable-loop
   for await (const line of chunksToLinesAsync(child.stdout)) {
     child.kill()
     return line.match(/vitest\/(\d+.\d+.\d+)/)![1]
   }
+}
+
+const getVersionOrThrow = (vitestCommand: string | undefined): string => {
+  if (vitestCommand !== undefined)
+    return vitestCommand
 
   throw new Error(`Cannot get vitest version from "${JSON.stringify(vitestCommand)}"`)
+}
+
+export async function getVitestVersion(
+  vitestCommand?: Cmd,
+  env?: Record<string, string>,
+): Promise<string> {
+  const envs = { ...process.env, ...env }
+
+  if (vitestCommand == null)
+    return getVersionOrThrow(await spawnVitestVersion('npx', ['vitest', '-v'], envs))
+
+  const version = getVersionOrThrow(await spawnVitestVersion(vitestCommand.cmd, [...vitestCommand.args, '-v'], envs))
+
+  if (version !== undefined)
+    return version
+
+  // When using a Node installed by a version manager, we need to pass the execPath to spawn
+  return getVersionOrThrow(await spawnVitestVersion(process.execPath, [vitestCommand.cmd, ...vitestCommand.args, '-v'], envs))
 }
 
 export function isNodeAvailable(
