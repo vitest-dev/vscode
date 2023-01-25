@@ -112,6 +112,15 @@
           ],
           "scope": "resource"
         },
+        "vitest.debugExclude": {
+          "markdownDescription": "Automatically skip files covered by these glob patterns. \nDefault: `[\"<node_internals>/**\", \"**/node_modules/**\"]`",
+          "type": "array",
+          "default": [
+            "<node_internals>/**",
+            "**/node_modules/**"
+          ],
+          "scope": "resource"
+        },
         "vitest.nodeEnv": {
           "markdownDescription": "The env passed to runner process in addition to `process.env`",
           "type": [
