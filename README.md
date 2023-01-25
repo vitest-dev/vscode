@@ -42,6 +42,8 @@
   `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`
 - `vitest.exclude`: Exclude globs for test files. Default:
   `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`
+- `vitest.debugExclude`: Automatically skip files covered by these glob patterns. Default:
+  `[\"<node_internals>/**\", \"**/node_modules/**\"]`
 
 # Screenshots
 

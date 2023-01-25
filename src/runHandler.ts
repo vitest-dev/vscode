@@ -285,7 +285,7 @@ async function runTest(
         request: 'launch',
         name: 'Debug Current Test File',
         autoAttachChildProcesses: true,
-        skipFiles: ['<node_internals>/**', '**/node_modules/**'],
+        skipFiles: config.debugExclude,
         program: getVitestPath(workspaceFolder.uri.fsPath),
         args,
         smartStep: true,

@@ -33,6 +33,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     include: get<string[]>('include', []),
     exclude: get<string[]>('exclude', []),
     enable: get<boolean>('enable', false),
+    debugExclude: get<string[]>('debugExclude', []),
   }
 }
 
