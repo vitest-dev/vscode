@@ -9,6 +9,7 @@ import {
 import * as path from 'path'
 import { chunksToLinesAsync } from '@rauschma/stringio'
 import { existsSync } from 'fs-extra'
+import { log } from '../log'
 import { isWindows } from './platform'
 
 export function getVitestPath(projectRoot: string): string | undefined {
@@ -80,46 +81,73 @@ export interface Cmd {
   args: string[]
 }
 
-const spawnVitestVersion = async (
+/**
+ * Try to extract a vitest version from the output of the command
+ *
+ * @returns the version, or undefined if not found
+ */
+export const spawnVitestVersion = async (
   command: string,
   args: string[],
-  env: Record<string, string | undefined>,
+  env?: Record<string, string | undefined>,
 ): Promise<string | undefined> => {
+  log.info(`Trying to get vitest version from ${command} ${args.join(' ')}...`)
+
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     env,
   })
 
+  child.on('error', () => {
+    log.info('Command not found')
+  })
+
   // eslint-disable-next-line no-unreachable-loop
   for await (const line of chunksToLinesAsync(child.stdout)) {
     child.kill()
-    return line.match(/vitest\/(\d+.\d+.\d+)/)![1]
+    log.info(line)
+
+    const match = line.match(/vitest\/(\d+.\d+.\d+)/)
+
+    if (match && match.length > 0)
+      return match[1]
   }
 }
 
-const getVersionOrThrow = (vitestCommand: string | undefined): string => {
-  if (vitestCommand !== undefined)
-    return vitestCommand
-
-  throw new Error(`Cannot get vitest version from "${JSON.stringify(vitestCommand)}"`)
-}
-
-export async function getVitestVersion(
-  vitestCommand?: Cmd,
-  env?: Record<string, string>,
-): Promise<string> {
-  const envs = { ...process.env, ...env }
-
-  if (vitestCommand == null)
-    return getVersionOrThrow(await spawnVitestVersion('npx', ['vitest', '-v'], envs))
-
-  const version = getVersionOrThrow(await spawnVitestVersion(vitestCommand.cmd, [...vitestCommand.args, '-v'], envs))
+/**
+ * Try to detect the vitest version by first spawning the command directly, then by spawning the command with the
+ * execPath of the current Node process (useful when using a Node installed by a version manager such as nvm).
+ *
+ * @see https://github.com/electron/electron/issues/3627#issuecomment-793052457
+ * @returns the version
+ * @throws an error if the version cannot be detected
+ */
+export const detectVitestVersion = async (command: string, args: string[], envs: Record<string, string | undefined>): Promise<string > => {
+  // Try to spawn the command directly
+  const version = await spawnVitestVersion(command, args, envs)
 
   if (version !== undefined)
     return version
 
   // When using a Node installed by a version manager, we need to pass the execPath to spawn
-  return getVersionOrThrow(await spawnVitestVersion(process.execPath, [vitestCommand.cmd, ...vitestCommand.args, '-v'], envs))
+  const versionExecPath = await spawnVitestVersion(process.execPath, [command, ...args], envs)
+
+  if (versionExecPath !== undefined)
+    return versionExecPath
+
+  throw new Error('Cannot get vitest version. Please open an issue at https://github.com/vitest-dev/vscode/issues and join the logs above.')
+}
+
+export async function getVitestVersion(
+  vitestCommand?: Cmd,
+  env?: Record<string, string | undefined>,
+): Promise<string | undefined> {
+  const envs = { ...process.env, ...env }
+
+  if (vitestCommand == null)
+    return await detectVitestVersion('npx', ['vitest', '-v'], envs)
+
+  return await detectVitestVersion(vitestCommand.cmd, [...vitestCommand.args, '-v'], envs)
 }
 
 export function isNodeAvailable(
