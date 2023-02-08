@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.38](https://github.com/vitest-dev/vscode/compare/v0.2.37...v0.2.38) (2023-02-08)
+
+
+### Features
+
+* make skipFiles of launch config configurable via debugExclude setting ([1c07064](https://github.com/vitest-dev/vscode/commit/1c070648671e4c1c426dc564a6a110ee437e159a))
+
 ### [0.2.37](https://github.com/vitest-dev/vscode/compare/v0.2.36...v0.2.37) (2023-01-20)
 
 ### [0.2.36](https://github.com/vitest-dev/vscode/compare/v0.2.35...v0.2.36) (2023-01-03)
