@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.39](https://github.com/vitest-dev/vscode/compare/v0.2.38...v0.2.39) (2023-02-08)
+
+
+### Bug Fixes
+
+* [#107](https://github.com/vitest-dev/vscode/issues/107) speed up activation events ([f4842b5](https://github.com/vitest-dev/vscode/commit/f4842b55de9b41e5e3e390b4408b19140a1b1942))
+
 ### [0.2.38](https://github.com/vitest-dev/vscode/compare/v0.2.37...v0.2.38) (2023-02-08)
 
 
