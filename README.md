@@ -58,3 +58,19 @@
 **Inspect console output**
 
 ![](https://i.ibb.co/gMZWXZQ/Screen-Recording-2022-03-29-at-20-59-31.gif)
+
+# FAQ
+
+#### **How can I use it in monorepo?**
+
+It's not well supported yet. But you can use VS Code workspace as a workaround for now. Each folder of the workspace can have its own vitest extension config.
+
+#### **How can I use this extension when tests are under a sub directory?**
+
+You can use VS Code command `add folder to workspace` to add the sub directory. The extension should work fine.
+
+#### **`test.each` is not working**
+
+Dynamic test name is not supported yet. This extension currently relies on the babel parser to calculate the positions of tests statically.
+
+Related issue: https://github.com/vitest-dev/vscode/issues/133
