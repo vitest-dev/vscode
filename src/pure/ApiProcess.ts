@@ -138,8 +138,8 @@ export class ApiProcess {
   kill() {
     // Kill using tree-kill to ensure all child processes are killed.
     // Especially necessary on Windows, due to shell: true being passed to spawn.
-    if (this.process)
-      kill(this.process?.pid)
+    if (this.process && this.process.pid)
+      kill(this.process.pid)
     this.handlers.onFinished?.()
   }
 
@@ -182,8 +182,8 @@ export class ApiProcess {
   dispose() {
     this.disposed = true
     this.vitestState?.client.dispose()
-    if (this.process)
-      kill(this.process?.pid)
+    if (this.process && this.process.pid)
+      kill(this.process.pid)
     this.vitestState = undefined
     this.process = undefined
   }
