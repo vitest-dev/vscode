@@ -93,9 +93,9 @@ export const spawnVitestVersion = async (
 ): Promise<string | undefined> => {
   log.info(`Trying to get vitest version from ${command} ${args.join(' ')}...`)
 
-  const child = spawn(path.basename(command), args, {
-    cwd: path.dirname(command),
+  const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
+    shell: isWindows,
     env,
   })
 
