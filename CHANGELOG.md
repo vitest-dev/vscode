@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.40](https://github.com/vitest-dev/vscode/compare/v0.2.39...v0.2.40) (2023-05-18)
+
+
+### Bug Fixes
+
+* spawn() requires a command name, not a full path ([#139](https://github.com/vitest-dev/vscode/issues/139)) ([fe7955e](https://github.com/vitest-dev/vscode/commit/fe7955e81dafb799b240c2db0e22bf828db2b36e))
+
 ### [0.2.39](https://github.com/vitest-dev/vscode/compare/v0.2.38...v0.2.39) (2023-02-08)
 
 
