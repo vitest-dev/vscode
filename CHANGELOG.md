@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.41](https://github.com/vitest-dev/vscode/compare/v0.2.40...v0.2.41) (2023-05-18)
+
+
+### Bug Fixes
+
+* spawn err on mac ([74d3ab2](https://github.com/vitest-dev/vscode/commit/74d3ab2359a1ed21584ab2d8bdfb439ae9ea7d86))
+
 ### [0.2.40](https://github.com/vitest-dev/vscode/compare/v0.2.39...v0.2.40) (2023-05-18)
 
 
