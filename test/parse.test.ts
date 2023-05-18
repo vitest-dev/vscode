@@ -43,4 +43,23 @@ describe('parse', () => {
 
     expect(out.describeBlocks.length).toBe(1)
   })
+
+  it('parse satisfies keyword', () => {
+    const out = parse(
+      'x.ts',
+      ''
+      + 'type Person = {\n'
+      + '    name: string\n'
+      + '    age: number\n'
+      + '};\n'
+      + 'describe("satisfies keyword", () => {\n'
+      + '  const person = {\n'
+      + '      name: "test",\n'
+      + '      age: 20\n'
+      + '  } satisfies Person\n'
+      + '});\n',
+    )
+
+    expect(out.describeBlocks.length).toBe(1)
+  })
 })
