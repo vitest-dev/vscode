@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.42](https://github.com/vitest-dev/vscode/compare/v0.2.41...v0.2.42) (2023-07-01)
+
+
+### Bug Fixes
+
+* Revert back to drive path capitalization on windows ([#161](https://github.com/vitest-dev/vscode/issues/161)) ([1afa62e](https://github.com/vitest-dev/vscode/commit/1afa62eaf234b6885dba7d0cf84e39400b2ce0a4))
+
 ### [0.2.41](https://github.com/vitest-dev/vscode/compare/v0.2.40...v0.2.41) (2023-05-18)
 
 
