@@ -167,20 +167,17 @@ export function isNodeAvailable(
   })
 }
 
-const removeDriveLetter = (string: string) => {
-  if (string.match(/^[a-zA-Z]:/))
-    return string.slice(2)
+const capitalizeDriveLetter = (path: string) => {
+  if (path.match(/^[a-zA-Z]:/))
+    return path.charAt(0).toUpperCase() + path.slice(1)
 
-  return string
+  return path
 }
 const replaceDoubleSlashes = (string: string) => string.replace(/\\/g, '/')
 
-export function sanitizeFilePath(path: string, isTestPattern: boolean) {
+export function sanitizeFilePath(path: string) {
   if (isWindows) {
-    if (isTestPattern)
-      return replaceDoubleSlashes(removeDriveLetter(path))
-    else
-      return replaceDoubleSlashes(path)
+    return replaceDoubleSlashes(capitalizeDriveLetter(path))
   }
 
   return path
