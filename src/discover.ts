@@ -103,6 +103,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
+        const workspacePath = workspaceFolder.uri.fsPath
         const exclude = getConfig(workspaceFolder).exclude
         for (const include of getConfig(workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
@@ -110,7 +111,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
             include,
           )
           const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(v.fsPath, x, { dot: true }))
+            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
