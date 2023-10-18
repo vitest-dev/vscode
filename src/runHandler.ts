@@ -327,7 +327,12 @@ async function runTest(
   syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false, finishedTests)
   if (mode !== 'debug' && !cancellation?.isCancellationRequested) {
     for (const item of testCaseSet) {
-      if (!finishedTests.has(item)) {
+      let testFinished = false
+      for (const finishedItem of finishedTests) {
+        if (finishedItem.id === item.id)
+          testFinished = true
+      }
+      if (!testFinished) {
         run.errored(item, new vscode.TestMessage(`${TEST_NOT_FOUND_MESSAGE}\r\n\r\nVitest output:\r\n${filterColorFormatOutput(output)}`))
         log.error(`Test not found: ${item.id}`)
       }
