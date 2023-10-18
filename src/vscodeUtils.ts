@@ -2,7 +2,8 @@ import { TextDecoder } from 'util'
 import type { Uri } from 'vscode'
 import { workspace } from 'vscode'
 import minimatch from 'minimatch'
-import { getConfig } from './config'
+import type { ResolvedConfig } from 'vitest'
+import { getCombinedConfig } from './config'
 
 const textDecoder = new TextDecoder('utf-8')
 
@@ -17,8 +18,8 @@ export const getContentFromFilesystem = async (uri: Uri) => {
   }
 }
 
-export function shouldIncludeFile(path: string) {
-  const { include, exclude } = getConfig()
+export function shouldIncludeFile(path: string, config: ResolvedConfig) {
+  const { include, exclude } = getCombinedConfig(config)
   return (
     include.some(x => minimatch(path, x))
     && exclude.every(x => !minimatch(path, x, { dot: true }))
