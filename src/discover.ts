@@ -1,6 +1,7 @@
 import path, { sep } from 'path'
 import * as vscode from 'vscode'
 import minimatch from 'minimatch'
+import type { ResolvedConfig } from 'vitest'
 import parse from './pure/parsers'
 import type { NamedBlock } from './pure/parsers/parser_nodes'
 import type { TestData } from './TestData'
@@ -13,7 +14,7 @@ import {
 } from './TestData'
 import { shouldIncludeFile } from './vscodeUtils'
 
-import { getConfig, vitestEnvironmentFolders } from './config'
+import { getCombinedConfig, vitestEnvironmentFolders } from './config'
 import { log } from './log'
 
 export class TestFileDiscoverer extends vscode.Disposable {
@@ -22,8 +23,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
   private workspaceCommonPrefix: Map<string, string> = new Map()
   private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map()
   private pathToFileItem: Map<string, TestFile> = new Map()
+  private config: ResolvedConfig
 
-  constructor() {
+  constructor(config: ResolvedConfig) {
     super(() => {
       for (const watch of this.lastWatches)
         watch.dispose()
@@ -33,6 +35,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       this.pathToFileItem.clear()
       this.workspaceCommonPrefix.clear()
     })
+    this.config = config
     this.workspacePaths
       = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath) || []
   }
@@ -49,8 +52,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
       vitestEnvironmentFolders.map(async (workspaceFolder) => {
-        const exclude = getConfig(workspaceFolder).exclude
-        for (const include of getConfig(workspaceFolder).include) {
+        const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
+        for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
@@ -103,9 +106,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const workspacePath = workspaceFolder.uri.fsPath
-        const exclude = getConfig(workspaceFolder).exclude
-        for (const include of getConfig(workspaceFolder).include) {
+        const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
+        for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
@@ -131,7 +133,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
     if (e.uri.scheme !== 'file')
       return
 
-    if (!shouldIncludeFile(e.uri.fsPath))
+    if (!shouldIncludeFile(e.uri.fsPath, this.config))
       return
 
     const { file, data } = this.getOrCreateFile(ctrl, e.uri)

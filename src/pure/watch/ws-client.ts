@@ -93,6 +93,7 @@ export interface VitestClientOptions {
   reactive?: <T>(v: T) => T
   ref?: <T>(v: T) => { value: T }
   WebSocketConstructor?: typeof WebSocket
+  onFailedConnection?: () => void
 }
 
 export interface VitestClient {
@@ -112,6 +113,7 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     reconnectTries = 10,
     reactive = v => v,
     WebSocketConstructor = globalThis.WebSocket,
+    onFailedConnection,
   } = options
 
   let tries = reconnectTries
@@ -190,6 +192,8 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
       tries -= 1
       if (!opened && autoReconnect && tries > 0)
         setTimeout(reconnect, reconnectInterval)
+      else if (autoReconnect && tries === 0)
+        onFailedConnection?.()
     })
   }
 
