@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 
 import { effect } from '@vue/reactivity'
 
+import type { ResolvedConfig } from 'vitest'
 import { Command } from './command'
 import {
   detectVitestEnvironmentFolders, extensionId, getVitestWorkspaceConfigs,
@@ -17,6 +18,7 @@ import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 
 import type { VitestWorkspaceConfig } from './config'
+import { fetchVitestConfig } from './pure/watch/vitestConfig'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -26,7 +28,6 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   const ctrl = vscode.tests.createTestController(`${extensionId}`, 'Vitest')
-  const fileDiscoverer = registerDiscovery(ctrl, context)
 
   const workspaceConfigs = await getVitestWorkspaceConfigs()
   // enable run/debug/watch tests only if vitest version >= 0.12.0
@@ -50,6 +51,12 @@ export async function activate(context: vscode.ExtensionContext) {
     return
   }
 
+  const config = await fetchVitestConfig(workspaceConfigs)
+  if (!config) {
+    vscode.window.showWarningMessage('Cannot run tests: no Vitest config found.')
+    return
+  }
+  const fileDiscoverer = registerDiscovery(ctrl, context, config)
   registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context)
   context.subscriptions.push(
     ctrl,
@@ -83,8 +90,8 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[])
   return true
 }
 
-function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext) {
-  const fileDiscoverer = new TestFileDiscoverer()
+function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext, config: ResolvedConfig) {
+  const fileDiscoverer = new TestFileDiscoverer(config)
   // run on refreshing test list
   ctrl.refreshHandler = async () => {
     await fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl)

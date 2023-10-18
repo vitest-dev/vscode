@@ -1,6 +1,8 @@
 import * as vscode from 'vscode'
 import semver from 'semver'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
+import type { ResolvedConfig } from 'vitest'
+import { configDefaults } from 'vitest/config'
 import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
 import { log } from './log'
@@ -10,8 +12,8 @@ export function getConfigValue<T>(
   rootConfig: WorkspaceConfiguration,
   folderConfig: WorkspaceConfiguration,
   key: string,
-  defaultValue: T,
-): T {
+  defaultValue?: T,
+): T | undefined {
   return folderConfig.get(key) ?? rootConfig.get(key) ?? defaultValue
 }
 
@@ -25,15 +27,23 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
   const folderConfig = vscode.workspace.getConfiguration('vitest', workspace)
   const rootConfig = vscode.workspace.getConfiguration('vitest')
 
-  const get = <T>(key: string, defaultValue: T) => getConfigValue<T>(rootConfig, folderConfig, key, defaultValue)
+  const get = <T>(key: string, defaultValue?: T) => getConfigValue<T>(rootConfig, folderConfig, key, defaultValue)
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     commandLine: get<string | undefined>('commandLine', undefined),
-    include: get<string[]>('include', []),
-    exclude: get<string[]>('exclude', []),
+    include: get<string[]>('include'),
+    exclude: get<string[]>('exclude'),
     enable: get<boolean>('enable', false),
     debugExclude: get<string[]>('debugExclude', []),
+  }
+}
+
+export function getCombinedConfig(config: ResolvedConfig, workspaceFolder?: WorkspaceFolder | vscode.Uri | string) {
+  const vitestConfig = getConfig(workspaceFolder)
+  return {
+    exclude: vitestConfig.exclude || config.exclude || configDefaults.exclude,
+    include: vitestConfig.include || config.include || configDefaults.include,
   }
 }
 
