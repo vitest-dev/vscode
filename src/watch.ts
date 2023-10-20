@@ -4,7 +4,7 @@ import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
-import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
+import type { ErrorWithDiff, File, ParsedStack, ResolvedConfig, Task } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
@@ -16,6 +16,7 @@ import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 import { log } from './log'
+import { getRootPath } from './vscodeUtils'
 
 export interface DebuggerLocation { path: string; line: number; column: number }
 export class TestWatcher extends Disposable {
@@ -30,11 +31,12 @@ export class TestWatcher extends Disposable {
     vitest: { cmd: string; args: string[] },
     workspace: WorkspaceFolder,
     id: number,
+    config: ResolvedConfig,
   ) {
     if (this.cache[id])
       return this.cache[id]
 
-    TestWatcher.cache[id] = new TestWatcher(id, ctrl, discover, vitest, workspace)
+    TestWatcher.cache[id] = new TestWatcher(id, ctrl, discover, vitest, workspace, config)
 
     return TestWatcher.cache[id]
   }
@@ -52,6 +54,7 @@ export class TestWatcher extends Disposable {
     private discover: TestFileDiscoverer,
     private vitest: { cmd: string; args: string[] },
     readonly workspace: WorkspaceFolder,
+    readonly config: ResolvedConfig,
   ) {
     super(() => {
       this.dispose()
@@ -73,7 +76,7 @@ export class TestWatcher extends Disposable {
         this.vitest.cmd,
         [...this.vitest.args, '--api.port', port.toString(), '--api.host', '127.0.0.1'],
         {
-          cwd: this.workspace.uri.fsPath,
+          cwd: getRootPath(this.workspace),
           env: { ...process.env, ...getConfig(this.workspace).env },
         },
         (line) => {

@@ -5,6 +5,7 @@ import { log } from '../../log'
 import type { VitestWorkspaceConfig } from '../../config'
 import { getConfig } from '../../config'
 import { execWithLog, sanitizeFilePath } from '../utils'
+import { getRootPath } from '../../vscodeUtils'
 import { createClient } from './ws-client'
 
 async function connectAndFetchConfig(
@@ -58,7 +59,7 @@ export async function fetchVitestConfig(
     workspace.isCompatible && !workspace.isDisabled && workspace.isUsingVitestForSure)
   if (!workspace)
     return
-  const folder = workspace.workspace.uri.fsPath
+  const folder = getRootPath(workspace.workspace)
   const childProcess = execWithLog(
     workspace.cmd,
     [...workspace.args, '--api.port', port.toString(), '--api.host', '127.0.0.1'],

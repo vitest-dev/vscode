@@ -44,6 +44,8 @@
   `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`
 - `vitest.debugExclude`: Automatically skip files covered by these glob patterns. Default:
   `[\"<node_internals>/**\", \"**/node_modules/**\"]`
+- `vitest.rootPath`: The path to the root of a project containing a Vitest configuration.
+  This can be used if your project does not exist at the root of your workspace.
 
 # Screenshots
 

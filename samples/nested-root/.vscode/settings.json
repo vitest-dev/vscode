@@ -1,0 +1,6 @@
+{
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "vitest.rootPath": "root"
+}

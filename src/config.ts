@@ -6,6 +6,7 @@ import { configDefaults } from 'vitest/config'
 import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
 import { log } from './log'
+import { getRootPath } from './vscodeUtils'
 export const extensionId = 'zxch3n.vitest-explorer'
 
 export function getConfigValue<T>(
@@ -36,6 +37,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     exclude: get<string[]>('exclude'),
     enable: get<boolean>('enable', false),
     debugExclude: get<string[]>('debugExclude', []),
+    rootPath: get<string>('rootPath', ''),
   }
 }
 
@@ -44,6 +46,7 @@ export function getCombinedConfig(config: ResolvedConfig, workspaceFolder?: Work
   return {
     exclude: vitestConfig.exclude || config.exclude || configDefaults.exclude,
     include: vitestConfig.include || config.include || configDefaults.include,
+    root: config.root,
   }
 }
 
@@ -86,7 +89,7 @@ export interface VitestWorkspaceConfig {
 
 export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig[]> {
   return await Promise.all(vitestEnvironmentFolders.map(async (workspace) => {
-    const cmd = getVitestCommand(workspace.uri.fsPath)
+    const cmd = getVitestCommand(getRootPath(workspace))
     const isUsingVitestForSure = getConfig(workspace).enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)
 
     const version = cmd == null

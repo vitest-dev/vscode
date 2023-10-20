@@ -19,6 +19,7 @@ import { TestWatcher } from './watch'
 
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
+import { getTestRoot } from './vscodeUtils'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -57,7 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return
   }
   const fileDiscoverer = registerDiscovery(ctrl, context, config)
-  registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context)
+  registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context, config)
   context.subscriptions.push(
     ctrl,
     fileDiscoverer,
@@ -139,9 +140,10 @@ function registerWatchHandlers(
   ctrl: vscode.TestController,
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
+  config: ResolvedConfig,
 ) {
   const testWatchers = vitestConfigs.map((vitestConfig, index) =>
-    TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index),
+    TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index, config),
   ) ?? []
 
   statusBarItem = new StatusBarItem()
@@ -207,7 +209,9 @@ function registerWatchHandlers(
 
     await Promise.all(testWatchers.map(watcher => watcher.watch()))
     testWatchers.forEach((watcher) => {
-      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
+      const testRoot = getTestRoot(watcher.workspace, config)
+      if (testRoot)
+        watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], testRoot))
     })
   }
 
@@ -219,19 +223,21 @@ function registerRunDebugWatchHandler(
   workspaceConfigs: VitestWorkspaceConfig[],
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
+  config: ResolvedConfig,
 ) {
   const testWatchers = registerWatchHandlers(
     workspaceConfigs.filter(x => x.isCompatible && !x.isDisabled),
     ctrl,
     fileDiscoverer,
     context,
+    config,
   ) ?? []
 
   const workspaces = workspaceConfigs.filter(x => x.isCompatible && !x.isDisabled).map(x => x.workspace)
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, workspaces),
+    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, workspaces, config),
     true,
   )
 

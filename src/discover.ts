@@ -12,7 +12,7 @@ import {
   WEAKMAP_TEST_DATA,
   testItemIdMap,
 } from './TestData'
-import { shouldIncludeFile } from './vscodeUtils'
+import { getTestRoot, shouldIncludeFile } from './vscodeUtils'
 
 import { getCombinedConfig, vitestEnvironmentFolders } from './config'
 import { log } from './log'
@@ -37,7 +37,14 @@ export class TestFileDiscoverer extends vscode.Disposable {
     })
     this.config = config
     this.workspacePaths
-      = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath) || []
+      = vscode.workspace.workspaceFolders?.reduce<string[]>((workspaces, workspace) => {
+        const testRoot = getTestRoot(workspace, config)
+        // This folder might not be configured to use Vitest in a
+        // multi-workspace project.
+        if (testRoot)
+          workspaces.push(testRoot)
+        return workspaces
+      }, []) || []
   }
 
   async watchAllTestFilesInWorkspace(
@@ -52,16 +59,20 @@ export class TestFileDiscoverer extends vscode.Disposable {
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
       vitestEnvironmentFolders.map(async (workspaceFolder) => {
+        const testRoot = getTestRoot(workspaceFolder, this.config)
+        // This folder might not be configured to use Vitest in a
+        // multi-workspace project.
+        if (!testRoot)
+          return
         const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
         for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
-            workspaceFolder.uri,
+            vscode.Uri.file(testRoot),
             include,
           )
-          const workspacePath = workspaceFolder.uri.fsPath
           const watcher = vscode.workspace.createFileSystemWatcher(pattern)
           const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
+            exclude.every(x => !minimatch(path.relative(testRoot, v.fsPath), x, { dot: true }))
           watcher.onDidCreate(
             uri => filter(uri) && this.getOrCreateFile(controller, uri),
           )
@@ -106,14 +117,19 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
+        const testRoot = getTestRoot(workspaceFolder, this.config)
+        // This folder might not be configured to use Vitest in a
+        // multi-workspace project.
+        if (!testRoot)
+          return
         const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
         for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
-            workspaceFolder.uri,
+            vscode.Uri.file(testRoot),
             include,
           )
           const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
+            exclude.every(x => !minimatch(path.relative(testRoot, v.fsPath), x, { dot: true }))
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)

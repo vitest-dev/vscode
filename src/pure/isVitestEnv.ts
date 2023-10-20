@@ -2,11 +2,12 @@ import { existsSync } from 'fs'
 import path = require('path')
 import { readFile, readdir } from 'fs-extra'
 import type { WorkspaceFolder } from 'vscode'
+import { getRootPath } from '../vscodeUtils'
 import { getVitestPath } from './utils'
 
 export async function isDefinitelyVitestEnv(projectRoot: string | WorkspaceFolder): Promise<boolean> {
   if (typeof projectRoot !== 'string')
-    return isDefinitelyVitestEnv(projectRoot.uri.fsPath)
+    return isDefinitelyVitestEnv(getRootPath(projectRoot))
 
   if (getVitestPath(projectRoot))
     return true
@@ -44,7 +45,7 @@ export async function isDefinitelyVitestEnv(projectRoot: string | WorkspaceFolde
 
 export async function mayBeVitestEnv(projectRoot: string | WorkspaceFolder): Promise<boolean> {
   if (typeof projectRoot !== 'string')
-    return mayBeVitestEnv(projectRoot.uri.fsPath)
+    return mayBeVitestEnv(getRootPath(projectRoot))
 
   if (getVitestPath(projectRoot))
     return true

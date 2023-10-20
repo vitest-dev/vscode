@@ -1,6 +1,6 @@
 import { isAbsolute, relative } from 'path'
 import * as vscode from 'vscode'
-import type { File } from 'vitest'
+import type { File, ResolvedConfig } from 'vitest'
 import {
   TestRunner,
 } from './pure/runner'
@@ -20,12 +20,14 @@ import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
 import type { TestFileDiscoverer } from './discover'
 import type { StartConfig } from './pure/ApiProcess'
+import { getRootPath, getTestRoot } from './vscodeUtils'
 
 export async function runHandler(
   ctrl: vscode.TestController,
   discover: TestFileDiscoverer,
   watchers: TestWatcher[],
   workspaces: vscode.WorkspaceFolder[],
+  config: ResolvedConfig,
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken,
 ) {
@@ -38,7 +40,9 @@ export async function runHandler(
   if (watchers.some(watcher => TestWatcher.isWatching(watcher.id)) && watchers.length > 0) {
     log.info('Use watchers to run tests')
     watchers.forEach((watcher) => {
-      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
+      const testRoot = getTestRoot(watcher.workspace, config)
+      if (testRoot)
+        watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], testRoot))
     })
     return
   }
@@ -47,14 +51,15 @@ export async function runHandler(
   const run = ctrl.createTestRun(request)
 
   await Promise.allSettled(workspaces.map(async (folder) => {
+    const rootPath = getRootPath(folder)
     const runner = new TestRunner(
-      folder.uri.fsPath,
-      getVitestCommand(folder.uri.fsPath),
+      rootPath,
+      getVitestCommand(rootPath),
     )
 
     const items = request.include ?? ctrl.items
 
-    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+    const testForThisWorkspace = gatherTestItemsFromWorkspace(items, rootPath)
     if (testForThisWorkspace.length === 0)
       return
 
@@ -92,7 +97,8 @@ export async function updateSnapshot(
   test = testItemIdMap.get(ctrl)!.get(test.id)!
 
   const workspace = determineWorkspaceForTestItems([test], vscode.workspace.workspaceFolders)
-  const runner = new TestRunner(workspace.uri.fsPath, getVitestCommand(workspace.uri.fsPath))
+  const rootPath = getRootPath(workspace)
+  const runner = new TestRunner(rootPath, getVitestCommand(rootPath))
 
   const request = new vscode.TestRunRequest([test])
   const tests = [test]
@@ -115,12 +121,13 @@ export async function debugHandler(
   const run = ctrl.createTestRun(request)
 
   for (const folder of workspaces) {
+    const rootPath = getRootPath(folder)
     const items = request.include ?? ctrl.items
-    const testsInThisWorkspace = gatherTestItemsFromWorkspace(items, folder.uri.fsPath)
+    const testsInThisWorkspace = gatherTestItemsFromWorkspace(items, rootPath)
     if (testsInThisWorkspace.length === 0)
       continue
     try {
-      const runner = new TestRunner(folder.uri.fsPath, getVitestCommand(folder.uri.fsPath))
+      const runner = new TestRunner(rootPath, getVitestCommand(rootPath))
       await runTest(ctrl, runner, run, testsInThisWorkspace, 'debug', discover, cancellation)
     }
     catch (e) {
@@ -286,7 +293,7 @@ async function runTest(
         name: 'Debug Current Test File',
         autoAttachChildProcesses: true,
         skipFiles: config.debugExclude,
-        program: getVitestPath(workspaceFolder.uri.fsPath),
+        program: getVitestPath(getRootPath(workspaceFolder)),
         args,
         smartStep: true,
         env: cfg.env,
