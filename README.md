@@ -29,19 +29,15 @@
 
 # Config
 
+- `vitest.include` and `vitest.exclude`` are deprecated. The extension now loads the include and exclude paths from your vitest config file.
 - `vitest.enable`: This plugin will try to detect whether the current project is
-  set up with Vitest to activate itself. When it failed, you can enable the
-  plugin manually
+   set up with Vitest to activate itself. If detection fails, you can enable the plugin manually.
 - `vitest.nodeEnv`: The env passed to runner process in addition to
   `process.env`
 - `vitest.commandLine`: The command line to start vitest tests. **It should have with the ability
   to append extra arguments**. For example
   `npx vitest` or `yarn test --`.(This is a workspace setting. Do not change it in
   the user setting directly, which will affect all the projects you open)
-- `vitest.include`: Include glob for test files. Default:
-  `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`
-- `vitest.exclude`: Exclude globs for test files. Default:
-  `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`
 - `vitest.debugExclude`: Automatically skip files covered by these glob patterns. Default:
   `[\"<node_internals>/**\", \"**/node_modules/**\"]`
 
