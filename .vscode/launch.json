@@ -36,6 +36,16 @@
       "outFiles": ["${workspaceFolder}/out/**/*.js"]
     },
     {
+      "name": "Run Extension Monorepo Vitest Workspace",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/monorepo-vitest-workspace"
+      ],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+    },
+    {
       "name": "Run Extension React Sample",
       "type": "extensionHost",
       "request": "launch",
