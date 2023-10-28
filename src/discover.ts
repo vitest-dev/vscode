@@ -106,6 +106,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
+        const workspacePath = workspaceFolder.uri.fsPath
         const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
         for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
