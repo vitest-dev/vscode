@@ -59,7 +59,7 @@
 
 #### **How can I use it in monorepo?**
 
-It's not well supported yet. But you can use VS Code workspace as a workaround for now. Each folder of the workspace can have its own vitest extension config.
+See <https://vitest.dev/guide/workspace.html> for monorepo support.
 
 #### **How can I use this extension when tests are under a sub directory?**
 
