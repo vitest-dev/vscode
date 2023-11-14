@@ -42,8 +42,8 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
 export function getCombinedConfig(config: ResolvedConfig, workspaceFolder?: WorkspaceFolder | vscode.Uri | string) {
   const vitestConfig = getConfig(workspaceFolder)
   return {
-    exclude: vitestConfig.exclude || config.exclude || configDefaults.exclude,
-    include: vitestConfig.include || config.include || configDefaults.include,
+    exclude: vitestConfig.exclude?.concat(config.exclude) || configDefaults.exclude,
+    include: vitestConfig.include?.concat(config.include) || configDefaults.include,
   }
 }
 
