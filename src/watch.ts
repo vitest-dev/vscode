@@ -209,7 +209,7 @@ export class TestWatcher extends Disposable {
       return
 
     if (!this.run)
-      this.run = this.ctrl.createTestRun(new TestRunRequest())
+      this.run = this.ctrl.createTestRun(new TestRunRequest(undefined, undefined, undefined, true))
 
     for (const file of files) {
       const data = this.discover.discoverTestFromPath(this.ctrl, file.filepath)
@@ -255,7 +255,7 @@ export class TestWatcher extends Disposable {
 
     const isFirstUpdate = !this.run
     if (isFirstUpdate)
-      this.run = this.ctrl.createTestRun(new TestRunRequest())
+      this.run = this.ctrl.createTestRun(new TestRunRequest(undefined, undefined, undefined, true))
 
     const discover = this.discover
     const ctrl = this.ctrl

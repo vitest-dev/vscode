@@ -94,7 +94,7 @@ export async function updateSnapshot(
   const workspace = determineWorkspaceForTestItems([test], vscode.workspace.workspaceFolders)
   const runner = new TestRunner(workspace.uri.fsPath, getVitestCommand(workspace.uri.fsPath))
 
-  const request = new vscode.TestRunRequest([test])
+  const request = new vscode.TestRunRequest([test], undefined, undefined, true)
   const tests = [test]
   const run = ctrl.createTestRun(request)
   run.started(test)

@@ -160,15 +160,9 @@ function registerWatchHandlers(
 
   const stopWatching = () => {
     testWatchers.forEach(watcher => watcher.dispose())
-    vscode.workspace
-      .getConfiguration('testing')
-      .update('automaticallyOpenPeekView', undefined)
   }
   const startWatching = () => {
     testWatchers.forEach(watcher => watcher.watch())
-    vscode.workspace
-      .getConfiguration('testing')
-      .update('automaticallyOpenPeekView', 'never')
   }
 
   context.subscriptions.push(
@@ -193,6 +187,8 @@ function registerWatchHandlers(
     vscode.TestRunProfileKind.Run,
     runHandler,
     false,
+    undefined,
+    true,
   )
 
   async function runHandler(
