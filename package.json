@@ -104,12 +104,12 @@
           "scope": "resource"
         },
         "vitest.exclude": {
-          "markdownDescription": "Exclude globs for test files. \nDefault: `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`",
+          "markdownDescription": "Exclude globs for test files. \nDefault: `[\"**/node_modules/**\", \"**/dist/**\", \"**/{cypress,e2e}/**\", \"**/.{idea,git,cache,output,temp}/**\"]`",
           "type": "array",
           "default": [
             "**/node_modules/**",
             "**/dist/**",
-            "**/cypress/**",
+            "**/{cypress,e2e}/**",
             "**/.{idea,git,cache,output,temp}/**"
           ],
           "scope": "resource"
