@@ -1,6 +1,5 @@
 // @ts-nocheck
-/* eslint-disable no-underscore-dangle */
-/* eslint-disable no-param-reassign */
+
 /**
  * Copyright (c) 2014-present, Facebook, Inc. All rights reserved.
  *
@@ -9,7 +8,7 @@
  * @flow
  */
 
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
 import type { File as BabelFile, Node as BabelNode, Statement } from '@babel/types'
 import * as parser from '@babel/parser'
 import type {
@@ -23,17 +22,13 @@ import {
 } from './parser_nodes'
 import { parseOptions } from './helper'
 
-const _getASTfor = (
-  file: string,
-  data?: string,
-  options?: parser.ParserOptions,
-): [BabelFile, string] => {
+function _getASTfor(file: string, data?: string, options?: parser.ParserOptions): [BabelFile, string] {
   const _data = data || readFileSync(file).toString()
   const config = { ...options, sourceType: 'module' as const }
   return [parser.parse(_data, config), _data]
 }
 
-export const getASTfor = (file: string, data?: string): BabelFile => {
+export function getASTfor(file: string, data?: string): BabelFile {
   const [bFile] = _getASTfor(file, data, parseOptions(file))
   return bFile
 }
@@ -44,11 +39,7 @@ export function doesImportVitest(ast: BabelFile): boolean {
   })
 }
 
-export const parse = (
-  file: string,
-  data?: string,
-  options?: parser.ParserOptions,
-): ParseResult => {
+export function parse(file: string, data?: string, options?: parser.ParserOptions): ParseResult {
   const parseResult = new ParseResult(file)
   const [ast, _data] = _getASTfor(file, data, options)
 
@@ -155,7 +146,6 @@ export const parse = (
     let name = ''
     let element = node && node.expression ? node.expression.callee : undefined
     while (!name && element) {
-      // eslint-disable-next-line prefer-destructuring
       name = element.name
       // Because expect may have accessors tacked on (.to.be) or nothing
       // (expect()) we have to check multiple levels for the name
@@ -173,10 +163,10 @@ export const parse = (
     const child = parent.addChild(type)
     updateNode(child, babylonNode, lastProperty)
 
-    if (child instanceof NamedBlock && child.name == null) {
-      // eslint-disable-next-line no-console
+    if (child instanceof NamedBlock && child.name == null)
+
       console.warn(`block is missing name: ${JSON.stringify(babylonNode)}`)
-    }
+
     return child
   }
 

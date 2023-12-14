@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TestRunner } from '../src/pure/runner'
 import * as platformConstants from '../src/pure/platform'
 
@@ -32,7 +32,7 @@ vi.mock('../src/config', () => {
 vi.mock('../src/pure/ApiProcess', () => {
   return {
     runVitestWithApi: (
-      vitest: { cmd: string; args: string[] },
+      vitest: { cmd: string, args: string[] },
       workspace: string,
       handlers: any,
       customStartProcess?: (config: any) => void,
@@ -45,14 +45,14 @@ vi.mock('../src/pure/ApiProcess', () => {
   }
 })
 
-describe('TestRunner', () => {
+describe('testRunner', () => {
   const prevIsWindows = platformConstants.isWindows
 
   afterEach(() => {
     Object.defineProperty(platformConstants, 'isWindows', { value: prevIsWindows, writable: true })
   })
 
-  test.each([
+  it.each([
     [false, false, 'vitest,abc.spec.ts,-t,a \\(b\\) \\\"c\\\" d'],
     [false, true, 'vitest,abc.spec.ts,-t,a \\(b\\) \\\"c\\\" d'],
     [true, false, 'vitest,abc.spec.ts,-t,\"a \\(b\\) \\\"c\\\" d\"'],

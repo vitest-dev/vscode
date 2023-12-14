@@ -1,12 +1,13 @@
+import process from 'node:process'
 import type {
   SpawnOptionsWithStdioTuple,
   StdioNull,
   StdioPipe,
-} from 'child_process'
+} from 'node:child_process'
 import {
   spawn,
-} from 'child_process'
-import * as path from 'path'
+} from 'node:child_process'
+import * as path from 'node:path'
 import { chunksToLinesAsync } from '@rauschma/stringio'
 import { existsSync } from 'fs-extra'
 import { log } from '../log'
@@ -18,14 +19,13 @@ export function getVitestPath(projectRoot: string): string | undefined {
     return
 
   if (existsSync(path.resolve(node_modules, 'vitest', 'vitest.mjs')))
-    return sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'), false)
+    return sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'))
 
   const suffixes = ['.js', '', '.cmd']
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, '.bin', `vitest${suffix}`))) {
       return sanitizeFilePath(
         path.resolve(node_modules, '.bin', `vitest${suffix}`),
-        false,
       )
     }
   }
@@ -34,11 +34,11 @@ export function getVitestPath(projectRoot: string): string | undefined {
 /**
  * if this function return a cmd, then this project is definitely using vitest
  * @param projectRoot
- * @returns
+ * @returns cmd
  */
 export function getVitestCommand(
   projectRoot: string,
-): { cmd: string; args: string[] } | undefined {
+): { cmd: string, args: string[] } | undefined {
   if (!projectRoot || projectRoot.length < 5)
     return
 
@@ -64,7 +64,7 @@ export function getVitestCommand(
       return {
         cmd: 'node',
         args: [
-          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'), false),
+          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs')),
         ],
       }
     }
@@ -86,11 +86,7 @@ export interface Cmd {
  *
  * @returns the version, or undefined if not found
  */
-export const spawnVitestVersion = async (
-  command: string,
-  args: string[],
-  env?: Record<string, string | undefined>,
-): Promise<string | undefined> => {
+export async function spawnVitestVersion(command: string, args: string[], env?: Record<string, string | undefined>): Promise<string | undefined> {
   log.info(`Trying to get vitest version from ${command} ${args.join(' ')}...`)
 
   const child = spawn(command, args, {
@@ -103,7 +99,6 @@ export const spawnVitestVersion = async (
     log.info('Command not found')
   })
 
-  // eslint-disable-next-line no-unreachable-loop
   for await (const line of chunksToLinesAsync(child.stdout)) {
     child.kill()
     log.info(line)
@@ -123,7 +118,7 @@ export const spawnVitestVersion = async (
  * @returns the version
  * @throws an error if the version cannot be detected
  */
-export const detectVitestVersion = async (command: string, args: string[], envs: Record<string, string | undefined>): Promise<string > => {
+export async function detectVitestVersion(command: string, args: string[], envs: Record<string, string | undefined>): Promise<string > {
   // Try to spawn the command directly
   const version = await spawnVitestVersion(command, args, envs)
 
@@ -167,7 +162,7 @@ export function isNodeAvailable(
   })
 }
 
-const capitalizeDriveLetter = (path: string) => {
+function capitalizeDriveLetter(path: string) {
   if (path.match(/^[a-zA-Z]:/))
     return path.charAt(0).toUpperCase() + path.slice(1)
 
@@ -176,9 +171,8 @@ const capitalizeDriveLetter = (path: string) => {
 const replaceDoubleSlashes = (string: string) => string.replace(/\\/g, '/')
 
 export function sanitizeFilePath(path: string) {
-  if (isWindows) {
+  if (isWindows)
     return replaceDoubleSlashes(capitalizeDriveLetter(path))
-  }
 
   return path
 }
@@ -234,6 +228,6 @@ export function stringToCmd(cmdStr: string): Cmd {
   }
 }
 
-export function negate(func: Function): (...args: typeof func.arguments) => Boolean {
+export function negate(func: Function): (...args: typeof func.arguments) => boolean {
   return (...args: typeof func.arguments) => !func(...args)
 }

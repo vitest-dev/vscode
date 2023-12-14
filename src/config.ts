@@ -1,3 +1,4 @@
+import process from 'node:process'
 import * as vscode from 'vscode'
 import semver from 'semver'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
@@ -6,6 +7,7 @@ import { configDefaults } from 'vitest/config'
 import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
 import { log } from './log'
+
 export const extensionId = 'zxch3n.vitest-explorer'
 
 export function getConfigValue<T>(

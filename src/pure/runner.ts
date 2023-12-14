@@ -1,5 +1,5 @@
-import { spawn } from 'child_process'
-
+import { spawn } from 'node:child_process'
+import process from 'node:process'
 import { chunksToLinesAsync } from '@rauschma/stringio'
 import type { File } from 'vitest'
 import type { CancellationToken } from 'vscode'
@@ -56,26 +56,26 @@ export interface FormattedTestResults {
 export class TestRunner {
   constructor(
     private workspacePath: string,
-    private defaultVitestCommand: { cmd: string; args: string[] } | undefined,
+    private defaultVitestCommand: { cmd: string, args: string[] } | undefined,
   ) {}
 
   async scheduleRun(
     testFile: string[] | undefined,
     testNamePattern: string | undefined,
-    log: { info: (msg: string) => void; error: (line: string) => void } = { info: () => {}, error: console.error },
+    log: { info: (msg: string) => void, error: (line: string) => void } = { info: () => {}, error: console.error },
     workspaceEnv: Record<string, string> = {},
-    vitestCommand: { cmd: string; args: string[] } = this.defaultVitestCommand
+    vitestCommand: { cmd: string, args: string[] } = this.defaultVitestCommand
       ? this.defaultVitestCommand
       : { cmd: 'npx', args: ['vitest'] },
     updateSnapshot = false,
     onUpdate?: (files: File[]) => void,
     customStartProcess?: (config: StartConfig) => void,
     cancellation?: CancellationToken,
-  ): Promise<{ testResultFiles: File[]; output: string }> {
+  ): Promise<{ testResultFiles: File[], output: string }> {
     const command = vitestCommand.cmd
     const args = [
       ...vitestCommand.args,
-      ...(testFile ? testFile.map(f => sanitizeFilePath(f, true)) : []),
+      ...(testFile ? testFile.map(f => sanitizeFilePath(f)) : []),
     ] as string[]
     if (updateSnapshot)
       args.push('--update')
@@ -90,11 +90,11 @@ export class TestRunner {
         args.push('-t', testNamePattern.replace(/[$^+?()[\]"]/g, '\\$&'))
     }
 
-    const workspacePath = sanitizeFilePath(this.workspacePath, false)
+    const workspacePath = sanitizeFilePath(this.workspacePath)
     const outputs: string[] = []
     const env = { ...process.env, ...workspaceEnv }
     let testResultFiles = [] as File[]
-    const output = await runVitestWithApi({ cmd: sanitizeFilePath(command, false), args }, this.workspacePath, {
+    const output = await runVitestWithApi({ cmd: sanitizeFilePath(command), args }, this.workspacePath, {
       log: (line) => {
         log.info(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
         outputs.push(filterColorFormatOutput(line))

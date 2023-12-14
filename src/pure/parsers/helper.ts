@@ -51,10 +51,7 @@ export const tsxPlugins: ParserPlugin[] = [
   'jsx',
 ]
 
-export const parseOptions = (
-  filePath: string,
-  strictMode = false,
-): ParserOptions => {
+export function parseOptions(filePath: string, strictMode = false): ParserOptions {
   if (filePath.match(/\.ts$/i))
     return { plugins: [...tsPlugins] }
 

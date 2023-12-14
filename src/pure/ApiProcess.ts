@@ -1,4 +1,5 @@
-import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } from 'child_process'
+import process from 'node:process'
+import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } from 'node:child_process'
 import getPort from 'get-port'
 import type { File, WebSocketEvents } from 'vitest'
 import type { CancellationToken } from 'vscode'
@@ -8,7 +9,7 @@ import { log } from '../log'
 import { execWithLog, filterColorFormatOutput, sanitizeFilePath } from './utils'
 import { buildWatchClient } from './watch/client'
 
-type Handlers = Partial<WebSocketEvents> & { log?: (msg: string) => void; onUpdate?: (files: File[]) => void }
+type Handlers = Partial<WebSocketEvents> & { log?: (msg: string) => void, onUpdate?: (files: File[]) => void }
 export interface StartConfig {
   cmd: string
   args: string[]
@@ -26,7 +27,7 @@ export class ApiProcess {
   output: string[] = []
 
   constructor(
-    private vitest: { cmd: string; args: string[] },
+    private vitest: { cmd: string, args: string[] },
     private workspace: string,
     private handlers: Handlers = {},
     private recordOutput = false,
@@ -74,7 +75,7 @@ export class ApiProcess {
 
     log.info('Start api process at port', port)
     log.info('[RUN]', `${this.vitest.cmd} ${this.vitest.args.join(' ')}`)
-    const cwd = sanitizeFilePath(this.workspace, false)
+    const cwd = sanitizeFilePath(this.workspace)
     log.info('[RUN.cwd]', cwd)
 
     const logs = [] as string[]
@@ -190,7 +191,7 @@ export class ApiProcess {
 }
 
 export function runVitestWithApi(
-  vitest: { cmd: string; args: string[] },
+  vitest: { cmd: string, args: string[] },
   workspace: string,
   handlers: Handlers,
   customStartProcess?: (config: StartConfig) => void,

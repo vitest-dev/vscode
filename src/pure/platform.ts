@@ -56,7 +56,7 @@ export const globals: any
 let nodeProcess: INodeProcess | undefined
 if (
   typeof globals.vscode !== 'undefined'
-  && typeof globals.vscode.process !== 'undefined'
+    && typeof globals.vscode.process !== 'undefined'
 ) {
   // Native environment (sandboxed)
   nodeProcess = globals.vscode.process
@@ -85,7 +85,7 @@ if (typeof navigator === 'object' && !isElectronRenderer) {
   _isMacintosh = _userAgent.includes('Macintosh')
   _isIOS
     = (_userAgent.includes('Macintosh') || _userAgent.includes('iPad')
-      || _userAgent.includes('iPhone'))
+    || _userAgent.includes('iPhone'))
     && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0
   _isLinux = _userAgent.includes('Linux')
   _isWeb = true
@@ -97,7 +97,7 @@ else if (typeof nodeProcess === 'object') {
   _isMacintosh = nodeProcess.platform === 'darwin'
   _isLinux = nodeProcess.platform === 'linux'
   _isLinuxSnap = _isLinux && !!nodeProcess.env.SNAP
-    && !!nodeProcess.env.SNAP_REVISION
+  && !!nodeProcess.env.SNAP_REVISION
   _isElectron = isElectronProcess
   _locale = LANGUAGE_DEFAULT
   _language = LANGUAGE_DEFAULT
@@ -121,7 +121,7 @@ else {
   console.error('Unable to resolve platform.')
 }
 
-export const enum Platform {
+export enum Platform {
   Web,
   Mac,
   Linux,
@@ -235,7 +235,7 @@ export const setTimeout0 = (() => {
   return (callback: () => void) => setTimeout(callback)
 })()
 
-export const enum OperatingSystem {
+export enum OperatingSystem {
   Windows = 1,
   Macintosh = 2,
   Linux = 3,

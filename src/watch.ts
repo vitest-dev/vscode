@@ -1,5 +1,6 @@
-import type { ChildProcess } from 'child_process'
-import path from 'path'
+import type { ChildProcess } from 'node:child_process'
+import process from 'node:process'
+import path from 'node:path'
 import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
@@ -17,7 +18,7 @@ import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 import { log } from './log'
 
-export interface DebuggerLocation { path: string; line: number; column: number }
+export interface DebuggerLocation { path: string, line: number, column: number }
 export class TestWatcher extends Disposable {
   static cache: Record<number, TestWatcher> = {}
   static isWatching(id: number) {
@@ -27,7 +28,7 @@ export class TestWatcher extends Disposable {
   static create(
     ctrl: TestController,
     discover: TestFileDiscoverer,
-    vitest: { cmd: string; args: string[] },
+    vitest: { cmd: string, args: string[] },
     workspace: WorkspaceFolder,
     id: number,
   ) {
@@ -50,7 +51,7 @@ export class TestWatcher extends Disposable {
     readonly id: number,
     private ctrl: TestController,
     private discover: TestFileDiscoverer,
-    private vitest: { cmd: string; args: string[] },
+    private vitest: { cmd: string, args: string[] },
     readonly workspace: WorkspaceFolder,
   ) {
     super(() => {
@@ -280,7 +281,7 @@ export class TestWatcher extends Disposable {
   }
 }
 
-function getSourceFilepathAndLocationFromStack(stack: ParsedStack): { sourceFilepath?: string; line: number; column: number } {
+function getSourceFilepathAndLocationFromStack(stack: ParsedStack): { sourceFilepath?: string, line: number, column: number } {
   if (stack.sourcePos) {
     return {
       sourceFilepath: stack.sourcePos.source?.replace(/\//g, path.sep),
@@ -303,7 +304,7 @@ function parseLocationFromStacks(testItem: TestItem, stacks: ParsedStack[]): Deb
   const targetFilepath = testItem.uri!.fsPath
   for (const stack of stacks) {
     const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
-    if (sourceFilepath !== targetFilepath || isNaN(column) || isNaN(line))
+    if (sourceFilepath !== targetFilepath || Number.isNaN(column) || Number.isNaN(line))
       continue
 
     return {
@@ -369,7 +370,9 @@ export function syncTestStatusToVsCode(
             finishedTest && finishedTest.add(data.item)
             run.skipped(data.item)
           }
-          else if (isFirstUpdate) { run.started(data.item) }
+          else if (isFirstUpdate) {
+            run.started(data.item)
+          }
         }
         else {
           if (finishedTest) {

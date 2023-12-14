@@ -31,7 +31,7 @@
 
 - `vitest.include` and `vitest.exclude`` are deprecated. The extension now loads the include and exclude paths from your vitest config file.
 - `vitest.enable`: This plugin will try to detect whether the current project is
-   set up with Vitest to activate itself. If detection fails, you can enable the plugin manually.
+  set up with Vitest to activate itself. If detection fails, you can enable the plugin manually.
 - `vitest.nodeEnv`: The env passed to runner process in addition to
   `process.env`
 - `vitest.commandLine`: The command line to start vitest tests. **It should have with the ability

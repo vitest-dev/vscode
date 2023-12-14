@@ -1,19 +1,12 @@
 {
+  "publisher": "ZixuanChen",
   "name": "vitest-explorer",
   "displayName": "Vitest",
+  "type": "module",
   "version": "0.2.43",
   "description": "Run and debug Vitest test cases",
-  "icon": "img/icon.png",
-  "preview": true,
-  "keywords": [
-    "vitest",
-    "test",
-    "typescript",
-    "javascript"
-  ],
-  "license": "MIT",
   "author": "zxch3n",
-  "publisher": "ZixuanChen",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/vitest-dev/vscode.git"
@@ -21,12 +14,21 @@
   "bugs": {
     "url": "https://github.com/vitest-dev/vscode/issues"
   },
-  "engines": {
-    "vscode": "^1.77.0"
-  },
+  "keywords": [
+    "vitest",
+    "test",
+    "typescript",
+    "javascript"
+  ],
   "categories": [
     "Testing"
   ],
+  "main": "./dist/extension.js",
+  "icon": "img/icon.png",
+  "preview": true,
+  "engines": {
+    "vscode": "^1.77.0"
+  },
   "activationEvents": [
     "onCommand:vitest-explorer.configureTest",
     "workspaceContains:**/vitest.config.js",
@@ -35,7 +37,6 @@
     "workspaceContains:**/vite.config.ts",
     "workspaceContains:**/package.json"
   ],
-  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -163,7 +164,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@antfu/eslint-config": "^0.23.1",
+    "@antfu/eslint-config": "^2.4.5",
     "@babel/parser": "^7.20.15",
     "@babel/types": "^7.20.7",
     "@rauschma/stringio": "^1.4.0",
@@ -180,6 +181,7 @@
     "@vue/reactivity": "^3.2.33",
     "@vueuse/core": "^8.4.2",
     "eslint": "^8.9.0",
+    "eslint-plugin-format": "^0.1.0",
     "fs-extra": "^10.0.1",
     "fuse.js": "^6.6.2",
     "get-port": "^6.1.2",
@@ -197,8 +199,8 @@
     "ws": "^8.6.0"
   },
   "lint-staged": {
-    "*.{js,ts,tsx,vue,md}": [
-      "eslint --fix"
+    "*": [
+      "eslint . --fix"
     ]
   }
 }

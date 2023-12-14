@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { effect, reactive } from '@vue/reactivity'
 import type { ResolvedConfig } from 'vitest'
 import getPort from 'get-port'

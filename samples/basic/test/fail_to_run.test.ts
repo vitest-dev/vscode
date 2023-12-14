@@ -1,1 +1,3 @@
-test('aaaaaa', () => {})
+import { it } from 'vitest'
+
+it('aaaaaa', () => {})

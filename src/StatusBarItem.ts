@@ -38,7 +38,7 @@ export class StatusBarItem extends vscode.Disposable {
     this.item.command = Command.StopWatching
     const total = passed + failed
     const percentOfExecutedTests = Number((passed / total * 100).toFixed(0))
-    const percentIsValid = !isNaN(percentOfExecutedTests)
+    const percentIsValid = !Number.isNaN(percentOfExecutedTests)
     const percentNumber = percentIsValid ? percentOfExecutedTests : 0
     const auxiliaryPercentInfo = percentOfExecutedTests ? skipped : 'all'
 
@@ -58,7 +58,7 @@ export class StatusBarItem extends vscode.Disposable {
     this.item.show()
   }
 
-  setBackgroundColor(failedTests: Boolean) {
+  setBackgroundColor(failedTests: boolean) {
     if (getRootConfig().changeBackgroundColor)
       this.item.backgroundColor = failedTests ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined
   }

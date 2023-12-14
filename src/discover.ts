@@ -1,4 +1,4 @@
-import path, { sep } from 'path'
+import path, { sep } from 'node:path'
 import * as vscode from 'vscode'
 import minimatch from 'minimatch'
 import type { ResolvedConfig } from 'vitest'
@@ -83,9 +83,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
-              && this.getOrCreateFile(controller, file).data.updateFromDisk(
-                controller,
-              )
+            && this.getOrCreateFile(controller, file).data.updateFromDisk(
+              controller,
+            )
           }
 
           watchers.push(watcher)
@@ -106,7 +106,6 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const workspacePath = workspaceFolder.uri.fsPath
         const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
         for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
           const pattern = new vscode.RelativePattern(
@@ -119,9 +118,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
-              && this.getOrCreateFile(controller, file).data.updateFromDisk(
-                controller,
-              )
+            && this.getOrCreateFile(controller, file).data.updateFromDisk(
+              controller,
+            )
           }
         }
       }),
