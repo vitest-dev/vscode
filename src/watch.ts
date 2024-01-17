@@ -281,14 +281,6 @@ export class TestWatcher extends Disposable {
 }
 
 function getSourceFilepathAndLocationFromStack(stack: ParsedStack): { sourceFilepath?: string; line: number; column: number } {
-  if (stack.sourcePos) {
-    return {
-      sourceFilepath: stack.sourcePos.source?.replace(/\//g, path.sep),
-      line: stack.sourcePos.line,
-      column: stack.sourcePos.column,
-    }
-  }
-
   return {
     sourceFilepath: stack.file.replace(/\//g, path.sep),
     line: stack.line,
@@ -362,7 +354,7 @@ export function syncTestStatusToVsCode(
   ) {
     const set = new Set(vscode)
     for (const task of vitest) {
-      const data = matchTask(task, set, task.type)
+      const data = matchTask(task, set)
       if (task.type === 'test') {
         if (task.result == null) {
           if (finished) {
@@ -385,7 +377,7 @@ export function syncTestStatusToVsCode(
             case 'fail':
               run.failed(
                 data.item,
-                testMessageForTestError(data.item, task.result.error),
+                task.result.errors?.map(i => testMessageForTestError(data.item, i)) ?? [],
                 task.result.duration,
               )
               finishedTest && finishedTest.add(data.item)
@@ -405,8 +397,11 @@ export function syncTestStatusToVsCode(
           }
         }
       }
-      else {
+      else if (task.type === 'suite') {
         sync(run, (data as TestDescribe).children, task.tasks)
+      }
+      else {
+        throw new Error('unexpected task type')
       }
     }
   }
@@ -414,14 +409,13 @@ export function syncTestStatusToVsCode(
   function matchTask(
     task: Task,
     candidates: Set<TestDescribe | TestCase>,
-    type: 'suite' | 'test',
   ): TestDescribe | TestCase {
     let ans: (TestDescribe | TestCase) | undefined
     for (const candidate of candidates) {
-      if (type === 'suite' && !(candidate instanceof TestDescribe))
+      if (task.type === 'suite' && !(candidate instanceof TestDescribe))
         continue
 
-      if (type === 'test' && !(candidate instanceof TestCase))
+      if (task.type === 'test' && !(candidate instanceof TestCase))
         continue
 
       if (candidate.pattern === task.name) {

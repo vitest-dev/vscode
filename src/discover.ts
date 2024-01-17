@@ -113,7 +113,6 @@ export class TestFileDiscoverer extends vscode.Disposable {
             workspaceFolder.uri,
             include,
           )
-          const workspacePath = workspaceFolder.uri.fsPath
           const filter = (v: vscode.Uri) =>
             exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
 

@@ -75,7 +75,7 @@ export class TestRunner {
     const command = vitestCommand.cmd
     const args = [
       ...vitestCommand.args,
-      ...(testFile ? testFile.map(f => sanitizeFilePath(f, true)) : []),
+      ...(testFile ? testFile.map(f => sanitizeFilePath(f)) : []),
     ] as string[]
     if (updateSnapshot)
       args.push('--update')
@@ -90,11 +90,11 @@ export class TestRunner {
         args.push('-t', testNamePattern.replace(/[$^+?()[\]"]/g, '\\$&'))
     }
 
-    const workspacePath = sanitizeFilePath(this.workspacePath, false)
+    const workspacePath = sanitizeFilePath(this.workspacePath)
     const outputs: string[] = []
     const env = { ...process.env, ...workspaceEnv }
     let testResultFiles = [] as File[]
-    const output = await runVitestWithApi({ cmd: sanitizeFilePath(command, false), args }, this.workspacePath, {
+    const output = await runVitestWithApi({ cmd: sanitizeFilePath(command), args }, this.workspacePath, {
       log: (line) => {
         log.info(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
         outputs.push(filterColorFormatOutput(line))

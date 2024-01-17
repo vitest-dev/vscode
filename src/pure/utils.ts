@@ -18,14 +18,13 @@ export function getVitestPath(projectRoot: string): string | undefined {
     return
 
   if (existsSync(path.resolve(node_modules, 'vitest', 'vitest.mjs')))
-    return sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'), false)
+    return sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'))
 
   const suffixes = ['.js', '', '.cmd']
   for (const suffix of suffixes) {
     if (existsSync(path.resolve(node_modules, '.bin', `vitest${suffix}`))) {
       return sanitizeFilePath(
         path.resolve(node_modules, '.bin', `vitest${suffix}`),
-        false,
       )
     }
   }
@@ -64,7 +63,7 @@ export function getVitestCommand(
       return {
         cmd: 'node',
         args: [
-          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs'), false),
+          sanitizeFilePath(path.resolve(node_modules, 'vitest', 'vitest.mjs')),
         ],
       }
     }
@@ -176,9 +175,8 @@ const capitalizeDriveLetter = (path: string) => {
 const replaceDoubleSlashes = (string: string) => string.replace(/\\/g, '/')
 
 export function sanitizeFilePath(path: string) {
-  if (isWindows) {
+  if (isWindows)
     return replaceDoubleSlashes(capitalizeDriveLetter(path))
-  }
 
   return path
 }

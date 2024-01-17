@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import path = require('path')
+import path from 'node:path'
 import { readFile, readdir } from 'fs-extra'
 import type { WorkspaceFolder } from 'vscode'
 import { getVitestPath } from './utils'

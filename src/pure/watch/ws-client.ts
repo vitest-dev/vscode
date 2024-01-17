@@ -99,7 +99,7 @@ export interface VitestClientOptions {
 export interface VitestClient {
   ws: WebSocket
   state: StateManager
-  rpc: BirpcReturn<WebSocketHandlers>
+  rpc: BirpcReturn<WebSocketHandlers, WebSocketEvents>
   waitForConnection(): Promise<void>
   reconnect(): Promise<void>
   dispose(): void
@@ -137,6 +137,9 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
       onCollected(files) {
         ctx.state.collectFiles(files)
         handlers.onCollected?.(files)
+      },
+      onCancel(reason) {
+        handlers.onCancel?.(reason)
       },
       onTaskUpdate(packs) {
         ctx.state.updateTasks(packs)

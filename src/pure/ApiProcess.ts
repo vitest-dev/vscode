@@ -74,7 +74,7 @@ export class ApiProcess {
 
     log.info('Start api process at port', port)
     log.info('[RUN]', `${this.vitest.cmd} ${this.vitest.args.join(' ')}`)
-    const cwd = sanitizeFilePath(this.workspace, false)
+    const cwd = sanitizeFilePath(this.workspace)
     log.info('[RUN.cwd]', cwd)
 
     const logs = [] as string[]
