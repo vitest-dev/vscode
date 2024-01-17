@@ -355,7 +355,7 @@ export function syncTestStatusToVsCode(
     const set = new Set(vscode)
     for (const task of vitest) {
       const data = matchTask(task, set)
-      if (task.type === 'test') {
+      if (task.type === 'test' || task.type === 'custom') {
         if (task.result == null) {
           if (finished) {
             finishedTest && finishedTest.add(data.item)
@@ -397,11 +397,8 @@ export function syncTestStatusToVsCode(
           }
         }
       }
-      else if (task.type === 'suite') {
-        sync(run, (data as TestDescribe).children, task.tasks)
-      }
       else {
-        throw new Error('unexpected task type')
+        sync(run, (data as TestDescribe).children, task.tasks)
       }
     }
   }

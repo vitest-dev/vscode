@@ -155,8 +155,8 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "tsup ./src/extension.ts --external vscode --minify",
-    "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
+    "compile": "tsup ./src/extension.ts --external vscode,lightningcss,esbuild --minify",
+    "watch": "tsup ./src/extension.ts --external vscode,lightningcss,esbuild --watch --sourcemap",
     "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -173,8 +173,8 @@
     "@types/semver": "^7.3.9",
     "@types/vscode": "^1.77.0",
     "@types/ws": "^8.5.10",
-    "@typescript-eslint/eslint-plugin": "^5.12.1",
-    "@typescript-eslint/parser": "^5.12.1",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
     "@vitest/ws-client": "^1.2.0",
     "@vscode/test-electron": "^2.1.2",
     "@vue/reactivity": "^3.2.33",

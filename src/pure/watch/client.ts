@@ -69,17 +69,14 @@ export function buildWatchClient(
     files && travel(files)
     function travel(tasks: Task[]) {
       for (const task of tasks) {
-        if (task.type === 'test') {
+        if (task.type === 'test' || task.type === 'custom') {
           if (task.result)
             idResultPairs.push([task.id, task.result, task.meta])
           else if (task.mode === 'run')
             isRunning = true
         }
-        else if (task.type === 'suite') {
-          travel(task.tasks)
-        }
         else {
-          throw new Error('Unknown task type')
+          travel(task.tasks)
         }
       }
     }
