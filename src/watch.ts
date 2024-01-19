@@ -355,6 +355,8 @@ export function syncTestStatusToVsCode(
     const set = new Set(vscode)
     for (const task of vitest) {
       const data = matchTask(task, set)
+      if (!data)
+        continue
       if (task.type === 'test' || task.type === 'custom') {
         if (task.result == null) {
           if (finished) {
@@ -406,7 +408,7 @@ export function syncTestStatusToVsCode(
   function matchTask(
     task: Task,
     candidates: Set<TestDescribe | TestCase>,
-  ): TestDescribe | TestCase {
+  ): TestDescribe | TestCase | undefined {
     let ans: (TestDescribe | TestCase) | undefined
     for (const candidate of candidates) {
       if (task.type === 'suite' && !(candidate instanceof TestDescribe))

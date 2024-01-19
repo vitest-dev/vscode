@@ -29,6 +29,17 @@ describe('parse', () => {
     expect(out.describeBlocks.length).toBe(1)
   })
 
+  it('parse each', () => {
+    const out = parse(
+      'x.js',
+      ''
+        + 'describe.each([1,2,3])(`test %i`, (i) => {\n'
+        + '}); \n',
+    )
+    expect(out.describeBlocks.length).toBe(1)
+    expect(out.describeBlocks[0].lastProperty).toBe('each')
+  })
+
   it('parse decorator', () => {
     const out = parse(
       'x.ts',

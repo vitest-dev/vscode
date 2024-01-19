@@ -61,7 +61,7 @@ export class TestRunner {
 
   async scheduleRun(
     testFile: string[] | undefined,
-    testNamePattern: string | undefined,
+    testPattern: string | undefined,
     log: { info: (msg: string) => void; error: (line: string) => void } = { info: () => {}, error: console.error },
     workspaceEnv: Record<string, string> = {},
     vitestCommand: { cmd: string; args: string[] } = this.defaultVitestCommand
@@ -80,14 +80,12 @@ export class TestRunner {
     if (updateSnapshot)
       args.push('--update')
 
-    if (testNamePattern) {
-      // Vitest's test name pattern is a regex, so we need to escape any special regex characters.
-      // Additionally, when a custom start process is not used on Windows, child_process.spawn is used with shell: true.
-      // That disables automatic quoting/escaping of arguments, requiring us to manually perform that here as well.
+    if (testPattern) {
+      let argsValue = testPattern
       if (isWindows && !customStartProcess)
-        args.push('-t', `"${testNamePattern.replace(/[$^+?()[\]"]/g, '\\$&')}"`)
-      else
-        args.push('-t', testNamePattern.replace(/[$^+?()[\]"]/g, '\\$&'))
+        argsValue = `"${argsValue}"`
+
+      args.push('-t', argsValue)
     }
 
     const workspacePath = sanitizeFilePath(this.workspacePath)

@@ -300,11 +300,10 @@ async function runTest(
       })
     }
   const finishedTests: Set<vscode.TestItem> = new Set()
+  const headItem = items.length === 1 ? WEAKMAP_TEST_DATA.get(items[0]) : undefined
   const { output, testResultFiles } = await runner!.scheduleRun(
     fileItems.map(x => x.uri!.fsPath),
-    items.length === 1
-      ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
-      : '',
+    headItem?.getFullPattern(),
     {
       info: (msg: string) => {
         if (items.length === 1)

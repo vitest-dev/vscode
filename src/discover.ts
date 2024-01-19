@@ -16,6 +16,7 @@ import { shouldIncludeFile } from './vscodeUtils'
 
 import { getCombinedConfig, vitestEnvironmentFolders } from './config'
 import { log } from './log'
+import { transformTestPattern } from './pure/testName'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -280,7 +281,7 @@ export function discoverTestFromFileContent(
     parent.children.push(caseItem)
     if (block.type === 'describe') {
       const data = new TestDescribe(
-        block.name!,
+        transformTestPattern(block),
         fileItem,
         caseItem,
         parent.data as TestFile,
@@ -297,7 +298,7 @@ export function discoverTestFromFileContent(
     }
     else if (block.type === 'it') {
       const testCase = new TestCase(
-        block.name!,
+        transformTestPattern(block),
         fileItem,
         caseItem,
         parent.data as TestFile | TestDescribe,
