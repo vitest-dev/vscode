@@ -1,17 +1,22 @@
 import { describe, expect, it, test, } from 'vitest'
 
-describe.each([
-  1, 2, 3
-])('testing %i', (a) => {
+describe('testing', (a) => {
   it.each([
     1, 2, 3
-  ])('run %i', (b) => {
-    expect(a).toBe(b)
+  ])('run %i', (a) => {
+    expect(a).toBe(a)
   })
   it.each([
     [1, 1], [2, 2], [3, 3]
-  ])('run mul %i', (b, c) => {
-    expect(a * b).toBe(c)
+  ])('run mul %i', (a,b) => {
+    expect(a * a).toBe(b)
+  })
+  test.each([
+    ["test1", 1],
+    ["test2", 2],
+    ["test3", 3],
+  ])(`%s => %i`, (a, b) => {
+    expect(a.at(-1)).toBe(`${b}`)
   })
   test.each`
     a               | b      | expected

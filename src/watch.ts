@@ -4,7 +4,7 @@ import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
 import Fuse from 'fuse.js'
-import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
+import type { ErrorWithDiff, File, ParsedStack, Task, TaskState } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
@@ -345,95 +345,113 @@ export function syncTestStatusToVsCode(
   isFirstUpdate: boolean,
   finishedTest?: Set<TestItem>,
 ) {
-  sync(run, vscodeFile.children, vitestFile.tasks)
+  const groups = groupTasksByPattern(new Map(), vscodeFile.children, vitestFile.tasks)
 
-  function sync(
-    run: TestRun,
-    vscode: (TestDescribe | TestCase)[],
-    vitest: Task[],
-  ) {
-    const set = new Set(vscode)
-    for (const task of vitest) {
-      const data = matchTask(task, set)
-      if (!data)
-        continue
-      if (task.type === 'test' || task.type === 'custom') {
-        if (task.result == null) {
-          if (finished) {
-            finishedTest && finishedTest.add(data.item)
-            run.skipped(data.item)
-          }
-          else if (isFirstUpdate) { run.started(data.item) }
-        }
-        else {
-          if (finishedTest) {
-            if (finishedTest.has(data.item))
-              continue
-          }
-
-          switch (task.result?.state) {
-            case 'pass':
-              run.passed(data.item, task.result.duration)
-              finishedTest && finishedTest.add(data.item)
-              break
-            case 'fail':
-              run.failed(
-                data.item,
-                task.result.errors?.map(i => testMessageForTestError(data.item, i)) ?? [],
-                task.result.duration,
-              )
-              finishedTest && finishedTest.add(data.item)
-              break
-            case 'skip':
-            case 'todo':
-              run.skipped(data.item)
-              finishedTest && finishedTest.add(data.item)
-              break
-            case 'run':
-              run.started(data.item)
-              break
-            case 'only':
-              break
-            default:
-              console.error('unexpected result state', task.result)
-          }
-        }
+  for (const [data, tasks] of groups.entries()) {
+    const [head] = tasks
+    if (head.result == null) {
+      if (finished) {
+        finishedTest && finishedTest.add(data.item)
+        run.skipped(data.item)
       }
-      else {
-        sync(run, (data as TestDescribe).children, task.tasks)
-      }
-    }
-  }
-
-  function matchTask(
-    task: Task,
-    candidates: Set<TestDescribe | TestCase>,
-  ): TestDescribe | TestCase | undefined {
-    let ans: (TestDescribe | TestCase) | undefined
-    for (const candidate of candidates) {
-      if (task.type === 'suite' && !(candidate instanceof TestDescribe))
-        continue
-
-      if (task.type === 'test' && !(candidate instanceof TestCase))
-        continue
-
-      if (candidate.pattern === task.name) {
-        ans = candidate
-        break
-      }
-    }
-
-    if (ans) {
-      candidates.delete(ans)
+      else if (isFirstUpdate) { run.started(data.item) }
     }
     else {
-      ans = new Fuse(Array.from(candidates), { keys: ['pattern'] }).search(
-        task.name,
-      )[0]?.item
-      // should not delete ans from candidates here, because there are usages like `test.each`
-      // TODO: should we create new TestCase here?
+      if (finishedTest) {
+        if (finishedTest.has(data.item))
+          continue
+      }
+      const tasksState = determineState(tasks.map(i => i.result?.state))
+      const duration = tasks.reduce((acc, i) => acc + (i.result?.duration ?? 0), 0)
+      const errors = tasks.flatMap(i => i.result?.errors ?? [])
+      switch (tasksState) {
+        case 'pass':
+          run.passed(data.item, duration)
+          finishedTest && finishedTest.add(data.item)
+          break
+        case 'fail':
+          run.failed(
+            data.item,
+            errors.map(i => testMessageForTestError(data.item, i)),
+            duration,
+          )
+          finishedTest && finishedTest.add(data.item)
+          break
+        case 'skip':
+        case 'todo':
+          run.skipped(data.item)
+          finishedTest && finishedTest.add(data.item)
+          break
+        case 'run':
+          run.started(data.item)
+          break
+        case 'only':
+          break
+        default:
+          console.error('unexpected result state', tasks)
+      }
     }
-
-    return ans
   }
+}
+
+function groupTasksByPattern(
+  map: Map<TestCase | TestDescribe, Task[]>,
+  vscode: (TestDescribe | TestCase)[],
+  vitest: Task[]) {
+  const set = new Set(vitest)
+  for (const descOrTest of vscode) {
+    const tasks = matchTask(descOrTest, set)
+    if (tasks.length === 0)
+      continue
+
+    if (!map.has(descOrTest))
+      map.set(descOrTest, [])
+
+    map.get(descOrTest)!.push(...tasks)
+
+    for (const task of tasks) {
+      if (task.type === 'suite')
+        groupTasksByPattern(map, (descOrTest as TestDescribe).children, task.tasks)
+    }
+  }
+  return map
+}
+
+function determineState(states: (TaskState | undefined)[]): TaskState | undefined {
+  if (states.includes('fail'))
+    return 'fail'
+  if (states.includes('run'))
+    return 'run'
+  if (states.every(i => i === 'pass'))
+    return 'pass'
+  return states[0]
+}
+
+function getFullTaskName(task: Task): string {
+  if (task.suite)
+    return `${getFullTaskName(task.suite)} ${task.name}`
+  return task.name
+}
+
+function matchTask(
+  vscode: TestDescribe | TestCase,
+  candidates: Set<Task>,
+): Task[] {
+  const result: Task[] = []
+  for (const task of candidates) {
+    if (task.type === 'suite' && !(vscode instanceof TestDescribe))
+      continue
+
+    if (task.type === 'test' && !(vscode instanceof TestCase))
+      continue
+
+    const fullTaskName = getFullTaskName(task)
+    const fullCandidatesPattern = new RegExp(vscode.getFullPattern())
+    if (fullTaskName.match(fullCandidatesPattern))
+      result.push(task)
+  }
+  for (const task of result)
+    candidates.delete(task)
+
+  return result
 }
