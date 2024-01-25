@@ -7,8 +7,16 @@ export function transformTestPattern(block: NamedBlock): string {
   let result = block.name!.replace(/[$^+?()[\]"]/g, '\\$&')
   // https://vitest.dev/api/#test-each
   // replace vitest's table test placeholder and treat it as regex
-  if (block.lastProperty === 'each')
-    result = result.replace(/%[sdifr#%]/g, () => '.+')
+  if (block.lastProperty === 'each') {
+    // Integer or index of test case
+    result = result.replace(/%[i#]/g, () => '\\d+?')
+    // Float
+    result = result.replace(/%[df]/g, () => '[\\d.eE+-]+?')
+    // Arbitrary string
+    result = result.replace(/%[sjo]/g, () => '.+?')
+    // Single percent sign
+    result = result.replace(/%%/g, () => '%')
+  }
   return result
 }
 

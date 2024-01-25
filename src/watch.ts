@@ -3,8 +3,7 @@ import path from 'path'
 import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
-import Fuse from 'fuse.js'
-import type { ErrorWithDiff, File, ParsedStack, Task, TaskState } from 'vitest'
+import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
@@ -346,25 +345,24 @@ export function syncTestStatusToVsCode(
   finishedTest?: Set<TestItem>,
 ) {
   const groups = groupTasksByPattern(new Map(), vscodeFile.children, vitestFile.tasks)
-
   for (const [data, tasks] of groups.entries()) {
-    const [head] = tasks
-    if (head.result == null) {
+    const primaryTask = getPrimaryResultTask(tasks)
+    if (primaryTask?.result == null) {
       if (finished) {
         finishedTest && finishedTest.add(data.item)
         run.skipped(data.item)
       }
-      else if (isFirstUpdate) { run.started(data.item) }
+      else if (isFirstUpdate) {
+        run.started(data.item)
+      }
     }
     else {
-      if (finishedTest) {
-        if (finishedTest.has(data.item))
-          continue
-      }
-      const tasksState = determineState(tasks.map(i => i.result?.state))
+      if (finishedTest?.has(data.item))
+        continue
+
       const duration = tasks.reduce((acc, i) => acc + (i.result?.duration ?? 0), 0)
       const errors = tasks.flatMap(i => i.result?.errors ?? [])
-      switch (tasksState) {
+      switch (primaryTask?.result?.state) {
         case 'pass':
           run.passed(data.item, duration)
           finishedTest && finishedTest.add(data.item)
@@ -417,14 +415,20 @@ function groupTasksByPattern(
   return map
 }
 
-function determineState(states: (TaskState | undefined)[]): TaskState | undefined {
-  if (states.includes('fail'))
-    return 'fail'
-  if (states.includes('run'))
-    return 'run'
-  if (states.every(i => i === 'pass'))
-    return 'pass'
-  return states[0]
+function getPrimaryResultTask(tasks: Task[]): Task | undefined {
+  const failedOne = tasks.find(i => i.result?.state === 'fail')
+  if (failedOne)
+    return failedOne
+  const runningOne = tasks.find(i => i.result?.state === 'run')
+  if (runningOne)
+    return runningOne
+  const allPassed = tasks.every(i => i.result?.state === 'pass')
+  if (allPassed)
+    return tasks[0]
+  const allSkipped = tasks.every(i => i.result?.state === 'skip')
+  if (allSkipped)
+    return tasks[0]
+  return tasks[0]
 }
 
 function getFullTaskName(task: Task): string {
@@ -446,7 +450,7 @@ function matchTask(
       continue
 
     const fullTaskName = getFullTaskName(task)
-    const fullCandidatesPattern = new RegExp(vscode.getFullPattern())
+    const fullCandidatesPattern = new RegExp(`${vscode.getFullPattern()}`)
     if (fullTaskName.match(fullCandidatesPattern))
       result.push(task)
   }

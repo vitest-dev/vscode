@@ -7,7 +7,7 @@ describe('testName', () => {
     it.each([
       ['describe(\'test\', () => {})', 'test'],
       ['describe(\'$^+?()[]\', () => {})', '\\$\\^\\+\\?\\(\\)\\[\\]'],
-      ['describe.each([1,2,3])(`test %i`, (i) => {})', 'test .+'],
+      ['describe.each([1,2,3])(`test %i`, (i) => {})', 'test \\d+?'],
     ])('describe %s', (input, expected) => {
       const [block] = parse('x.js', input).describeBlocks
       expect(transformTestPattern(block)).toBe(expected)
@@ -15,7 +15,7 @@ describe('testName', () => {
     it.each([
       ['test(\'add\', () => {})', 'add'],
       ['test(\'$^+?()[]\', () => {})', '\\$\\^\\+\\?\\(\\)\\[\\]'],
-      ['test.each([1,2,3])(`test %i`, (i) => {})', 'test .+'],
+      ['test.each([1,2,3])(`test %i`, (i) => {})', 'test \\d+?'],
     ])('test %s', (input, expected) => {
       const [block] = parse('x.js', input).itBlocks
       expect(transformTestPattern(block)).toBe(expected)
