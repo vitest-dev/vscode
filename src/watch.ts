@@ -432,8 +432,12 @@ function getPrimaryResultTask(tasks: Task[]): Task | undefined {
 }
 
 function getFullTaskName(task: Task): string {
-  if (task.suite)
-    return `${getFullTaskName(task.suite)} ${task.name}`
+  if (task.suite) {
+    const suiteName = getFullTaskName(task.suite)
+    // root parent is a suite, but it's name is empty
+    if (suiteName)
+      return `${suiteName} ${task.name}`
+  }
   return task.name
 }
 
@@ -450,7 +454,7 @@ function matchTask(
       continue
 
     const fullTaskName = getFullTaskName(task)
-    const fullCandidatesPattern = new RegExp(`${vscode.getFullPattern()}`)
+    const fullCandidatesPattern = new RegExp(`^${vscode.getFullPattern()}$`)
     if (fullTaskName.match(fullCandidatesPattern))
       result.push(task)
   }
