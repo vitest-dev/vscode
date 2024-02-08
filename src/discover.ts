@@ -281,7 +281,10 @@ export function discoverTestFromFileContent(
     parent.children.push(caseItem)
     if (block.type === 'describe') {
       const data = new TestDescribe(
-        transformTestPattern(block),
+        transformTestPattern({
+          testName: block.name!,
+          isEach: block.lastProperty === 'each',
+        }),
         fileItem,
         caseItem,
         parent.data as TestFile,
@@ -298,7 +301,10 @@ export function discoverTestFromFileContent(
     }
     else if (block.type === 'it') {
       const testCase = new TestCase(
-        transformTestPattern(block),
+        transformTestPattern({
+          testName: block.name!,
+          isEach: block.lastProperty === 'each',
+        }),
         fileItem,
         caseItem,
         parent.data as TestFile | TestDescribe,

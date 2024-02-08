@@ -58,6 +58,12 @@ describe('testing', (a) => {
   `('returns $expected when $a is added $b', ({ a, b, expected }) => {
     expect(a + b).toBe(expected)
   })
+  test.each([
+    { input: 1, add: 1, sum: 2 },
+    { input: 2, add: 2, sum: 4 },
+  ])('$input + $add = $sum', ({ input, add, sum }) => {
+    expect(input + add).toBe(sum)
+  })
 })
 
 describe('ambiguous', () => {
