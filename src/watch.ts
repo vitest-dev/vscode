@@ -412,7 +412,7 @@ export function syncTestStatusToVsCode(
       if (task.type === 'suite' && !(candidate instanceof TestDescribe))
         continue
 
-      if (task.type === 'test' && !(candidate instanceof TestCase))
+      if ((task.type === 'test' || task.type==='custom') && !(candidate instanceof TestCase))
         continue
 
       if (candidate.pattern === task.name) {
