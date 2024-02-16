@@ -31,7 +31,7 @@ async function connectAndFetchConfig(
       if (!handled.has(ws)) {
         handled.add(ws)
         ws.addEventListener('open', () => {
-          log.info('WS Opened')
+          log.info('pure/WS Opened')
           client.rpc.getConfig().then((_config) => {
             client.dispose()
             resolve(_config)
@@ -39,11 +39,11 @@ async function connectAndFetchConfig(
         })
 
         ws.addEventListener('error', (e) => {
-          console.error('WS ERROR', e)
+          console.error('pure/WS ERROR ', e)
         })
 
         ws.addEventListener('close', () => {
-          log.info('WS Close')
+          log.info('pure/WS Close')
         })
       }
     })

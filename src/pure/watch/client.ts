@@ -1,6 +1,6 @@
 import WebSocket from 'ws'
 import { computed, effect, reactive, ref, shallowRef } from '@vue/reactivity'
-import type { ResolvedConfig, Task, TaskResult, WebSocketEvents } from 'vitest'
+import type { ResolvedConfig, Task, TaskResultPack, WebSocketEvents } from 'vitest'
 import { log } from '../../log'
 import { createClient } from './ws-client'
 
@@ -64,14 +64,14 @@ export function buildWatchClient(
   // otherwise those record will not be recorded to client.state
   const loadingPromise = client.waitForConnection().then(async () => {
     const files = await client.rpc.getFiles()
-    const idResultPairs: [string, TaskResult][] = []
+    const idResultPairs: TaskResultPack[] = []
     let isRunning = files.length === 0
     files && travel(files)
     function travel(tasks: Task[]) {
       for (const task of tasks) {
-        if (task.type === 'test') {
+        if (task.type === 'test' || task.type === 'custom') {
           if (task.result)
-            idResultPairs.push([task.id, task.result])
+            idResultPairs.push([task.id, task.result, task.meta])
           else if (task.mode === 'run')
             isRunning = true
         }
