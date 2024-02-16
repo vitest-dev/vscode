@@ -356,6 +356,15 @@ export function syncTestStatusToVsCode(
     for (const task of vitest) {
       const data = matchTask(task, set)
       if (task.type === 'test' || task.type === 'custom') {
+        // for now, display logs after all tests are finished.
+        // ideally, it might be possible to append logs during test execution via `onUserConsoleLog` rpc.
+        if (finished) {
+          for (const log of task.logs ?? []) {
+            // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
+            const output = log.content.replace(/(?<!\r)\n/g, "\r\n");
+            run.appendOutput(output, undefined, data.item);
+          }
+        }
         if (task.result == null) {
           if (finished) {
             finishedTest && finishedTest.add(data.item)

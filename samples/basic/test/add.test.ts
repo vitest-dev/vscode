@@ -39,10 +39,14 @@ describe('addition', () => {
 describe('testing', () => {
   it('run', () => {
     const a = 10
+    console.log("foo", { a });
     expect(a).toBe(10)
   })
 
   it('mul', () => {
+    console.log("hey1");
+    console.log("hey2");
+    console.log("hey3");
     expect(5 * 5).toBe(25)
   })
 })
