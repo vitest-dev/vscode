@@ -1,9 +1,7 @@
-import path, { sep } from 'path'
-import * as vscode from 'vscode'
 import minimatch from 'minimatch'
+import path, { sep } from 'path'
 import type { ResolvedConfig } from 'vitest'
-import parse from './pure/parsers'
-import type { NamedBlock } from './pure/parsers/parser_nodes'
+import * as vscode from 'vscode'
 import type { TestData } from './TestData'
 import {
   TestCase,
@@ -12,6 +10,8 @@ import {
   WEAKMAP_TEST_DATA,
   testItemIdMap,
 } from './TestData'
+import parse from './pure/parsers'
+import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { shouldIncludeFile } from './vscodeUtils'
 
 import { getCombinedConfig, vitestEnvironmentFolders } from './config'
@@ -257,7 +257,7 @@ export function discoverTestFromFileContent(
     result = parse(fileItem.id, content)
   }
   catch (e) {
-    log.error('parse error')
+    log.error('parse error', e)
     return
   }
 
