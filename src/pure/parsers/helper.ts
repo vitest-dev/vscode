@@ -29,6 +29,7 @@ const commonPlugins: ParserPlugin[] = [
   'optionalChaining',
   'partialApplication',
   'throwExpressions',
+  'explicitResourceManagement',
   'topLevelAwait',
   ['pipelineOperator', { proposal: 'smart' }],
 ]
