@@ -157,7 +157,7 @@
     "vscode:prepublish": "yarn run compile",
     "compile": "tsup ./src/extension.ts --external vscode,lightningcss,esbuild --minify",
     "watch": "tsup ./src/extension.ts --external vscode,lightningcss,esbuild --watch --sourcemap",
-    "test": "vitest run",
+    "test": "vitest run --config vite.global-config.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
