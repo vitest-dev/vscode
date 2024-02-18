@@ -17,9 +17,10 @@
 
 # Features
 
-- Run/debug vitest tests in vscode
-- NX support (see the [NX sample](./samples/monorepo-nx/))
-- Watch mode is supported 🎊. Test reruns are blazing fast
+- Run/debug vitest tests in vscode.
+- NX support (see the [NX sample](./samples/monorepo-nx/)).
+- Watch mode is supported 🎊. Test reruns are blazing fast.
+- A `@open` tag can be used when filtering tests, to only show the tests open in the editor.
 
 ![Watch Mode](https://i.ibb.co/YRhJj9f/Screen-Recording-2022-05-21-at-20-09-20.gif)
 
