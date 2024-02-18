@@ -14,7 +14,7 @@ import parse from './pure/parsers'
 import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { shouldIncludeFile } from './vscodeUtils'
 
-import { getCombinedConfig, vitestEnvironmentFolders } from './config'
+import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
 import { openTestTag } from './tags'
 
@@ -53,8 +53,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
       vitestEnvironmentFolders.map(async (workspaceFolder) => {
-        const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
-        for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
+        const exclude = this.config.exclude
+        for (const include of this.config.include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
@@ -108,8 +108,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
         const workspacePath = workspaceFolder.uri.fsPath
-        const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
-        for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
+        const exclude = this.config.exclude
+        for (const include of this.config.include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
