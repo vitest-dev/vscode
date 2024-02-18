@@ -18,6 +18,7 @@
 # Features
 
 - Run/debug vitest tests in vscode
+- NX support (see the [NX sample](./samples/monorepo-nx/))
 - Watch mode is supported 🎊. Test reruns are blazing fast
 
 ![Watch Mode](https://i.ibb.co/YRhJj9f/Screen-Recording-2022-05-21-at-20-09-20.gif)
@@ -31,6 +32,7 @@
 
 - `vitest.enable`: This plugin will try to detect whether the current project is
    set up with Vitest to activate itself. If detection fails, you can enable the plugin manually.
+- `vitest.watchOnStartup`: Whether to activate Watch mode per default when the extension starts.
 - `vitest.nodeEnv`: The env passed to runner process in addition to
   `process.env`
 - `vitest.commandLine`: The command line to start vitest tests. **It should have with the ability
