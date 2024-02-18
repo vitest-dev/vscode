@@ -13,6 +13,5 @@
   ],
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  },
-  "vitest.commandLine": "npx vitest --api.host 127.0.0.1"
+  }
 }
