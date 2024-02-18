@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.44](https://github.com/vitest-dev/vscode/compare/v0.2.43...v0.2.44) (2024-02-18)
+
+
+### Bug Fixes
+
+* exclude/include configs and missing workspacePath ([#192](https://github.com/vitest-dev/vscode/issues/192)) ([bee4f6e](https://github.com/vitest-dev/vscode/commit/bee4f6e9bce9a9761a627f89379d2aed20735d11))
+
 ### [0.2.43](https://github.com/vitest-dev/vscode/compare/v0.2.42...v0.2.43) (2023-10-18)
 
 ### [0.2.42](https://github.com/vitest-dev/vscode/compare/v0.2.41...v0.2.42) (2023-07-01)

@@ -1,9 +1,7 @@
-import path, { sep } from 'path'
-import * as vscode from 'vscode'
 import minimatch from 'minimatch'
+import path, { sep } from 'path'
 import type { ResolvedConfig } from 'vitest'
-import parse from './pure/parsers'
-import type { NamedBlock } from './pure/parsers/parser_nodes'
+import * as vscode from 'vscode'
 import type { TestData } from './TestData'
 import {
   TestCase,
@@ -12,10 +10,13 @@ import {
   WEAKMAP_TEST_DATA,
   testItemIdMap,
 } from './TestData'
+import parse from './pure/parsers'
+import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { shouldIncludeFile } from './vscodeUtils'
 
 import { getCombinedConfig, vitestEnvironmentFolders } from './config'
 import { log } from './log'
+import { openTestTag } from './tags'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -139,6 +140,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     const { file, data } = this.getOrCreateFile(ctrl, e.uri)
     discoverTestFromFileContent(ctrl, e.getText(), file, data)
+
+    return file
   }
 
   discoverTestFromPath(
@@ -257,7 +260,7 @@ export function discoverTestFromFileContent(
     result = parse(fileItem.id, content)
   }
   catch (e) {
-    log.error('parse error')
+    log.error('parse error', e)
     return
   }
 
@@ -320,4 +323,28 @@ export function discoverTestFromFileContent(
       ]
     }
   }
+
+  const childTestItems = [fileItem]
+  const allTestItems = new Array<vscode.TestItem>()
+
+  while (childTestItems.length) {
+    const child = childTestItems.pop()
+    if (!child)
+      continue
+
+    allTestItems.push(child)
+    childTestItems.push(...[...child.children].map(x => x[1]))
+  }
+
+  const isFileOpen = vscode.workspace.textDocuments.some(
+    x => x.uri.fsPath === fileItem.uri?.fsPath,
+  )
+  const existingTagsWithoutOpenTag = fileItem.tags.filter(
+    x => x !== openTestTag,
+  )
+  const newTags = isFileOpen
+    ? [...existingTagsWithoutOpenTag, openTestTag]
+    : existingTagsWithoutOpenTag
+  for (const testItem of allTestItems)
+    testItem.tags = newTags
 }

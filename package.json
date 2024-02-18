@@ -1,7 +1,7 @@
 {
   "name": "vitest-explorer",
   "displayName": "Vitest",
-  "version": "0.2.43",
+  "version": "0.2.44",
   "description": "Run and debug Vitest test cases",
   "icon": "img/icon.png",
   "preview": true,
@@ -85,6 +85,12 @@
       "properties": {
         "vitest.enable": {
           "description": "This plugin will try to detect whether the current project is set up with Vitest to activate itself. When it failed, you can enable the plugin manually.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": false
+        },
+        "vitest.watchOnStartup": {
+          "description": "Start watching tests on startup",
           "type": "boolean",
           "scope": "resource",
           "default": false
