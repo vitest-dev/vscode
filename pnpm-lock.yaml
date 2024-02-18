@@ -41,9 +41,15 @@ devDependencies:
   '@vue/reactivity':
     specifier: ^3.2.33
     version: 3.4.19
+  birpc:
+    specifier: ^0.2.15
+    version: 0.2.15
   eslint:
     specifier: ^8.56.0
     version: 8.56.0
+  flatted:
+    specifier: ^3.2.9
+    version: 3.2.9
   fs-extra:
     specifier: ^10.0.1
     version: 10.1.0
