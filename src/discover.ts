@@ -260,7 +260,7 @@ export function discoverTestFromFileContent(
     result = parse(fileItem.id, content)
   }
   catch (e) {
-    log.error('parse error')
+    log.error('parse error', e)
     return
   }
 
