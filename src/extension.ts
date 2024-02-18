@@ -5,7 +5,7 @@ import { effect } from '@vue/reactivity'
 import type { ResolvedConfig } from 'vitest'
 import { Command } from './command'
 import {
-  detectVitestEnvironmentFolders, extensionId, getVitestWorkspaceConfigs,
+  detectVitestEnvironmentFolders, extensionId, getConfig, getVitestWorkspaceConfigs,
   vitestEnvironmentFolders,
 } from './config'
 import { TestFileDiscoverer } from './discover'
@@ -140,9 +140,14 @@ function registerWatchHandlers(
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
 ) {
-  const testWatchers = vitestConfigs.map((vitestConfig, index) =>
-    TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index),
-  ) ?? []
+  const testWatchers = vitestConfigs.map((vitestConfig, index) => {
+    const watcher = TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index)
+
+    if (getConfig(vitestConfig.workspace).watchOnStartup)
+      watcher.watch()
+
+    return watcher
+  }) ?? []
 
   statusBarItem = new StatusBarItem()
   effect(() => {

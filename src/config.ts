@@ -1,10 +1,10 @@
-import * as vscode from 'vscode'
 import semver from 'semver'
-import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import type { ResolvedConfig } from 'vitest'
+import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
+import * as vscode from 'vscode'
+import { log } from './log'
 import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
-import { log } from './log'
 export const extensionId = 'zxch3n.vitest-explorer'
 
 // Copied from https://github.com/vitest-dev/vitest/blob/main/packages/vitest/src/defaults.ts
@@ -42,6 +42,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     commandLine: get<string | undefined>('commandLine', undefined),
+    watchOnStartup: get<boolean>('watchOnStartup', false),
     include: get<string[]>('include'),
     exclude: get<string[]>('exclude'),
     enable: get<boolean>('enable', false),
