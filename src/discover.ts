@@ -1,4 +1,4 @@
-import path, { sep } from 'path'
+import path, { sep } from 'node:path'
 import minimatch from 'minimatch'
 import type { ResolvedConfig } from 'vitest'
 import * as vscode from 'vscode'
@@ -84,9 +84,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
-              && this.getOrCreateFile(controller, file).data.updateFromDisk(
-                controller,
-              )
+            && this.getOrCreateFile(controller, file).data.updateFromDisk(
+              controller,
+            )
           }
 
           watchers.push(watcher)
@@ -119,9 +119,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
-              && this.getOrCreateFile(controller, file).data.updateFromDisk(
-                controller,
-              )
+            && this.getOrCreateFile(controller, file).data.updateFromDisk(
+              controller,
+            )
           }
         }
       }),

@@ -1,5 +1,5 @@
-import type { ChildProcess } from 'child_process'
-import path from 'path'
+import type { ChildProcess } from 'node:child_process'
+import path from 'node:path'
 import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
@@ -295,7 +295,7 @@ function parseLocationFromStacks(testItem: TestItem, stacks: ParsedStack[]): Deb
   const targetFilepath = testItem.uri!.fsPath
   for (const stack of stacks) {
     const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
-    if (sourceFilepath !== targetFilepath || isNaN(column) || isNaN(line))
+    if (sourceFilepath !== targetFilepath || Number.isNaN(column) || Number.isNaN(line))
       continue
 
     return {
@@ -370,7 +370,9 @@ export function syncTestStatusToVsCode(
             finishedTest && finishedTest.add(data.item)
             run.skipped(data.item)
           }
-          else if (isFirstUpdate) { run.started(data.item) }
+          else if (isFirstUpdate) {
+            run.started(data.item)
+          }
         }
         else {
           if (finishedTest) {

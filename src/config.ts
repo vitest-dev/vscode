@@ -4,6 +4,7 @@ import * as vscode from 'vscode'
 import { log } from './log'
 import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
+
 export const extensionId = 'zxch3n.vitest-explorer'
 
 export function getConfigValue<T>(

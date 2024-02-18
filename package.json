@@ -1,19 +1,11 @@
 {
+  "publisher": "ZixuanChen",
   "name": "vitest-explorer",
   "displayName": "Vitest",
   "version": "0.2.44",
   "description": "Run and debug Vitest test cases",
-  "icon": "img/icon.png",
-  "preview": true,
-  "keywords": [
-    "vitest",
-    "test",
-    "typescript",
-    "javascript"
-  ],
-  "license": "MIT",
   "author": "zxch3n",
-  "publisher": "ZixuanChen",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/vitest-dev/vscode.git"
@@ -21,12 +13,21 @@
   "bugs": {
     "url": "https://github.com/vitest-dev/vscode/issues"
   },
-  "engines": {
-    "vscode": "^1.77.0"
-  },
+  "keywords": [
+    "vitest",
+    "test",
+    "typescript",
+    "javascript"
+  ],
   "categories": [
     "Testing"
   ],
+  "main": "./dist/extension.js",
+  "icon": "img/icon.png",
+  "preview": true,
+  "engines": {
+    "vscode": "^1.77.0"
+  },
   "activationEvents": [
     "onCommand:vitest-explorer.configureTest",
     "workspaceContains:**/vitest.config.js",
@@ -35,7 +36,6 @@
     "workspaceContains:**/vite.config.ts",
     "workspaceContains:**/package.json"
   ],
-  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -142,15 +142,15 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "tsup ./src/extension.ts --external vscode,lightningcss,esbuild --minify",
-    "watch": "tsup ./src/extension.ts --external vscode,lightningcss,esbuild --watch --sourcemap",
+    "compile": "tsup ./src/extension.ts --external vscode --minify",
+    "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
     "test": "vitest run --config vite.global-config.ts",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache --fix ."
   },
   "dependencies": {},
   "devDependencies": {
-    "@antfu/eslint-config": "^0.23.1",
+    "@antfu/eslint-config": "^2.6.4",
     "@babel/parser": "^7.20.15",
     "@babel/types": "^7.20.7",
     "@rauschma/stringio": "^1.4.0",

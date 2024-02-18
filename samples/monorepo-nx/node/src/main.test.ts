@@ -1,14 +1,14 @@
-import { library } from '@nx/library';
-import { mainFunction } from './main';
+import { library } from '@nx/library'
+import { mainFunction } from './main'
 
 describe('library from app', () => {
   it('should work', () => {
-    expect(library()).toEqual('library');
-  });
-});
+    expect(library()).toEqual('library')
+  })
+})
 
 describe('main', () => {
   it('should work', () => {
-    expect(mainFunction()).toEqual('hello world');
-  });
-});
+    expect(mainFunction()).toEqual('hello world')
+  })
+})

@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
-    "module": "commonJS",
     "target": "ES2020",
-    "outDir": "out",
     "lib": ["ES2020", "ESNext.Disposable", "DOM"],
-    "sourceMap": true,
     "rootDir": "src",
+    "module": "commonJS",
+    "strict": true,
+    "outDir": "out",
+    "sourceMap": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "strict": true /* enable all strict type-checking options */
+    "skipLibCheck": true /* enable all strict type-checking options */
     /* Additional Checks */
     // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
     // "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */

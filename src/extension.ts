@@ -7,13 +7,19 @@ import { StatusBarItem } from './StatusBarItem'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { Command } from './command'
 import {
-  detectVitestEnvironmentFolders, extensionId, getConfig, getVitestWorkspaceConfigs,
+  detectVitestEnvironmentFolders,
+  extensionId,
+  getConfig,
+  getVitestWorkspaceConfigs,
   vitestEnvironmentFolders,
 } from './config'
 import { TestFileDiscoverer } from './discover'
 import { log } from './log'
 import {
-  debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot,
+  debugHandler,
+  gatherTestItemsFromWorkspace,
+  runHandler,
+  updateSnapshot,
 } from './runHandler'
 import { TestWatcher } from './watch'
 
@@ -87,7 +93,7 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[])
   // prompt error message if we can get the version from vitest, but it's not compatible with the extension
   workspaceConfigs.filter(x => !x.isCompatible && x.isUsingVitestForSure).forEach((config) => {
     vscode.window.showWarningMessage('Because Vitest version < 0.12.0'
-      + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
+    + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
   })
 
   if (workspaceConfigs.every(x => !x.isCompatible))
