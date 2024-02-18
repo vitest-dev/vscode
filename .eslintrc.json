@@ -3,6 +3,7 @@
   "rules": {
     "import/no-named-as-default": "off",
     "no-console": "off",
-    "@typescript-eslint/ban-ts-comment": "off"
+    "@typescript-eslint/ban-ts-comment": "off",
+    "import/order": "off"
   }
 }
