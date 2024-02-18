@@ -1,7 +1,7 @@
 {
   "name": "vitest-explorer",
   "displayName": "Vitest",
-  "version": "0.2.43",
+  "version": "0.2.44",
   "description": "Run and debug Vitest test cases",
   "icon": "img/icon.png",
   "preview": true,
