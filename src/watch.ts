@@ -361,8 +361,8 @@ export function syncTestStatusToVsCode(
         if (finished) {
           for (const log of task.logs ?? []) {
             // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
-            const output = log.content.replace(/(?<!\r)\n/g, "\r\n");
-            run.appendOutput(output, undefined, data.item);
+            const output = log.content.replace(/(?<!\r)\n/g, '\r\n')
+            run.appendOutput(output, undefined, data.item)
           }
         }
         if (task.result == null) {
@@ -421,7 +421,7 @@ export function syncTestStatusToVsCode(
       if (task.type === 'suite' && !(candidate instanceof TestDescribe))
         continue
 
-      if ((task.type === 'test' || task.type==='custom') && !(candidate instanceof TestCase))
+      if ((task.type === 'test' || task.type === 'custom') && !(candidate instanceof TestCase))
         continue
 
       if (candidate.pattern === task.name) {

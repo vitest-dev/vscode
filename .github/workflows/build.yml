@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
   build:
@@ -13,18 +13,20 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x]
-        
+
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
 
-    - run: yarn install --frozen-lockfile
+      - run: yarn install --frozen-lockfile
 
-    - run: yarn run compile
+      - run: yarn run compile
 
-    - run: yarn test
+      - run: yarn run lint
+
+      - run: yarn test
