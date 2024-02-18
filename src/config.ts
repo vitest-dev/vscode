@@ -1,22 +1,10 @@
 import semver from 'semver'
-import type { ResolvedConfig } from 'vitest'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import * as vscode from 'vscode'
 import { log } from './log'
 import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
 export const extensionId = 'zxch3n.vitest-explorer'
-
-// Copied from https://github.com/vitest-dev/vitest/blob/main/packages/vitest/src/defaults.ts
-// "import { configDefaults } from 'vitest'" throws unexpected URL error
-const defaultInclude = ['**/*.{test,spec}.?(c|m)[jt]s?(x)']
-const defaultExclude = [
-  '**/node_modules/**',
-  '**/dist/**',
-  '**/cypress/**',
-  '**/.{idea,git,cache,output,temp}/**',
-  '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
-]
 
 export function getConfigValue<T>(
   rootConfig: WorkspaceConfiguration,
@@ -43,18 +31,8 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     env: get<null | Record<string, string>>('nodeEnv', null),
     commandLine: get<string | undefined>('commandLine', undefined),
     watchOnStartup: get<boolean>('watchOnStartup', false),
-    include: get<string[]>('include'),
-    exclude: get<string[]>('exclude'),
     enable: get<boolean>('enable', false),
     debugExclude: get<string[]>('debugExclude', []),
-  }
-}
-
-export function getCombinedConfig(config: ResolvedConfig, workspaceFolder?: WorkspaceFolder | vscode.Uri | string) {
-  const vitestConfig = getConfig(workspaceFolder)
-  return {
-    exclude: vitestConfig.exclude?.concat(config.exclude) || defaultExclude,
-    include: vitestConfig.include?.concat(config.include) || defaultInclude,
   }
 }
 

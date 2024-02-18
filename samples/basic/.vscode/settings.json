@@ -1,9 +1,5 @@
 {
   "vitest.nodeEnv": {},
-  "vitest.include": [
-    "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
-    "**/src/should_included_test.ts"
-  ],
   "vitest.exclude": [
     "**/node_modules/**",
     "**/dist/**",
