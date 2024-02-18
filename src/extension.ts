@@ -3,6 +3,8 @@ import * as vscode from 'vscode'
 import { effect } from '@vue/reactivity'
 
 import type { ResolvedConfig } from 'vitest'
+import { StatusBarItem } from './StatusBarItem'
+import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { Command } from './command'
 import {
   detectVitestEnvironmentFolders, extensionId, getVitestWorkspaceConfigs,
@@ -13,8 +15,6 @@ import { log } from './log'
 import {
   debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot,
 } from './runHandler'
-import { StatusBarItem } from './StatusBarItem'
-import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 
 import type { VitestWorkspaceConfig } from './config'
@@ -115,6 +115,8 @@ function registerDiscovery(ctrl: vscode.TestController, context: vscode.Extensio
   vscode.window.visibleTextEditors.forEach(x =>
     fileDiscoverer.discoverTestFromDoc(ctrl, x.document),
   )
+
+  fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl)
 
   return fileDiscoverer
 }
