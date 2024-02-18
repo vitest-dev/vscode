@@ -2,6 +2,6 @@
 
 How to build and test the extension:
 
-- Run `yarn` to install deps
-- Run `yarn watch`
+- Run `pnpm` to install deps
+- Run `pnpm watch`
 - Press F5 to run extension
