@@ -1,5 +1,5 @@
-import minimatch from 'minimatch'
 import path, { sep } from 'path'
+import minimatch from 'minimatch'
 import type { ResolvedConfig } from 'vitest'
 import * as vscode from 'vscode'
 import type { TestData } from './TestData'
