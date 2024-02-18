@@ -101,25 +101,6 @@
           "scope": "resource",
           "default": ""
         },
-        "vitest.include": {
-          "markdownDescription": "Include glob for test files. Default: `[\"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}\"]`",
-          "type": "array",
-          "default": [
-            "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
-          ],
-          "scope": "resource"
-        },
-        "vitest.exclude": {
-          "markdownDescription": "Exclude globs for test files. \nDefault: `[\"**/node_modules/**\", \"**/dist/**\", \"**/cypress/**\", \"**/.{idea,git,cache,output,temp}/**\"]`",
-          "type": "array",
-          "default": [
-            "**/node_modules/**",
-            "**/dist/**",
-            "**/cypress/**",
-            "**/.{idea,git,cache,output,temp}/**"
-          ],
-          "scope": "resource"
-        },
         "vitest.debugExclude": {
           "markdownDescription": "Automatically skip files covered by these glob patterns. \nDefault: `[\"<node_internals>/**\", \"**/node_modules/**\"]`",
           "type": "array",
