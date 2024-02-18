@@ -3,6 +3,8 @@ import * as vscode from 'vscode'
 import { effect } from '@vue/reactivity'
 
 import type { ResolvedConfig } from 'vitest'
+import { StatusBarItem } from './StatusBarItem'
+import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { Command } from './command'
 import {
   detectVitestEnvironmentFolders, extensionId, getVitestWorkspaceConfigs,
@@ -13,12 +15,11 @@ import { log } from './log'
 import {
   debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot,
 } from './runHandler'
-import { StatusBarItem } from './StatusBarItem'
-import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
+import { openTestTag } from './tags'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -66,6 +67,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e)
+    }),
+    vscode.workspace.onDidCloseTextDocument((e) => {
+      const item = fileDiscoverer.discoverTestFromDoc(ctrl, e)
+      if (item)
+        item.tags = item.tags.filter(x => x !== openTestTag)
     }),
     vscode.workspace.onDidChangeTextDocument(e =>
       fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
