@@ -306,12 +306,7 @@ async function runTest(
       ? WEAKMAP_TEST_DATA.get(items[0])!.getFullPattern()
       : '',
     {
-      info: (msg: string) => {
-        if (items.length === 1)
-          run.appendOutput(msg, undefined, items[0])
-        else
-          run.appendOutput(msg)
-      },
+      info: log.info,
       error: log.error,
     },
     config.env || undefined,
@@ -339,4 +334,3 @@ async function runTest(
     }
   }
 }
-
