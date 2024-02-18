@@ -19,6 +19,7 @@ import { TestWatcher } from './watch'
 
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
+import { openTestTag } from './tags'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -66,6 +67,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e)
+    }),
+    vscode.workspace.onDidCloseTextDocument((e) => {
+      const item = fileDiscoverer.discoverTestFromDoc(ctrl, e)
+      if (item)
+        item.tags = item.tags.filter(x => x !== openTestTag)
     }),
     vscode.workspace.onDidChangeTextDocument(e =>
       fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
