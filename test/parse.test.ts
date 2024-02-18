@@ -7,11 +7,11 @@ describe('parse', () => {
     const out = parse(
       'x.js',
       ''
-        + 'let a = 10;\n'
-        + 'describe(`x ${a} sdf`, () => {\n'
-        + '    for (let i = 0; i < 5; i++){it(\'run\' + i, () => {})}\n'
-        + '}); \n'
-        + 'test(\'add\', () => {})',
+      + 'let a = 10;\n'
+      + 'describe(`x ${a} sdf`, () => {\n'
+      + '    for (let i = 0; i < 5; i++){it(\'run\' + i, () => {})}\n'
+      + '}); \n'
+      + 'test(\'add\', () => {})',
     )
 
     expect(out.describeBlocks.length).toBe(1)
@@ -22,8 +22,8 @@ describe('parse', () => {
     const out = parse(
       'x.js',
       ''
-        + 'describe.skipIf(true).concurrent(`test`, () => {\n'
-        + '}); \n',
+      + 'describe.skipIf(true).concurrent(`test`, () => {\n'
+      + '}); \n',
     )
 
     expect(out.describeBlocks.length).toBe(1)
@@ -33,12 +33,12 @@ describe('parse', () => {
     const out = parse(
       'x.ts',
       ''
-        + 'let a = 10;\n'
-        + 'describe(`x ${a} sdf`, () => {\n'
-        + '    class B { \n'
-        + '         constructor(@Inject(A) public a: A) {} \n'
-        + '    } '
-        + '});',
+      + 'let a = 10;\n'
+      + 'describe(`x ${a} sdf`, () => {\n'
+      + '    class B { \n'
+      + '         constructor(@Inject(A) public a: A) {} \n'
+      + '    } '
+      + '});',
     )
 
     expect(out.describeBlocks.length).toBe(1)

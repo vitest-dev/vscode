@@ -1,3 +1,3 @@
 export function library(): string {
-  return 'library';
+  return 'library'
 }

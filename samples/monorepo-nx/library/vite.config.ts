@@ -1,7 +1,7 @@
 /// <reference types='vitest' />
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vite'
 
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
+import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 
 export default defineConfig({
   root: __dirname,
@@ -28,4 +28,4 @@ export default defineConfig({
       provider: 'v8',
     },
   },
-});
+})

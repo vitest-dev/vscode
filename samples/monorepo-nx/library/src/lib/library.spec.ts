@@ -1,7 +1,7 @@
-import { library } from './library';
+import { library } from './library'
 
 describe('library', () => {
   it('should work', () => {
-    expect(library()).toEqual('library');
-  });
-});
+    expect(library()).toEqual('library')
+  })
+})

@@ -1,12 +1,12 @@
+import { TextDecoder } from 'node:util'
 import minimatch from 'minimatch'
-import { TextDecoder } from 'util'
 import type { ResolvedConfig } from 'vitest'
 import type { Uri } from 'vscode'
 import { workspace } from 'vscode'
 
 const textDecoder = new TextDecoder('utf-8')
 
-export const getContentFromFilesystem = async (uri: Uri) => {
+export async function getContentFromFilesystem(uri: Uri) {
   try {
     const rawContent = await workspace.fs.readFile(uri)
     return textDecoder.decode(rawContent)

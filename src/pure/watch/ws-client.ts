@@ -4,12 +4,14 @@ import { shallowReactive } from '@vue/reactivity'
 import type { BirpcReturn } from 'birpc'
 import { createBirpc } from 'birpc'
 import { parse, stringify } from 'flatted'
-// eslint-disable-next-line no-restricted-imports
+
 import type {
   File,
   Task,
   TaskResultPack,
-  UserConsoleLog, WebSocketEvents, WebSocketHandlers,
+  UserConsoleLog,
+  WebSocketEvents,
+  WebSocketHandlers,
 } from 'vitest'
 import { log } from '../../log'
 
@@ -100,9 +102,9 @@ export interface VitestClient {
   ws: WebSocket
   state: StateManager
   rpc: BirpcReturn<WebSocketHandlers, WebSocketEvents>
-  waitForConnection(): Promise<void>
-  reconnect(): Promise<void>
-  dispose(): void
+  waitForConnection: () => Promise<void>
+  reconnect: () => Promise<void>
+  dispose: () => void
 }
 
 export function createClient(url: string, options: VitestClientOptions = {}) {
