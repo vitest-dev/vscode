@@ -6,4 +6,9 @@ export default defineConfig([
     external: ['vscode'],
     format: 'cjs',
   },
+  {
+    entry: ['./src/worker/worker.ts'],
+    external: ['vitest/node'],
+    format: 'esm',
+  },
 ])

@@ -1,5 +1,3 @@
-import { Worker } from 'node:worker_threads'
-import { dirname, resolve } from 'node:path'
 import * as vscode from 'vscode'
 
 import { effect } from '@vue/reactivity'
@@ -28,30 +26,26 @@ import { TestWatcher } from './watch'
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
 import { openTestTag } from './tags'
-import { workerPath } from './constants'
+import { createVitestAPI } from './api'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const workspacePaths = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath)
-  if (workspacePaths?.length) {
-    const vitestPath = require.resolve('vitest', { paths: workspacePaths }) // resolves to cjs
-    log.info('vitest path', vitestPath, resolve(dirname(vitestPath), './dist/node.js'))
-    const worker = new Worker(workerPath, {
-      workerData: {
-        root: workspacePaths[0],
-        vitestPath: resolve(dirname(vitestPath), './dist/node.js'),
-      },
-    })
-    worker.stdout.on('data', (d) => {
-      log.info('worker log', d.toString())
-    })
-    worker.stderr.on('data', (d) => {
-      log.error('worker error', d.toString())
-    })
-    worker.on('message', (d) => {
-      log.info(JSON.stringify(d))
-    })
+  const workspaces = vscode.workspace.workspaceFolders
+  if (workspaces) {
+    try {
+      const vitestAPIs = await Promise.all(workspaces.map(async (folder) => {
+        const api = await createVitestAPI(folder)
+        return {
+          folder,
+          api,
+          config: await api?.getConfig(),
+        }
+      }))
+      log.info(vitestAPIs.map(v => `${v.folder.name}: resolved as ${v.config ? (v.config.name || 'core') : 'Failed'}`))
+    }
+    catch (err: any) {
+      log.error('[Vitest API]', err?.stack)
+    }
   }
-
   await detectVitestEnvironmentFolders()
   if (vitestEnvironmentFolders.length === 0) {
     log.info('The extension is not activated because no Vitest environment was detected.')

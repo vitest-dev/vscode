@@ -1,21 +1,22 @@
-import { parentPort, workerData } from 'node:worker_threads'
+import { workerData } from 'node:worker_threads'
+import { createErrorRPC, createWorkerRPC } from './rpc'
 
 (async () => {
-  parentPort!.postMessage({ msg: 'hello from worker', p: workerData.vitestPath })
   try {
     const vitestMode = await import(workerData.vitestPath) as typeof import('vitest/node')
     const vitest = await vitestMode.createVitest('test', {
-      watch: false,
+      watch: true,
       root: workerData.root,
     })
-    parentPort!.postMessage({ msg: 'vitest created' })
-    const files = await vitest.globTestFiles()
-    parentPort!.postMessage({
-      files: files.map(([_, spec]) => spec),
-    })
-    await vitest.close()
+    const rpc = createWorkerRPC(vitest)
+    await rpc.onReady()
   }
   catch (err: any) {
-    parentPort!.postMessage({ error: err.message, stack: String(err.stack) })
+    const closeRpc = createErrorRPC()
+    closeRpc.onError({
+      message: err.message,
+      stack: String(err.stack),
+      name: err.name,
+    })
   }
 })()
