@@ -1,5 +1,4 @@
 import { TextDecoder } from 'node:util'
-import fs from 'node:fs/promises'
 import fastGlob from 'fast-glob'
 import type { ResolvedConfig } from 'vitest'
 import type { Uri } from 'vscode'
@@ -32,10 +31,6 @@ export function shouldIncludeFile(path: string, config: ResolvedConfig): boolean
     return true
 
   return false
-
-  function isInSourceTestFile(code: string) {
-    return code.includes('import.meta.vitest')
-  }
 }
 
 /**
