@@ -1,9 +1,13 @@
-name: Build
+name: Publish Package
 
 on:
   push:
     tags:
       - v*
+
+permissions:
+  contents: write
+  id-token: write
 
 jobs:
   release:
@@ -14,13 +18,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: pnpm/action-setup@v3
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 20
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Publish to Open VSX Registry
         id: publishToOpenVSX
@@ -35,3 +40,8 @@ jobs:
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
           extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+
+      - name: Generate Changelog
+        run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
