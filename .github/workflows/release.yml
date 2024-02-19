@@ -27,19 +27,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Publish to Open VSX Registry
-        id: publishToOpenVSX
-        uses: HaaLeo/publish-vscode-extension@v1
-        with:
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-          dependencies: false
+      # - name: Publish to Open VSX Registry
+      #   id: publishToOpenVSX
+      #   uses: HaaLeo/publish-vscode-extension@v1
+      #   with:
+      #     pat: ${{ secrets.OPEN_VSX_TOKEN }}
+      #     dependencies: false
 
       - name: Publish to Visual Studio Marketplace
         uses: HaaLeo/publish-vscode-extension@v1
         with:
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+          # extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+          dependencies: false
 
       - name: Generate Changelog
         run: npx changelogithub
