@@ -2,17 +2,17 @@
   "name": "basic",
   "version": "1.0.0",
   "description": "",
+  "author": "",
+  "license": "ISC",
   "main": "index.js",
   "scripts": {
     "test": "vitest run"
   },
-  "author": "",
-  "license": "ISC",
+  "dependencies": {
+    "birpc": "^0.2.2"
+  },
   "devDependencies": {
     "vite": "^2.8.6",
     "vitest": "^0.24.0"
-  },
-  "dependencies": {
-    "birpc": "^0.2.2"
   }
 }

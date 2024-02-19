@@ -2,17 +2,17 @@
   "name": "monorepo",
   "version": "1.0.1",
   "description": "",
+  "author": "",
+  "license": "ISC",
   "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
     "happy-dom": "^2.49.0",
-    "vitest": "^0.34.6"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC"
+    "vitest": "^1.3.0"
+  }
 }

@@ -1,4 +1,4 @@
-import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } from 'child_process'
+import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } from 'node:child_process'
 import getPort from 'get-port'
 import type { File, WebSocketEvents } from 'vitest'
 import type { CancellationToken } from 'vscode'

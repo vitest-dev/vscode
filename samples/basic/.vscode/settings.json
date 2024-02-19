@@ -1,9 +1,5 @@
 {
   "vitest.nodeEnv": {},
-  "vitest.include": [
-    "**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
-    "**/src/should_included_test.ts"
-  ],
   "vitest.exclude": [
     "**/node_modules/**",
     "**/dist/**",
@@ -14,5 +10,5 @@
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
-  "vitest.commandLine": "npx vitest --api.host 127.0.0.1"
+  "vitest.commandLine": "npx vitest"
 }

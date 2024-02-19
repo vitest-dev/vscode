@@ -3,6 +3,7 @@ import { window } from 'vscode'
 const _log = window.createOutputChannel('Vitest')
 export const log = {
   info: (...args: any[]) => {
+    // eslint-disable-next-line no-console
     console.log(...args)
     const time = new Date().toLocaleTimeString()
     _log.appendLine(`[INFO ${time}] ${args.join(' ')}`)

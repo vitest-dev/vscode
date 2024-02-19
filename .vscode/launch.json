@@ -13,7 +13,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/basic"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
       "name": "Run Extension Multi-Root Workspace Sample",
@@ -23,7 +23,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/multi-root-workspace/sample.code-workspace"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
       "name": "Run Extension Monorepo Sample",
@@ -33,7 +33,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
       "name": "Run Extension Monorepo Vitest Workspace",
@@ -43,7 +43,17 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo-vitest-workspace"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
+      "name": "Run Extension Monorepo NX",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/monorepo-nx"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
       "name": "Run Extension React Sample",
@@ -53,7 +63,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo/packages/react"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
       "name": "Run Extension Vue Sample",
@@ -63,7 +73,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/vue"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
       "name": "Extension Tests",
@@ -71,9 +81,9 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+        "--extensionTestsPath=${workspaceFolder}/dist/test/suite/index"
       ],
-      "outFiles": ["${workspaceFolder}/out/test/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/test/**/*.js"]
     }
   ]
 }

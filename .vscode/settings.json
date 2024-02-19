@@ -8,17 +8,10 @@
   },
   // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
   "typescript.tsc.autoDetect": "off",
-  "cSpell.words": ["execa"],
-  "vitest.exclude": [
-    "**/out/**",
-    "**/src/**",
-    "**/samples/**",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/cypress/**",
-    "**/.{idea,git,cache,output,temp}/**"
-  ],
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "never"
   }
 }

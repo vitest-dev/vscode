@@ -3,22 +3,29 @@ import * as vscode from 'vscode'
 import { effect } from '@vue/reactivity'
 
 import type { ResolvedConfig } from 'vitest'
+import { StatusBarItem } from './StatusBarItem'
+import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { Command } from './command'
 import {
-  detectVitestEnvironmentFolders, extensionId, getVitestWorkspaceConfigs,
+  detectVitestEnvironmentFolders,
+  getConfig,
+  getVitestWorkspaceConfigs,
+  testControllerId,
   vitestEnvironmentFolders,
 } from './config'
 import { TestFileDiscoverer } from './discover'
 import { log } from './log'
 import {
-  debugHandler, gatherTestItemsFromWorkspace, runHandler, updateSnapshot,
+  debugHandler,
+  gatherTestItemsFromWorkspace,
+  runHandler,
+  updateSnapshot,
 } from './runHandler'
-import { StatusBarItem } from './StatusBarItem'
-import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { TestWatcher } from './watch'
 
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
+import { openTestTag } from './tags'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -27,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return
   }
 
-  const ctrl = vscode.tests.createTestController(`${extensionId}`, 'Vitest')
+  const ctrl = vscode.tests.createTestController(testControllerId, 'Vitest')
 
   const workspaceConfigs = await getVitestWorkspaceConfigs()
   // enable run/debug/watch tests only if vitest version >= 0.12.0
@@ -67,6 +74,11 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e)
     }),
+    vscode.workspace.onDidCloseTextDocument((e) => {
+      const item = fileDiscoverer.discoverTestFromDoc(ctrl, e)
+      if (item)
+        item.tags = item.tags.filter(x => x !== openTestTag)
+    }),
     vscode.workspace.onDidChangeTextDocument(e =>
       fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
     ),
@@ -81,7 +93,7 @@ function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[])
   // prompt error message if we can get the version from vitest, but it's not compatible with the extension
   workspaceConfigs.filter(x => !x.isCompatible && x.isUsingVitestForSure).forEach((config) => {
     vscode.window.showWarningMessage('Because Vitest version < 0.12.0'
-      + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
+    + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
   })
 
   if (workspaceConfigs.every(x => !x.isCompatible))
@@ -116,6 +128,8 @@ function registerDiscovery(ctrl: vscode.TestController, context: vscode.Extensio
     fileDiscoverer.discoverTestFromDoc(ctrl, x.document),
   )
 
+  fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl)
+
   return fileDiscoverer
 }
 
@@ -140,9 +154,14 @@ function registerWatchHandlers(
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
 ) {
-  const testWatchers = vitestConfigs.map((vitestConfig, index) =>
-    TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index),
-  ) ?? []
+  const testWatchers = vitestConfigs.map((vitestConfig, index) => {
+    const watcher = TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index)
+
+    if (getConfig(vitestConfig.workspace).watchOnStartup)
+      watcher.watch()
+
+    return watcher
+  }) ?? []
 
   statusBarItem = new StatusBarItem()
   effect(() => {

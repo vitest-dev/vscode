@@ -29,6 +29,7 @@ const commonPlugins: ParserPlugin[] = [
   'optionalChaining',
   'partialApplication',
   'throwExpressions',
+  'explicitResourceManagement', // allows use of the EcmaScript `using` keyword: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#using-declarations-and-explicit-resource-management
   'topLevelAwait',
   ['pipelineOperator', { proposal: 'smart' }],
 ]
@@ -51,10 +52,7 @@ export const tsxPlugins: ParserPlugin[] = [
   'jsx',
 ]
 
-export const parseOptions = (
-  filePath: string,
-  strictMode = false,
-): ParserOptions => {
+export function parseOptions(filePath: string, strictMode = false): ParserOptions {
   if (filePath.match(/\.ts$/i))
     return { plugins: [...tsPlugins] }
 

@@ -1,9 +1,7 @@
-import path, { sep } from 'path'
-import * as vscode from 'vscode'
+import path, { sep } from 'node:path'
 import minimatch from 'minimatch'
 import type { ResolvedConfig } from 'vitest'
-import parse from './pure/parsers'
-import type { NamedBlock } from './pure/parsers/parser_nodes'
+import * as vscode from 'vscode'
 import type { TestData } from './TestData'
 import {
   TestCase,
@@ -12,11 +10,14 @@ import {
   WEAKMAP_TEST_DATA,
   testItemIdMap,
 } from './TestData'
+import parse from './pure/parsers'
+import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { shouldIncludeFile } from './vscodeUtils'
 
-import { getCombinedConfig, vitestEnvironmentFolders } from './config'
+import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
 import { transformTestPattern } from './pure/testName'
+import { openTestTag } from './tags'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -53,8 +54,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
       vitestEnvironmentFolders.map(async (workspaceFolder) => {
-        const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
-        for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
+        const exclude = this.config.exclude
+        for (const include of this.config.include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
@@ -84,9 +85,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
-              && this.getOrCreateFile(controller, file).data.updateFromDisk(
-                controller,
-              )
+            && this.getOrCreateFile(controller, file).data.updateFromDisk(
+              controller,
+            )
           }
 
           watchers.push(watcher)
@@ -108,8 +109,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
         const workspacePath = workspaceFolder.uri.fsPath
-        const exclude = getCombinedConfig(this.config, workspaceFolder).exclude
-        for (const include of getCombinedConfig(this.config, workspaceFolder).include) {
+        const exclude = this.config.exclude
+        for (const include of this.config.include) {
           const pattern = new vscode.RelativePattern(
             workspaceFolder.uri,
             include,
@@ -119,9 +120,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
           for (const file of await vscode.workspace.findFiles(pattern)) {
             filter(file)
-              && this.getOrCreateFile(controller, file).data.updateFromDisk(
-                controller,
-              )
+            && this.getOrCreateFile(controller, file).data.updateFromDisk(
+              controller,
+            )
           }
         }
       }),
@@ -140,6 +141,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     const { file, data } = this.getOrCreateFile(ctrl, e.uri)
     discoverTestFromFileContent(ctrl, e.getText(), file, data)
+
+    return file
   }
 
   discoverTestFromPath(
@@ -258,7 +261,7 @@ export function discoverTestFromFileContent(
     result = parse(fileItem.id, content)
   }
   catch (e) {
-    log.error('parse error')
+    log.error('parse error', e)
     return
   }
 
@@ -327,4 +330,28 @@ export function discoverTestFromFileContent(
       ]
     }
   }
+
+  const childTestItems = [fileItem]
+  const allTestItems = new Array<vscode.TestItem>()
+
+  while (childTestItems.length) {
+    const child = childTestItems.pop()
+    if (!child)
+      continue
+
+    allTestItems.push(child)
+    childTestItems.push(...[...child.children].map(x => x[1]))
+  }
+
+  const isFileOpen = vscode.workspace.textDocuments.some(
+    x => x.uri.fsPath === fileItem.uri?.fsPath,
+  )
+  const existingTagsWithoutOpenTag = fileItem.tags.filter(
+    x => x !== openTestTag,
+  )
+  const newTags = isFileOpen
+    ? [...existingTagsWithoutOpenTag, openTestTag]
+    : existingTagsWithoutOpenTag
+  for (const testItem of allTestItems)
+    testItem.tags = newTags
 }
