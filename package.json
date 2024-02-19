@@ -1,10 +1,10 @@
 {
-  "publisher": "ZixuanChen",
+  "publisher": "vitest",
   "name": "explorer",
   "displayName": "Vitest",
-  "version": "0.2.44",
+  "version": "0.3.0",
   "packageManager": "pnpm@8.15.3",
-  "description": "Run and debug Vitest test cases",
+  "description": "A Vite-native testing framework. It's fast!",
   "author": "vitest",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,7 @@
   ],
   "main": "./dist/extension.js",
   "icon": "img/icon.png",
-  "preview": true,
+  "pricing": "Free",
   "engines": {
     "vscode": "^1.77.0"
   },
@@ -145,7 +145,8 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "yarn run compile",
+    "vscode:prepublish": "pnpm compile",
+    "release": "bumpp package.json --commit --push --tag && git update-ref refs/heads/release refs/heads/main && git push origin release",
     "compile": "tsup ./src/extension.ts --external vscode --minify",
     "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
     "test": "vitest run --config vite.global-config.ts",
@@ -166,6 +167,8 @@
     "@vitest/ws-client": "^1.3.0",
     "@vue/reactivity": "^3.2.33",
     "birpc": "^0.2.15",
+    "bumpp": "^9.3.0",
+    "changelogithub": "^0.13.3",
     "eslint": "^8.56.0",
     "flatted": "^3.2.9",
     "fs-extra": "^10.0.1",

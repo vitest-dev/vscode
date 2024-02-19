@@ -6,6 +6,7 @@ import { isDefinitelyVitestEnv, mayBeVitestEnv } from './pure/isVitestEnv'
 import { getVitestCommand, getVitestVersion, isNodeAvailable } from './pure/utils'
 
 export const extensionId = 'vitest.explorer'
+export const testControllerId = 'vitest'
 
 export function getConfigValue<T>(
   rootConfig: WorkspaceConfiguration,
