@@ -346,10 +346,23 @@ export function syncTestStatusToVsCode(
 ) {
   const groups = groupTasksByPattern(new Map(), vscodeFile.children, vitestFile.tasks)
   for (const [data, tasks] of groups.entries()) {
+    if (finished) {
+      for (const task of tasks) {
+        if (!task.logs)
+          continue
+        // for now, display logs after all tests are finished.
+        // TODO: append logs during test execution using `onUserConsoleLog` rpc.
+        for (const log of task.logs) {
+          // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
+          const output = log.content.replace(/(?<!\r)\n/g, '\r\n')
+          run.appendOutput(output, undefined, data.item)
+        }
+      }
+    }
     const primaryTask = getPrimaryResultTask(tasks)
     if (primaryTask?.result == null) {
       if (finished) {
-        finishedTest && finishedTest.add(data.item)
+        finishedTest?.add(data.item)
         run.skipped(data.item)
       }
       else if (isFirstUpdate) {
@@ -451,7 +464,7 @@ function matchTask(
     if (task.type === 'suite' && !(vscode instanceof TestDescribe))
       continue
 
-    if (task.type === 'test' && !(vscode instanceof TestCase))
+    if ((task.type === 'test' || task.type === 'custom') && !(vscode instanceof TestCase))
       continue
 
     const fullTaskName = getFullTaskName(task)
