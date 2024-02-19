@@ -19,4 +19,3 @@ export function transformTestPattern({ testName, isEach }: { testName: string; i
   }
   return result
 }
-

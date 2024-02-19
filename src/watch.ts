@@ -395,7 +395,8 @@ export function syncTestStatusToVsCode(
 function groupTasksByPattern(
   map: Map<TestCase | TestDescribe, Task[]>,
   vscode: (TestDescribe | TestCase)[],
-  vitest: Task[]) {
+  vitest: Task[],
+) {
   const set = new Set(vitest)
   for (const descOrTest of vscode) {
     const tasks = matchTask(descOrTest, set)
