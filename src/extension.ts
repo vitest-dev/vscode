@@ -1,24 +1,27 @@
 import * as vscode from 'vscode'
 
-import { effect } from '@vue/reactivity'
+// import { effect } from '@vue/reactivity'
 
-import { StatusBarItem } from './StatusBarItem'
+// import { StatusBarItem } from './StatusBarItem'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
-import { Command } from './command'
+
+// import { Command } from './command'
 import { testControllerId } from './config'
 import { TestFileDiscoverer } from './discover'
 import { log } from './log'
-import {
-  debugHandler,
-  gatherTestItemsFromWorkspace,
-  runHandler,
-  updateSnapshot,
-} from './runHandler'
-import { TestWatcher } from './watch'
+
+// import {
+//   debugHandler,
+//   gatherTestItemsFromWorkspace,
+//   runHandler,
+//   updateSnapshot,
+// } from './runHandler'
+// import { TestWatcher } from './watch'
 
 import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
+import { runTest } from './runner/runTests'
 
 export async function activate(context: vscode.ExtensionContext) {
   const workspaces = vscode.workspace.workspaceFolders || []
@@ -52,14 +55,25 @@ export async function activate(context: vscode.ExtensionContext) {
   //   return
   // }
 
-  const fileDiscoverer = registerDiscovery(ctrl, context, api)
-  registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
+  let fileDiscoverer: TestFileDiscoverer
+
+  const profile = ctrl.createRunProfile(
+    'Run Tests',
+    vscode.TestRunProfileKind.Run,
+    (request, token) => runTest(ctrl, api, fileDiscoverer, request, token),
+    true,
+    undefined,
+    true,
+  )
+
+  fileDiscoverer = registerDiscovery(ctrl, profile, context, api)
+  // registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
   context.subscriptions.push(
     ctrl,
     fileDiscoverer,
-    vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
-      updateSnapshot(ctrl, fileDiscoverer, test)
-    }),
+    // vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
+    //   updateSnapshot(ctrl, fileDiscoverer, test)
+    // }),
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e)
     }),
@@ -74,8 +88,8 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 }
 
-function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext, api: VitestAPI) {
-  const fileDiscoverer = new TestFileDiscoverer(api)
+function registerDiscovery(ctrl: vscode.TestController, profile: vscode.TestRunProfile, context: vscode.ExtensionContext, api: VitestAPI) {
+  const fileDiscoverer = new TestFileDiscoverer(ctrl, profile, api)
   // run on refreshing test list
   ctrl.refreshHandler = async () => {
     await fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl)
@@ -105,123 +119,131 @@ function registerDiscovery(ctrl: vscode.TestController, context: vscode.Extensio
   return fileDiscoverer
 }
 
-function aggregateTestWatcherStatuses(testWatchers: TestWatcher[]) {
-  return testWatchers.reduce((aggregate, watcher) => {
-    return {
-      passed: aggregate.passed + watcher.testStatus.value.passed,
-      failed: aggregate.failed + watcher.testStatus.value.failed,
-      skipped: aggregate.skipped + watcher.testStatus.value.skipped,
-    }
-  }, {
-    passed: 0,
-    failed: 0,
-    skipped: 0,
-  })
-}
+// function aggregateTestWatcherStatuses(testWatchers: TestWatcher[]) {
+//   return testWatchers.reduce((aggregate, watcher) => {
+//     return {
+//       passed: aggregate.passed + watcher.testStatus.value.passed,
+//       failed: aggregate.failed + watcher.testStatus.value.failed,
+//       skipped: aggregate.skipped + watcher.testStatus.value.skipped,
+//     }
+//   }, {
+//     passed: 0,
+//     failed: 0,
+//     skipped: 0,
+//   })
+// }
 
-let statusBarItem: StatusBarItem
-function registerWatchHandlers(
-  api: VitestAPI,
-  ctrl: vscode.TestController,
-  fileDiscoverer: TestFileDiscoverer,
-  context: vscode.ExtensionContext,
-) {
-  const testWatchers = api.map((folderApi, index) => {
-    const watcher = TestWatcher.create(
-      ctrl,
-      fileDiscoverer,
-      folderApi.folder,
-      index,
-      folderApi,
-    )
+// let statusBarItem: StatusBarItem
+// function registerWatchHandlers(
+//   api: VitestAPI,
+//   ctrl: vscode.TestController,
+//   fileDiscoverer: TestFileDiscoverer,
+//   context: vscode.ExtensionContext,
+// ) {
+//   const testWatchers = api.map((folderApi, index) => {
+//     const watcher = TestWatcher.create(
+//       ctrl,
+//       fileDiscoverer,
+//       folderApi.folder,
+//       index,
+//       folderApi,
+//     )
 
-    return watcher
-  }) ?? []
+//     return watcher
+//   }) ?? []
 
-  statusBarItem = new StatusBarItem()
-  effect(() => {
-    if (testWatchers.some(watcher => watcher.isRunning.value)) {
-      statusBarItem.toRunningMode()
-      return
-    }
-    else if (testWatchers.some(watcher => watcher.isWatching.value)) {
-      statusBarItem.toWatchMode(aggregateTestWatcherStatuses(testWatchers))
-      return
-    }
+//   statusBarItem = new StatusBarItem()
+//   effect(() => {
+//     if (testWatchers.some(watcher => watcher.isRunning.value)) {
+//       statusBarItem.toRunningMode()
+//       return
+//     }
+//     else if (testWatchers.some(watcher => watcher.isWatching.value)) {
+//       statusBarItem.toWatchMode(aggregateTestWatcherStatuses(testWatchers))
+//       return
+//     }
 
-    statusBarItem.toDefaultMode()
-  })
+//     statusBarItem.toDefaultMode()
+//   })
 
-  const stopWatching = () => {
-    testWatchers.forEach(watcher => watcher.dispose())
-  }
+//   const stopWatching = () => {
+//     testWatchers.forEach(watcher => watcher.dispose())
+//   }
+//   const startWatching = () => {
+//     testWatchers.forEach(watcher => watcher.watch())
+//   }
 
-  context.subscriptions.push(
-    {
-      dispose: stopWatching,
-    },
-    ...testWatchers,
-    statusBarItem,
-  )
+//   context.subscriptions.push(
+//     {
+//       dispose: stopWatching,
+//     },
+//     ...testWatchers,
+//     statusBarItem,
+//     vscode.commands.registerCommand(Command.StartWatching, startWatching),
+//     vscode.commands.registerCommand(Command.StopWatching, stopWatching),
+//     vscode.commands.registerCommand(Command.ToggleWatching, () => {
+//       const anyWatching = testWatchers.some(watcher => watcher.isWatching.value)
+//       if (anyWatching)
+//         stopWatching()
+//       else
+//         startWatching()
+//     }),
+//   )
 
-  ctrl.createRunProfile(
-    'Run Tests (Watch Mode)',
-    vscode.TestRunProfileKind.Run,
-    runHandler,
-    false,
-    undefined,
-    true,
-  )
+//   ctrl.createRunProfile(
+//     'Run Tests (Watch Mode)',
+//     vscode.TestRunProfileKind.Run,
+//     runHandler,
+//     false,
+//     undefined,
+//     true,
+//   )
 
-  async function runHandler(
-    request: vscode.TestRunRequest,
-    cancellation: vscode.CancellationToken,
-  ) {
-    if (
-      vscode.workspace.workspaceFolders === undefined
-      || vscode.workspace.workspaceFolders.length === 0
-    )
-      return
+//   async function runHandler(
+//     request: vscode.TestRunRequest,
+//     _cancellation: vscode.CancellationToken,
+//   ) {
+//     if (
+//       vscode.workspace.workspaceFolders === undefined
+//       || vscode.workspace.workspaceFolders.length === 0
+//     )
+//       return
 
-    cancellation.onCancellationRequested(() => {
-      testWatchers.forEach(watcher => watcher.dispose())
-    })
+//     await Promise.all(testWatchers.map(watcher => watcher.watch()))
+//     testWatchers.forEach((watcher) => {
+//       watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
+//     })
+//   }
 
-    await Promise.all(testWatchers.map(watcher => watcher.watch()))
-    testWatchers.forEach((watcher) => {
-      watcher.runTests(gatherTestItemsFromWorkspace(request.include ?? [], watcher.workspace.uri.fsPath))
-    })
-  }
+//   return testWatchers
+// }
 
-  return testWatchers
-}
+// function registerRunDebugWatchHandler(
+//   ctrl: vscode.TestController,
+//   api: VitestAPI,
+//   fileDiscoverer: TestFileDiscoverer,
+//   context: vscode.ExtensionContext,
+// ) {
+//   const testWatchers = registerWatchHandlers(
+//     api,
+//     ctrl,
+//     fileDiscoverer,
+//     context,
+//   ) ?? []
 
-function registerRunDebugWatchHandler(
-  ctrl: vscode.TestController,
-  api: VitestAPI,
-  fileDiscoverer: TestFileDiscoverer,
-  context: vscode.ExtensionContext,
-) {
-  const testWatchers = registerWatchHandlers(
-    api,
-    ctrl,
-    fileDiscoverer,
-    context,
-  ) ?? []
+//   ctrl.createRunProfile(
+//     'Run Tests',
+//     vscode.TestRunProfileKind.Run,
+//     runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, api),
+//     true,
+//   )
 
-  ctrl.createRunProfile(
-    'Run Tests',
-    vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, api),
-    true,
-  )
+//   ctrl.createRunProfile(
+//     'Debug Tests',
+//     vscode.TestRunProfileKind.Debug,
+//     debugHandler.bind(null, ctrl, fileDiscoverer, api),
+//     true,
+//   )
+// }
 
-  ctrl.createRunProfile(
-    'Debug Tests',
-    vscode.TestRunProfileKind.Debug,
-    debugHandler.bind(null, ctrl, fileDiscoverer, api),
-    true,
-  )
-}
-
-export function deactivate() {}
+// export function deactivate() {}

@@ -5,8 +5,11 @@ import type { BirpcEvents, BirpcMethods } from '../api'
 
 export function createWorkerRPC(vitest: Vitest) {
   return createBirpc<BirpcEvents, BirpcMethods>({
-    async runFiles(files) {
-      await vitest.start(files)
+    async runFiles(files, testNamePattern) {
+      if (testNamePattern)
+        await vitest.changeNamePattern(testNamePattern, files)
+      else
+        await vitest.start(files)
     },
     async getFiles() {
       const files = await vitest.globTestFiles()

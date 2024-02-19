@@ -10,7 +10,7 @@ import { workerPath } from './constants'
 
 export interface BirpcMethods {
   getFiles: () => Promise<string[]>
-  runFiles: (files?: string[]) => Promise<void>
+  runFiles: (files?: string[], testNamePattern?: string) => Promise<void>
   getConfig: () => Promise<ResolvedConfig>
   isTestFile: (file: string) => Promise<boolean>
   terminate: () => void
@@ -77,8 +77,8 @@ export class VitestFolderAPI {
     return this.rpc.getFiles()
   }
 
-  runFiles(files?: string[]) {
-    return this.rpc.runFiles(files)
+  runFiles(files?: string[], testNamePattern?: string) {
+    return this.rpc.runFiles(files, testNamePattern)
   }
 
   isTestFile(file: string) {

@@ -41,6 +41,9 @@ devDependencies:
   '@types/ws':
     specifier: ^8.5.10
     version: 8.5.10
+  '@vitest/utils':
+    specifier: ^1.3.0
+    version: 1.3.0
   '@vitest/ws-client':
     specifier: ^1.3.0
     version: 1.3.0

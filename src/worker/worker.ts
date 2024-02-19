@@ -1,4 +1,5 @@
 import { workerData } from 'node:worker_threads'
+import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { BirpcEvents, BirpcMethods } from '../api'
 import { createErrorRPC, createWorkerRPC } from './rpc'
@@ -15,8 +16,20 @@ import { createErrorRPC, createWorkerRPC } from './rpc'
           onUserConsoleLog(log) {
             rpc.onConsoleLog(log)
           },
-          onTaskUpdate(tasks) {
-            rpc.onTaskUpdate(tasks)
+          onTaskUpdate(packs) {
+            packs.forEach(([taskId, result]) => {
+              const project = vitest.getProjectByTaskId(taskId)
+
+              result?.errors?.forEach((error) => {
+                if (typeof error === 'object' && error) {
+                  error.stacks = parseErrorStacktrace(error, {
+                    getSourceMap: file => project.getBrowserSourceMapModuleById(file),
+                  })
+                }
+              })
+            })
+
+            rpc.onTaskUpdate(packs)
           },
           onFinished(files, errors) {
             rpc.onFinished(files, errors)
