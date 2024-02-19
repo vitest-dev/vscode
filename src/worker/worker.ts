@@ -15,7 +15,7 @@ import { parentPort, workerData } from 'node:worker_threads'
     })
     await vitest.close()
   }
-  catch (err) {
+  catch (err: any) {
     parentPort!.postMessage({ error: err.message, stack: String(err.stack) })
   }
 })()
