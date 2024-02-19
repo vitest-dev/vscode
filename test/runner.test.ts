@@ -53,13 +53,13 @@ describe('TestRunner', () => {
   })
 
   test.each([
-    [false, false, 'vitest,abc.spec.ts,-t,a (b) "c" d'],
-    [false, true, 'vitest,abc.spec.ts,-t,a (b) "c" d'],
-    [true, false, 'vitest,abc.spec.ts,-t,"a (b) "c" d"'],
-    [true, true, 'vitest,abc.spec.ts,-t,a (b) "c" d'],
-  ])('scheduleRun properly escapes arguments (isWindows: %s, customStartProcess: %s)', async (isWindows, useCustomStartProcess, expectedArgs) => {
+    [false, false, `vitest,abc.spec.ts,-t,a (b) "c" d`],
+    [false, true, `vitest,abc.spec.ts,-t,a (b) "c" d`],
+    [true, false, `vitest,abc.spec.ts,-t,"a (b) \\"c\\" d"`],
+    [true, true, `vitest,abc.spec.ts,-t,a (b) "c" d`],
+  ])('scheduleRun wrap test patterns if needed, (isWindows: %s, customStartProcess: %s)',
+    async (isWindows, useCustomStartProcess, expectedArgs) => {
     Object.defineProperty(platformConstants, 'isWindows', { value: isWindows, writable: true })
-
     const workspacePath = '/test'
     const testFiles = ['abc.spec.ts']
     const testNamePattern = 'a (b) "c" d'

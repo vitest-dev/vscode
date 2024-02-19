@@ -83,7 +83,7 @@ export class TestRunner {
     if (testPattern) {
       let argsValue = testPattern
       if (isWindows && !customStartProcess)
-        argsValue = `"${argsValue}"`
+        argsValue = `"${argsValue.replace(/"/g, '\\"')}"`
 
       args.push('-t', argsValue)
     }
