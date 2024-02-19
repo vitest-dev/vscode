@@ -4,6 +4,7 @@ import { shallowReactive } from '@vue/reactivity'
 import type { BirpcReturn } from 'birpc'
 import { createBirpc } from 'birpc'
 import { parse, stringify } from 'flatted'
+import WebSocket from 'ws'
 
 import type {
   File,
@@ -114,7 +115,7 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
     reconnectInterval = 2000,
     reconnectTries = 10,
     reactive = v => v,
-    WebSocketConstructor = globalThis.WebSocket,
+    WebSocketConstructor = WebSocket,
     onFailedConnection,
   } = options
 

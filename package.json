@@ -149,6 +149,7 @@
     "compile": "tsup ./src/extension.ts --external vscode --minify",
     "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
     "test": "vitest run --config vite.global-config.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
   },
