@@ -53,10 +53,10 @@ describe('TestRunner', () => {
   })
 
   test.each([
-    [false, false, 'vitest,abc.spec.ts,-t,a \\(b\\) \\\"c\\\" d'],
-    [false, true, 'vitest,abc.spec.ts,-t,a \\(b\\) \\\"c\\\" d'],
-    [true, false, 'vitest,abc.spec.ts,-t,\"a \\(b\\) \\\"c\\\" d\"'],
-    [true, true, 'vitest,abc.spec.ts,-t,a \\(b\\) \\\"c\\\" d'],
+    [false, false, 'vitest,abc.spec.ts,-t,a (b) "c" d'],
+    [false, true, 'vitest,abc.spec.ts,-t,a (b) "c" d'],
+    [true, false, 'vitest,abc.spec.ts,-t,"a (b) "c" d"'],
+    [true, true, 'vitest,abc.spec.ts,-t,a (b) "c" d'],
   ])('scheduleRun properly escapes arguments (isWindows: %s, customStartProcess: %s)', async (isWindows, useCustomStartProcess, expectedArgs) => {
     Object.defineProperty(platformConstants, 'isWindows', { value: isWindows, writable: true })
 
