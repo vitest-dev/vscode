@@ -74,8 +74,8 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidOpenTextDocument((e) => {
       fileDiscoverer.discoverTestFromDoc(ctrl, e)
     }),
-    vscode.workspace.onDidCloseTextDocument((e) => {
-      const item = fileDiscoverer.discoverTestFromDoc(ctrl, e)
+    vscode.workspace.onDidCloseTextDocument(async (e) => {
+      const item = await fileDiscoverer.discoverTestFromDoc(ctrl, e)
       if (item)
         item.tags = item.tags.filter(x => x !== openTestTag)
     }),
