@@ -115,7 +115,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
     if (e.uri.scheme !== 'file')
       return
 
-    if (!await shouldIncludeFile(e.uri.fsPath, this.config))
+    if (!shouldIncludeFile(e.uri.fsPath, this.config))
       return
 
     const { file, data } = this.getOrCreateFile(ctrl, e.uri)

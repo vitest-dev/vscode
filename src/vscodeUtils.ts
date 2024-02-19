@@ -23,18 +23,13 @@ export async function getContentFromFilesystem(uri: Uri) {
 /**
  * @see https://github.com/vitest-dev/vitest/blob/main/packages/vitest/src/node/workspace.ts
  */
-export async function shouldIncludeFile(path: string, config: ResolvedConfig): Promise<boolean> {
+export function shouldIncludeFile(path: string, config: ResolvedConfig): boolean {
   const relativeId = relative(config.dir || config.root, path)
   if (micromatch.isMatch(relativeId, config.exclude))
     return false
 
   if (micromatch.isMatch(relativeId, config.include))
     return true
-
-  if (config.includeSource?.length && micromatch.isMatch(relativeId, config.includeSource)) {
-    const source = await fs.readFile(path, 'utf-8')
-    return isInSourceTestFile(source)
-  }
 
   return false
 
@@ -43,6 +38,9 @@ export async function shouldIncludeFile(path: string, config: ResolvedConfig): P
   }
 }
 
+/**
+ * @see https://github.com/vitest-dev/vitest/blob/main/packages/vitest/src/node/workspace.ts
+ */
 export async function globFiles(include: string[], exclude: string[], cwd: string) {
   const globOptions: fastGlob.Options = {
     dot: true,
