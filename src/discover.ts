@@ -98,7 +98,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const files = await globFiles(this.config.include, this.config.exclude, workspaceFolder.uri.fsPath)
+        const files = await globFiles(this.config.include, this.config.exclude, this.config.dir || workspaceFolder.uri.fsPath)
         for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
             controller,
