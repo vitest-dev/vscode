@@ -109,20 +109,17 @@ export class TestFileDiscoverer extends vscode.Disposable {
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
         const workspacePath = workspaceFolder.uri.fsPath
         const exclude = this.config.exclude
-        for (const include of this.config.include) {
-          const pattern = new vscode.RelativePattern(
-            workspaceFolder.uri,
-            include,
-          )
-          const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
+        const include = this.config.include
 
-          for (const file of await vscode.workspace.findFiles(pattern)) {
-            filter(file)
-            && this.getOrCreateFile(controller, file).data.updateFromDisk(
-              controller,
-            )
-          }
+        const filter = (v: vscode.Uri) =>
+          include.some(x => minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true })) &&
+          exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
+
+        const files = await vscode.workspace.findFiles('**/*')
+        for (const file of files.filter(filter)) {
+          this.getOrCreateFile(controller, file).data.updateFromDisk(
+            controller,
+          )
         }
       }),
     )
