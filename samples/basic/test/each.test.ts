@@ -66,13 +66,13 @@ describe('testing', (a) => {
   })
 })
 
-describe('ambiguous', () => {
-  test.each([
-    ['test', 1],
-  ])(`%s => %i`, (a, b) => {
-    expect(b).toBe(1)
-  })
-  test('test', () => {
-    expect(1).toBe(1)
+// 'Test result not fourd' error occurs as both .each patterns are matched
+// TODO: Fix this
+describe("over matched test patterns", () => {
+  test.each(['1', '2'])('run %s', (a) => {
+    expect(a).toBe(String(a))
+   })
+  test.each(['1', '2'])('run for %s', (a) => {
+    expect(a).toBe(String(a))
   })
 })
