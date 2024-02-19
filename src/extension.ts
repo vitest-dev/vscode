@@ -10,6 +10,7 @@ import {
   detectVitestEnvironmentFolders,
   getConfig,
   getVitestWorkspaceConfigs,
+  testControllerId,
   vitestEnvironmentFolders,
 } from './config'
 import { TestFileDiscoverer } from './discover'
@@ -33,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return
   }
 
-  const ctrl = vscode.tests.createTestController('vitest', 'Vitest')
+  const ctrl = vscode.tests.createTestController(testControllerId, 'Vitest')
 
   const workspaceConfigs = await getVitestWorkspaceConfigs()
   // enable run/debug/watch tests only if vitest version >= 0.12.0
