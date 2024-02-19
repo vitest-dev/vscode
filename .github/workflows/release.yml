@@ -2,8 +2,8 @@ name: Build
 
 on:
   push:
-  # tags:
-  #   - v*
+    tags:
+      - v*
 
 jobs:
   release:
@@ -26,16 +26,12 @@ jobs:
         id: publishToOpenVSX
         uses: HaaLeo/publish-vscode-extension@v1
         with:
-          # pat: ${{ secrets.OPEN_VSX_TOKEN }}
-          pat: dummy
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
           dependencies: false
-          dryRun: true
 
       - name: Publish to Visual Studio Marketplace
         uses: HaaLeo/publish-vscode-extension@v1
         with:
-          # pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          pat: dummy
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
           extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
-          dryRun: true
