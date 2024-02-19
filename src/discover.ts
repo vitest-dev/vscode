@@ -1,5 +1,4 @@
-import path, { sep } from 'node:path'
-import minimatch from 'minimatch'
+import { join, sep } from 'node:path'
 import type { ResolvedConfig } from 'vitest'
 import * as vscode from 'vscode'
 import type { TestData } from './TestData'
@@ -12,11 +11,11 @@ import {
 } from './TestData'
 import parse from './pure/parsers'
 import type { NamedBlock } from './pure/parsers/parser_nodes'
-import { shouldIncludeFile } from './vscodeUtils'
 
 import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
 import { openTestTag } from './tags'
+import { globFiles, shouldIncludeFile } from './vscodeUtils'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -53,49 +52,41 @@ export class TestFileDiscoverer extends vscode.Disposable {
     const watchers = [] as vscode.FileSystemWatcher[]
     await Promise.all(
       vitestEnvironmentFolders.map(async (workspaceFolder) => {
-        const exclude = this.config.exclude
-        for (const include of this.config.include) {
-          const pattern = new vscode.RelativePattern(
-            workspaceFolder.uri,
-            include,
+        const workspacePath = workspaceFolder.uri.fsPath
+        const files = await globFiles(this.config.include, this.config.exclude, this.config.dir || workspacePath)
+        for (const file of files) {
+          this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
+            controller,
           )
-          const workspacePath = workspaceFolder.uri.fsPath
-          const watcher = vscode.workspace.createFileSystemWatcher(pattern)
-          const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
-          watcher.onDidCreate(
-            uri => filter(uri) && this.getOrCreateFile(controller, uri),
-          )
-
-          watcher.onDidChange(
-            (uri) => {
-              if (!filter(uri))
-                return
-
-              const { data } = this.getOrCreateFile(controller, uri)
-              if (!data.resolved)
-                return
-
-              data.updateFromDisk(controller)
-            },
-          )
-
-          watcher.onDidDelete(uri => controller.items.delete(uri.toString()))
-
-          for (const file of await vscode.workspace.findFiles(pattern)) {
-            filter(file)
-            && this.getOrCreateFile(controller, file).data.updateFromDisk(
-              controller,
-            )
-          }
-
-          watchers.push(watcher)
         }
 
-        return watchers
+        const watcher = vscode.workspace.createFileSystemWatcher(join(workspacePath, '**'))
+        const filter = (v: vscode.Uri) =>
+          shouldIncludeFile(v.fsPath, this.config)
+        watcher.onDidCreate(
+          async uri => await filter(uri) && this.getOrCreateFile(controller, uri),
+        )
+
+        watcher.onDidChange(
+          (uri) => {
+            if (!filter(uri))
+              return
+
+            const { data } = this.getOrCreateFile(controller, uri)
+            if (!data.resolved)
+              return
+
+            data.updateFromDisk(controller)
+          },
+        )
+
+        watcher.onDidDelete(uri => controller.items.delete(uri.toString()))
+        watchers.push(watcher)
+
+        return watcher
       }),
     )
-    this.lastWatches = watchers.concat()
+    this.lastWatches = watchers
     return watchers
   }
 
@@ -107,28 +98,17 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const workspacePath = workspaceFolder.uri.fsPath
-        const exclude = this.config.exclude
-        for (const include of this.config.include) {
-          const pattern = new vscode.RelativePattern(
-            workspaceFolder.uri,
-            include,
+        const files = await globFiles(this.config.include, this.config.exclude, this.config.dir || workspaceFolder.uri.fsPath)
+        for (const file of files) {
+          this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
+            controller,
           )
-          const filter = (v: vscode.Uri) =>
-            exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
-
-          for (const file of await vscode.workspace.findFiles(pattern)) {
-            filter(file)
-            && this.getOrCreateFile(controller, file).data.updateFromDisk(
-              controller,
-            )
-          }
         }
       }),
     )
   }
 
-  public discoverTestFromDoc(
+  public async discoverTestFromDoc(
     ctrl: vscode.TestController,
     e: vscode.TextDocument,
   ) {
@@ -260,7 +240,7 @@ export function discoverTestFromFileContent(
     result = parse(fileItem.id, content)
   }
   catch (e) {
-    log.error('parse error', e)
+    log.error('parse error', fileItem.id, e)
     return
   }
 

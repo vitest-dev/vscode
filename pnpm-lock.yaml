@@ -23,6 +23,9 @@ devDependencies:
   '@types/glob':
     specifier: ^7.2.0
     version: 7.2.0
+  '@types/micromatch':
+    specifier: ^4.0.6
+    version: 4.0.6
   '@types/node':
     specifier: ^18.11.18
     version: 18.19.17
@@ -53,6 +56,9 @@ devDependencies:
   eslint:
     specifier: ^8.56.0
     version: 8.56.0
+  fast-glob:
+    specifier: ^3.3.2
+    version: 3.3.2
   flatted:
     specifier: ^3.2.9
     version: 3.2.9
@@ -68,12 +74,15 @@ devDependencies:
   glob:
     specifier: ^7.2.0
     version: 7.2.3
+  micromatch:
+    specifier: ^4.0.5
+    version: 4.0.5
   mighty-promise:
     specifier: ^0.0.8
     version: 0.0.8
-  minimatch:
-    specifier: ^3.1.1
-    version: 3.1.2
+  pathe:
+    specifier: ^1.1.2
+    version: 1.1.2
   semver:
     specifier: ^7.3.5
     version: 7.6.0
@@ -793,6 +802,10 @@ packages:
       - typescript
     dev: true
 
+  /@types/braces@3.0.4:
+    resolution: {integrity: sha512-0WR3b8eaISjEW7RpZnclONaLFDf7buaowRHdqLp4vLj54AsSAYWfh3DRbfiYJY9XDxMgx1B4sE1Afw2PGpuHOA==}
+    dev: true
+
   /@types/eslint@8.56.2:
     resolution: {integrity: sha512-uQDwm1wFHmbBbCZCqAlq6Do9LYwByNZHWzXppSnay9SuwJ+VRbjkbLABer54kcPnMSlG6Fdiy2yaFXm/z9Z5gw==}
     dependencies:
@@ -825,6 +838,12 @@ packages:
     resolution: {integrity: sha512-LnwD+mUEfxWMa1QpDraczIn6k0Ee3SMicuYSSzS6ZYl2gKS09EClnJYGd8Du6rfc5r/GZEk5o1mRb8TaTj03sQ==}
     dependencies:
       '@types/unist': 2.0.10
+    dev: true
+
+  /@types/micromatch@4.0.6:
+    resolution: {integrity: sha512-2eulCHWqjEpk9/vyic4tBhI8a9qQEl6DaK2n/sF7TweX9YESlypgKyhXMDGt4DAOy/jhLPvVrZc8pTDAMsplJA==}
+    dependencies:
+      '@types/braces': 3.0.4
     dev: true
 
   /@types/minimatch@5.1.2:
