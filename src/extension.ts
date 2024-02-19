@@ -1,3 +1,5 @@
+import { Worker } from 'node:worker_threads'
+import { dirname, resolve } from 'node:path'
 import * as vscode from 'vscode'
 
 import { effect } from '@vue/reactivity'
@@ -26,8 +28,32 @@ import { TestWatcher } from './watch'
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
 import { openTestTag } from './tags'
+import { workerPath } from './constants'
 
 export async function activate(context: vscode.ExtensionContext) {
+  // TODO: just to test, improve the logic!
+  const workspacePath = vscode.workspace.workspaceFolders?.[0].uri.fsPath
+  log.info('workspace path', workspacePath, workerPath)
+  if (workspacePath) {
+    const vitestPath = require.resolve('vitest', { paths: [workspacePath] }) // resolves to cjs
+    log.info('vitest path', vitestPath, resolve(dirname(vitestPath), './dist/node.js'))
+    const worker = new Worker(workerPath, {
+      workerData: {
+        root: workspacePath,
+        vitestPath: resolve(dirname(vitestPath), './dist/node.js'),
+      },
+    })
+    worker.stdout.on('data', (d) => {
+      log.info('worker error', d.toString())
+    })
+    worker.stderr.on('data', (d) => {
+      log.error('worker error', d.toString())
+    })
+    worker.on('message', (d) => {
+      log.info(JSON.stringify(d))
+      // worker.terminate()
+    })
+  }
   await detectVitestEnvironmentFolders()
   if (vitestEnvironmentFolders.length === 0) {
     log.info('The extension is not activated because no Vitest environment was detected.')
