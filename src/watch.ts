@@ -3,7 +3,6 @@ import path from 'node:path'
 import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
-import Fuse from 'fuse.js'
 import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
@@ -345,104 +344,136 @@ export function syncTestStatusToVsCode(
   isFirstUpdate: boolean,
   finishedTest?: Set<TestItem>,
 ) {
-  sync(run, vscodeFile.children, vitestFile.tasks)
-
-  function sync(
-    run: TestRun,
-    vscode: (TestDescribe | TestCase)[],
-    vitest: Task[],
-  ) {
-    const set = new Set(vscode)
-    for (const task of vitest) {
-      const data = matchTask(task, set)
-      if (task.type === 'test' || task.type === 'custom') {
+  const groups = groupTasksByPattern(new Map(), vscodeFile.children, vitestFile.tasks)
+  for (const [data, tasks] of groups.entries()) {
+    if (finished) {
+      for (const task of tasks) {
+        if (!task.logs)
+          continue
         // for now, display logs after all tests are finished.
         // TODO: append logs during test execution using `onUserConsoleLog` rpc.
-        if (finished) {
-          for (const log of task.logs ?? []) {
-            // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
-            const output = log.content.replace(/(?<!\r)\n/g, '\r\n')
-            run.appendOutput(output, undefined, data.item)
-          }
+        for (const log of task.logs) {
+          // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
+          const output = log.content.replace(/(?<!\r)\n/g, '\r\n')
+          run.appendOutput(output, undefined, data.item)
         }
-        if (task.result == null) {
-          if (finished) {
-            finishedTest && finishedTest.add(data.item)
-            run.skipped(data.item)
-          }
-          else if (isFirstUpdate) {
-            run.started(data.item)
-          }
-        }
-        else {
-          if (finishedTest) {
-            if (finishedTest.has(data.item))
-              continue
-          }
-
-          switch (task.result?.state) {
-            case 'pass':
-              run.passed(data.item, task.result.duration)
-              finishedTest && finishedTest.add(data.item)
-              break
-            case 'fail':
-              run.failed(
-                data.item,
-                task.result.errors?.map(i => testMessageForTestError(data.item, i)) ?? [],
-                task.result.duration,
-              )
-              finishedTest && finishedTest.add(data.item)
-              break
-            case 'skip':
-            case 'todo':
-              run.skipped(data.item)
-              finishedTest && finishedTest.add(data.item)
-              break
-            case 'run':
-              run.started(data.item)
-              break
-            case 'only':
-              break
-            default:
-              console.error('unexpected result state', task.result)
-          }
-        }
-      }
-      else {
-        sync(run, (data as TestDescribe).children, task.tasks)
       }
     }
-  }
-
-  function matchTask(
-    task: Task,
-    candidates: Set<TestDescribe | TestCase>,
-  ): TestDescribe | TestCase {
-    let ans: (TestDescribe | TestCase) | undefined
-    for (const candidate of candidates) {
-      if (task.type === 'suite' && !(candidate instanceof TestDescribe))
-        continue
-
-      if ((task.type === 'test' || task.type === 'custom') && !(candidate instanceof TestCase))
-        continue
-
-      if (candidate.pattern === task.name) {
-        ans = candidate
-        break
+    const primaryTask = getPrimaryResultTask(tasks)
+    if (primaryTask?.result == null) {
+      if (finished) {
+        finishedTest?.add(data.item)
+        run.skipped(data.item)
       }
-    }
-
-    if (ans) {
-      candidates.delete(ans)
+      else if (isFirstUpdate) {
+        run.started(data.item)
+      }
     }
     else {
-      ans = new Fuse(Array.from(candidates), { keys: ['pattern'] }).search(
-        task.name,
-      )[0]?.item
-      // should not delete ans from candidates here, because there are usages like `test.each`
-      // TODO: should we create new TestCase here?
-    }
+      if (finishedTest?.has(data.item))
+        continue
 
-    return ans
+      const duration = tasks.reduce((acc, i) => acc + (i.result?.duration ?? 0), 0)
+      const errors = tasks.flatMap(i => i.result?.errors ?? [])
+      switch (primaryTask?.result?.state) {
+        case 'pass':
+          run.passed(data.item, duration)
+          finishedTest && finishedTest.add(data.item)
+          break
+        case 'fail':
+          run.failed(
+            data.item,
+            errors.map(i => testMessageForTestError(data.item, i)),
+            duration,
+          )
+          finishedTest && finishedTest.add(data.item)
+          break
+        case 'skip':
+        case 'todo':
+          run.skipped(data.item)
+          finishedTest && finishedTest.add(data.item)
+          break
+        case 'run':
+          run.started(data.item)
+          break
+        case 'only':
+          break
+        default:
+          console.error('unexpected result state', tasks)
+      }
+    }
   }
+}
+
+function groupTasksByPattern(
+  map: Map<TestCase | TestDescribe, Task[]>,
+  vscode: (TestDescribe | TestCase)[],
+  vitest: Task[],
+) {
+  const set = new Set(vitest)
+  for (const descOrTest of vscode) {
+    const tasks = matchTask(descOrTest, set)
+    if (tasks.length === 0)
+      continue
+
+    if (!map.has(descOrTest))
+      map.set(descOrTest, [])
+
+    map.get(descOrTest)!.push(...tasks)
+
+    for (const task of tasks) {
+      if (task.type === 'suite')
+        groupTasksByPattern(map, (descOrTest as TestDescribe).children, task.tasks)
+    }
+  }
+  return map
+}
+
+function getPrimaryResultTask(tasks: Task[]): Task | undefined {
+  const failedOne = tasks.find(i => i.result?.state === 'fail')
+  if (failedOne)
+    return failedOne
+  const runningOne = tasks.find(i => i.result?.state === 'run')
+  if (runningOne)
+    return runningOne
+  const allPassed = tasks.every(i => i.result?.state === 'pass')
+  if (allPassed)
+    return tasks[0]
+  const allSkipped = tasks.every(i => i.result?.state === 'skip')
+  if (allSkipped)
+    return tasks[0]
+  return tasks[0]
+}
+
+function getFullTaskName(task: Task): string {
+  if (task.suite) {
+    const suiteName = getFullTaskName(task.suite)
+    // root parent is a suite, but it's name is empty
+    if (suiteName)
+      return `${suiteName} ${task.name}`
+  }
+  return task.name
+}
+
+function matchTask(
+  vscode: TestDescribe | TestCase,
+  candidates: Set<Task>,
+): Task[] {
+  const result: Task[] = []
+  for (const task of candidates) {
+    if (task.type === 'suite' && !(vscode instanceof TestDescribe))
+      continue
+
+    if ((task.type === 'test' || task.type === 'custom') && !(vscode instanceof TestCase))
+      continue
+
+    const fullTaskName = getFullTaskName(task)
+    const fullCandidatesPattern = new RegExp(`^${vscode.getFullPattern()}$`)
+    if (fullTaskName.match(fullCandidatesPattern))
+      result.push(task)
+  }
+  for (const task of result)
+    candidates.delete(task)
+
+  return result
 }
