@@ -16,7 +16,7 @@ import type {
 } from 'vitest'
 import { log } from '../../log'
 
-class StateManager {
+export class StateManager {
   filesMap = new Map<string, File>()
   idMap = new Map<string, Task>()
   taskFileMap = new WeakMap<Task, File>()

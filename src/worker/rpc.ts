@@ -5,6 +5,9 @@ import type { BirpcEvents, BirpcMethods } from '../api'
 
 export function createWorkerRPC(vitest: Vitest) {
   return createBirpc<BirpcEvents, BirpcMethods>({
+    async runFiles(files) {
+      await vitest.start(files)
+    },
     async getFiles() {
       const files = await vitest.globTestFiles()
       return files.map(([_, spec]) => spec)
@@ -24,7 +27,7 @@ export function createWorkerRPC(vitest: Vitest) {
       return false
     },
   }, {
-    eventNames: ['onReady', 'onError', 'onConsoleLog'],
+    eventNames: ['onReady', 'onError', 'onConsoleLog', 'onTaskUpdate', 'onFinished', 'onCollected'],
     on(listener) {
       parentPort!.on('message', listener)
     },

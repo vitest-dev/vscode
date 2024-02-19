@@ -2,7 +2,7 @@ import { Worker } from 'node:worker_threads'
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { ResolvedConfig, UserConsoleLog } from 'vitest'
+import type { File, ResolvedConfig, TaskResultPack, UserConsoleLog } from 'vitest'
 import { log } from './log'
 import { workerPath } from './constants'
 
@@ -10,6 +10,7 @@ import { workerPath } from './constants'
 
 export interface BirpcMethods {
   getFiles: () => Promise<string[]>
+  runFiles: (files?: string[]) => Promise<void>
   getConfig: () => Promise<ResolvedConfig>
   isTestFile: (file: string) => Promise<boolean>
   terminate: () => void
@@ -20,6 +21,9 @@ export interface BirpcEvents {
   onError: (err: object) => void
 
   onConsoleLog: (log: UserConsoleLog) => void
+  onTaskUpdate: (task: TaskResultPack[]) => void
+  onFinished: (files?: File[], errors?: unknown[]) => void
+  onCollected: (files?: File[]) => void
 }
 
 type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
@@ -65,23 +69,44 @@ export class VitestAPI {
 export class VitestFolderAPI {
   constructor(
     public folder: vscode.WorkspaceFolder,
-    public api: ResolvedRPC,
-  ) { }
+    private rpc: VitestRPC,
+    private handlers: ResolvedRPC['handlers'],
+  ) {}
 
   getFiles() {
-    return this.api.rpc.getFiles()
+    return this.rpc.getFiles()
+  }
+
+  runFiles(files?: string[]) {
+    return this.rpc.runFiles(files)
   }
 
   isTestFile(file: string) {
-    return this.api.rpc.isTestFile(file)
+    return this.rpc.isTestFile(file)
   }
 
   dispose() {
     // TODO: terminate?
   }
 
-  onConsoleLog(listener: (log: UserConsoleLog) => void) {
-    this.api.handlers.onConsoleLog(listener)
+  onConsoleLog(listener: BirpcEvents['onConsoleLog']) {
+    this.handlers.onConsoleLog(listener)
+  }
+
+  onTaskUpdate(listener: BirpcEvents['onTaskUpdate']) {
+    this.handlers.onTaskUpdate(listener)
+  }
+
+  onFinished(listener: BirpcEvents['onFinished']) {
+    this.handlers.onFinished(listener)
+  }
+
+  onCollected(listener: BirpcEvents['onCollected']) {
+    this.handlers.onCollected(listener)
+  }
+
+  clearListeners() {
+    this.handlers.clearListeners()
   }
 }
 
@@ -90,7 +115,7 @@ export async function resolveVitestAPI(folders: readonly vscode.WorkspaceFolder[
     const api = await createVitestRPC(folder)
     if (!api)
       return null
-    return new VitestFolderAPI(folder, api)
+    return new VitestFolderAPI(folder, api.rpc, api.handlers)
   }))
   return new VitestAPI(apis.filter(x => x !== null) as VitestFolderAPI[])
 }
@@ -98,7 +123,11 @@ export async function resolveVitestAPI(folders: readonly vscode.WorkspaceFolder[
 interface ResolvedRPC {
   rpc: VitestRPC
   handlers: {
-    onConsoleLog: (listener: (log: UserConsoleLog) => void) => void
+    onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
+    onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
+    onFinished: (listener: BirpcEvents['onFinished']) => void
+    onCollected: (listener: BirpcEvents['onCollected']) => void
+    clearListeners: () => void
   }
 }
 
@@ -121,6 +150,9 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
   worker.stderr.on('data', d => log.error('[Worker]', d.toString()))
 
   const logHandlers: ((log: UserConsoleLog) => void)[] = []
+  const onTaskUpdate: ((task: TaskResultPack[]) => void)[] = []
+  const onFinished: ((files?: File[], errors?: unknown[]) => void)[] = []
+  const onCollected: ((files?: File[]) => void)[] = []
 
   return await new Promise<ResolvedRPC | null>((resolve) => {
     const api = createBirpc<BirpcMethods, BirpcEvents>(
@@ -133,6 +165,21 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
               onConsoleLog(listener) {
                 logHandlers.push(listener)
               },
+              onTaskUpdate(listener) {
+                onTaskUpdate.push(listener)
+              },
+              onFinished(listener) {
+                onFinished.push(listener)
+              },
+              onCollected(listener) {
+                onCollected.push(listener)
+              },
+              clearListeners() {
+                logHandlers.length = 0
+                onTaskUpdate.length = 0
+                onFinished.length = 0
+                onCollected.length = 0
+              },
             },
           })
         },
@@ -141,8 +188,16 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
           resolve(null)
         },
         onConsoleLog(log) {
-          for (const handler of logHandlers)
-            handler(log)
+          logHandlers.forEach(handler => handler(log))
+        },
+        onFinished(files, errors) {
+          onFinished.forEach(handler => handler(files, errors))
+        },
+        onTaskUpdate(task) {
+          onTaskUpdate.forEach(handler => handler(task))
+        },
+        onCollected(files) {
+          onCollected.forEach(handler => handler(files))
         },
       },
       {

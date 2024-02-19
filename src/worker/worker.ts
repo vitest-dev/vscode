@@ -15,6 +15,15 @@ import { createErrorRPC, createWorkerRPC } from './rpc'
           onUserConsoleLog(log) {
             rpc.onConsoleLog(log)
           },
+          onTaskUpdate(tasks) {
+            rpc.onTaskUpdate(tasks)
+          },
+          onFinished(files, errors) {
+            rpc.onFinished(files, errors)
+          },
+          onCollected(files) {
+            rpc.onCollected(files)
+          },
         },
       ],
     })

@@ -1,23 +1,25 @@
-import type { ChildProcess } from 'node:child_process'
 import path from 'node:path'
-import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
-import { effect, ref } from '@vue/reactivity'
+import { effect, reactive, ref } from '@vue/reactivity'
+import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
 import * as vscode from 'vscode'
-import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
-import { getConfig, getRootConfig } from './config'
+import { getRootConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
-import { execWithLog } from './pure/utils'
-import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 import { log } from './log'
-import { VitestAPI, VitestFolderAPI } from './api'
+import type { VitestFolderAPI } from './api'
+import { StateManager } from './pure/watch/ws-client'
 
-export interface DebuggerLocation { path: string; line: number; column: number }
+export interface DebuggerLocation {
+  path: string
+  line: number
+  column: number
+}
+
 export class TestWatcher extends Disposable {
   static cache: Record<number, TestWatcher> = {}
   static isWatching(id: number) {
@@ -43,8 +45,7 @@ export class TestWatcher extends Disposable {
   public isRunning = ref(false)
   public testStatus = ref({ passed: 0, failed: 0, skipped: 0 })
   private lock = new Lock()
-  private process?: ChildProcess
-  private vitestState?: ReturnType<typeof buildWatchClient>
+  private vitestState = reactive(new StateManager())
   private run: TestRun | undefined
   private constructor(
     readonly id: number,
@@ -67,90 +68,71 @@ export class TestWatcher extends Disposable {
       this.isRunning.value = true
       this.isWatching.value = true
       const logs = [] as string[]
-      const port = await getPort({ port: 51204 })
       let timer: any
-      this.process = execWithLog(
-        this.vitest.cmd,
-        [...this.vitest.args, '--api.port', port.toString(), '--api.host', '127.0.0.1'],
-        {
-          cwd: this.workspace.uri.fsPath,
-          env: { ...process.env, ...getConfig(this.workspace).env },
-        },
-        (line) => {
-          logs.push(line)
-          clearTimeout(timer)
-          timer = setTimeout(() => {
-            log.info(logs.join('\n'))
-            logs.length = 0
-          }, 200)
-        },
-        (line) => {
-          logs.push(line)
-          clearTimeout(timer)
-          timer = setTimeout(() => {
-            log.info(logs.join('\n'))
-            logs.length = 0
-          }, 200)
-        },
-      ).child
-
-      this.process.on('exit', () => {
-        log.info('VITEST WATCH PROCESS EXIT')
+      this.api.onConsoleLog(({ content }) => {
+        logs.push(content)
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+          log.info(logs.join('\n'))
+          logs.length = 0
+        }, 200)
       })
 
-      this.vitestState = buildWatchClient({
-        port,
-        handlers: {
-          onTaskUpdate: (packs) => {
-            try {
-              if (!this.vitestState)
-                return
+      this.api.onCollected((files) => {
+        this.vitestState.collectFiles(files)
+      })
 
-              this.isRunning.value = true
-              const idMap = this.vitestState.client.state.idMap
-              const fileSet = new Set<File>()
-              for (const [id] of packs) {
-                const task = idMap.get(id)
-                if (!task)
-                  continue
+      this.api.onTaskUpdate((packs) => {
+        this.vitestState.updateTasks(packs)
 
-                task.file && fileSet.add(task.file)
-              }
+        try {
+          this.isRunning.value = true
+          const idMap = this.vitestState.idMap
+          const fileSet = new Set<File>()
+          for (const [id] of packs) {
+            const task = idMap.get(id)
+            if (!task)
+              continue
 
-              this.onUpdated(Array.from(fileSet), false)
-            }
-            catch (e) {
-              console.error(e)
-            }
-          },
-          onFinished: (files) => {
-            try {
-              this.isRunning.value = false
-              this.onUpdated(files, true)
-              if (!this.run)
-                return
+            task.file && fileSet.add(task.file)
+          }
 
-              this.run.end()
-              this.run = undefined
-              this.updateStatus()
-            }
-            catch (e) {
-              console.error(e)
-            }
-          },
-        },
-        // vitest could take up to 10 seconds to start up on some computers, so reconnects need to be long enough to handle that
-        reconnectInterval: 500,
-        reconnectTries: 20,
+          this.onUpdated(Array.from(fileSet), false)
+        }
+        catch (e) {
+          console.error(e)
+        }
+      })
+
+      this.api.onFinished((files, errors) => {
+        errors?.forEach((error: any) => {
+          if (error && typeof error === 'object' && (error.stack || error.message))
+            log.error(error.stack || error.message)
+        })
+
+        try {
+          this.isRunning.value = false
+          this.onUpdated(files, true)
+          if (!this.run)
+            return
+
+          this.run.end()
+          this.run = undefined
+          this.updateStatus()
+        }
+        catch (e) {
+          console.error(e)
+        }
       })
 
       effect(() => {
-        this.onFileUpdated(this.vitestState!.files.value)
+        this.onFileUpdated(this.vitestState.getFiles())
       })
-      return this.vitestState.loadingPromise.then(() => {
-        this.updateStatus()
-        this.isRunning.value = false
-      })
+
+      await this.api.runFiles()
+
+      this.updateStatus()
+      this.isRunning.value = false
     }
     finally {
       release()
@@ -158,13 +140,10 @@ export class TestWatcher extends Disposable {
   }
 
   updateStatus() {
-    if (!this.vitestState)
-      return
-
     let passed = 0
     let failed = 0
     let skipped = 0
-    const idMap = this.vitestState.client.state.idMap
+    const idMap = this.vitestState.idMap
     for (const task of idMap.values()) {
       if (task.type !== 'test')
         continue
@@ -186,17 +165,14 @@ export class TestWatcher extends Disposable {
   }
 
   public runTests(tests?: readonly TestItem[]) {
-    if (!this.vitestState)
-      return
-
     if (tests == null) {
-      const files = this.vitestState.files.value
+      const files = this.vitestState.getFiles()
       this.runFiles(files)
       return
     }
 
     this.runFiles(
-      this.vitestState.files.value.filter(file =>
+      this.vitestState.getFiles().filter(file =>
         tests.some(test =>
           WEAKMAP_TEST_DATA.get(test)!.getFilePath().includes(file.filepath),
         ),
@@ -205,9 +181,6 @@ export class TestWatcher extends Disposable {
   }
 
   private runFiles(files: File[]): Promise<void> | undefined {
-    if (!this.vitestState)
-      return
-
     if (!this.run)
       this.run = this.ctrl.createTestRun(new TestRunRequest(undefined, undefined, undefined, true))
 
@@ -232,8 +205,7 @@ export class TestWatcher extends Disposable {
       getTasks(f).forEach(i => delete i.result)
     })
 
-    const client = this.vitestState.client
-    return client.rpc.rerun(files.map(i => i.filepath))
+    return this.api.runFiles(files.map(i => i.filepath))
   }
 
   private readonly onFileUpdated = (files?: File[]) => {
@@ -269,10 +241,7 @@ export class TestWatcher extends Disposable {
       log.info('Stop watch mode')
       this.isWatching.value = false
       this.isRunning.value = false
-      this.vitestState?.client.dispose()
-      this.process?.kill()
-      this.process = undefined
-      this.vitestState = undefined
+      this.api.clearListeners()
     }
     finally {
       release()
