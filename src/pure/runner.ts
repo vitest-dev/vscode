@@ -82,8 +82,10 @@ export class TestRunner {
 
     if (testPattern) {
       let argsValue = testPattern
-      if (isWindows && !customStartProcess)
+      if (isWindows && !customStartProcess) {
+        // Wrap the test pattern in quotes to ensure it is treated as a single argument
         argsValue = `"${argsValue.replace(/"/g, '\\"')}"`
+      }
 
       args.push('-t', argsValue)
     }

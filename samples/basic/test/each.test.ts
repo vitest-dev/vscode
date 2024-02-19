@@ -55,8 +55,14 @@ describe('testing', (a) => {
     ${[]}           | ${'b'} | ${'b'}
     ${{}}           | ${'b'} | ${'[object Object]b'}
     ${{ asd: 1 }}   | ${'b'} | ${'[object Object]b'}
-  `('returns $expected when $a is added $b', ({ a, b, expected }) => {
+  `('table1: returns $expected when $a is added $b', ({ a, b, expected }) => {
     expect(a + b).toBe(expected)
+  })
+  test.each`
+    a               | b           | expected
+    ${{v: 1}}       | ${{v: 1}}   | ${2}
+  `('table2: returns $expected when $a.v is added $b.v', ({ a, b, expected }) => {
+    expect(a.v + b.v).toBe(expected)
   })
   test.each([
     { input: 1, add: 1, sum: 2 },

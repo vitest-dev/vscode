@@ -8,8 +8,11 @@ describe('testName', () => {
       ['$^+?()[]', '\\$\\^\\+\\?\\(\\)\\[\\]'],
       ['$value', '.+?'],
       ['$obj_name.a', '.+?'],
+      ['%%', '%'],
+      ['%d = %f', '[\\d.eE+-]+? = [\\d.eE+-]+?'],
+      ['%j = %o', '.+? = .+?'],
       ['test %i', 'test \\d+?'],
-    ])('isEach=true, %s', (input, expected) => {
+    ])('isEach=true, value=%s', (input, expected) => {
       expect(transformTestPattern({
         testName: input,
         isEach: true,
@@ -19,9 +22,12 @@ describe('testName', () => {
       ['test', 'test'],
       ['$^+?()[]', '\\$\\^\\+\\?\\(\\)\\[\\]'],
       ['$value', '\\$value'],
-      ['$obj_name.a', '\\$obj_name.a'],
+      ['$obj_name.a', '\\$obj_name\\.a'],
+      ['%%', '%%'],
+      ['%d = %f', '%d = %f'],
+      ['%j = %o', '%j = %o'],
       ['test %i', 'test %i'],
-    ])('isEach=false %s', (input, expected) => {
+    ])('isEach=false, value=%s', (input, expected) => {
       expect(transformTestPattern({
         testName: input,
         isEach: false,
