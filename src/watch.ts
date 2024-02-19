@@ -15,6 +15,7 @@ import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
 import { log } from './log'
+import { VitestAPI, VitestFolderAPI } from './api'
 
 export interface DebuggerLocation { path: string; line: number; column: number }
 export class TestWatcher extends Disposable {
@@ -26,14 +27,14 @@ export class TestWatcher extends Disposable {
   static create(
     ctrl: TestController,
     discover: TestFileDiscoverer,
-    vitest: { cmd: string; args: string[] },
     workspace: WorkspaceFolder,
     id: number,
+    api: VitestFolderAPI,
   ) {
     if (this.cache[id])
       return this.cache[id]
 
-    TestWatcher.cache[id] = new TestWatcher(id, ctrl, discover, vitest, workspace)
+    TestWatcher.cache[id] = new TestWatcher(id, ctrl, discover, workspace, api)
 
     return TestWatcher.cache[id]
   }
@@ -49,8 +50,8 @@ export class TestWatcher extends Disposable {
     readonly id: number,
     private ctrl: TestController,
     private discover: TestFileDiscoverer,
-    private vitest: { cmd: string; args: string[] },
     readonly workspace: WorkspaceFolder,
+    readonly api: VitestFolderAPI,
   ) {
     super(() => {
       this.dispose()

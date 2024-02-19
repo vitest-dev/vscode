@@ -2,17 +2,10 @@ import * as vscode from 'vscode'
 
 import { effect } from '@vue/reactivity'
 
-import type { ResolvedConfig } from 'vitest'
 import { StatusBarItem } from './StatusBarItem'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { Command } from './command'
-import {
-  detectVitestEnvironmentFolders,
-  getConfig,
-  getVitestWorkspaceConfigs,
-  testControllerId,
-  vitestEnvironmentFolders,
-} from './config'
+import { testControllerId } from './config'
 import { TestFileDiscoverer } from './discover'
 import { log } from './log'
 import {
@@ -23,63 +16,44 @@ import {
 } from './runHandler'
 import { TestWatcher } from './watch'
 
-import type { VitestWorkspaceConfig } from './config'
-import { fetchVitestConfig } from './pure/watch/vitestConfig'
 import { openTestTag } from './tags'
-import { createVitestAPI } from './api'
+import type { VitestAPI } from './api'
+import { resolveVitestAPI } from './api'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const workspaces = vscode.workspace.workspaceFolders
-  if (workspaces) {
-    try {
-      const vitestAPIs = await Promise.all(workspaces.map(async (folder) => {
-        const api = await createVitestAPI(folder)
-        return {
-          folder,
-          api,
-          config: await api?.getConfig(),
-        }
-      }))
-      log.info(vitestAPIs.map(v => `${v.folder.name}: resolved as ${v.config ? (v.config.name || 'core') : 'Failed'}`))
-    }
-    catch (err: any) {
-      log.error('[Vitest API]', err?.stack)
-    }
-  }
-  await detectVitestEnvironmentFolders()
-  if (vitestEnvironmentFolders.length === 0) {
+  const workspaces = vscode.workspace.workspaceFolders || []
+
+  const api = await resolveVitestAPI(workspaces)
+
+  if (!api.enabled) {
     log.info('The extension is not activated because no Vitest environment was detected.')
     return
   }
 
   const ctrl = vscode.tests.createTestController(testControllerId, 'Vitest')
 
-  const workspaceConfigs = await getVitestWorkspaceConfigs()
-  // enable run/debug/watch tests only if vitest version >= 0.12.0
-  if (!workspacesCompatibilityCheck(workspaceConfigs)) {
-    const msg = 'Because Vitest version < 0.12.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
-    log.error(msg)
-    // if the vitest detection is false positive, we may still reach here.
-    // but we can still use `.version` to filter some false positive
-    if (workspaceConfigs.some(x => x.isUsingVitestForSure))
-      vscode.window.showWarningMessage(msg)
+  // TODO: check compatibility with version >= 0.34.0(?)
+  // const workspaceConfigs = await getVitestWorkspaceConfigs()
+  // // enable run/debug/watch tests only if vitest version >= 0.12.0
+  // if (!workspacesCompatibilityCheck(workspaceConfigs)) {
+  //   const msg = 'Because Vitest version < 0.12.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
+  //   log.error(msg)
+  //   // if the vitest detection is false positive, we may still reach here.
+  //   // but we can still use `.version` to filter some false positive
+  //   if (workspaceConfigs.some(x => x.isUsingVitestForSure))
+  //     vscode.window.showWarningMessage(msg)
 
-    context.subscriptions.push(
-      vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
-    )
+  // context.subscriptions.push(
+  //   vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
+  //     vscode.window.showWarningMessage(msg)
+  //   }),
+  // )
 
-    return
-  }
+  //   return
+  // }
 
-  const config = await fetchVitestConfig(workspaceConfigs)
-  if (!config) {
-    vscode.window.showWarningMessage('Cannot run tests: no Vitest config found.')
-    return
-  }
-  const fileDiscoverer = registerDiscovery(ctrl, context, config)
-  registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context)
+  const fileDiscoverer = registerDiscovery(ctrl, context, api)
+  registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
   context.subscriptions.push(
     ctrl,
     fileDiscoverer,
@@ -100,25 +74,8 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 }
 
-function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[]) {
-  workspaceConfigs.forEach((vitest) => {
-    log.info(`Vitest Workspace [${vitest.workspace.name}]: Vitest version = ${vitest.version}`)
-  })
-
-  // prompt error message if we can get the version from vitest, but it's not compatible with the extension
-  workspaceConfigs.filter(x => !x.isCompatible && x.isUsingVitestForSure).forEach((config) => {
-    vscode.window.showWarningMessage('Because Vitest version < 0.12.0'
-    + `, run/debug/watch tests are disabled in workspace "${config.workspace.name}" \n`)
-  })
-
-  if (workspaceConfigs.every(x => !x.isCompatible))
-    return false
-
-  return true
-}
-
-function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext, config: ResolvedConfig) {
-  const fileDiscoverer = new TestFileDiscoverer(config)
+function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext, api: VitestAPI) {
+  const fileDiscoverer = new TestFileDiscoverer(api)
   // run on refreshing test list
   ctrl.refreshHandler = async () => {
     await fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl)
@@ -164,16 +121,19 @@ function aggregateTestWatcherStatuses(testWatchers: TestWatcher[]) {
 
 let statusBarItem: StatusBarItem
 function registerWatchHandlers(
-  vitestConfigs: { cmd: string; args: string[]; workspace: vscode.WorkspaceFolder }[],
+  api: VitestAPI,
   ctrl: vscode.TestController,
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
 ) {
-  const testWatchers = vitestConfigs.map((vitestConfig, index) => {
-    const watcher = TestWatcher.create(ctrl, fileDiscoverer, vitestConfig, vitestConfig.workspace, index)
-
-    if (getConfig(vitestConfig.workspace).watchOnStartup)
-      watcher.watch()
+  const testWatchers = api.map((folderApi, index) => {
+    const watcher = TestWatcher.create(
+      ctrl,
+      fileDiscoverer,
+      folderApi.folder,
+      index,
+      folderApi,
+    )
 
     return watcher
   }) ?? []
@@ -238,29 +198,28 @@ function registerWatchHandlers(
 
 function registerRunDebugWatchHandler(
   ctrl: vscode.TestController,
-  workspaceConfigs: VitestWorkspaceConfig[],
+  api: VitestAPI,
   fileDiscoverer: TestFileDiscoverer,
   context: vscode.ExtensionContext,
 ) {
   const testWatchers = registerWatchHandlers(
-    workspaceConfigs.filter(x => x.isCompatible && !x.isDisabled),
+    api,
     ctrl,
     fileDiscoverer,
     context,
   ) ?? []
 
-  const workspaces = workspaceConfigs.filter(x => x.isCompatible && !x.isDisabled).map(x => x.workspace)
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, workspaces),
+    runHandler.bind(null, ctrl, fileDiscoverer, testWatchers, api),
     true,
   )
 
   ctrl.createRunProfile(
     'Debug Tests',
     vscode.TestRunProfileKind.Debug,
-    debugHandler.bind(null, ctrl, fileDiscoverer, workspaces),
+    debugHandler.bind(null, ctrl, fileDiscoverer, api),
     true,
   )
 }

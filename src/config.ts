@@ -33,7 +33,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     env: get<null | Record<string, string>>('nodeEnv', null),
     commandLine: get<string | undefined>('commandLine', undefined),
     watchOnStartup: get<boolean>('watchOnStartup', false),
-    enable: get<boolean>('enable', false),
+    enable: get<boolean>('enable', true),
     debugExclude: get<string[]>('debugExclude', []),
   }
 }

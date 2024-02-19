@@ -20,16 +20,17 @@ import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
 import type { TestFileDiscoverer } from './discover'
 import type { StartConfig } from './pure/ApiProcess'
+import { VitestAPI } from './api'
 
 export async function runHandler(
   ctrl: vscode.TestController,
   discover: TestFileDiscoverer,
   watchers: TestWatcher[],
-  workspaces: vscode.WorkspaceFolder[],
+  api: VitestAPI,
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken,
 ) {
-  if (workspaces.length === 0) {
+  if (!api.enabled) {
     log.info('ERROR: No workspace folder found')
     vscode.window.showErrorMessage('Cannot run tests: No workspace folder found')
     return
@@ -105,11 +106,11 @@ export async function updateSnapshot(
 export async function debugHandler(
   ctrl: vscode.TestController,
   discover: TestFileDiscoverer,
-  workspaces: vscode.WorkspaceFolder[],
+  api: VitestAPI,
   request: vscode.TestRunRequest,
   cancellation: vscode.CancellationToken,
 ) {
-  if (workspaces.length === 0)
+  if (!api.enabled)
     return
 
   const run = ctrl.createTestRun(request)

@@ -1,6 +1,5 @@
 import { join, sep } from 'node:path'
 import * as vscode from 'vscode'
-import type { ResolvedConfig } from 'vitest'
 import type { TestData } from './TestData'
 import {
   TestCase,
@@ -11,10 +10,9 @@ import {
 } from './TestData'
 import parse from './pure/parsers'
 import type { NamedBlock } from './pure/parsers/parser_nodes'
-import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
 import { openTestTag } from './tags'
-import { globFiles, shouldIncludeFile } from './vscodeUtils'
+import type { VitestAPI } from './api'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -22,9 +20,9 @@ export class TestFileDiscoverer extends vscode.Disposable {
   private workspaceCommonPrefix: Map<string, string> = new Map()
   private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map()
   private pathToFileItem: Map<string, TestFile> = new Map()
-  private config: ResolvedConfig
+  private api: VitestAPI
 
-  constructor(config: ResolvedConfig) {
+  constructor(api: VitestAPI) {
     super(() => {
       for (const watch of this.lastWatches)
         watch.dispose()
@@ -34,7 +32,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       this.pathToFileItem.clear()
       this.workspaceCommonPrefix.clear()
     })
-    this.config = config
+    this.api = api
     this.workspacePaths
       = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath) || []
   }
@@ -45,14 +43,15 @@ export class TestFileDiscoverer extends vscode.Disposable {
     for (const watch of this.lastWatches)
       watch.dispose()
 
-    if (!vitestEnvironmentFolders)
+    if (!this.api.enabled)
       return [] // handle the case of no opened folders
 
     const watchers = [] as vscode.FileSystemWatcher[]
+
     await Promise.all(
-      vitestEnvironmentFolders.map(async (workspaceFolder) => {
-        const workspacePath = workspaceFolder.uri.fsPath
-        const files = await globFiles(this.config.include, this.config.exclude, this.config.dir || workspacePath)
+      this.api.map(async (api) => {
+        const workspacePath = api.folder.uri.fsPath
+        const files = await api.getFiles()
         for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
             controller,
@@ -60,15 +59,13 @@ export class TestFileDiscoverer extends vscode.Disposable {
         }
 
         const watcher = vscode.workspace.createFileSystemWatcher(join(workspacePath, '**'))
-        const filter = (v: vscode.Uri) =>
-          shouldIncludeFile(v.fsPath, this.config)
         watcher.onDidCreate(
-          async uri => await filter(uri) && this.getOrCreateFile(controller, uri),
+          async uri => await api.isTestFile(uri.fsPath) && this.getOrCreateFile(controller, uri),
         )
 
         watcher.onDidChange(
-          (uri) => {
-            if (!filter(uri))
+          async (uri) => {
+            if (!await api.isTestFile(uri.fsPath))
               return
 
             const { data } = this.getOrCreateFile(controller, uri)
@@ -92,12 +89,12 @@ export class TestFileDiscoverer extends vscode.Disposable {
   async discoverAllTestFilesInWorkspace(
     controller: vscode.TestController,
   ): Promise<void> {
-    if (!vscode.workspace.workspaceFolders)
+    if (!this.api.enabled)
       return
 
     await Promise.all(
-      vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const files = await globFiles(this.config.include, this.config.exclude, this.config.dir || workspaceFolder.uri.fsPath)
+      this.api.map(async (api) => {
+        const files = await api.getFiles()
         for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
             controller,
@@ -114,7 +111,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
     if (e.uri.scheme !== 'file')
       return
 
-    if (!shouldIncludeFile(e.uri.fsPath, this.config))
+    if (!await this.api.isTestFile(e.uri.fsPath))
       return
 
     const { file, data } = this.getOrCreateFile(ctrl, e.uri)

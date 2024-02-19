@@ -16,8 +16,15 @@ export function createWorkerRPC(vitest: Vitest) {
     async terminate() {
       await vitest.close()
     },
+    async isTestFile(file: string) {
+      for (const project of vitest.projects) {
+        if (project.isTestFile(file))
+          return true
+      }
+      return false
+    },
   }, {
-    eventNames: ['onReady', 'onError'],
+    eventNames: ['onReady', 'onError', 'onConsoleLog'],
     on(listener) {
       parentPort!.on('message', listener)
     },
