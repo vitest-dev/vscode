@@ -1,10 +1,10 @@
 {
-  "publisher": "ZixuanChen",
-  "name": "vitest-explorer",
+  "publisher": "vitest",
+  "name": "explorer",
   "displayName": "Vitest",
-  "version": "0.2.44",
+  "version": "1.0.0",
   "packageManager": "pnpm@8.15.3",
-  "description": "Run and debug Vitest test cases",
+  "description": "A Vite-native testing framework. It's fast!",
   "author": "zxch3n",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,7 @@
   ],
   "main": "./dist/extension.js",
   "icon": "img/icon.png",
-  "preview": true,
+  "pricing": "Free",
   "engines": {
     "vscode": "^1.77.0"
   },
@@ -145,7 +145,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "yarn run compile",
+    "vscode:prepublish": "pnpm compile",
     "compile": "tsup ./src/extension.ts --external vscode --minify",
     "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
     "test": "vitest run --config vite.global-config.ts",
