@@ -33,7 +33,6 @@
     "vscode": "^1.77.0"
   },
   "activationEvents": [
-    "onCommand:vitest-explorer.configureTest",
     "workspaceContains:**/vitest.config.js",
     "workspaceContains:**/vite.config.js",
     "workspaceContains:**/vitest.config.ts",
