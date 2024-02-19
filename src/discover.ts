@@ -112,8 +112,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
         const include = this.config.include
 
         const filter = (v: vscode.Uri) =>
-          include.some(x => minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true })) &&
-          exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
+          include.some(x => minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
+          && exclude.every(x => !minimatch(path.relative(workspacePath, v.fsPath), x, { dot: true }))
 
         const files = await vscode.workspace.findFiles('**/*')
         for (const file of files.filter(filter)) {
