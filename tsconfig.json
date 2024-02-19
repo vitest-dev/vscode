@@ -4,12 +4,12 @@
     "lib": ["ES2020", "ESNext.Disposable"],
     "rootDir": "src",
     "module": "commonJS",
+    "types": ["node"],
     "strict": true,
     "outDir": "out",
     "sourceMap": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["samples/**/*"]
