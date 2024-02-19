@@ -8,7 +8,6 @@ import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 import { Command } from './command'
 import {
   detectVitestEnvironmentFolders,
-  extensionId,
   getConfig,
   getVitestWorkspaceConfigs,
   vitestEnvironmentFolders,
@@ -34,7 +33,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return
   }
 
-  const ctrl = vscode.tests.createTestController(`${extensionId}`, 'Vitest')
+  const ctrl = vscode.tests.createTestController('vitest', 'Vitest')
 
   const workspaceConfigs = await getVitestWorkspaceConfigs()
   // enable run/debug/watch tests only if vitest version >= 0.12.0
