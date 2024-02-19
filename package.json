@@ -153,6 +153,11 @@
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
   },
+  "dependencies": {
+    "fast-glob": "^3.3.2",
+    "micromatch": "^4.0.5",
+    "pathe": "^1.1.2"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^2.6.4",
     "@babel/parser": "^7.20.15",
@@ -188,10 +193,5 @@
     "*.{js,ts,tsx,vue,md}": [
       "eslint --fix"
     ]
-  },
-  "dependencies": {
-    "fast-glob": "^3.3.2",
-    "micromatch": "^4.0.5",
-    "pathe": "^1.1.2"
   }
 }

@@ -1,11 +1,11 @@
 import { TextDecoder } from 'node:util'
+import fs from 'node:fs/promises'
 import fastGlob from 'fast-glob'
 import type { ResolvedConfig } from 'vitest'
 import type { Uri } from 'vscode'
 import { workspace } from 'vscode'
-import { resolve, relative } from 'pathe'
+import { relative, resolve } from 'pathe'
 import micromatch from 'micromatch'
-import fs from 'node:fs/promises'
 
 const textDecoder = new TextDecoder('utf-8')
 

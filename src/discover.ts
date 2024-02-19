@@ -1,4 +1,4 @@
-import path, { join, sep } from 'node:path'
+import { join, sep } from 'node:path'
 import type { ResolvedConfig } from 'vitest'
 import * as vscode from 'vscode'
 import type { TestData } from './TestData'
@@ -53,8 +53,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
     await Promise.all(
       vitestEnvironmentFolders.map(async (workspaceFolder) => {
         const workspacePath = workspaceFolder.uri.fsPath
-        const files = await globFiles(this.config.include, this.config.exclude, workspaceFolder.uri.fsPath);
-        for(const file of files) {
+        const files = await globFiles(this.config.include, this.config.exclude, workspaceFolder.uri.fsPath)
+        for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
             controller,
           )
@@ -98,8 +98,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
 
     await Promise.all(
       vscode.workspace.workspaceFolders.map(async (workspaceFolder) => {
-        const files = await globFiles(this.config.include, this.config.exclude, workspaceFolder.uri.fsPath);
-        for(const file of files) {
+        const files = await globFiles(this.config.include, this.config.exclude, workspaceFolder.uri.fsPath)
+        for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
             controller,
           )
