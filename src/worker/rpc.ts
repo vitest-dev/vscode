@@ -30,7 +30,14 @@ export function createWorkerRPC(vitest: Vitest) {
       return false
     },
   }, {
-    eventNames: ['onReady', 'onError', 'onConsoleLog', 'onTaskUpdate', 'onFinished', 'onCollected'],
+    eventNames: [
+      'onReady',
+      'onError',
+      'onConsoleLog',
+      'onTaskUpdate',
+      'onFinished',
+      'onCollected',
+    ],
     on(listener) {
       parentPort!.on('message', listener)
     },

@@ -21,7 +21,7 @@ import { log } from './log'
 import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
-import { runTest } from './runner/runTests'
+import { GlobalTestRunner } from './runner/runner'
 
 export async function activate(context: vscode.ExtensionContext) {
   const workspaces = vscode.workspace.workspaceFolders || []
@@ -55,22 +55,23 @@ export async function activate(context: vscode.ExtensionContext) {
   //   return
   // }
 
-  let fileDiscoverer: TestFileDiscoverer
+  const runner = new GlobalTestRunner(ctrl, api)
 
   const profile = ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    (request, token) => runTest(ctrl, api, fileDiscoverer, request, token),
+    (request, token) => runner.runTests(request, token),
     true,
     undefined,
     true,
   )
 
-  fileDiscoverer = registerDiscovery(ctrl, profile, context, api)
+  const fileDiscoverer = registerDiscovery(ctrl, profile, context, api)
   // registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
   context.subscriptions.push(
     ctrl,
     fileDiscoverer,
+    runner,
     // vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
     //   updateSnapshot(ctrl, fileDiscoverer, test)
     // }),

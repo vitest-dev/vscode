@@ -13,7 +13,6 @@ import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { log } from './log'
 import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
-import { runTest } from './runner/runTests'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
@@ -78,17 +77,6 @@ export class TestFileDiscoverer extends vscode.Disposable {
               return
 
             await data.updateFromDisk(controller)
-
-            if (this.profile.supportsContinuousRun) {
-              controller.invalidateTestResults([data.item])
-              await runTest(
-                controller,
-                this.api,
-                this,
-                new vscode.TestRunRequest([data.item], [], this.profile, true),
-                new vscode.CancellationTokenSource().token,
-              )
-            }
           },
         )
 

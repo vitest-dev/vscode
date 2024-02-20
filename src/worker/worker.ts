@@ -37,6 +37,12 @@ import { createErrorRPC, createWorkerRPC } from './rpc'
           onCollected(files) {
             rpc.onCollected(files)
           },
+          onWatcherStart(files, errors) {
+            rpc.onWatcherStart(files, errors)
+          },
+          onWatcherRerun(files, trigger) {
+            rpc.onWatcherRerun(files, trigger)
+          },
         },
       ],
     })

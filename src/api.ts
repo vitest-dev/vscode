@@ -26,6 +26,8 @@ export interface BirpcEvents {
   onTaskUpdate: (task: TaskResultPack[]) => void
   onFinished: (files?: File[], errors?: unknown[]) => void
   onCollected: (files?: File[]) => void
+  onWatcherStart: (files?: File[], errors?: unknown[]) => void
+  onWatcherRerun: (files: string[], trigger?: string) => void
 }
 
 type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
@@ -50,9 +52,32 @@ function resolveVitestPath(vitestPkgPath: string) {
   return resolve(dirname(vitestPkgPath), './dist/index.js')
 }
 
+export class VitestReporter {
+  constructor(
+    protected handlers: ResolvedRPC['handlers'],
+  ) {}
+
+  onConsoleLog = this.createHandler('onConsoleLog')
+  onTaskUpdate = this.createHandler('onTaskUpdate')
+  onFinished = this.createHandler('onFinished')
+  onCollected = this.createHandler('onCollected')
+  onWatcherStart = this.createHandler('onWatcherStart')
+  onWatcherRerun = this.createHandler('onWatcherRerun')
+
+  clearListeners() {
+    this.handlers.clearListeners()
+  }
+
+  private createHandler<K extends Exclude<keyof ResolvedRPC['handlers'], 'clearListeners'>>(name: K) {
+    return (callback: BirpcEvents[K]) => {
+      this.handlers[name](callback as any)
+    }
+  }
+}
+
 export class VitestAPI {
   constructor(
-    private api: VitestFolderAPI[],
+    protected api: VitestFolderAPI[],
   ) {}
 
   get enabled() {
@@ -61,6 +86,10 @@ export class VitestAPI {
 
   map<T>(callback: (api: VitestFolderAPI, index: number) => T) {
     return this.api.map(callback)
+  }
+
+  forEach<T>(callback: (api: VitestFolderAPI, index: number) => T) {
+    return this.api.forEach(callback)
   }
 
   async isTestFile(file: string) {
@@ -76,12 +105,14 @@ export class VitestAPI {
   }
 }
 
-export class VitestFolderAPI {
+export class VitestFolderAPI extends VitestReporter {
   constructor(
     public folder: vscode.WorkspaceFolder,
     private rpc: VitestRPC,
-    private handlers: ResolvedRPC['handlers'],
-  ) {}
+    handlers: ResolvedRPC['handlers'],
+  ) {
+    super(handlers)
+  }
 
   getFiles() {
     return this.rpc.getFiles()
@@ -97,26 +128,6 @@ export class VitestFolderAPI {
 
   dispose() {
     // TODO: terminate?
-  }
-
-  onConsoleLog(listener: BirpcEvents['onConsoleLog']) {
-    this.handlers.onConsoleLog(listener)
-  }
-
-  onTaskUpdate(listener: BirpcEvents['onTaskUpdate']) {
-    this.handlers.onTaskUpdate(listener)
-  }
-
-  onFinished(listener: BirpcEvents['onFinished']) {
-    this.handlers.onFinished(listener)
-  }
-
-  onCollected(listener: BirpcEvents['onCollected']) {
-    this.handlers.onCollected(listener)
-  }
-
-  clearListeners() {
-    this.handlers.clearListeners()
   }
 }
 
@@ -139,7 +150,19 @@ interface ResolvedRPC {
     onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
     onFinished: (listener: BirpcEvents['onFinished']) => void
     onCollected: (listener: BirpcEvents['onCollected']) => void
+    onWatcherStart: (listener: BirpcEvents['onWatcherStart']) => void
+    onWatcherRerun: (listener: BirpcEvents['onWatcherRerun']) => void
     clearListeners: () => void
+  }
+}
+
+function createHandler<T extends (...args: any) => any>() {
+  const handlers: T[] = []
+  return {
+    handlers,
+    register: (listener: any) => handlers.push(listener),
+    trigger: (data: any) => handlers.forEach(handler => handler(data)),
+    clear: () => handlers.length = 0,
   }
 }
 
@@ -166,10 +189,12 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
   worker.stdout.on('data', d => log.info('[Worker]', d.toString()))
   worker.stderr.on('data', d => log.error('[Worker]', d.toString()))
 
-  const logHandlers: ((log: UserConsoleLog) => void)[] = []
-  const onTaskUpdate: ((task: TaskResultPack[]) => void)[] = []
-  const onFinished: ((files?: File[], errors?: unknown[]) => void)[] = []
-  const onCollected: ((files?: File[]) => void)[] = []
+  const onConsoleLog = createHandler<BirpcEvents['onConsoleLog']>()
+  const onTaskUpdate = createHandler<BirpcEvents['onTaskUpdate']>()
+  const onFinished = createHandler<BirpcEvents['onFinished']>()
+  const onCollected = createHandler<BirpcEvents['onCollected']>()
+  const onWatcherRerun = createHandler<BirpcEvents['onWatcherRerun']>()
+  const onWatcherStart = createHandler<BirpcEvents['onWatcherStart']>()
 
   return await new Promise<ResolvedRPC | null>((resolve) => {
     const api = createBirpc<BirpcMethods, BirpcEvents>(
@@ -181,23 +206,19 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
             version: pkg.version,
             cli: resolveVitestPath(vitestPackagePath),
             handlers: {
-              onConsoleLog(listener) {
-                logHandlers.push(listener)
-              },
-              onTaskUpdate(listener) {
-                onTaskUpdate.push(listener)
-              },
-              onFinished(listener) {
-                onFinished.push(listener)
-              },
-              onCollected(listener) {
-                onCollected.push(listener)
-              },
+              onConsoleLog: onConsoleLog.register,
+              onTaskUpdate: onTaskUpdate.register,
+              onFinished: onFinished.register,
+              onCollected: onCollected.register,
+              onWatcherRerun: onWatcherRerun.register,
+              onWatcherStart: onWatcherStart.register,
               clearListeners() {
-                logHandlers.length = 0
-                onTaskUpdate.length = 0
-                onFinished.length = 0
-                onCollected.length = 0
+                onConsoleLog.clear()
+                onTaskUpdate.clear()
+                onFinished.clear()
+                onCollected.clear()
+                onWatcherRerun.clear()
+                onWatcherStart.clear()
               },
             },
           })
@@ -206,18 +227,12 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
           log.error('[API]', err?.stack)
           resolve(null)
         },
-        onConsoleLog(log) {
-          logHandlers.forEach(handler => handler(log))
-        },
-        onFinished(files, errors) {
-          onFinished.forEach(handler => handler(files, errors))
-        },
-        onTaskUpdate(task) {
-          onTaskUpdate.forEach(handler => handler(task))
-        },
-        onCollected(files) {
-          onCollected.forEach(handler => handler(files))
-        },
+        onConsoleLog: onConsoleLog.trigger,
+        onFinished: onFinished.trigger,
+        onTaskUpdate: onTaskUpdate.trigger,
+        onCollected: onCollected.trigger,
+        onWatcherRerun: onWatcherRerun.trigger,
+        onWatcherStart: onWatcherStart.trigger,
       },
       {
         on(listener) {
