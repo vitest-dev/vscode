@@ -44,32 +44,14 @@ export class FolderTestRunner extends vscode.Disposable {
   constructor(
     private readonly controller: vscode.TestController,
     private readonly runner: GlobalTestRunner,
-    private readonly api: VitestFolderAPI,
+    api: VitestFolderAPI,
   ) {
     super(() => {
       api.clearListeners()
       this.taskIdToTestData.clear()
     })
 
-    api.onWatcherRerun(() => {
-      this.testRun?.end()
-
-      // if there is a current request and it's continues, then we keep reruning
-      const currentRequest = runner.currentVscodeRequest
-      if (currentRequest) {
-        if (!this.testRun || currentRequest.continuous) {
-          this.testRun = controller.createTestRun(currentRequest)
-          log.info('[Watcher]', currentRequest.continuous ? 'Continuing test run' : 'Running tests')
-        }
-        else {
-          this.testRun = undefined
-          log.info('[Watcher]', 'Skip reporting because the test run is not continuous')
-        }
-      }
-      else {
-        log.info('[Watcher]', 'Skip reporting because there is no request')
-      }
-    })
+    api.onWatcherRerun(() => this.startTestRun())
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
@@ -100,8 +82,7 @@ export class FolderTestRunner extends vscode.Disposable {
           this.markResult(data.item, task.result, task)
       })
 
-      this.testRun?.end()
-      this.testRun = undefined
+      this.endTestRun()
     })
 
     api.onConsoleLog(({ content, taskId }) => {
@@ -112,6 +93,20 @@ export class FolderTestRunner extends vscode.Disposable {
         data?.item,
       )
     })
+  }
+
+  private startTestRun() {
+    const currentRequest = this.runner.currentVscodeRequest
+    if (currentRequest) {
+      // report only if continuous mode is enabled or this is the first run
+      if (!this.testRun || currentRequest.continuous)
+        this.testRun = this.controller.createTestRun(currentRequest)
+    }
+  }
+
+  private endTestRun() {
+    this.testRun?.end()
+    this.testRun = undefined
   }
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {
@@ -207,14 +202,6 @@ export class GlobalTestRunner extends vscode.Disposable {
     api.forEach((folderAPI) => {
       this.runners.push(new FolderTestRunner(controller, this, folderAPI))
     })
-  }
-
-  public getTestItemsFromFilepaths(_filepaths: string[]): vscode.TestItem[] {
-    return []
-  }
-
-  public getTestItemsFromTasks(_tasks: Task[]): vscode.TestItem[] {
-    return []
   }
 
   public getTestDataByTaskId(taskId: string): TestData | null {
