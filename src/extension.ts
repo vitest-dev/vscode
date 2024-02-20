@@ -55,9 +55,10 @@ export async function activate(context: vscode.ExtensionContext) {
   //   return
   // }
 
+  const fileDiscoverer = registerDiscovery(ctrl, context, api)
   const runner = new GlobalTestRunner(ctrl, api)
 
-  const profile = ctrl.createRunProfile(
+  ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
     (request, token) => runner.runTests(request, token),
@@ -66,9 +67,9 @@ export async function activate(context: vscode.ExtensionContext) {
     true,
   )
 
-  const fileDiscoverer = registerDiscovery(ctrl, profile, context, api)
   // registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
   context.subscriptions.push(
+    api,
     ctrl,
     fileDiscoverer,
     runner,
@@ -89,8 +90,8 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 }
 
-function registerDiscovery(ctrl: vscode.TestController, profile: vscode.TestRunProfile, context: vscode.ExtensionContext, api: VitestAPI) {
-  const fileDiscoverer = new TestFileDiscoverer(ctrl, profile, api)
+function registerDiscovery(ctrl: vscode.TestController, context: vscode.ExtensionContext, api: VitestAPI) {
+  const fileDiscoverer = new TestFileDiscoverer(api)
   // run on refreshing test list
   ctrl.refreshHandler = async () => {
     await fileDiscoverer.discoverAllTestFilesInWorkspace(ctrl)

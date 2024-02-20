@@ -16,15 +16,13 @@ import type { VitestAPI } from './api'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]
-  private readonly workspacePaths = [] as string[]
+  // private readonly workspacePaths = [] as string[]
   private workspaceCommonPrefix: Map<string, string> = new Map()
   private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map()
   private pathToFileItem: Map<string, TestFile> = new Map()
   private api: VitestAPI
 
   constructor(
-    private readonly ctrl: vscode.TestController,
-    private readonly profile: vscode.TestRunProfile,
     api: VitestAPI,
   ) {
     super(() => {
@@ -37,8 +35,8 @@ export class TestFileDiscoverer extends vscode.Disposable {
       this.workspaceCommonPrefix.clear()
     })
     this.api = api
-    this.workspacePaths
-      = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath) || []
+    // this.workspacePaths
+    //   = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath) || []
   }
 
   async watchAllTestFilesInWorkspace(
@@ -57,14 +55,14 @@ export class TestFileDiscoverer extends vscode.Disposable {
         const workspacePath = api.folder.uri.fsPath
         const files = await api.getFiles()
         for (const file of files) {
-          this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
+          this.getOrCreateFile(controller, vscode.Uri.file(file), api.folder).data.updateFromDisk(
             controller,
           )
         }
 
         const watcher = vscode.workspace.createFileSystemWatcher(join(workspacePath, '**'))
         watcher.onDidCreate(
-          async uri => await api.isTestFile(uri.fsPath) && this.getOrCreateFile(controller, uri),
+          async uri => await api.isTestFile(uri.fsPath) && this.getOrCreateFile(controller, uri, api.folder),
         )
 
         watcher.onDidChange(
@@ -72,7 +70,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
             if (!await api.isTestFile(uri.fsPath))
               return
 
-            const { data } = this.getOrCreateFile(controller, uri)
+            const { data } = this.getOrCreateFile(controller, uri, api.folder)
             if (!data.resolved)
               return
 
@@ -100,7 +98,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       this.api.map(async (api) => {
         const files = await api.getFiles()
         for (const file of files) {
-          this.getOrCreateFile(controller, vscode.Uri.file(file)).data.updateFromDisk(
+          this.getOrCreateFile(controller, vscode.Uri.file(file), api.folder).data.updateFromDisk(
             controller,
           )
         }
@@ -115,28 +113,17 @@ export class TestFileDiscoverer extends vscode.Disposable {
     if (e.uri.scheme !== 'file')
       return
 
-    if (!await this.api.isTestFile(e.uri.fsPath))
+    const testFileData = await this.api.getTestFileData(e.uri.fsPath)
+    if (!testFileData)
       return
 
-    const { file, data } = this.getOrCreateFile(ctrl, e.uri)
+    const { file, data } = this.getOrCreateFile(ctrl, e.uri, testFileData.folder)
     discoverTestFromFileContent(ctrl, e.getText(), file, data)
 
     return file
   }
 
-  discoverTestFromPath(
-    controller: vscode.TestController,
-    path: string,
-    forceReload = false,
-  ) {
-    const { data } = this.getOrCreateFile(controller, vscode.Uri.file(path))
-    if (!data.resolved || forceReload)
-      data.updateFromDisk(controller)
-
-    return data
-  }
-
-  private getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
+  private getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri, workspaceFolder: vscode.WorkspaceFolder) {
     const existing = controller.items.get(uri.toString())
     if (existing) {
       return {
@@ -145,9 +132,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       }
     }
 
-    const workspacePath = this.workspacePaths.find(x =>
-      uri.fsPath.startsWith(x),
-    )
+    const workspacePath = workspaceFolder.uri.fsPath
     let name
     if (workspacePath) {
       if (!this.workspaceCommonPrefix.has(workspacePath)) {

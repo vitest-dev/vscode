@@ -92,12 +92,15 @@ export class VitestAPI {
     return this.api.forEach(callback)
   }
 
-  async isTestFile(file: string) {
+  async getTestFileData(file: string) {
     for (const rpc of this.api) {
-      if (await rpc.isTestFile(file))
-        return true
+      if (await rpc.isTestFile(file)) {
+        return {
+          folder: rpc.folder,
+        }
+      }
     }
-    return false
+    return null
   }
 
   dispose() {
