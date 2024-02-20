@@ -171,6 +171,7 @@ class TestRunner {
     }
     switch (result.state) {
       case 'fail': {
+        // TODO: show syntax errors as test.error
         const errors = result.errors?.map(err => testMessageForTestError(test, err)) || []
         this.testRun.errored(test, errors, result.duration)
         break
