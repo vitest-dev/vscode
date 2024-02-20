@@ -67,9 +67,13 @@ export async function mayBeVitestEnv(projectRoot: string | WorkspaceFolder): Pro
 
   if (
     existsSync(path.join(projectRoot, 'vite.config.js'))
+    || existsSync(path.join(projectRoot, 'vite.config.mjs'))
     || existsSync(path.join(projectRoot, 'vite.config.ts'))
+    || existsSync(path.join(projectRoot, 'vite.config.mts'))
     || existsSync(path.join(projectRoot, 'vitest.config.js'))
+    || existsSync(path.join(projectRoot, 'vitest.config.mjs'))
     || existsSync(path.join(projectRoot, 'vitest.config.ts'))
+    || existsSync(path.join(projectRoot, 'vitest.config.mts'))
   )
     return true
 

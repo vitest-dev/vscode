@@ -34,9 +34,13 @@
   },
   "activationEvents": [
     "workspaceContains:**/vitest.config.js",
+    "workspaceContains:**/vitest.config.mjs",
     "workspaceContains:**/vite.config.js",
+    "workspaceContains:**/vite.config.mjs",
     "workspaceContains:**/vitest.config.ts",
+    "workspaceContains:**/vitest.config.mts",
     "workspaceContains:**/vite.config.ts",
+    "workspaceContains:**/vite.config.mts",
     "workspaceContains:**/package.json"
   ],
   "contributes": {
