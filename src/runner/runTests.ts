@@ -61,6 +61,29 @@ function flatTestData(test: TestData, data: Set<TestData> = new Set()): Set<Test
   return recursiveFlatTestData(WEAKMAP_TEST_DATA.get(test.fileItem)!, data)
 }
 
+function getPatternFromTestItem(test: vscode.TestItem, pattern = '') {
+  const data = WEAKMAP_TEST_DATA.get(test)!
+  if (data instanceof TestFile || !test.parent)
+    return pattern.trimStart()
+  return getPatternFromTestItem(
+    test.parent,
+    pattern ? ` ${data.pattern} ${pattern}` : data.pattern,
+  )
+}
+
+function formatTestPattern(tests: vscode.TestItem[]) {
+  if (!tests.length || tests.length > 1)
+    return
+  const data = WEAKMAP_TEST_DATA.get(tests[0])!
+  if (data instanceof TestFile)
+    return
+  const testNameLabel = getPatternFromTestItem(tests[0])
+  const testNamePattern = testNameLabel.replace(/[$^+?()[\]"]/g, '\\$&')
+  if (data instanceof TestCase)
+    return `^\\s*${testNamePattern}$`
+  return `^\\s*${testNamePattern} .+`
+}
+
 class TestRunner {
   private state = new StateManager()
 
@@ -133,8 +156,7 @@ class TestRunner {
       this.api.clearListeners()
     })
 
-    const testNameLabel = tests?.length === 1 && !(WEAKMAP_TEST_DATA.get(tests[0]) instanceof TestFile) ? tests[0].label : undefined
-    const testNamePattern = testNameLabel ? testNameLabel.replace(/[$^+?()[\]"]/g, '\\$&') : undefined
+    const testNamePattern = formatTestPattern(tests)
     const files = tests?.map(test => test.uri!.fsPath) || []
 
     log.info('Running tests', ...files, testNamePattern ? `with a pattern "${testNamePattern}"` : '')

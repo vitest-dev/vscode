@@ -17,6 +17,10 @@
 - Visual Studio Code version >= July 2021 (version 1.59).
 - Vitest version >= v0.12.0
 
+# Introduction
+
+You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
+
 ## Configuration
 
 - `vitest.enable`: Extension will automatically detect if the current project is using Vitest. If detection fails, extension can be manually enabled via this option.

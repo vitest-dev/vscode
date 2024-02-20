@@ -13,7 +13,6 @@ import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { log } from './log'
 import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
-import { runTest } from './runner/runTests'
 
 export class TestFileDiscoverer extends vscode.Disposable {
   private lastWatches = [] as vscode.FileSystemWatcher[]

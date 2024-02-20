@@ -9,7 +9,7 @@ export function createWorkerRPC(vitest: Vitest) {
       if (testNamePattern)
         await vitest.changeNamePattern(testNamePattern, files)
       else
-        await vitest.start(files)
+        await vitest.changeNamePattern('', files)
     },
     async getFiles() {
       const files = await vitest.globTestFiles()

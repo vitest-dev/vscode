@@ -6,6 +6,8 @@ import type { File, ResolvedConfig, TaskResultPack, UserConsoleLog } from 'vites
 import { log } from './log'
 import { workerPath } from './constants'
 
+const _require = require
+
 // import { getConfig, getRootConfig } from './config'
 
 export interface BirpcMethods {
@@ -28,16 +30,24 @@ export interface BirpcEvents {
 
 type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
 
-function resolveVitestPath(workspace: vscode.WorkspaceFolder) {
+function resolveVitestPackagePath(workspace: vscode.WorkspaceFolder) {
   try {
-    // resolves to unsupported cjs
-    const vitestPath = require.resolve('vitest', { paths: [workspace.uri.fsPath] })
-    return resolve(dirname(vitestPath), './dist/node.js')
+    return require.resolve('vitest/package.json', {
+      paths: [workspace.uri.fsPath],
+    })
   }
   catch (err: any) {
     log.info('[API]', `Vitest not found in "${workspace.name}" workspace folder`)
     return null
   }
+}
+
+function resolveVitestNodePath(vitestPkgPath: string) {
+  return resolve(dirname(vitestPkgPath), './dist/node.js')
+}
+
+function resolveVitestPath(vitestPkgPath: string) {
+  return resolve(dirname(vitestPkgPath), './dist/index.js')
 }
 
 export class VitestAPI {
@@ -122,6 +132,8 @@ export async function resolveVitestAPI(folders: readonly vscode.WorkspaceFolder[
 
 interface ResolvedRPC {
   rpc: VitestRPC
+  version: string
+  cli: string
   handlers: {
     onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
@@ -136,14 +148,19 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
   // if (getConfig(workspace).enable === false || getRootConfig().disabledWorkspaceFolders.includes(workspace.name))
   //   return null
   // TODO: check compatibility with version >= 0.34.0(?)
-  const vitestNodePath = resolveVitestPath(workspace)
-  if (!vitestNodePath)
+  const vitestPackagePath = resolveVitestPackagePath(workspace)
+  if (!vitestPackagePath)
     return null
-  log.info('[API]', `Running Vitest for "${workspace.name}" workspace folder from ${vitestNodePath}`)
+  const pkg = _require(vitestPackagePath)
+  const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
+  log.info('[API]', `Running Vitest ${pkg.version} for "${workspace.name}" workspace folder from ${vitestNodePath}`)
   const worker = new Worker(workerPath, {
     workerData: {
       root: workspace.uri.fsPath,
       vitestPath: vitestNodePath,
+    },
+    env: {
+      VITEST_VSCODE: 'true',
     },
   })
   worker.stdout.on('data', d => log.info('[Worker]', d.toString()))
@@ -161,6 +178,8 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
           log.info('[API]', `Vitest for "${workspace.name}" workspace folder is resolved.`)
           resolve({
             rpc: api,
+            version: pkg.version,
+            cli: resolveVitestPath(vitestPackagePath),
             handlers: {
               onConsoleLog(listener) {
                 logHandlers.push(listener)

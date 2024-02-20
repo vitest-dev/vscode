@@ -7,7 +7,7 @@ describe('addition', () => {
   })
 
   it('sum', () => {
-    expect(sum(0, 10)).toBe(25)
+    expect(sum(0, 10)).toBe(55)
   })
 
   it.skip('skipped', () => {
