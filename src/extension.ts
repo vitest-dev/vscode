@@ -212,13 +212,17 @@ function registerWatchHandlers(
 
   async function runHandler(
     request: vscode.TestRunRequest,
-    _cancellation: vscode.CancellationToken,
+    cancellation: vscode.CancellationToken,
   ) {
     if (
       vscode.workspace.workspaceFolders === undefined
       || vscode.workspace.workspaceFolders.length === 0
     )
       return
+
+    cancellation.onCancellationRequested(() => {
+      testWatchers.forEach(watcher => watcher.dispose())
+    })
 
     await Promise.all(testWatchers.map(watcher => watcher.watch()))
     testWatchers.forEach((watcher) => {
