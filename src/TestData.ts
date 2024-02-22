@@ -4,11 +4,16 @@ import { getContentFromFilesystem } from './vscodeUtils'
 import { transformTestPattern } from './pure/testName'
 
 export const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>()
+export const WEAKMAP_TEST_FOLDER = new WeakMap<vscode.TestItem, vscode.WorkspaceFolder>()
 // FIXME: GC
 export const testItemIdMap = new WeakMap<
   vscode.TestController,
   Map<string, vscode.TestItem>
 >()
+
+export function getTestItemFolder(item: vscode.TestItem) {
+  return WEAKMAP_TEST_FOLDER.get(item)!
+}
 
 export type TestData = TestFile | TestDescribe | TestCase
 

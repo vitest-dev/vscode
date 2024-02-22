@@ -65,6 +65,9 @@ devDependencies:
   chai:
     specifier: ^5.1.0
     version: 5.1.0
+  cac:
+    specifier: ^6.7.14
+    version: 6.7.14
   changelogithub:
     specifier: ^0.13.3
     version: 0.13.3

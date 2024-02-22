@@ -1,10 +1,19 @@
-import { workerData } from 'node:worker_threads'
+import { parentPort, workerData } from 'node:worker_threads'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
-import type { BirpcReturn } from 'birpc'
+import type { BirpcReturn, ChannelOptions } from 'birpc'
 import type { BirpcEvents, BirpcMethods } from '../api'
-import { createErrorRPC, createWorkerRPC } from './rpc'
+import { createErrorRPC, createWorkerRPC } from '../rpc'
 
 (async () => {
+  const channel: ChannelOptions = {
+    on(listener) {
+      parentPort!.on('message', listener)
+    },
+    post(message) {
+      parentPort!.postMessage(message)
+    },
+  }
+
   try {
     let rpc: BirpcReturn<BirpcEvents, BirpcMethods>
     const vitestMode = await import(workerData.vitestPath) as typeof import('vitest/node')
@@ -46,11 +55,11 @@ import { createErrorRPC, createWorkerRPC } from './rpc'
         },
       ],
     })
-    rpc = createWorkerRPC(vitest)
+    rpc = createWorkerRPC(vitest, channel)
     await rpc.onReady()
   }
   catch (err: any) {
-    const closeRpc = createErrorRPC()
+    const closeRpc = createErrorRPC(channel)
     closeRpc.onError({
       message: err.message,
       stack: String(err.stack),

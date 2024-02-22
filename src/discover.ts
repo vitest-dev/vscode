@@ -6,6 +6,7 @@ import {
   TestDescribe,
   TestFile,
   WEAKMAP_TEST_DATA,
+  WEAKMAP_TEST_FOLDER,
   testItemIdMap,
 } from './TestData'
 import parse from './pure/parsers'
@@ -118,7 +119,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
       return
 
     const { file, data } = this.getOrCreateFile(ctrl, e.uri, testFileData.folder)
-    discoverTestFromFileContent(ctrl, e.getText(), file, data)
+    discoverTestFromFileContent(ctrl, e.getText(), file, data, testFileData.folder)
 
     return file
   }
@@ -171,6 +172,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
     workspacePath && this.workspaceItems.get(workspacePath)!.add(file)
     controller.items.add(file)
     const data = new TestFile(file)
+    WEAKMAP_TEST_FOLDER.set(file, workspaceFolder)
     WEAKMAP_TEST_DATA.set(file, data)
     this.pathToFileItem.set(uri.fsPath, data)
 
@@ -184,6 +186,7 @@ export function discoverTestFromFileContent(
   content: string,
   fileItem: vscode.TestItem,
   data: TestFile,
+  folder: vscode.WorkspaceFolder,
 ) {
   if (testItemIdMap.get(controller) == null)
     testItemIdMap.set(controller, new Map())
@@ -240,6 +243,7 @@ export function discoverTestFromFileContent(
     ]).join(' ').trim()
     const id = `${fileItem.uri}/${fullName}@${index++}`
     const caseItem = controller.createTestItem(id, block.name!, fileItem.uri)
+    WEAKMAP_TEST_FOLDER.set(caseItem, folder)
     idMap.set(id, caseItem)
     caseItem.range = new vscode.Range(
       new vscode.Position(block.start!.line - 1, block.start!.column),

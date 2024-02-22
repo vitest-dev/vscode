@@ -84,6 +84,18 @@ export class VitestAPI {
     return this.api.length > 0
   }
 
+  get length() {
+    return this.api.length
+  }
+
+  get(folder: vscode.WorkspaceFolder) {
+    return this.api.find(api => api.folder === folder)!
+  }
+
+  filter(callback: (api: VitestFolderAPI, index: number) => boolean) {
+    return this.api.filter(callback)
+  }
+
   map<T>(callback: (api: VitestFolderAPI, index: number) => T) {
     return this.api.map(callback)
   }
@@ -108,13 +120,20 @@ export class VitestAPI {
   }
 }
 
+const WEAKMAP_API_FOLDER = new WeakMap<VitestFolderAPI, vscode.WorkspaceFolder>()
+
 export class VitestFolderAPI extends VitestReporter {
   constructor(
-    public folder: vscode.WorkspaceFolder,
+    folder: vscode.WorkspaceFolder,
     private rpc: VitestRPC,
     handlers: ResolvedRPC['handlers'],
   ) {
     super(handlers)
+    WEAKMAP_API_FOLDER.set(this, folder)
+  }
+
+  get folder() {
+    return WEAKMAP_API_FOLDER.get(this)!
   }
 
   getFiles() {
@@ -168,6 +187,10 @@ function createHandler<T extends (...args: any) => any>() {
     clear: () => handlers.length = 0,
   }
 }
+
+// export function createVitestDebugRpc(workspace: vscode.WorkspaceFolder) {
+
+// }
 
 export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
   // TODO: respect config? Why does enable exist? Can't you just disable the extension?

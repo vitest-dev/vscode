@@ -8,7 +8,10 @@ export default defineConfig([
   },
   {
     entry: ['./src/worker/worker.ts'],
-    external: ['vitest/node'],
+    format: 'esm',
+  },
+  {
+    entry: ['./src/debug/debug.ts'],
     format: 'esm',
   },
 ])

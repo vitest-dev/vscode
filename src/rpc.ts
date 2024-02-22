@@ -1,15 +1,24 @@
-import { parentPort } from 'node:worker_threads'
+import type { ChannelOptions } from 'birpc'
 import { createBirpc } from 'birpc'
 import type { Vitest } from 'vitest'
-import type { BirpcEvents, BirpcMethods } from '../api'
+import type { BirpcEvents, BirpcMethods } from './api'
 
-export function createWorkerRPC(vitest: Vitest) {
-  return createBirpc<BirpcEvents, BirpcMethods>({
+export function createWorkerRPC(vitest: Vitest, channel: ChannelOptions) {
+  const rpc = createBirpc<BirpcEvents, BirpcMethods>({
     async runFiles(files, testNamePattern) {
-      if (testNamePattern)
+      if (testNamePattern) {
         await vitest.changeNamePattern(testNamePattern, files)
-      else
+      }
+      else if (files?.length) {
         await vitest.changeNamePattern('', files)
+      }
+      else {
+        vitest.configOverride.testNamePattern = undefined
+
+        const specs = await vitest.globTestFiles()
+        const files = specs.map(([_, spec]) => spec)
+        await vitest.rerunFiles(files)
+      }
     },
     async getFiles() {
       const files = await vitest.globTestFiles()
@@ -38,23 +47,14 @@ export function createWorkerRPC(vitest: Vitest) {
       'onFinished',
       'onCollected',
     ],
-    on(listener) {
-      parentPort!.on('message', listener)
-    },
-    post(message) {
-      parentPort!.postMessage(message)
-    },
+    ...channel,
   })
+  return rpc
 }
 
-export function createErrorRPC() {
+export function createErrorRPC(channel: ChannelOptions) {
   return createBirpc<BirpcEvents>({}, {
     eventNames: ['onError'],
-    on(listener) {
-      parentPort!.on('message', listener)
-    },
-    post(message) {
-      parentPort!.postMessage(message)
-    },
+    ...channel,
   })
 }

@@ -4,8 +4,10 @@ import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
 import type { VitestAPI, VitestFolderAPI } from '../api'
 import type { TestData } from '../TestData'
-import { TestCase, TestFile, WEAKMAP_TEST_DATA } from '../TestData'
+import { TestCase, TestFile, WEAKMAP_TEST_DATA, getTestItemFolder } from '../TestData'
 import { log } from '../log'
+import { getConfig } from '../config'
+import { debugPath } from '../constants'
 
 function getFilepathFromTask(task: Task) {
   if ('filepath' in task)
@@ -105,6 +107,7 @@ export class FolderTestRunner extends vscode.Disposable {
   }
 
   private endTestRun() {
+    console.log('run ended')
     this.testRun?.end()
     this.testRun = undefined
   }
@@ -236,13 +239,84 @@ export class GlobalTestRunner extends vscode.Disposable {
 
     const tests = request.include ?? []
 
-    const files = Array.from(
-      new Set(tests.map(test => test.uri?.fsPath).filter(Boolean) as string[]),
-    )
-
     const testNamePatern = formatTestPattern(tests)
 
-    await Promise.all(this.api.map(folderAPI => folderAPI.runFiles(files, testNamePatern)))
+    if (!tests.length || this.api.length === 1) {
+      const files = this.getTestFiles(tests)
+
+      await Promise.all(this.api.map(folderAPI => folderAPI.runFiles(files, testNamePatern)))
+    }
+    else {
+      // run only affected folders
+      const workspaces = new Map<vscode.WorkspaceFolder, vscode.TestItem[]>()
+      tests.forEach((test) => {
+        const workspaceFolder = getTestItemFolder(test)
+        const folderTests = workspaces.get(workspaceFolder) ?? []
+        folderTests.push(test)
+        workspaces.set(workspaceFolder, folderTests)
+      })
+      const api = this.api.filter(folderAPI => workspaces.has(folderAPI.folder))
+      if (!api.length) {
+        // TODO: show an error
+      }
+      const promises = [...workspaces.entries()].map(async ([folder, tests]) => {
+        const api = this.api.get(folder)
+        const files = this.getTestFiles(tests)
+        await api.runFiles(files, testNamePatern)
+      })
+      await Promise.all(promises)
+    }
+
+    if (!request.continuous)
+      this.currentVscodeRequest = undefined
+  }
+
+  private getTestFiles(tests: readonly vscode.TestItem[]) {
+    return Array.from(
+      new Set(tests.map(test => test.uri?.fsPath).filter(Boolean) as string[]),
+    )
+  }
+}
+
+export class DebugTestRunner extends GlobalTestRunner {
+  // constructor(
+  //   controller: vscode.TestController,
+  // ) {
+  //   super(controller, api)
+  // }
+
+  override async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken): Promise<void> {
+    this.currentVscodeRequest = request
+    token.onCancellationRequested(() => {
+      this.currentVscodeRequest = undefined
+    })
+
+    const config = getConfig()
+
+    vscode.debug.startDebugging(undefined, {
+      type: 'pwa-node',
+      request: 'launch',
+      name: 'Debug Tests',
+      autoAttachChildProcesses: true,
+      skipFiles: config.debugExclude,
+      program: debugPath,
+      args: [
+
+      ],
+      smartStep: true,
+      // TODO: custom env
+      env: {
+        VITEST_VSCODE: 'true',
+      },
+    }).then(() => {
+      log.info('[DEBUG] Debugging started')
+    }, (err) => {
+      log.error('[DEBIG] Start debugging failed')
+      log.error(err.toString())
+      // dispose1.dispose()
+      // dispose2.dispose()
+    })
+
     if (!request.continuous)
       this.currentVscodeRequest = undefined
   }
