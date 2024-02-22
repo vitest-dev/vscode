@@ -190,15 +190,6 @@ function registerWatchHandlers(
     },
     ...testWatchers,
     statusBarItem,
-    vscode.commands.registerCommand(Command.StartWatching, startWatching),
-    vscode.commands.registerCommand(Command.StopWatching, stopWatching),
-    vscode.commands.registerCommand(Command.ToggleWatching, () => {
-      const anyWatching = testWatchers.some(watcher => watcher.isWatching.value)
-      if (anyWatching)
-        stopWatching()
-      else
-        startWatching()
-    }),
   )
 
   ctrl.createRunProfile(
