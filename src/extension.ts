@@ -180,9 +180,6 @@ function registerWatchHandlers(
   const stopWatching = () => {
     testWatchers.forEach(watcher => watcher.dispose())
   }
-  const startWatching = () => {
-    testWatchers.forEach(watcher => watcher.watch())
-  }
 
   context.subscriptions.push(
     {

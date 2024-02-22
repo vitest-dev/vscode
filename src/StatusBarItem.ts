@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import { Command } from './command'
 import { getRootConfig } from './config'
 
 export class StatusBarItem extends vscode.Disposable {
