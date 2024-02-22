@@ -47,9 +47,6 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.window.showWarningMessage(msg)
 
     context.subscriptions.push(
-      vscode.commands.registerCommand(Command.ToggleWatching, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
       vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
         vscode.window.showWarningMessage(msg)
       }),
