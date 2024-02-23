@@ -36,4 +36,4 @@ jobs:
 
       - run: pnpm test
         env:
-          DISPLAY: ":99"
+          DISPLAY: ':99'
