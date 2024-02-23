@@ -45,23 +45,15 @@ export function getAllTestCases(
 
 export class TestDescribe {
   children: (TestDescribe | TestCase)[] = []
-  readonly processedName: string
+  readonly nameResolver: TaskName
   constructor(
-    readonly rawName: string,
+    readonly name: string,
     readonly isEach: boolean,
     readonly fileItem: vscode.TestItem,
     readonly item: vscode.TestItem,
     readonly parent: TestDescribe | TestFile,
   ) {
-    this.processedName = transformTestPattern({testName: rawName, isEach})
-  }
-
-  getRawFullPattern(): string {
-    return getFullPattern(this, 'rawName')
-  }
-
-  getFullPattern(): string {
-    return getFullPattern(this, 'processedName')
+    this.nameResolver = new TaskName(this)
   }
 
   getFilePath(): string {
@@ -70,24 +62,16 @@ export class TestDescribe {
 }
 
 export class TestCase {
-  readonly processedName: string
+  readonly nameResolver: TaskName
   constructor(
-    readonly rawName: string,
+    readonly name: string,
     readonly isEach: boolean,
     readonly fileItem: vscode.TestItem,
     readonly item: vscode.TestItem,
     readonly parent: TestDescribe | TestFile,
     readonly index: number,
   ) {
-    this.processedName = transformTestPattern({testName: rawName, isEach})
-  }
-
-  getRawFullPattern(): string {
-    return getFullPattern(this, 'rawName')
-  }
-
-  getFullPattern(): string {
-    return getFullPattern(this, 'processedName')
+    this.nameResolver = new TaskName(this)
   }
 
   getFilePath(): string {
@@ -97,8 +81,8 @@ export class TestCase {
 
 export class TestFile {
   resolved = false
-  pattern = ''
   children: (TestDescribe | TestCase)[] = []
+  nameResolver: undefined
   constructor(public item: vscode.TestItem) {}
   public async updateFromDisk(controller: vscode.TestController) {
     const item = this.item
@@ -129,20 +113,36 @@ export class TestFile {
   }
 }
 
-function getFullPattern(
-  start: TestDescribe | TestCase,
-  key: 'processedName' | 'rawName'
-): string {
-  const parents: TestDescribe[] = []
-  let iter = start.parent
-  while (iter && iter instanceof TestDescribe) {
-    parents.push(iter)
-    iter = iter.parent
+class TaskName {
+  private readonly pattern: string
+  constructor(readonly start: TestCase | TestDescribe) {
+    this.pattern = transformTestPattern({ testName: start.name, isEach: start.isEach })
   }
 
-  parents.reverse()
-  if (parents.length)
-    return parents.reduce((a, b) => `${a + b[key]} `, '') + start[key]
-  else
-    return start[key]
+  asVitestArgs(): string {
+    if (this.start instanceof TestCase)
+      return `^${this.join()}$`
+    else
+      return `^${this.join()}`
+  }
+
+  asFullMatchPattern(): string {
+    return `^${this.join()}$`
+  }
+
+  private join(): string {
+    const parents: (TestDescribe)[] = []
+    let iter: TestDescribe | TestFile | undefined = this.start.parent
+    while (iter && iter instanceof TestDescribe) {
+      parents.push(iter)
+      iter = iter.parent
+    }
+
+    parents.reverse()
+    // vitest's test task name starts with ' ' of root suite
+    if (parents.length)
+      return ` ${parents.reduce((a, b) => `${a + b.nameResolver.pattern} `, '')}${this.start.nameResolver.pattern}`
+    else
+      return ` ${this.start.nameResolver.pattern}`
+  }
 }

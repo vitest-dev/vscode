@@ -14,7 +14,6 @@ import type { NamedBlock } from './pure/parsers/parser_nodes'
 
 import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
-import { transformTestPattern } from './pure/testName'
 import { openTestTag } from './tags'
 import { globFiles, shouldIncludeFile } from './vscodeUtils'
 
