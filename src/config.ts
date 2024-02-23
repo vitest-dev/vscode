@@ -78,7 +78,6 @@ export interface VitestWorkspaceConfig {
 export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig[]> {
   return await Promise.all(vitestEnvironmentFolders.map(async (workspace) => {
     const cmd = getVitestCommand(workspace.uri.fsPath)
-    const isUsingVitestForSure = getConfig(workspace).enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)
 
     const version = cmd == null
       ? undefined
@@ -96,6 +95,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
         return undefined
       })
 
+    const isUsingVitestForSure = (getConfig(workspace).enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)) && version != null
     const disabled = getRootConfig().disabledWorkspaceFolders
     const out: VitestWorkspaceConfig = cmd
       ? {
