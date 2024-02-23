@@ -477,9 +477,8 @@ function matchTask(
     const fullTaskName = getFullTaskName(task)
     const pattern = vscode.nameResolver.asFullMatchPattern()
     const fullCandidatesPattern = new RegExp(pattern)
-    if (fullTaskName.match(fullCandidatesPattern)) {
+    if (fullTaskName.match(fullCandidatesPattern))
       result.push(task)
-    }
   }
   for (const task of result)
     candidates.delete(task)
