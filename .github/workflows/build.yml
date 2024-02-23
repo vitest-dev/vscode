@@ -28,4 +28,10 @@ jobs:
       - run: pnpm compile
       - run: pnpm typecheck
       - run: pnpm lint
+
+      # see: https://github.com/microsoft/vscode-test/blob/main/sample/azure-pipelines.yml
+      - run: |
+          /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          echo ">>> Started xvfb"
+          
       - run: pnpm test
