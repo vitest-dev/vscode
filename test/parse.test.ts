@@ -1,6 +1,5 @@
-/* eslint-disable no-template-curly-in-string */
-import { describe, expect, it } from 'vitest'
 import parse from '../src/pure/parsers'
+import { expect } from 'chai'
 
 describe('parse', () => {
   it('parse', () => {
@@ -14,8 +13,8 @@ describe('parse', () => {
       + 'test(\'add\', () => {})',
     )
 
-    expect(out.describeBlocks.length).toBe(1)
-    expect(out.itBlocks.length).toBe(1)
+    expect(out.describeBlocks.length).to.equal(1)
+    expect(out.itBlocks.length).to.equal(1)
   })
 
   it('parse skipIf with concurrent #36', () => {
@@ -26,7 +25,7 @@ describe('parse', () => {
       + '}); \n',
     )
 
-    expect(out.describeBlocks.length).toBe(1)
+    expect(out.describeBlocks.length).to.equal(1)
   })
 
   it('parse each', () => {
@@ -36,8 +35,8 @@ describe('parse', () => {
         + 'describe.each([1,2,3])(`test %i`, (i) => {\n'
         + '}); \n',
     )
-    expect(out.describeBlocks.length).toBe(1)
-    expect(out.describeBlocks[0].lastProperty).toBe('each')
+    expect(out.describeBlocks.length).to.equal(1)
+    expect(out.describeBlocks[0].lastProperty).to.equal('each')
   })
 
   it('parse decorator', () => {
@@ -52,14 +51,14 @@ describe('parse', () => {
       + '});',
     )
 
-    expect(out.describeBlocks.length).toBe(1)
+    expect(out.describeBlocks.length).to.equal(1)
   })
 
   it('parse using keyword', () => {
     const out = parse(
       'x.ts',
       `
-      import { describe, expect, it } from 'vitest';
+      import { expect } from 'chai';
 
       (Symbol as any).dispose ??= Symbol('Symbol.dispose');
       (Symbol as any).asyncDispose ??= Symbol('Symbol.asyncDispose')
@@ -72,7 +71,7 @@ describe('parse', () => {
           }
 
           const resource = getDisposableResource()
-          expect(resource.isDisposed).toBe(true)
+          expect(resource.isDisposed).to.equal(true)
         })
 
         it('asyncDispose', async () => {
@@ -82,7 +81,7 @@ describe('parse', () => {
           }
 
           const resource = await getAsyncDisposableResource()
-          expect(resource.isDisposed).toBe(true)
+          expect(resource.isDisposed).to.equal(true)
         })
       })
 
@@ -105,7 +104,7 @@ describe('parse', () => {
       `,
     )
 
-    expect(out.describeBlocks.length).toBe(1)
+    expect(out.describeBlocks.length).to.equal(1)
   })
 
   it('parse satisfies keyword', () => {
@@ -124,6 +123,6 @@ describe('parse', () => {
       + '});\n',
     )
 
-    expect(out.describeBlocks.length).toBe(1)
+    expect(out.describeBlocks.length).to.equal(1)
   })
 })

@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process'
 
 import { chunksToLinesAsync } from '@rauschma/stringio'
-import type { File } from 'vitest'
 import type { CancellationToken } from 'vscode'
 import {
   filterColorFormatOutput,

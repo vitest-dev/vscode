@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest'
+import { expect } from 'chai'
 
 describe('mul', () => {
   it.skip('run 1', () => {})

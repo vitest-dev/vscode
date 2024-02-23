@@ -1,6 +1,5 @@
 import { isAbsolute, relative } from 'node:path'
 import * as vscode from 'vscode'
-import type { File } from 'vitest'
 import {
   TestRunner,
 } from './pure/runner'

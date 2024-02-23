@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { expect } from 'chai'
 import { transformTestPattern } from '../../src/pure/testName'
 
 describe('testName', () => {
@@ -16,7 +16,7 @@ describe('testName', () => {
       expect(transformTestPattern({
         testName: input,
         isEach: true,
-      })).toBe(expected)
+      })).to.equal(expected)
     })
     it.each([
       ['test', 'test'],
@@ -31,7 +31,7 @@ describe('testName', () => {
       expect(transformTestPattern({
         testName: input,
         isEach: false,
-      })).toBe(expected)
+      })).to.equal(expected)
     })
   })
 })

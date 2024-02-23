@@ -126,6 +126,7 @@
     "compile": "tsup ./src/extension.ts test/**.test.ts --external vscode --minify",
     "watch": "tsup ./src/extension.ts test/**.test.ts --external vscode --watch --sourcemap",
     "test": "vscode-test",
+    "test:watch": "vscode-test --watch-files dist/**/*.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
@@ -143,9 +144,12 @@
     "@types/vscode": "^1.77.0",
     "@types/ws": "^8.5.10",
     "@vitest/ws-client": "^1.3.0",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.9",
     "@vue/reactivity": "^3.2.33",
     "birpc": "^0.2.15",
     "bumpp": "^9.3.0",
+    "chai": "^5.1.0",
     "changelogithub": "^0.13.3",
     "eslint": "^8.56.0",
     "fast-glob": "^3.3.2",
@@ -156,21 +160,18 @@
     "glob": "^7.2.0",
     "micromatch": "^4.0.5",
     "mighty-promise": "^0.0.8",
+    "mocha": "^10.3.0",
     "pathe": "^1.1.2",
     "semver": "^7.3.5",
     "tree-kill": "^1.2.2",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.3.0",
+    "vitest": "^1.3.1",
     "ws": "^8.16.0"
   },
   "lint-staged": {
     "*.{js,ts,tsx,vue,md}": [
       "eslint --fix"
     ]
-  },
-  "dependencies": {
-    "@vscode/test-cli": "^0.0.6",
-    "@vscode/test-electron": "^2.3.9"
   }
 }

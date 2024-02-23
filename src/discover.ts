@@ -1,5 +1,4 @@
 import { join, sep } from 'node:path'
-import type { ResolvedConfig } from 'vitest'
 import * as vscode from 'vscode'
 import type { TestData } from './TestData'
 import {
