@@ -2,11 +2,11 @@ import type { ChildProcess, SpawnOptionsWithStdioTuple, StdioNull, StdioPipe } f
 import getPort from 'get-port'
 import type { CancellationToken } from 'vscode'
 import kill from 'tree-kill'
+import type { File, WebSocketEvents } from 'vitest'
 import { getConfig } from '../config'
 import { log } from '../log'
 import { execWithLog, filterColorFormatOutput, sanitizeFilePath } from './utils'
 import { buildWatchClient } from './watch/client'
-import { File, WebSocketEvents } from 'vitest'
 
 type Handlers = Partial<WebSocketEvents> & { log?: (msg: string) => void; onUpdate?: (files: File[]) => void }
 export interface StartConfig {

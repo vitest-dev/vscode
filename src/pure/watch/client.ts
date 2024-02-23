@@ -1,8 +1,8 @@
 import WebSocket from 'ws'
 import { computed, effect, reactive, ref, shallowRef } from '@vue/reactivity'
+import type { ResolvedConfig, Task, TaskResultPack, WebSocketEvents } from 'vitest'
 import { log } from '../../log'
 import { createClient } from './ws-client'
-import { ResolvedConfig, Task, TaskResultPack, WebSocketEvents } from 'vitest';
 
 type WebSocketStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
 (globalThis as any).WebSocket = WebSocket

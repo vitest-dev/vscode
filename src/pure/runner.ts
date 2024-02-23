@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 
 import { chunksToLinesAsync } from '@rauschma/stringio'
 import type { CancellationToken } from 'vscode'
+import type { File } from 'vitest'
 import {
   filterColorFormatOutput,
   sanitizeFilePath,
@@ -9,7 +10,6 @@ import {
 import { isWindows } from './platform'
 import type { StartConfig } from './ApiProcess'
 import { runVitestWithApi } from './ApiProcess'
-import { File } from 'vitest'
 
 type Status = 'passed' | 'failed' | 'skipped' | 'pending' | 'todo' | 'disabled'
 type Milliseconds = number

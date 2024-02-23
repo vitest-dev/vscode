@@ -1,5 +1,6 @@
 import { join, sep } from 'node:path'
 import * as vscode from 'vscode'
+import type { ResolvedConfig } from 'vitest'
 import type { TestData } from './TestData'
 import {
   TestCase,
@@ -10,7 +11,6 @@ import {
 } from './TestData'
 import parse from './pure/parsers'
 import type { NamedBlock } from './pure/parsers/parser_nodes'
-import type { ResolvedConfig } from 'vitest'
 import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
 import { transformTestPattern } from './pure/testName'
