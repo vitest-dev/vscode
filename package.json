@@ -45,35 +45,12 @@
         "title": "Update Snapshot",
         "command": "vitest.updateSnapshot",
         "category": "Vitest"
-      },
-      {
-        "title": "Start Watch Mode",
-        "command": "vitest.startWatching",
-        "category": "Vitest"
-      },
-      {
-        "title": "Stop Watch Mode",
-        "command": "vitest.stopWatching",
-        "category": "Vitest"
-      },
-      {
-        "title": "Toggle Watch Mode",
-        "command": "vitest.toggleWatching",
-        "category": "Vitest"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "vitest.updateSnapshot",
-          "when": "false"
-        },
-        {
-          "command": "vitest.startWatching",
-          "when": "false"
-        },
-        {
-          "command": "vitest.stopWatching",
           "when": "false"
         }
       ],

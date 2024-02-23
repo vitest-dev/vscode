@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import { Command } from './command'
 import { getRootConfig } from './config'
 
 export class StatusBarItem extends vscode.Disposable {
@@ -17,7 +16,6 @@ export class StatusBarItem extends vscode.Disposable {
   }
 
   toDefaultMode() {
-    this.item.command = Command.StartWatching
     this.item.text = '$(test-view-icon) Vitest'
     this.item.tooltip = 'Click to start watch mode'
     this.setBackgroundColor(false)
@@ -35,7 +33,6 @@ export class StatusBarItem extends vscode.Disposable {
       skipped: number
     },
   ) {
-    this.item.command = Command.StopWatching
     const total = passed + failed
     const percentOfExecutedTests = Number((passed / total * 100).toFixed(0))
     const percentIsValid = !Number.isNaN(percentOfExecutedTests)
@@ -51,7 +48,6 @@ export class StatusBarItem extends vscode.Disposable {
   }
 
   toRunningMode() {
-    this.item.command = Command.StopWatching
     this.item.text = '$(loading~spin) Vitest is running'
     this.item.tooltip = 'Click to stop watching'
     this.setBackgroundColor(false)

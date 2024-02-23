@@ -47,9 +47,6 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.window.showWarningMessage(msg)
 
     context.subscriptions.push(
-      vscode.commands.registerCommand(Command.ToggleWatching, () => {
-        vscode.window.showWarningMessage(msg)
-      }),
       vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
         vscode.window.showWarningMessage(msg)
       }),
@@ -180,9 +177,6 @@ function registerWatchHandlers(
   const stopWatching = () => {
     testWatchers.forEach(watcher => watcher.dispose())
   }
-  const startWatching = () => {
-    testWatchers.forEach(watcher => watcher.watch())
-  }
 
   context.subscriptions.push(
     {
@@ -190,15 +184,6 @@ function registerWatchHandlers(
     },
     ...testWatchers,
     statusBarItem,
-    vscode.commands.registerCommand(Command.StartWatching, startWatching),
-    vscode.commands.registerCommand(Command.StopWatching, stopWatching),
-    vscode.commands.registerCommand(Command.ToggleWatching, () => {
-      const anyWatching = testWatchers.some(watcher => watcher.isWatching.value)
-      if (anyWatching)
-        stopWatching()
-      else
-        startWatching()
-    }),
   )
 
   ctrl.createRunProfile(
@@ -212,13 +197,17 @@ function registerWatchHandlers(
 
   async function runHandler(
     request: vscode.TestRunRequest,
-    _cancellation: vscode.CancellationToken,
+    cancellation: vscode.CancellationToken,
   ) {
     if (
       vscode.workspace.workspaceFolders === undefined
       || vscode.workspace.workspaceFolders.length === 0
     )
       return
+
+    cancellation.onCancellationRequested(() => {
+      testWatchers.forEach(watcher => watcher.dispose())
+    })
 
     await Promise.all(testWatchers.map(watcher => watcher.watch()))
     testWatchers.forEach((watcher) => {

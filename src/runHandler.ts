@@ -194,7 +194,6 @@ async function runTest(
   const workspaceFolder = determineWorkspaceForTestItems(items, vscode.workspace.workspaceFolders!)
   const config = getConfig(workspaceFolder)
   const testCaseSet: Set<vscode.TestItem> = new Set()
-  const testItemIdMap = new Map<string, vscode.TestItem>()
   const fileItems: vscode.TestItem[] = []
   for (const item of items) {
     const testingData = WEAKMAP_TEST_DATA.get(item)
@@ -221,13 +220,6 @@ async function runTest(
     }
 
     fileItems.push(file)
-    const fileTestCases = getAllTestCases(file)
-    for (const testCase of fileTestCases) {
-      // remove suffix of test item id
-      // e.g. "test-case@1" -> "test-case"
-      // TODO: refactor
-      testItemIdMap.set(testCase.id.replace(/@\d+$/g, ''), testCase)
-    }
 
     for (const test of getAllTestCases(item))
       testCaseSet.add(test)
