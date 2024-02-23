@@ -6,8 +6,6 @@ import type { VitestAPI, VitestFolderAPI } from '../api'
 import type { TestData } from '../TestData'
 import { TestCase, TestFile, WEAKMAP_TEST_DATA, getTestItemFolder } from '../TestData'
 import { log } from '../log'
-import { getConfig } from '../config'
-import { debugPath } from '../constants'
 
 function getFilepathFromTask(task: Task) {
   if ('filepath' in task)
@@ -101,13 +99,15 @@ export class FolderTestRunner extends vscode.Disposable {
     const currentRequest = this.runner.currentVscodeRequest
     if (currentRequest) {
       // report only if continuous mode is enabled or this is the first run
-      if (!this.testRun || currentRequest.continuous)
-        this.testRun = this.controller.createTestRun(currentRequest)
+      if (!this.testRun || currentRequest.continuous) {
+        const name = currentRequest.include?.length ? undefined : 'Running all tests'
+        this.testRun = this.controller.createTestRun(currentRequest, name)
+      }
     }
   }
 
   private endTestRun() {
-    console.log('run ended')
+    console.log('end test run')
     this.testRun?.end()
     this.testRun = undefined
   }
@@ -130,6 +130,7 @@ export class FolderTestRunner extends vscode.Disposable {
     }
     switch (result.state) {
       case 'fail': {
+        // error in a suite doesn't mean test fail
         if (task?.type === 'suite') {
           const errors = result.errors?.map(err =>
             new vscode.TestMessage(err.stack || err.message),
@@ -194,16 +195,14 @@ export class GlobalTestRunner extends vscode.Disposable {
   private taskIdToTestData = new Map<string, TestData>()
   private runners: FolderTestRunner[] = []
 
+  private initializedApi = new WeakSet<VitestAPI>()
+
   constructor(
     private readonly controller: vscode.TestController,
-    private readonly api: VitestAPI,
   ) {
     super(() => {
       this.taskIdToTestData.clear()
       this.runners.forEach(runner => runner.dispose())
-    })
-    api.forEach((folderAPI) => {
-      this.runners.push(new FolderTestRunner(controller, this, folderAPI))
     })
   }
 
@@ -231,7 +230,19 @@ export class GlobalTestRunner extends vscode.Disposable {
     return null
   }
 
-  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+  protected initializeApi(api: VitestAPI) {
+    if (!this.initializedApi.has(api)) {
+      this.runners.forEach(runner => runner.dispose())
+      this.runners = []
+      api.forEach((folderAPI) => {
+        this.runners.push(new FolderTestRunner(this.controller, this, folderAPI))
+      })
+    }
+  }
+
+  public async runTests(api: VitestAPI, request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    this.initializeApi(api)
+
     this.currentVscodeRequest = request
     token.onCancellationRequested(() => {
       this.currentVscodeRequest = undefined
@@ -241,10 +252,10 @@ export class GlobalTestRunner extends vscode.Disposable {
 
     const testNamePatern = formatTestPattern(tests)
 
-    if (!tests.length || this.api.length === 1) {
+    if (!tests.length || api.length === 1) {
       const files = this.getTestFiles(tests)
 
-      await Promise.all(this.api.map(folderAPI => folderAPI.runFiles(files, testNamePatern)))
+      await Promise.all(api.map(folderAPI => folderAPI.runFiles(files, testNamePatern)))
     }
     else {
       // run only affected folders
@@ -255,14 +266,10 @@ export class GlobalTestRunner extends vscode.Disposable {
         folderTests.push(test)
         workspaces.set(workspaceFolder, folderTests)
       })
-      const api = this.api.filter(folderAPI => workspaces.has(folderAPI.folder))
-      if (!api.length) {
-        // TODO: show an error
-      }
       const promises = [...workspaces.entries()].map(async ([folder, tests]) => {
-        const api = this.api.get(folder)
+        const folderApi = api.get(folder)
         const files = this.getTestFiles(tests)
-        await api.runFiles(files, testNamePatern)
+        await folderApi.runFiles(files, testNamePatern)
       })
       await Promise.all(promises)
     }
@@ -275,50 +282,6 @@ export class GlobalTestRunner extends vscode.Disposable {
     return Array.from(
       new Set(tests.map(test => test.uri?.fsPath).filter(Boolean) as string[]),
     )
-  }
-}
-
-export class DebugTestRunner extends GlobalTestRunner {
-  // constructor(
-  //   controller: vscode.TestController,
-  // ) {
-  //   super(controller, api)
-  // }
-
-  override async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken): Promise<void> {
-    this.currentVscodeRequest = request
-    token.onCancellationRequested(() => {
-      this.currentVscodeRequest = undefined
-    })
-
-    const config = getConfig()
-
-    vscode.debug.startDebugging(undefined, {
-      type: 'pwa-node',
-      request: 'launch',
-      name: 'Debug Tests',
-      autoAttachChildProcesses: true,
-      skipFiles: config.debugExclude,
-      program: debugPath,
-      args: [
-
-      ],
-      smartStep: true,
-      // TODO: custom env
-      env: {
-        VITEST_VSCODE: 'true',
-      },
-    }).then(() => {
-      log.info('[DEBUG] Debugging started')
-    }, (err) => {
-      log.error('[DEBIG] Start debugging failed')
-      log.error(err.toString())
-      // dispose1.dispose()
-      // dispose2.dispose()
-    })
-
-    if (!request.continuous)
-      this.currentVscodeRequest = undefined
   }
 }
 

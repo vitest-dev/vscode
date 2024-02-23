@@ -1,9 +1,10 @@
+import type { Server } from 'node:net'
 import * as vscode from 'vscode'
 
 // import { effect } from '@vue/reactivity'
 
 // import { StatusBarItem } from './StatusBarItem'
-import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
+import { TestFile, WEAKMAP_TEST_DATA, getTestItemFolder } from './TestData'
 
 // import { Command } from './command'
 import { testControllerId } from './config'
@@ -20,13 +21,13 @@ import { log } from './log'
 
 import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
-import { resolveVitestAPI } from './api'
+import { createIPCServer, resolveVitestAPI, resolveVitestDebugAPI } from './api'
 import { GlobalTestRunner } from './runner/runner'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const workspaces = vscode.workspace.workspaceFolders || []
+  const folders = vscode.workspace.workspaceFolders || []
 
-  const api = await resolveVitestAPI(workspaces)
+  const api = await resolveVitestAPI(folders)
 
   if (!api.enabled) {
     log.info('The extension is not activated because no Vitest environment was detected.')
@@ -56,16 +57,50 @@ export async function activate(context: vscode.ExtensionContext) {
   // }
 
   const fileDiscoverer = registerDiscovery(ctrl, context, api)
-  const runner = new GlobalTestRunner(ctrl, api)
+  const runner = new GlobalTestRunner(ctrl)
+  // const gebugRunner = new DebugTestRunner(ctrl)
 
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    (request, token) => runner.runTests(request, token),
+    (request, token) => runner.runTests(api, request, token),
     true,
     undefined,
     true,
   )
+
+  let _ipc: {
+    server: Server
+    socket: string
+  } | null = null
+
+  let _debugAPI: VitestAPI | null = null
+
+  ctrl.createRunProfile(
+    'Debug Tests',
+    vscode.TestRunProfileKind.Debug,
+    async (request, token) => {
+      const ipc = _ipc || (_ipc = createIPCServer())
+      const _folders = request.include?.length
+        ? [...new Set(request.include.map(test => getTestItemFolder(test)))]
+        : folders
+      // TODO: don't create new ones unless debug was terminated
+      if (_debugAPI)
+        _debugAPI.forEach(folderApi => folderApi.stopDebugger())
+      _debugAPI = await resolveVitestDebugAPI(ipc.server, ipc.socket, _folders)
+      await runner.runTests(_debugAPI, request, token)
+    },
+    false,
+    undefined,
+    // TODO: support continues mode with debug
+    false,
+  )
+
+  context.subscriptions.push({
+    dispose() {
+      _ipc?.server.close()
+    },
+  })
 
   // registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
   context.subscriptions.push(

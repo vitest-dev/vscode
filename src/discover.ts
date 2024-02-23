@@ -58,6 +58,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
         for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file), api.folder).data.updateFromDisk(
             controller,
+            api.folder,
           )
         }
 
@@ -75,7 +76,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
             if (!data.resolved)
               return
 
-            await data.updateFromDisk(controller)
+            await data.updateFromDisk(controller, api.folder)
           },
         )
 
@@ -101,6 +102,7 @@ export class TestFileDiscoverer extends vscode.Disposable {
         for (const file of files) {
           this.getOrCreateFile(controller, vscode.Uri.file(file), api.folder).data.updateFromDisk(
             controller,
+            api.folder,
           )
         }
       }),

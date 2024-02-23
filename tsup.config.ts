@@ -11,7 +11,7 @@ export default defineConfig([
     format: 'esm',
   },
   {
-    entry: ['./src/debug/debug.ts'],
+    entry: ['./src/worker/debug.ts'],
     format: 'esm',
   },
 ])

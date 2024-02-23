@@ -89,12 +89,12 @@ export class TestFile {
   children: (TestDescribe | TestCase)[] = []
   nameResolver: undefined
   constructor(public item: vscode.TestItem) {}
-  public async updateFromDisk(controller: vscode.TestController) {
+  public async updateFromDisk(controller: vscode.TestController, folder?: vscode.WorkspaceFolder) {
     const item = this.item
     try {
       const content = await getContentFromFilesystem(item.uri!)
       this.item.error = undefined
-      discoverTestFromFileContent(controller, content, item, this)
+      discoverTestFromFileContent(controller, content, item, this, folder || WEAKMAP_TEST_FOLDER.get(item)!)
       this.resolved = true
     }
     catch (e) {
@@ -102,11 +102,11 @@ export class TestFile {
     }
   }
 
-  load(ctrl: vscode.TestController): Promise<void> | undefined {
+  load(ctrl: vscode.TestController, folder: vscode.WorkspaceFolder): Promise<void> | undefined {
     if (this.resolved)
       return
 
-    return this.updateFromDisk(ctrl)
+    return this.updateFromDisk(ctrl, folder)
   }
 
   getFilePath(): string {
