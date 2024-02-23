@@ -479,8 +479,6 @@ function matchTask(
     const fullCandidatesPattern = new RegExp(pattern)
     if (fullTaskName.match(fullCandidatesPattern)) {
       result.push(task)
-      if (!vscode.isEach && !task.each)
-        break
     }
   }
   for (const task of result)
