@@ -26,7 +26,7 @@
   "categories": [
     "Testing"
   ],
-  "main": "./dist/extension.js",
+  "main": "./dist/src/extension.js",
   "icon": "img/icon.png",
   "pricing": "Free",
   "engines": {
@@ -123,9 +123,9 @@
   "scripts": {
     "vscode:prepublish": "pnpm compile",
     "release": "bumpp package.json --commit --push --tag && git update-ref refs/heads/release refs/heads/main && git push origin release",
-    "compile": "tsup ./src/extension.ts --external vscode --minify",
-    "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
-    "test": "vitest run --config vite.global-config.ts",
+    "compile": "tsup ./src/extension.ts test/**.test.ts --external vscode --minify",
+    "watch": "tsup ./src/extension.ts test/**.test.ts --external vscode --watch --sourcemap",
+    "test": "vscode-test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
@@ -168,5 +168,9 @@
     "*.{js,ts,tsx,vue,md}": [
       "eslint --fix"
     ]
+  },
+  "dependencies": {
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.9"
   }
 }
