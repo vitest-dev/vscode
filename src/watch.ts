@@ -468,9 +468,17 @@ function matchTask(
       continue
 
     const fullTaskName = getFullTaskName(task)
-    const fullCandidatesPattern = new RegExp(`^${vscode.getFullPattern()}$`)
-    if (fullTaskName.match(fullCandidatesPattern))
-      result.push(task)
+    if (vscode.isEach && task.each) {
+      const fullCandidatesPattern = new RegExp(`^${vscode.getFullPattern()}$`)
+      if (fullTaskName.match(fullCandidatesPattern))
+        result.push(task)
+    }
+    else {
+      if (fullTaskName === vscode.getRawFullPattern()) {
+        result.push(task)
+        break;
+      }
+    }
   }
   for (const task of result)
     candidates.delete(task)

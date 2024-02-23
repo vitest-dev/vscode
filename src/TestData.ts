@@ -1,6 +1,7 @@
 import type * as vscode from 'vscode'
 import { discoverTestFromFileContent } from './discover'
 import { getContentFromFilesystem } from './vscodeUtils'
+import { transformTestPattern } from './pure/testName'
 
 export const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>()
 // FIXME: GC
@@ -44,15 +45,23 @@ export function getAllTestCases(
 
 export class TestDescribe {
   children: (TestDescribe | TestCase)[] = []
+  readonly processedName: string
   constructor(
-    public pattern: string,
-    public fileItem: vscode.TestItem,
-    public item: vscode.TestItem,
-    public parent: TestDescribe | TestFile,
-  ) {}
+    readonly rawName: string,
+    readonly isEach: boolean,
+    readonly fileItem: vscode.TestItem,
+    readonly item: vscode.TestItem,
+    readonly parent: TestDescribe | TestFile,
+  ) {
+    this.processedName = transformTestPattern({testName: rawName, isEach})
+  }
+
+  getRawFullPattern(): string {
+    return getFullPattern(this, 'rawName')
+  }
 
   getFullPattern(): string {
-    return getFullPattern(this)
+    return getFullPattern(this, 'processedName')
   }
 
   getFilePath(): string {
@@ -61,16 +70,24 @@ export class TestDescribe {
 }
 
 export class TestCase {
+  readonly processedName: string
   constructor(
-    public pattern: string,
-    public fileItem: vscode.TestItem,
-    public item: vscode.TestItem,
-    public parent: TestDescribe | TestFile,
-    public index: number,
-  ) {}
+    readonly rawName: string,
+    readonly isEach: boolean,
+    readonly fileItem: vscode.TestItem,
+    readonly item: vscode.TestItem,
+    readonly parent: TestDescribe | TestFile,
+    readonly index: number,
+  ) {
+    this.processedName = transformTestPattern({testName: rawName, isEach})
+  }
+
+  getRawFullPattern(): string {
+    return getFullPattern(this, 'rawName')
+  }
 
   getFullPattern(): string {
-    return getFullPattern(this)
+    return getFullPattern(this, 'processedName')
   }
 
   getFilePath(): string {
@@ -112,7 +129,10 @@ export class TestFile {
   }
 }
 
-function getFullPattern(start: TestDescribe | TestCase): string {
+function getFullPattern(
+  start: TestDescribe | TestCase,
+  key: 'processedName' | 'rawName'
+): string {
   const parents: TestDescribe[] = []
   let iter = start.parent
   while (iter && iter instanceof TestDescribe) {
@@ -122,7 +142,7 @@ function getFullPattern(start: TestDescribe | TestCase): string {
 
   parents.reverse()
   if (parents.length)
-    return parents.reduce((a, b) => `${a + b.pattern} `, '') + start.pattern
+    return parents.reduce((a, b) => `${a + b[key]} `, '') + start[key]
   else
-    return start.pattern
+    return start[key]
 }
