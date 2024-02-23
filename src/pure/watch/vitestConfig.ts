@@ -5,6 +5,7 @@ import type { VitestWorkspaceConfig } from '../../config'
 import { getConfig } from '../../config'
 import { execWithLog, sanitizeFilePath } from '../utils'
 import { createClient } from './ws-client'
+import { ResolvedConfig } from 'vitest'
 
 async function connectAndFetchConfig(
   { port, url = `ws://localhost:${port}/__vitest_api__`, reconnectInterval, reconnectTries }: {

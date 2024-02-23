@@ -4,6 +4,7 @@ import type { Uri } from 'vscode'
 import { workspace } from 'vscode'
 import { relative, resolve } from 'pathe'
 import micromatch from 'micromatch'
+import { ResolvedConfig } from 'vitest'
 
 const textDecoder = new TextDecoder('utf-8')
 

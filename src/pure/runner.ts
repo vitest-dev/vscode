@@ -9,6 +9,7 @@ import {
 import { isWindows } from './platform'
 import type { StartConfig } from './ApiProcess'
 import { runVitestWithApi } from './ApiProcess'
+import { File } from 'vitest'
 
 type Status = 'passed' | 'failed' | 'skipped' | 'pending' | 'todo' | 'disabled'
 type Milliseconds = number

@@ -19,6 +19,7 @@ import { TestWatcher, syncFilesTestStatus } from './watch'
 import { log } from './log'
 import type { TestFileDiscoverer } from './discover'
 import type { StartConfig } from './pure/ApiProcess'
+import { File } from 'vitest'
 
 export async function runHandler(
   ctrl: vscode.TestController,

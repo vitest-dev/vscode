@@ -154,6 +154,7 @@ export function createClient(url: string, options: VitestClientOptions = {}) {
       onFinished(files) {
         handlers.onFinished?.(files)
       },
+      onFinishedReportCoverage: () => {}
     },
     {
       post: msg => ctx.ws.send(msg),
