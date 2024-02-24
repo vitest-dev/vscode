@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { expect, describe, it } from 'vitest'
 
 describe('snapshots', () => {
   it('string', () => {

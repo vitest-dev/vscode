@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest'
 
 (Symbol as any).dispose ??= Symbol('Symbol.dispose');
 (Symbol as any).asyncDispose ??= Symbol('Symbol.asyncDispose')

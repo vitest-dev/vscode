@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { expect, describe, it } from 'vitest'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
