@@ -39,9 +39,3 @@ See <https://vitest.dev/guide/workspace.html> for monorepo support.
 ### How can I use this extension when tests are under a sub directory?
 
 You can use VS Code command `add folder to workspace` to add the sub directory. The extension should work fine.
-
-### `test.each` is not working
-
-Dynamic test names are not suppported yet. Extension currently relies on the babel parser to calculate the positions of tests statically.
-
-Related issue: https://github.com/vitest-dev/vscode/issues/133
