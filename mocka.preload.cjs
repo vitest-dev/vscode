@@ -1,1 +1,1 @@
-require("tsx/cjs");
+require('tsx/cjs')

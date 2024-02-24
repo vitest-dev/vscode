@@ -4,6 +4,6 @@ export default defineConfig({
   files: 'test/**/*.test.ts',
   mocha: {
     ui: 'bdd',
-    preload: "./mocka.preload.cjs",
+    preload: './mocka.preload.cjs',
   },
 })
