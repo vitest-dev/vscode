@@ -3,7 +3,7 @@ import { transformTestPattern } from '../../src/pure/testName'
 
 describe('testName', () => {
   describe('transformTestPattern', () => {
-    it.each([
+    [
       ['test', 'test'],
       ['$^+?()[]', '\\$\\^\\+\\?\\(\\)\\[\\]'],
       ['$value', '.+?'],
@@ -12,13 +12,16 @@ describe('testName', () => {
       ['%d = %f', '[\\d.eE+-]+? = [\\d.eE+-]+?'],
       ['%j = %o', '.+? = .+?'],
       ['test %i', 'test \\d+?'],
-    ])('isEach=true, value=%s', (input, expected) => {
-      expect(transformTestPattern({
-        testName: input,
-        isEach: true,
-      })).to.equal(expected)
-    })
-    it.each([
+    ].map(([input, expected]) => {
+      it(`isEach=true, value=${input}`, () => {
+        expect(transformTestPattern({
+          testName: input,
+          isEach: true,
+        })).to.equal(expected)
+      })
+    });
+
+    [
       ['test', 'test'],
       ['$^+?()[]', '\\$\\^\\+\\?\\(\\)\\[\\]'],
       ['$value', '\\$value'],
@@ -26,12 +29,14 @@ describe('testName', () => {
       ['%%', '%%'],
       ['%d = %f', '%d = %f'],
       ['%j = %o', '%j = %o'],
-      ['test %i', 'test %i'],
-    ])('isEach=false, value=%s', (input, expected) => {
-      expect(transformTestPattern({
-        testName: input,
-        isEach: false,
-      })).to.equal(expected)
-    })
+      ['test %i', 'test %i']
+    ].map(([input, expected]) => {
+      it(`isEach=false, value=${input}`, () => {
+        expect(transformTestPattern({
+          testName: input,
+          isEach: false,
+        })).to.equal(expected)
+      })
+    });
   })
 })
