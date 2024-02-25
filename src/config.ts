@@ -82,12 +82,12 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
 
     const version = cmd == null
       ? undefined
-      : await getVitestVersion(cmd, getConfig(workspace).env || undefined).catch(async (e) => {
+      : await getVitestVersion(cmd, vscodeConfig.env || undefined).catch(async (e) => {
         log.info(e.toString())
         log.info(`process.env.PATH = ${process.env.PATH}`)
-        log.info(`vitest.nodeEnv = ${JSON.stringify(getConfig(workspace).env)}`)
+        log.info(`vitest.nodeEnv = ${JSON.stringify(vscodeConfig.env)}`)
         let errorMsg = e.toString()
-        if (!isNodeAvailable(getConfig(workspace).env || undefined)) {
+        if (!isNodeAvailable(vscodeConfig.env || undefined)) {
           log.info('Cannot spawn node process')
           errorMsg += 'Cannot spawn node process. Please try setting vitest.nodeEnv as {"PATH": "/path/to/node"} in your settings.'
         }
@@ -96,7 +96,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
         return undefined
       })
 
-    const isUsingVitestForSure = (getConfig(workspace).enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)) && version != null
+    const isUsingVitestForSure = (vscodeConfig.enable || await isDefinitelyVitestEnv(workspace) || (!!cmd)) && version != null
     const disabled = getRootConfig().disabledWorkspaceFolders
     const out: VitestWorkspaceConfig = cmd
       ? {
