@@ -33,12 +33,22 @@ export function getVitestPath(projectRoot: string): string | undefined {
 /**
  * if this function return a cmd, then this project is definitely using vitest
  * @param projectRoot
+ * @param settingsVitestCommand - the cmd to use for vitest, set in vscode settings
  */
 export function getVitestCommand(
   projectRoot: string,
+  settingsVitestCommand?: string,
 ): { cmd: string; args: string[] } | undefined {
   if (!projectRoot || projectRoot.length < 5)
     return
+
+  if (settingsVitestCommand && settingsVitestCommand.length > 0) {
+    const settingsCmdList = settingsVitestCommand.split(' ')
+    return {
+      cmd: settingsCmdList[0],
+      args: settingsCmdList.slice(1) || [],
+    }
+  }
 
   const node_modules = path.resolve(projectRoot, 'node_modules')
   try {
