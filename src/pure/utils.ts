@@ -94,12 +94,15 @@ export interface Cmd {
  *
  * @returns the version, or undefined if not found
  */
-export async function spawnVitestVersion(command: string, args: string[], env?: Record<string, string | undefined>): Promise<string | undefined> {
+export async function spawnVitestVersion(command: string, args: string[], env?: Record<string, string | undefined>, cwd?: string): Promise<string | undefined> {
   log.info(`Trying to get vitest version from ${command} ${args.join(' ')}...`)
+  if (cwd && cwd.length > 0) 
+    log.info(`Running command in directory: ${cwd}`)
 
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: isWindows,
+    cwd: cwd,
     env,
   })
 
@@ -126,15 +129,15 @@ export async function spawnVitestVersion(command: string, args: string[], env?: 
  * @returns the version
  * @throws an error if the version cannot be detected
  */
-export async function detectVitestVersion(command: string, args: string[], envs: Record<string, string | undefined>): Promise<string > {
+export async function detectVitestVersion(command: string, args: string[], envs: Record<string, string | undefined>, cwd?: string): Promise<string > {
   // Try to spawn the command directly
-  const version = await spawnVitestVersion(command, args, envs)
+  const version = await spawnVitestVersion(command, args, envs, cwd)
 
   if (version !== undefined)
     return version
 
   // When using a Node installed by a version manager, we need to pass the execPath to spawn
-  const versionExecPath = await spawnVitestVersion(process.execPath, [command, ...args], envs)
+  const versionExecPath = await spawnVitestVersion(process.execPath, [command, ...args], envs, cwd)
 
   if (versionExecPath !== undefined)
     return versionExecPath
@@ -145,13 +148,14 @@ export async function detectVitestVersion(command: string, args: string[], envs:
 export async function getVitestVersion(
   vitestCommand?: Cmd,
   env?: Record<string, string | undefined>,
+  cwd?: string,
 ): Promise<string | undefined> {
   const envs = { ...process.env, ...env }
 
   if (vitestCommand == null)
-    return await detectVitestVersion('npx', ['vitest', '-v'], envs)
+    return await detectVitestVersion('npx', ['vitest', '-v'], envs, cwd)
 
-  return await detectVitestVersion(vitestCommand.cmd, [...vitestCommand.args, '-v'], envs)
+  return await detectVitestVersion(vitestCommand.cmd, [...vitestCommand.args, '-v'], envs, cwd)
 }
 
 export function isNodeAvailable(

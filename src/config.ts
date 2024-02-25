@@ -82,7 +82,7 @@ export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig
 
     const version = cmd == null
       ? undefined
-      : await getVitestVersion(cmd, vscodeConfig.env || undefined).catch(async (e) => {
+      : await getVitestVersion(cmd, vscodeConfig.env || undefined, workspace.uri.fsPath).catch(async (e) => {
         log.info(e.toString())
         log.info(`process.env.PATH = ${process.env.PATH}`)
         log.info(`vitest.nodeEnv = ${JSON.stringify(vscodeConfig.env)}`)
