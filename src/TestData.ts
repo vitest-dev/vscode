@@ -1,6 +1,7 @@
 import type * as vscode from 'vscode'
 import { discoverTestFromFileContent } from './discover'
 import { getContentFromFilesystem } from './vscodeUtils'
+import { transformTestPattern } from './pure/testName'
 
 export const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>()
 // FIXME: GC
@@ -44,15 +45,15 @@ export function getAllTestCases(
 
 export class TestDescribe {
   children: (TestDescribe | TestCase)[] = []
+  readonly nameResolver: TaskName
   constructor(
-    public pattern: string,
-    public fileItem: vscode.TestItem,
-    public item: vscode.TestItem,
-    public parent: TestDescribe | TestFile,
-  ) {}
-
-  getFullPattern(): string {
-    return getFullPattern(this)
+    readonly name: string,
+    readonly isEach: boolean,
+    readonly fileItem: vscode.TestItem,
+    readonly item: vscode.TestItem,
+    readonly parent: TestDescribe | TestFile,
+  ) {
+    this.nameResolver = new TaskName(this)
   }
 
   getFilePath(): string {
@@ -61,16 +62,16 @@ export class TestDescribe {
 }
 
 export class TestCase {
+  readonly nameResolver: TaskName
   constructor(
-    public pattern: string,
-    public fileItem: vscode.TestItem,
-    public item: vscode.TestItem,
-    public parent: TestDescribe | TestFile,
-    public index: number,
-  ) {}
-
-  getFullPattern(): string {
-    return getFullPattern(this)
+    readonly name: string,
+    readonly isEach: boolean,
+    readonly fileItem: vscode.TestItem,
+    readonly item: vscode.TestItem,
+    readonly parent: TestDescribe | TestFile,
+    readonly index: number,
+  ) {
+    this.nameResolver = new TaskName(this)
   }
 
   getFilePath(): string {
@@ -80,8 +81,8 @@ export class TestCase {
 
 export class TestFile {
   resolved = false
-  pattern = ''
   children: (TestDescribe | TestCase)[] = []
+  nameResolver: undefined
   constructor(public item: vscode.TestItem) {}
   public async updateFromDisk(controller: vscode.TestController) {
     const item = this.item
@@ -103,26 +104,37 @@ export class TestFile {
     return this.updateFromDisk(ctrl)
   }
 
-  getFullPattern(): string {
-    return ''
-  }
-
   getFilePath(): string {
     return this.item.uri!.fsPath
   }
 }
 
-function getFullPattern(start: TestDescribe | TestCase): string {
-  const parents: TestDescribe[] = []
-  let iter = start.parent
-  while (iter && iter instanceof TestDescribe) {
-    parents.push(iter)
-    iter = iter.parent
+class TaskName {
+  private readonly pattern: string
+  constructor(readonly start: TestCase | TestDescribe) {
+    this.pattern = transformTestPattern({ testName: start.name, isEach: start.isEach })
   }
 
-  parents.reverse()
-  if (parents.length)
-    return parents.reduce((a, b) => `${a + b.pattern} `, '') + start.pattern
-  else
-    return start.pattern
+  asVitestArgs(): string {
+    if (this.start instanceof TestCase)
+      return `^${this.join()}$`
+    else
+      return `^${this.join()}`
+  }
+
+  asFullMatchPattern(): string {
+    return `^${this.join()}$`
+  }
+
+  private join(): string {
+    const patterns = [this.start.nameResolver.pattern]
+    let iter = this.start.parent
+    while (iter instanceof TestDescribe) {
+      patterns.unshift(iter.nameResolver.pattern)
+      iter = iter.parent
+    }
+    // vitest's test task name starts with ' ' of root suite
+    // It's considered as a bug, but it's not fixed yet for backward compatibility
+    return `\\s?${patterns.join(' ')}`
+  }
 }
