@@ -13,7 +13,6 @@ import parse from './pure/parsers'
 import type { NamedBlock } from './pure/parsers/parser_nodes'
 import { vitestEnvironmentFolders } from './config'
 import { log } from './log'
-import { transformTestPattern } from './pure/testName'
 import { openTestTag } from './tags'
 import { globFiles, shouldIncludeFile } from './vscodeUtils'
 
@@ -262,11 +261,10 @@ export function discoverTestFromFileContent(
     )
     parent.children.push(caseItem)
     if (block.type === 'describe') {
+      const isEach = block.lastProperty === 'each'
       const data = new TestDescribe(
-        transformTestPattern({
-          testName: block.name!,
-          isEach: block.lastProperty === 'each',
-        }),
+        block.name!,
+        isEach,
         fileItem,
         caseItem,
         parent.data as TestFile,
@@ -282,11 +280,10 @@ export function discoverTestFromFileContent(
       })
     }
     else if (block.type === 'it') {
+      const isEach = block.lastProperty === 'each'
       const testCase = new TestCase(
-        transformTestPattern({
-          testName: block.name!,
-          isEach: block.lastProperty === 'each',
-        }),
+        block.name!,
+        isEach,
         fileItem,
         caseItem,
         parent.data as TestFile | TestDescribe,
