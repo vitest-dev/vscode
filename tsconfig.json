@@ -4,7 +4,7 @@
     "lib": ["ES2020", "ESNext.Disposable"],
     "rootDir": "src",
     "module": "commonJS",
-    "types": ["node"],
+    "types": ["node", "mocha"],
     "strict": true,
     "outDir": "out",
     "sourceMap": true,
