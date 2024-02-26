@@ -123,8 +123,8 @@
   "scripts": {
     "vscode:prepublish": "pnpm compile",
     "release": "bumpp package.json --commit --push --tag && git update-ref refs/heads/release refs/heads/main && git push origin release",
-    "compile": "tsup ./src/extension.ts --external vscode --minify",
-    "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
+    "compile": "tsup --minify",
+    "watch": "tsup --watch --sourcemap",
     "test": "vitest run --config vite.global-config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache .",
