@@ -295,7 +295,7 @@ async function runTest(
   const headItem = items.length === 1 ? WEAKMAP_TEST_DATA.get(items[0]) : undefined
   const { output, testResultFiles } = await runner!.scheduleRun(
     fileItems.map(x => x.uri!.fsPath),
-    headItem?.getFullPattern(),
+    headItem?.nameResolver?.asVitestArgs(),
     {
       info: log.info,
       error: log.error,
@@ -304,13 +304,30 @@ async function runTest(
     command,
     mode === 'update',
     (files: File[]) => {
-      syncFilesTestStatus(files, discover, ctrl, run, false, false, finishedTests)
+      syncFilesTestStatus({
+        files,
+        discover,
+        ctrl,
+        run,
+        finished: false,
+        isFirstUpdate: false,
+        finishedTests,
+      })
     },
     mode === 'debug' ? startDebugProcess : undefined,
     cancellation,
   )
 
-  syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false, finishedTests)
+  syncFilesTestStatus({
+    files: testResultFiles,
+    discover,
+    ctrl,
+    run,
+    finished: true,
+    isFirstUpdate: false,
+    finishedTests,
+  })
+
   if (mode !== 'debug' && !cancellation?.isCancellationRequested) {
     for (const item of testCaseSet) {
       let testFinished = false
