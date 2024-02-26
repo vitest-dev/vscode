@@ -1,6 +1,6 @@
 import { effect, reactive } from '@vue/reactivity'
-import type { ResolvedConfig } from 'vitest'
 import getPort from 'get-port'
+import type { ResolvedConfig } from 'vitest'
 import { log } from '../../log'
 import type { VitestWorkspaceConfig } from '../../config'
 import { getConfig } from '../../config'
