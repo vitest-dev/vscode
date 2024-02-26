@@ -19,7 +19,7 @@ function getPatternFromTestItem(test: vscode.TestItem, pattern = '') {
     return pattern.trimStart()
   return getPatternFromTestItem(
     test.parent,
-    pattern ? ` ${data.pattern} ${pattern}` : data.pattern,
+    data.nameResolver.asVitestArgs(),
   )
 }
 
@@ -107,7 +107,6 @@ export class FolderTestRunner extends vscode.Disposable {
   }
 
   private endTestRun() {
-    console.log('end test run')
     this.testRun?.end()
     this.testRun = undefined
   }
@@ -176,7 +175,7 @@ function unwrapTask(task: Task, path: Task[] = []) {
 function findTestItemByTaskPath(path: Task[], item: vscode.TestItem, depth = 0): TestData | null {
   const data = WEAKMAP_TEST_DATA.get(item)!
   const isFile = depth === 0 && data instanceof TestFile && 'filepath' in path[0] && path[0].filepath === data.getFilePath()
-  if (isFile || data.pattern === path[depth].name) {
+  if (isFile || item.label === path[depth].name) {
     if (path.length === depth + 1)
       return data
 
