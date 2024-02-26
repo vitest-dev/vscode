@@ -26,7 +26,7 @@
   "categories": [
     "Testing"
   ],
-  "main": "./dist/src/extension.js",
+  "main": "./dist/extension.js",
   "icon": "img/icon.png",
   "pricing": "Free",
   "engines": {
@@ -126,7 +126,7 @@
     "compile": "tsup ./src/extension.ts --external vscode --minify",
     "watch": "tsup ./src/extension.ts --external vscode --watch --sourcemap",
     "test": "vscode-test",
-    "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.tsx --watch-files test/**/*.test.tsx",
+    "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
