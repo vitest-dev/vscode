@@ -135,6 +135,6 @@ class TaskName {
     }
     // vitest's test task name starts with ' ' of root suite
     // It's considered as a bug, but it's not fixed yet for backward compatibility
-    return '\\s?' + patterns.join(' ')
+    return `\\s?${patterns.join(' ')}`
   }
 }
