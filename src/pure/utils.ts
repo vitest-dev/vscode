@@ -96,13 +96,13 @@ export interface Cmd {
  */
 export async function spawnVitestVersion(command: string, args: string[], env?: Record<string, string | undefined>, cwd?: string): Promise<string | undefined> {
   log.info(`Trying to get vitest version from ${command} ${args.join(' ')}...`)
-  if (cwd && cwd.length > 0) 
+  if (cwd && cwd.length > 0)
     log.info(`Running command in directory: ${cwd}`)
 
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: isWindows,
-    cwd: cwd,
+    cwd,
     env,
   })
 

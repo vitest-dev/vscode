@@ -77,7 +77,7 @@ export interface VitestWorkspaceConfig {
 
 export async function getVitestWorkspaceConfigs(): Promise<VitestWorkspaceConfig[]> {
   return await Promise.all(vitestEnvironmentFolders.map(async (workspace) => {
-    const vscodeConfig = getConfig(workspace);
+    const vscodeConfig = getConfig(workspace)
     const cmd = getVitestCommand(workspace.uri.fsPath, vscodeConfig.commandLine)
 
     const version = cmd == null
