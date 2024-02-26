@@ -104,10 +104,6 @@ export class TestFile {
     return this.updateFromDisk(ctrl)
   }
 
-  getFullPattern(): string {
-    return ''
-  }
-
   getFilePath(): string {
     return this.item.uri!.fsPath
   }
@@ -131,18 +127,14 @@ class TaskName {
   }
 
   private join(): string {
-    const parents: (TestDescribe)[] = []
-    let iter: TestDescribe | TestFile | undefined = this.start.parent
-    while (iter && iter instanceof TestDescribe) {
-      parents.push(iter)
+    const patterns = [this.start.nameResolver.pattern]
+    let iter = this.start.parent
+    while (iter instanceof TestDescribe) {
+      patterns.unshift(iter.nameResolver.pattern)
       iter = iter.parent
     }
-
-    parents.reverse()
     // vitest's test task name starts with ' ' of root suite
-    if (parents.length)
-      return ` ${parents.reduce((a, b) => `${a + b.nameResolver.pattern} `, '')}${this.start.nameResolver.pattern}`
-    else
-      return ` ${this.start.nameResolver.pattern}`
+    // It's considered as a bug, but it's not fixed yet for backward compatibility
+    return '\\s?' + patterns.join(' ')
   }
 }
