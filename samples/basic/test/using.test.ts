@@ -1,4 +1,4 @@
-import { expect, describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 
 (Symbol as any).dispose ??= Symbol('Symbol.dispose');
 (Symbol as any).asyncDispose ??= Symbol('Symbol.asyncDispose')
@@ -11,7 +11,7 @@ describe('using keyword', () => {
     }
 
     const resource = getDisposableResource()
-    expect(resource.isDisposed).to.equal(true)
+    expect(resource.isDisposed).toBe(true)
   })
 
   it('asyncDispose', async () => {
@@ -21,7 +21,7 @@ describe('using keyword', () => {
     }
 
     const resource = await getAsyncDisposableResource()
-    expect(resource.isDisposed).to.equal(true)
+    expect(resource.isDisposed).toBe(true)
   })
 })
 

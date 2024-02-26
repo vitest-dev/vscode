@@ -1,17 +1,17 @@
-import { expect, describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { add, sum } from '../src/add'
 
 describe('addition', () => {
   it('add', () => {
-    expect(add(1, 1)).to.equal(2)
+    expect(add(1, 1)).toBe(2)
   })
 
   it('sum', () => {
-    expect(sum(0, 10)).to.equal(55)
+    expect(sum(0, 10)).toBe(55)
   })
 
   it.skip('skipped', () => {
-    expect(1 + 2).to.equal(3)
+    expect(1 + 2).toBe(3)
   })
 
   it.todo('todo')
@@ -39,14 +39,14 @@ describe('addition', () => {
 describe('testing', () => {
   it('run', () => {
     const a = 10
-    expect(a).to.equal(10)
+    expect(a).toBe(10)
   })
 
   it('mul', () => {
-    expect(5 * 5).to.equal(25)
+    expect(5 * 5).toBe(25)
   })
 
   it("mul fail", () => {
-    expect(5 * 5).to.equal(26)
+    expect(5 * 5).toBe(26)
   })
 })

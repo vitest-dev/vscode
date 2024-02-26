@@ -1,6 +1,6 @@
 import React from 'react'
 import renderer from 'react-test-renderer'
-import { expect, describe, it } from 'vitest'
+import { expect, test } from 'vitest'
 import Link from '../components/Link'
 
 function toJson(component: renderer.ReactTestRenderer) {
