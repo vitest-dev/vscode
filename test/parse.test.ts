@@ -17,7 +17,7 @@ describe('parse', () => {
   })
 
   it('parse skipIf with concurrent #36', () => {
-    const [filename, data] = load('01_skipIf.ts')
+    const [filename, data] = load('01_skipif.ts')
     const out = parse(filename, data)
     expect(out.describeBlocks.length).to.equal(1)
   })
