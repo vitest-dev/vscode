@@ -58,13 +58,13 @@ export async function runHandler(
     if (testForThisWorkspace.length === 0)
       return
 
-    log.info(`[Workspace "${folder.name}] Run tests from workspace`)
+    log.info(`[Workspace ${folder.name}] Run tests from workspace`)
     try {
       await runTest(ctrl, runner, run, testForThisWorkspace, 'run', discover, cancellation)
-      log.info(`[Workspace "${folder.name}] Test run finished`)
+      log.info(`[Workspace ${folder.name}] Test run finished`)
     }
     catch (e) {
-      log.error(`[Workspace "${folder.name}] Run error`)
+      log.error(`[Workspace ${folder.name}] Run error`)
       if (e instanceof Error) {
         const err = e
         console.error(e)

@@ -10,7 +10,7 @@ import * as vscode from 'vscode'
 import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import { getConfig, getRootConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
-import { execWithLog } from './pure/utils'
+import { addQuotes, execWithLog } from './pure/utils'
 import { buildWatchClient } from './pure/watch/client'
 import type { TestFile } from './TestData'
 import { TestCase, TestDescribe, WEAKMAP_TEST_DATA } from './TestData'
@@ -69,7 +69,7 @@ export class TestWatcher extends Disposable {
       const port = await getPort({ port: 51204 })
       let timer: any
       this.process = execWithLog(
-        this.vitest.cmd,
+        addQuotes(this.vitest.cmd),
         [...this.vitest.args, '--api.port', port.toString(), '--api.host', '127.0.0.1'],
         {
           cwd: this.workspace.uri.fsPath,

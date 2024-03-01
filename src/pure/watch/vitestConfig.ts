@@ -4,7 +4,7 @@ import type { ResolvedConfig } from 'vitest'
 import { log } from '../../log'
 import type { VitestWorkspaceConfig } from '../../config'
 import { getConfig } from '../../config'
-import { execWithLog, sanitizeFilePath } from '../utils'
+import { addQuotes, execWithLog, sanitizeFilePath } from '../utils'
 import { createClient } from './ws-client'
 
 async function connectAndFetchConfig(
@@ -60,7 +60,7 @@ export async function fetchVitestConfig(
     return
   const folder = workspace.workspace.uri.fsPath
   const childProcess = execWithLog(
-    workspace.cmd,
+    addQuotes(workspace.cmd),
     [...workspace.args, '--api.port', port.toString(), '--api.host', '127.0.0.1'],
     {
       cwd: sanitizeFilePath(folder),

@@ -155,6 +155,9 @@ export async function getVitestVersion(
   if (vitestCommand == null)
     return await detectVitestVersion('npx', ['vitest', '-v'], envs, cwd)
 
+  if (vitestCommand.cmd.includes(' '))
+    return await detectVitestVersion(`"${vitestCommand.cmd}"`, [...vitestCommand.args, '-v'], envs, cwd)
+
   return await detectVitestVersion(vitestCommand.cmd, [...vitestCommand.args, '-v'], envs, cwd)
 }
 
@@ -172,6 +175,12 @@ export function isNodeAvailable(
       child.kill()
     }, 1000)
   })
+}
+
+export function addQuotes(path: string) {
+  if (path.includes(' '))
+    return `"${path}"`
+  return path
 }
 
 function capitalizeDriveLetter(path: string) {

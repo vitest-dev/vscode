@@ -4,6 +4,7 @@ import { chunksToLinesAsync } from '@rauschma/stringio'
 import type { CancellationToken } from 'vscode'
 import type { File } from 'vitest'
 import {
+  addQuotes,
   filterColorFormatOutput,
   sanitizeFilePath,
 } from './utils'
@@ -87,7 +88,7 @@ export class TestRunner {
     const command = vitestCommand.cmd
     const args = [
       ...vitestCommand.args,
-      ...(testFile ? testFile.map(f => sanitizeFilePath(f)) : []),
+      ...(testFile ? testFile.map(f => addQuotes(sanitizeFilePath(f))) : []),
     ] as string[]
     if (updateSnapshot)
       args.push('--update')
@@ -105,7 +106,7 @@ export class TestRunner {
     const outputs: string[] = []
     const env = { ...process.env, ...workspaceEnv }
     let testResultFiles = [] as File[]
-    const output = await runVitestWithApi({ cmd: sanitizeFilePath(command), args }, this.workspacePath, {
+    const output = await runVitestWithApi({ cmd: addQuotes(sanitizeFilePath(command)), args }, this.workspacePath, {
       log: (line) => {
         log.info(`${filterColorFormatOutput(line.trimEnd())}\r\n`)
         outputs.push(filterColorFormatOutput(line))
