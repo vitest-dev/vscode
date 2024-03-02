@@ -26,6 +26,7 @@ import { TestWatcher } from './watch'
 import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
 import { openTestTag } from './tags'
+import { CoverageCodeLensProvider } from './coverage/coverageCodeLensProvider'
 
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
@@ -63,6 +64,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.showWarningMessage('Cannot run tests: no Vitest config found.')
     return
   }
+
+  registerCoverageCodeLens(context)
+
   const fileDiscoverer = registerDiscovery(ctrl, context, config)
   registerRunDebugWatchHandler(ctrl, workspaceConfigs, fileDiscoverer, context)
   context.subscriptions.push(
@@ -83,6 +87,15 @@ export async function activate(context: vscode.ExtensionContext) {
       fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
     ),
   )
+}
+
+function registerCoverageCodeLens(context: vscode.ExtensionContext) {
+  const codeLensProvider = new CoverageCodeLensProvider()
+  const jsSelector = { language: 'javascript', scheme: 'file' }
+  const tsSelector = { language: 'typescript', scheme: 'file' }
+
+  context.subscriptions.push(vscode.languages.registerCodeLensProvider(jsSelector, codeLensProvider))
+  context.subscriptions.push(vscode.languages.registerCodeLensProvider(tsSelector, codeLensProvider))
 }
 
 function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[]) {
