@@ -196,7 +196,6 @@ async function runTest(
   const workspaceFolder = determineWorkspaceForTestItems(items, vscode.workspace.workspaceFolders!)
   const config = getConfig(workspaceFolder)
   const testCaseSet: Set<vscode.TestItem> = new Set()
-  const testItemIdMap = new Map<string, vscode.TestItem>()
   const fileItems: vscode.TestItem[] = []
   for (const item of items) {
     const testingData = WEAKMAP_TEST_DATA.get(item)
@@ -223,13 +222,6 @@ async function runTest(
     }
 
     fileItems.push(file)
-    const fileTestCases = getAllTestCases(file)
-    for (const testCase of fileTestCases) {
-      // remove suffix of test item id
-      // e.g. "test-case@1" -> "test-case"
-      // TODO: refactor
-      testItemIdMap.set(testCase.id.replace(/@\d+$/g, ''), testCase)
-    }
 
     for (const test of getAllTestCases(item))
       testCaseSet.add(test)
@@ -305,7 +297,7 @@ async function runTest(
   const headItem = items.length === 1 ? WEAKMAP_TEST_DATA.get(items[0]) : undefined
   const { output, testResultFiles } = await runner!.scheduleRun(
     fileItems.map(x => x.uri!.fsPath),
-    headItem?.getFullPattern(),
+    headItem?.nameResolver?.asVitestArgs(),
     {
       info: log.info,
       error: log.error,
@@ -314,13 +306,30 @@ async function runTest(
     command,
     mode === 'update',
     (files: File[]) => {
-      syncFilesTestStatus(files, discover, ctrl, run, false, false, finishedTests)
+      syncFilesTestStatus({
+        files,
+        discover,
+        ctrl,
+        run,
+        finished: false,
+        isFirstUpdate: false,
+        finishedTests,
+      })
     },
     mode === 'debug' ? startDebugProcess : undefined,
     cancellation,
   )
 
-  syncFilesTestStatus(testResultFiles, discover, ctrl, run, true, false, finishedTests)
+  syncFilesTestStatus({
+    files: testResultFiles,
+    discover,
+    ctrl,
+    run,
+    finished: true,
+    isFirstUpdate: false,
+    finishedTests,
+  })
+
   if (mode !== 'debug' && !cancellation?.isCancellationRequested) {
     for (const item of testCaseSet) {
       let testFinished = false

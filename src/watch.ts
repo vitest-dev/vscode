@@ -3,11 +3,11 @@ import path from 'node:path'
 import getPort from 'get-port'
 import { getTasks } from '@vitest/ws-client'
 import { effect, ref } from '@vue/reactivity'
-import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import type { TestController, TestItem, TestRun, WorkspaceFolder } from 'vscode'
 import { Disposable, Location, Position, TestMessage, TestRunRequest, Uri } from 'vscode'
 import { Lock } from 'mighty-promise'
 import * as vscode from 'vscode'
+import type { ErrorWithDiff, File, ParsedStack, Task } from 'vitest'
 import { getConfig, getRootConfig } from './config'
 import type { TestFileDiscoverer } from './discover'
 import { execWithLog } from './pure/utils'
@@ -253,13 +253,13 @@ export class TestWatcher extends Disposable {
       return
 
     const isFirstUpdate = !this.run
-    if (isFirstUpdate)
+    if (!this.run)
       this.run = this.ctrl.createTestRun(new TestRunRequest(undefined, undefined, undefined, true))
 
     const discover = this.discover
     const ctrl = this.ctrl
     const run = this.run
-    syncFilesTestStatus(files, discover, ctrl, run, finished, isFirstUpdate)
+    syncFilesTestStatus({ files, discover, ctrl, run, finished, isFirstUpdate })
   }
 
   public async dispose() {
@@ -321,48 +321,57 @@ function testMessageForTestError(testItem: TestItem, error: ErrorWithDiff | unde
 }
 
 export function syncFilesTestStatus(
-  files: File[],
-  discover: TestFileDiscoverer,
-  ctrl: TestController,
-  run: TestRun | undefined,
-  finished: boolean,
-  isFirstUpdate: boolean,
-  finishedTest: Set<TestItem> = new Set(),
+  {
+    files,
+    discover,
+    ctrl,
+    run,
+    finished,
+    isFirstUpdate,
+    finishedTests = new Set(),
+  }: {
+    files: File[]
+    discover: TestFileDiscoverer
+    ctrl: TestController
+    run: TestRun
+    finished: boolean
+    isFirstUpdate: boolean
+    finishedTests?: Set<TestItem>
+  },
 ) {
-  for (const file of files) {
-    const data = discover.discoverTestFromPath(ctrl, file.filepath)
-    run && syncTestStatusToVsCode(run, data, file, finished, isFirstUpdate, finishedTest)
+  for (const vitestFile of files) {
+    const vscodeFile = discover.discoverTestFromPath(ctrl, vitestFile.filepath)
+    syncTestStatusToVsCode({ run, vscodeFile, vitestFile, finished, isFirstUpdate, finishedTests })
   }
-  return finishedTest
+  return finishedTests
 }
 
 export function syncTestStatusToVsCode(
-  run: TestRun,
-  vscodeFile: TestFile,
-  vitestFile: File,
-  finished: boolean,
-  isFirstUpdate: boolean,
-  finishedTest?: Set<TestItem>,
+  {
+    run,
+    vscodeFile,
+    vitestFile,
+    finished,
+    isFirstUpdate,
+    finishedTests,
+  }: {
+    run: TestRun
+    vscodeFile: TestFile
+    vitestFile: File
+    finished: boolean
+    isFirstUpdate: boolean
+    finishedTests: Set<TestItem>
+  },
 ) {
   const groups = groupTasksByPattern(new Map(), vscodeFile.children, vitestFile.tasks)
   for (const [data, tasks] of groups.entries()) {
-    if (finished) {
-      for (const task of tasks) {
-        if (!task.logs)
-          continue
-        // for now, display logs after all tests are finished.
-        // TODO: append logs during test execution using `onUserConsoleLog` rpc.
-        for (const log of task.logs) {
-          // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
-          const output = log.content.replace(/(?<!\r)\n/g, '\r\n')
-          run.appendOutput(output, undefined, data.item)
-        }
-      }
-    }
+    if (finished)
+      appendTestOutputs(run, data, tasks)
+
     const primaryTask = getPrimaryResultTask(tasks)
     if (primaryTask?.result == null) {
       if (finished) {
-        finishedTest?.add(data.item)
+        finishedTests.add(data.item)
         run.skipped(data.item)
       }
       else if (isFirstUpdate) {
@@ -370,7 +379,7 @@ export function syncTestStatusToVsCode(
       }
     }
     else {
-      if (finishedTest?.has(data.item))
+      if (finishedTests.has(data.item))
         continue
 
       const duration = tasks.reduce((acc, i) => acc + (i.result?.duration ?? 0), 0)
@@ -378,7 +387,7 @@ export function syncTestStatusToVsCode(
       switch (primaryTask?.result?.state) {
         case 'pass':
           run.passed(data.item, duration)
-          finishedTest && finishedTest.add(data.item)
+          finishedTests.add(data.item)
           break
         case 'fail':
           run.failed(
@@ -386,12 +395,12 @@ export function syncTestStatusToVsCode(
             errors.map(i => testMessageForTestError(data.item, i)),
             duration,
           )
-          finishedTest && finishedTest.add(data.item)
+          finishedTests.add(data.item)
           break
         case 'skip':
         case 'todo':
           run.skipped(data.item)
-          finishedTest && finishedTest.add(data.item)
+          finishedTests.add(data.item)
           break
         case 'run':
           run.started(data.item)
@@ -448,9 +457,7 @@ function getPrimaryResultTask(tasks: Task[]): Task | undefined {
 function getFullTaskName(task: Task): string {
   if (task.suite) {
     const suiteName = getFullTaskName(task.suite)
-    // root parent is a suite, but it's name is empty
-    if (suiteName)
-      return `${suiteName} ${task.name}`
+    return `${suiteName} ${task.name}`
   }
   return task.name
 }
@@ -468,7 +475,8 @@ function matchTask(
       continue
 
     const fullTaskName = getFullTaskName(task)
-    const fullCandidatesPattern = new RegExp(`^${vscode.getFullPattern()}$`)
+    const pattern = vscode.nameResolver.asFullMatchPattern()
+    const fullCandidatesPattern = new RegExp(pattern)
     if (fullTaskName.match(fullCandidatesPattern))
       result.push(task)
   }
@@ -476,4 +484,18 @@ function matchTask(
     candidates.delete(task)
 
   return result
+}
+
+function appendTestOutputs(run: TestRun, data: TestDescribe | TestCase, tasks: Task[]) {
+  for (const task of tasks) {
+    if (!task.logs)
+      continue
+    // for now, display logs after all tests are finished.
+    // TODO: append logs during test execution using `onUserConsoleLog` rpc.
+    for (const log of task.logs) {
+      // LF to CRLF https://code.visualstudio.com/api/extension-guides/testing#test-output
+      const output = log.content.replace(/(?<!\r)\n/g, '\r\n')
+      run.appendOutput(output, undefined, data.item)
+    }
+  }
 }
