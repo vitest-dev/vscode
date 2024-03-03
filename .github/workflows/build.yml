@@ -42,3 +42,8 @@ jobs:
       - run: pnpm test-e2e
         env:
           DISPLAY: ':99'
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          path: test-results
