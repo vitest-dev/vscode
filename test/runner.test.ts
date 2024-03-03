@@ -17,7 +17,7 @@ describe('TestRunner', () => {
   ]
   testCases.forEach(function (testCase) {
     const {isWindows, useCustomStartProcess, expectedArgs} = testCase
-    describe(
+    it(
       'scheduleRun wrap test patterns if needed, (isWindows: ' + isWindows + ', customStartProcess: ' + useCustomStartProcess + ')',
       async () => {
         Object.defineProperty(platformConstants, 'isWindows', { value: isWindows, writable: true })
@@ -25,7 +25,7 @@ describe('TestRunner', () => {
         const testFiles = ['abc.spec.ts']
         const testNamePattern = 'a (b) "c" d'
         const customStartProcess = useCustomStartProcess ? () => {} : undefined
-  
+
         const { testResultFiles, output } = await new TestRunner(workspacePath, undefined).scheduleRun(
           testFiles,
           testNamePattern,
@@ -36,7 +36,7 @@ describe('TestRunner', () => {
           undefined,
           customStartProcess,
         )
-  
+
         expect(testResultFiles).to.not.equal(undefined)
         expect(output).to.equal(`vitest.cmd=npx vitest.args=${expectedArgs} workspace=/test customStartProcess=${useCustomStartProcess}`)
       })
