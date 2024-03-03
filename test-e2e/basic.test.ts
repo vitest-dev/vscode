@@ -8,6 +8,7 @@ beforeEach(({ task }) => {
 
   // Vitst extension doesn't work with CI flag
   delete process.env.CI
+  delete process.env.GITHUB_ACTIONS
 })
 
 vscodeTest('basic', async ({ page }) => {
