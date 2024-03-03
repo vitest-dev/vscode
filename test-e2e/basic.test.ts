@@ -5,6 +5,10 @@ beforeEach(({ task }) => {
   task.meta.vscodeExtensionPath = '.'
   task.meta.vscodeWorkspacePath = './samples/basic'
   task.meta.vscodeTrace = 'on'
+
+  // Vitst extension doesn't work when CI flag?
+  delete process.env.CI
+  delete process.env.GITHUB_ACTIONS
 })
 
 vscodeTest('basic', async ({ page }) => {
