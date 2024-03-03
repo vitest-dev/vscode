@@ -1,16 +1,13 @@
-import { Worker } from 'node:worker_threads'
-import { type Server, createServer } from 'node:net'
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import type { ChildProcess } from 'node:child_process'
+import { fork } from 'node:child_process'
+import v8 from 'node:v8'
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, ResolvedConfig, TaskResultPack, UserConsoleLog } from 'vitest'
-import { parse, stringify } from 'flatted'
 import { log } from './log'
-import { workerPath } from './constants'
 import type { DebugSessionAPI } from './debug/startSession'
-import { startDebugSession } from './debug/startSession'
-import {} from 'node-ipc'
+import { workerPath } from './constants'
 
 const _require = require
 
@@ -22,12 +19,12 @@ export interface BirpcMethods {
   getConfig: () => Promise<ResolvedConfig>
   isTestFile: (file: string) => Promise<boolean>
   terminate: () => void
+
+  startDebugger: (port: number) => void
+  stopDebugger: () => void
 }
 
 export interface BirpcEvents {
-  onReady: () => void
-  onError: (err: object) => void
-
   onConsoleLog: (log: UserConsoleLog) => void
   onTaskUpdate: (task: TaskResultPack[]) => void
   onFinished: (files?: File[], errors?: unknown[]) => void
@@ -129,6 +126,7 @@ export class VitestFolderAPI extends VitestReporter {
     folder: vscode.WorkspaceFolder,
     private rpc: VitestRPC,
     handlers: ResolvedRPC['handlers'],
+    private pid: number,
     private debug?: DebugSessionAPI,
   ) {
     super(handlers)
@@ -137,6 +135,10 @@ export class VitestFolderAPI extends VitestReporter {
 
   get folder() {
     return WEAKMAP_API_FOLDER.get(this)!
+  }
+
+  get processId() {
+    return this.pid
   }
 
   getFiles() {
@@ -152,7 +154,11 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   stopDebugger() {
-    this.debug?.stop()
+    return this.rpc.stopDebugger()
+  }
+
+  startDebugger(port: number) {
+    return this.rpc.startDebugger(port)
   }
 
   dispose() {
@@ -165,40 +171,7 @@ export async function resolveVitestAPI(folders: readonly vscode.WorkspaceFolder[
     const api = await createVitestRPC(folder)
     if (!api)
       return null
-    return new VitestFolderAPI(folder, api.rpc, api.handlers)
-  }))
-  return new VitestAPI(apis.filter(x => x !== null) as VitestFolderAPI[])
-}
-
-function getIPCSocket() {
-  let path = 'vitest-explorer.sock'
-  if (process.platform === 'win32')
-    path = `\\\\.\\pipe\\${path}`
-  else
-    path = resolve(__dirname, path)
-  if (!existsSync(dirname(path)))
-    mkdirSync(dirname(path), { recursive: true })
-  // cleanup socket
-  if (existsSync(path))
-    rmSync(path)
-  return path
-}
-
-export function createIPCServer() {
-  const socket = getIPCSocket()
-  const server = createServer().listen(socket)
-  return {
-    server,
-    socket,
-  }
-}
-
-export async function resolveVitestDebugAPI(server: Server, socketPath: string, folders: readonly vscode.WorkspaceFolder[]) {
-  const apis = await Promise.all(folders.map(async (folder) => {
-    const api = await createVitestDebugRpc(server, socketPath, folder)
-    if (!api)
-      return null
-    return new VitestFolderAPI(folder, api.rpc, api.handlers, api.debug)
+    return new VitestFolderAPI(folder, api.rpc, api.handlers, api.pid)
   }))
   return new VitestAPI(apis.filter(x => x !== null) as VitestFolderAPI[])
 }
@@ -206,21 +179,7 @@ export async function resolveVitestDebugAPI(server: Server, socketPath: string, 
 interface ResolvedRPC {
   rpc: VitestRPC
   version: string
-  handlers: {
-    onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
-    onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
-    onFinished: (listener: BirpcEvents['onFinished']) => void
-    onCollected: (listener: BirpcEvents['onCollected']) => void
-    onWatcherStart: (listener: BirpcEvents['onWatcherStart']) => void
-    onWatcherRerun: (listener: BirpcEvents['onWatcherRerun']) => void
-    clearListeners: () => void
-  }
-}
-
-interface ResolvedDebugRPC {
-  rpc: VitestRPC
-  version: string
-  debug: DebugSessionAPI
+  pid: number
   handlers: {
     onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
@@ -242,14 +201,7 @@ function createHandler<T extends (...args: any) => any>() {
   }
 }
 
-export async function createVitestDebugRpc(server: Server, socketPath: string, folder: vscode.WorkspaceFolder): Promise<ResolvedDebugRPC | null> {
-  const vitestPackagePath = resolveVitestPackagePath(folder)
-  if (!vitestPackagePath)
-    return null
-  const pkg = _require(vitestPackagePath)
-  const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
-  log.info('[API][DEBUG]', `Running Vitest ${pkg.version} for "${folder.name}" workspace folder from ${vitestNodePath}`)
-
+function createRpcOptions() {
   const onConsoleLog = createHandler<BirpcEvents['onConsoleLog']>()
   const onTaskUpdate = createHandler<BirpcEvents['onTaskUpdate']>()
   const onFinished = createHandler<BirpcEvents['onFinished']>()
@@ -257,87 +209,79 @@ export async function createVitestDebugRpc(server: Server, socketPath: string, f
   const onWatcherRerun = createHandler<BirpcEvents['onWatcherRerun']>()
   const onWatcherStart = createHandler<BirpcEvents['onWatcherStart']>()
 
-  return new Promise<ResolvedDebugRPC | null>((resolve) => {
-    const debug = startDebugSession(
-      folder,
-      socketPath,
-      vitestNodePath,
-    )
+  const events: Omit<BirpcEvents, 'onReady' | 'onError'> = {
+    onConsoleLog: onConsoleLog.trigger,
+    onFinished: onFinished.trigger,
+    onTaskUpdate: onTaskUpdate.trigger,
+    onCollected: onCollected.trigger,
+    onWatcherRerun: onWatcherRerun.trigger,
+    onWatcherStart: onWatcherStart.trigger,
+  }
 
-    server.on('connection', function connection(socket) {
-      socket.on('data', function ready(buffer) {
-        const data = JSON.parse(buffer.toString('utf-8'))
-        if (data.type === 'ready' && data.root === folder.uri.fsPath) {
-          socket.off('data', ready)
-          server.off('connection', connection)
-          const api = createBirpc<BirpcMethods, BirpcEvents>(
-            {
-              onReady() {
-                // not called
-              },
-              onError(err: any) {
-                log.error('[API]', err?.stack)
-                resolve(null)
-              },
-              onConsoleLog: onConsoleLog.trigger,
-              onFinished: onFinished.trigger,
-              onTaskUpdate: onTaskUpdate.trigger,
-              onCollected: onCollected.trigger,
-              onWatcherRerun: onWatcherRerun.trigger,
-              onWatcherStart: onWatcherStart.trigger,
-            },
-            {
-              on(listener) {
-                socket.on('data', (data) => {
-                  data.toString('utf-8').split('$~0~$').forEach((message) => {
-                    if (message)
-                      listener(message)
-                  })
-                })
-              },
-              post(message) {
-                // We add "$~0~$" to the end of the message to split it on the other side
-                // Because socket can send multiple messages at once
-                socket.write(`${message}$~0~$`)
-              },
-              serialize(data: unknown): string {
-                return stringify(data)
-              },
-              deserialize(data: string): unknown {
-                return parse(data)
-              },
-            },
-          )
+  return {
+    events,
+    handlers: {
+      onConsoleLog: onConsoleLog.register,
+      onTaskUpdate: onTaskUpdate.register,
+      onFinished: onFinished.register,
+      onCollected: onCollected.register,
+      onWatcherRerun: onWatcherRerun.register,
+      onWatcherStart: onWatcherStart.register,
+      clearListeners() {
+        onConsoleLog.clear()
+        onTaskUpdate.clear()
+        onFinished.clear()
+        onCollected.clear()
+        onWatcherRerun.clear()
+        onWatcherStart.clear()
+      },
+    },
+    // on(listener: (data: string) => void) {
+    //   ws.on('message', listener)
+    // },
+    // post(message: string) {
+    //   ws.send(message)
+    // },
+  }
+}
 
-          log.info('[API][DEBUG]', `Vitest for "${folder.name}" workspace folder is resolved.`)
-          resolve({
-            rpc: api,
-            version: pkg.version,
-            debug,
-            handlers: {
-              onConsoleLog: onConsoleLog.register,
-              onTaskUpdate: onTaskUpdate.register,
-              onFinished: onFinished.register,
-              onCollected: onCollected.register,
-              onWatcherRerun: onWatcherRerun.register,
-              onWatcherStart: onWatcherStart.register,
-              clearListeners() {
-                onConsoleLog.clear()
-                onTaskUpdate.clear()
-                onFinished.clear()
-                onCollected.clear()
-                onWatcherRerun.clear()
-                onWatcherStart.clear()
-              },
-            },
-          })
+function createChildVitestProcess(
+  folder: vscode.WorkspaceFolder,
+  vitestNodePath: string,
+) {
+  const vitest = fork(
+    workerPath,
+    {
+      cwd: folder.uri.fsPath,
+      // TODO: use another execPath to use the local node version (also expose an option?)
+      env: {
+        VITEST_VSCODE: 'true',
+      },
+      stdio: 'overlapped',
+    },
+  )
+  return new Promise<ChildProcess>((resolve, reject) => {
+    vitest.on('error', (error) => {
+      log.error('[API]', error)
+      reject(error)
+    })
+    vitest.on('spawn', () => {
+      vitest.send({ type: 'init', vitestPath: vitestNodePath })
+      vitest.on('message', function ready(message: any) {
+        if (message.type === 'ready') {
+          vitest.off('message', ready)
+          resolve(vitest)
+        }
+        if (message.type === 'error') {
+          vitest.off('message', ready)
+          reject(message.error)
         }
       })
     })
   })
 }
 
-export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
+export async function createVitestRPC(workspace: vscode.WorkspaceFolder): Promise<ResolvedRPC | null> {
   // TODO: respect config? Why does enable exist? Can't you just disable the extension?
   // if (getConfig(workspace).enable === false || getRootConfig().disabledWorkspaceFolders.includes(workspace.name))
   //   return null
@@ -348,70 +292,34 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder) {
   const pkg = _require(vitestPackagePath)
   const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
   log.info('[API]', `Running Vitest ${pkg.version} for "${workspace.name}" workspace folder from ${vitestNodePath}`)
-  const worker = new Worker(workerPath, {
-    workerData: {
-      root: workspace.uri.fsPath,
-      vitestPath: vitestNodePath,
-    },
-    env: {
-      VITEST_VSCODE: 'true',
-    },
-  })
-  worker.stdout.on('data', d => log.info('[Worker]', d.toString()))
-  worker.stderr.on('data', d => log.error('[Worker]', d.toString()))
 
-  const onConsoleLog = createHandler<BirpcEvents['onConsoleLog']>()
-  const onTaskUpdate = createHandler<BirpcEvents['onTaskUpdate']>()
-  const onFinished = createHandler<BirpcEvents['onFinished']>()
-  const onCollected = createHandler<BirpcEvents['onCollected']>()
-  const onWatcherRerun = createHandler<BirpcEvents['onWatcherRerun']>()
-  const onWatcherStart = createHandler<BirpcEvents['onWatcherStart']>()
+  const vitest = await createChildVitestProcess(workspace, vitestNodePath)
 
-  return await new Promise<ResolvedRPC | null>((resolve) => {
-    const api = createBirpc<BirpcMethods, BirpcEvents>(
-      {
-        onReady() {
-          log.info('[API]', `Vitest for "${workspace.name}" workspace folder is resolved.`)
-          resolve({
-            rpc: api,
-            version: pkg.version,
-            handlers: {
-              onConsoleLog: onConsoleLog.register,
-              onTaskUpdate: onTaskUpdate.register,
-              onFinished: onFinished.register,
-              onCollected: onCollected.register,
-              onWatcherRerun: onWatcherRerun.register,
-              onWatcherStart: onWatcherStart.register,
-              clearListeners() {
-                onConsoleLog.clear()
-                onTaskUpdate.clear()
-                onFinished.clear()
-                onCollected.clear()
-                onWatcherRerun.clear()
-                onWatcherStart.clear()
-              },
-            },
-          })
-        },
-        onError(err: any) {
-          log.error('[API]', err?.stack)
-          resolve(null)
-        },
-        onConsoleLog: onConsoleLog.trigger,
-        onFinished: onFinished.trigger,
-        onTaskUpdate: onTaskUpdate.trigger,
-        onCollected: onCollected.trigger,
-        onWatcherRerun: onWatcherRerun.trigger,
-        onWatcherStart: onWatcherStart.trigger,
+  log.info('[Worker]', `Vitest process ${vitest.pid} created`)
+
+  vitest.stdout?.on('data', d => log.info('[Worker]', d.toString()))
+  vitest.stderr?.on('data', d => log.error('[Worker]', d.toString()))
+
+  const { events, handlers } = createRpcOptions()
+
+  const api = createBirpc<BirpcMethods, BirpcEvents>(
+    events,
+    {
+      on(listener) {
+        vitest.on('message', listener)
       },
-      {
-        on(listener) {
-          worker.on('message', listener)
-        },
-        post(message) {
-          worker.postMessage(message)
-        },
+      post(message) {
+        vitest.send(message)
       },
-    )
-  })
+      serialize: v8.serialize,
+      deserialize: v => v8.deserialize(Buffer.from(v)),
+    },
+  )
+
+  return {
+    rpc: api,
+    pid: vitest.pid!,
+    version: pkg.version,
+    handlers,
+  }
 }

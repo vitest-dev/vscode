@@ -1,7 +1,10 @@
+import { createRequire } from 'node:module'
 import type { ChannelOptions } from 'birpc'
 import { createBirpc } from 'birpc'
 import type { Vitest } from 'vitest'
-import type { BirpcEvents, BirpcMethods } from './api'
+import type { BirpcEvents, BirpcMethods } from '../api'
+
+const _require = createRequire(__filename)
 
 export function createWorkerRPC(vitest: Vitest, channel: ChannelOptions) {
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
@@ -38,10 +41,14 @@ export function createWorkerRPC(vitest: Vitest, channel: ChannelOptions) {
       }
       return false
     },
+    startDebugger(port) {
+      _require('inspector').open(port)
+    },
+    stopDebugger() {
+      _require('inspector').close()
+    },
   }, {
     eventNames: [
-      'onReady',
-      'onError',
       'onConsoleLog',
       'onTaskUpdate',
       'onFinished',
@@ -50,11 +57,4 @@ export function createWorkerRPC(vitest: Vitest, channel: ChannelOptions) {
     ...channel,
   })
   return rpc
-}
-
-export function createErrorRPC(channel: ChannelOptions) {
-  return createBirpc<BirpcEvents>({}, {
-    eventNames: ['onError'],
-    ...channel,
-  })
 }

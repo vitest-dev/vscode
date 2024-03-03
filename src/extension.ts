@@ -1,4 +1,3 @@
-import type { Server } from 'node:net'
 import * as vscode from 'vscode'
 
 // import { effect } from '@vue/reactivity'
@@ -21,8 +20,9 @@ import { log } from './log'
 
 import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
-import { createIPCServer, resolveVitestAPI, resolveVitestDebugAPI } from './api'
+import { resolveVitestAPI } from './api'
 import { GlobalTestRunner } from './runner/runner'
+import { startDebugSession } from './debug/startSession'
 
 export async function activate(context: vscode.ExtensionContext) {
   const folders = vscode.workspace.workspaceFolders || []
@@ -69,38 +69,22 @@ export async function activate(context: vscode.ExtensionContext) {
     true,
   )
 
-  let _ipc: {
-    server: Server
-    socket: string
-  } | null = null
-
-  let _debugAPI: VitestAPI | null = null
-
   ctrl.createRunProfile(
     'Debug Tests',
     vscode.TestRunProfileKind.Debug,
     async (request, token) => {
-      const ipc = _ipc || (_ipc = createIPCServer())
-      const _folders = request.include?.length
-        ? [...new Set(request.include.map(test => getTestItemFolder(test)))]
-        : folders
-      // TODO: don't create new ones unless debug was terminated
-      if (_debugAPI)
-        _debugAPI.forEach(folderApi => folderApi.stopDebugger())
-      _debugAPI = await resolveVitestDebugAPI(ipc.server, ipc.socket, _folders)
-      await runner.runTests(_debugAPI, request, token)
+      const folderApi = api.get(getTestItemFolder(request.include![0]))
+      await startDebugSession(
+        folderApi,
+        request,
+        token,
+      )
     },
     false,
     undefined,
     // TODO: support continues mode with debug
-    false,
+    true,
   )
-
-  context.subscriptions.push({
-    dispose() {
-      _ipc?.server.close()
-    },
-  })
 
   // registerRunDebugWatchHandler(ctrl, api, fileDiscoverer, context)
   context.subscriptions.push(

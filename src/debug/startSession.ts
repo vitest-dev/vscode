@@ -1,18 +1,20 @@
 import * as vscode from 'vscode'
-import { debugPath } from '../constants'
 import { log } from '../log'
 import { getConfig } from '../config'
+import type { VitestFolderAPI } from '../api'
 
 export interface DebugSessionAPI {
   session: vscode.DebugSession | undefined
   stop: () => void
 }
 
-export function startDebugSession(
-  folder: vscode.WorkspaceFolder,
-  socketPath: string,
-  vitestNodePath: string,
-): DebugSessionAPI {
+const DEBUG_DEFAULT_PORT = 9229
+
+export async function startDebugSession(
+  folderAPI: VitestFolderAPI,
+  request: vscode.TestRunRequest,
+  token: vscode.CancellationToken,
+): Promise<DebugSessionAPI> {
   let thisSession: vscode.DebugSession | undefined
   const terminateListeners: (() => void)[] = []
   const sessionApi: DebugSessionAPI = {
@@ -24,17 +26,23 @@ export function startDebugSession(
         vscode.debug.stopDebugging(thisSession)
     },
   }
-  const onStartDispose = vscode.debug.onDidStartDebugSession((session) => {
+  const onStartDispose = vscode.debug.onDidStartDebugSession(async (session) => {
+    console.log('debug started new session', session.id, session.name)
     thisSession = session
     onStartDispose.dispose()
   })
-  const onTerminateDispose = vscode.debug.onDidTerminateDebugSession((session) => {
+  const onTerminateDispose = vscode.debug.onDidTerminateDebugSession(async (session) => {
+    console.log('debug terminated', thisSession === session, session.id, session.name)
     if (thisSession !== session)
       return
+
+    // await folderAPI.stopDebugger()
 
     let timeout = false
     let restarted = false
     const onNewStartDispose = vscode.debug.onDidStartDebugSession((session) => {
+      console.log('new NEW session started')
+      // TODO: start running tests here?
       onNewStartDispose.dispose()
       // session.
       if (timeout)
@@ -55,38 +63,35 @@ export function startDebugSession(
     }, 200)
   })
 
-  const config = getConfig(folder)
+  const config = getConfig(folderAPI.folder)
+
+  await folderAPI.startDebugger(DEBUG_DEFAULT_PORT)
 
   vscode.debug.startDebugging(undefined, {
     type: 'pwa-node',
-    request: 'launch',
+    request: 'attach',
     name: 'Debug Tests',
+    processId: `${folderAPI.processId}:${DEBUG_DEFAULT_PORT}`,
+    // processId: '${command:PickProcess}',
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
-    program: debugPath,
-    args: [
-      '--socket',
-      socketPath,
-      '--vitest-path',
-      vitestNodePath,
-      '--root',
-      folder.uri.fsPath,
-    ],
+    cwd: folderAPI.folder.uri.fsPath,
     smartStep: true,
     // TODO: custom env
     env: {
       VITEST_VSCODE: 'true',
     },
-  }).then(() => {
-    log.info('[DEBUG] Debugging started')
+  }).then((fulfilled) => {
+    if (fulfilled)
+      log.info('[DEBUG] Debugging started')
+    else
+      log.error('[DEBUG] Debugging failed')
   }, (err) => {
     log.error('[DEBIG] Start debugging failed')
     log.error(err.toString())
     onStartDispose.dispose()
     onTerminateDispose.dispose()
   })
-
-  log.info('[DEBUG] Running debug at', debugPath)
 
   return sessionApi
 }

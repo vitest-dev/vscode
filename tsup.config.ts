@@ -8,10 +8,6 @@ export default defineConfig([
   },
   {
     entry: ['./src/worker/worker.ts'],
-    format: 'esm',
-  },
-  {
-    entry: ['./src/worker/debug.ts'],
-    format: 'esm',
+    format: 'cjs',
   },
 ])
