@@ -3,7 +3,7 @@ import { beforeEach } from 'vitest'
 
 beforeEach(({ task }) => {
   task.meta.vscodeExtensionPath = '.'
-  task.meta.vscodeWorkspacePath = './samples/basic'
+  task.meta.vscodeWorkspacePath = './samples/e2e'
   task.meta.vscodeTrace = 'on'
 
   // Vitst extension doesn't work with CI flag
@@ -19,7 +19,8 @@ vscodeTest('basic', async ({ page }) => {
   await page.getByRole('button', { name: 'Run Tests' }).click()
 
   // check results
-  await page.locator(`[title*="test/add.test.ts (Failed)"]`).click()
-  await page.locator(`[title*="test/mul.test.ts (Passed)"]`).click()
-  await page.locator(`[title*="28/43 tests passed"]`).click()
+  await page.locator(`[title*="pass.test.ts (Passed)"]`).click()
+  await page.locator(`[title*="fail.test.ts (Failed)"]`).click()
+  await page.locator(`[title*="mix.test.ts (Failed)"]`).click()
+  await page.locator(`[title*="2/4 tests passed"]`).click()
 })

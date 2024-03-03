@@ -1,0 +1,12 @@
+{
+  "name": "e2e",
+  "type": "module",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^1.3.0"
+  }
+}
