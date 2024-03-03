@@ -32,9 +32,6 @@ devDependencies:
   '@types/node':
     specifier: ^18.11.18
     version: 18.19.17
-  '@types/node-ipc':
-    specifier: ^9.2.3
-    version: 9.2.3
   '@types/semver':
     specifier: ^7.3.9
     version: 7.5.7
@@ -65,9 +62,6 @@ devDependencies:
   bumpp:
     specifier: ^9.3.0
     version: 9.3.0
-  cac:
-    specifier: ^6.7.14
-    version: 6.7.14
   chai:
     specifier: ^5.1.0
     version: 5.1.0
@@ -900,12 +894,6 @@ packages:
 
   /@types/mocha@10.0.6:
     resolution: {integrity: sha512-dJvrYWxP/UcXm36Qn36fxhUKu8A/xMRXVT2cliFF1Z7UA9liG5Psj3ezNSZw+5puH2czDXRLcXQxf8JbJt0ejg==}
-    dev: true
-
-  /@types/node-ipc@9.2.3:
-    resolution: {integrity: sha512-/MvSiF71fYf3+zwqkh/zkVkZj1hl1Uobre9EMFy08mqfJNAmpR0vmPgOUdEIDVgifxHj6G1vYMPLSBLLxoDACQ==}
-    dependencies:
-      '@types/node': 18.19.17
     dev: true
 
   /@types/node@10.17.60:
