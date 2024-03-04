@@ -7,9 +7,9 @@ export function createVscodeTest({
   workspacePath,
   trace,
 }: {
-  extensionPath?: string;
-  workspacePath?: string;
-  trace?: boolean;
+  extensionPath?: string
+  workspacePath?: string
+  trace?: boolean
 }) {
   return test.extend<{ page: Page }>({
     page: async ({ task }, use) => {
@@ -18,13 +18,13 @@ export function createVscodeTest({
         workspacePath,
       })
       const page = await app.firstWindow()
-      if (trace) {
+      if (trace)
         await page.context().tracing.start({ screenshots: true, snapshots: true })
-      }
+
       await use(page)
-      if (trace) {
+      if (trace)
         await page.context().tracing.stop({ path: `test-results/${task.id}/basic.zip` })
-      }
+
       await app.close()
     },
   })
