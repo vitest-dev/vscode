@@ -77,7 +77,7 @@ export async function runHandler(
   run.end()
   log.info('Tests run end')
 
-  await vscode.commands.executeCommand('editor.action.refreshCodeLens');
+  await vscode.commands.executeCommand('editor.action.refreshCodeLens')
 }
 
 export async function updateSnapshot(
