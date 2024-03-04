@@ -4,9 +4,8 @@ import v8 from 'node:v8'
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { File, ResolvedConfig, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 import { log } from './log'
-import type { DebugSessionAPI } from './debug/startSession'
 import { workerPath } from './constants'
 
 const _require = require
@@ -14,17 +13,28 @@ const _require = require
 // import { getConfig, getRootConfig } from './config'
 
 export interface BirpcMethods {
-  getFiles: () => Promise<string[]>
-  runFiles: (files?: string[], testNamePattern?: string) => Promise<void>
-  getConfig: () => Promise<ResolvedConfig>
-  isTestFile: (file: string) => Promise<boolean>
-  terminate: () => void
+  getFiles: () => Promise<Record<string, string[]>>
+  runFiles: () => Promise<void>
+  cancelRun: () => Promise<void>
+  runFolderFiles: (folder: string, files?: string[], testNamePattern?: string) => Promise<void>
+  getTestMetadata: (file: string) => Promise<{
+    folder: string
+  } | null>
 
-  startDebugger: (port: number) => void
-  stopDebugger: () => void
+  startInspect: (port: number) => void
+  stopInspect: () => void
 }
 
 export interface BirpcEvents {
+  onConsoleLog: (folder: string, log: UserConsoleLog) => void
+  onTaskUpdate: (folder: string, task: TaskResultPack[]) => void
+  onFinished: (folder: string, files?: File[], errors?: unknown[]) => void
+  onCollected: (folder: string, files?: File[]) => void
+  onWatcherStart: (folder: string, files?: File[], errors?: unknown[]) => void
+  onWatcherRerun: (folder: string, files: string[], trigger?: string) => void
+}
+
+export interface VitestEvents {
   onConsoleLog: (log: UserConsoleLog) => void
   onTaskUpdate: (task: TaskResultPack[]) => void
   onFinished: (files?: File[], errors?: unknown[]) => void
@@ -53,7 +63,8 @@ function resolveVitestNodePath(vitestPkgPath: string) {
 
 export class VitestReporter {
   constructor(
-    protected handlers: ResolvedRPC['handlers'],
+    protected folderFsPath: string,
+    protected handlers: ResolvedMeta['handlers'],
   ) {}
 
   onConsoleLog = this.createHandler('onConsoleLog')
@@ -67,9 +78,12 @@ export class VitestReporter {
     this.handlers.clearListeners()
   }
 
-  private createHandler<K extends Exclude<keyof ResolvedRPC['handlers'], 'clearListeners'>>(name: K) {
-    return (callback: BirpcEvents[K]) => {
-      this.handlers[name](callback as any)
+  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners'>>(name: K) {
+    return (callback: VitestEvents[K]) => {
+      this.handlers[name]((folder, ...args) => {
+        if (folder === this.folderFsPath)
+          (callback as any)(...args)
+      })
     }
   }
 }
@@ -77,10 +91,15 @@ export class VitestReporter {
 export class VitestAPI {
   constructor(
     protected api: VitestFolderAPI[],
+    protected meta: ResolvedMeta,
   ) {}
 
   get enabled() {
     return this.api.length > 0
+  }
+
+  get processId() {
+    return this.meta
   }
 
   get length() {
@@ -101,6 +120,26 @@ export class VitestAPI {
 
   forEach<T>(callback: (api: VitestFolderAPI, index: number) => T) {
     return this.api.forEach(callback)
+  }
+
+  cancelRun() {
+    return this.meta.rpc.cancelRun()
+  }
+
+  getFiles() {
+    return this.meta.rpc.getFiles()
+  }
+
+  async runFiles() {
+    await this.meta.rpc.runFiles()
+  }
+
+  stopInspect() {
+    return this.meta.rpc.stopInspect()
+  }
+
+  startInspect(port: number) {
+    return this.meta.rpc.startInspect(port)
   }
 
   async getTestFileData(file: string) {
@@ -125,11 +164,9 @@ export class VitestFolderAPI extends VitestReporter {
   constructor(
     folder: vscode.WorkspaceFolder,
     private rpc: VitestRPC,
-    handlers: ResolvedRPC['handlers'],
-    private pid: number,
-    private debug?: DebugSessionAPI,
+    handlers: ResolvedMeta['handlers'],
   ) {
-    super(handlers)
+    super(folder.uri.fsPath, handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
   }
 
@@ -137,28 +174,12 @@ export class VitestFolderAPI extends VitestReporter {
     return WEAKMAP_API_FOLDER.get(this)!
   }
 
-  get processId() {
-    return this.pid
-  }
-
-  getFiles() {
-    return this.rpc.getFiles()
-  }
-
-  runFiles(files?: string[], testNamePattern?: string) {
-    return this.rpc.runFiles(files, testNamePattern)
-  }
-
   isTestFile(file: string) {
-    return this.rpc.isTestFile(file)
+    return this.rpc.getTestMetadata(file)
   }
 
-  stopDebugger() {
-    return this.rpc.stopDebugger()
-  }
-
-  startDebugger(port: number) {
-    return this.rpc.startDebugger(port)
+  async runFiles(files?: string[], testNamePatern?: string) {
+    await this.rpc.runFolderFiles(this.folder.uri.fsPath, files, testNamePatern)
   }
 
   dispose() {
@@ -167,18 +188,17 @@ export class VitestFolderAPI extends VitestReporter {
 }
 
 export async function resolveVitestAPI(folders: readonly vscode.WorkspaceFolder[]) {
-  const apis = await Promise.all(folders.map(async (folder) => {
-    const api = await createVitestRPC(folder)
-    if (!api)
-      return null
-    return new VitestFolderAPI(folder, api.rpc, api.handlers, api.pid)
-  }))
-  return new VitestAPI(apis.filter(x => x !== null) as VitestFolderAPI[])
+  const vitest = await createVitestProcess(folders)
+  if (!vitest)
+    return null
+  const apis = folders.map(folder =>
+    new VitestFolderAPI(folder, vitest.rpc, vitest.handlers),
+  )
+  return new VitestAPI(apis, vitest)
 }
 
-interface ResolvedRPC {
+interface ResolvedMeta {
   rpc: VitestRPC
-  version: string
   pid: number
   handlers: {
     onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
@@ -236,24 +256,36 @@ function createRpcOptions() {
         onWatcherStart.clear()
       },
     },
-    // on(listener: (data: string) => void) {
-    //   ws.on('message', listener)
-    // },
-    // post(message: string) {
-    //   ws.send(message)
-    // },
   }
 }
 
-function createChildVitestProcess(
-  folder: vscode.WorkspaceFolder,
-  vitestNodePath: string,
-) {
+function nonNullable<T>(value: T | null | undefined): value is T {
+  return value != null
+}
+
+interface VitestMeta {
+  folder: vscode.WorkspaceFolder
+  vitestNodePath: string
+  version: string
+}
+
+function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolder[]): VitestMeta[] {
+  return folders.map((folder) => {
+    const vitestPackagePath = resolveVitestPackagePath(folder)
+    if (!vitestPackagePath)
+      return null
+    const pkg = _require(vitestPackagePath)
+    const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
+    return { folder, vitestNodePath, version: pkg.version }
+  }).filter(nonNullable)
+}
+
+function createChildVitestProcess(meta: VitestMeta[]) {
   const vitest = fork(
     workerPath,
     {
-      cwd: folder.uri.fsPath,
-      // TODO: use another execPath to use the local node version (also expose an option?)
+      // TODO: use user's execPath to use the local node version (also expose an option?)
+      execPath: undefined,
       env: {
         VITEST_VSCODE: 'true',
       },
@@ -266,7 +298,6 @@ function createChildVitestProcess(
       reject(error)
     })
     vitest.on('spawn', () => {
-      vitest.send({ type: 'init', vitestPath: vitestNodePath })
       vitest.on('message', function ready(message: any) {
         if (message.type === 'ready') {
           vitest.off('message', ready)
@@ -277,23 +308,29 @@ function createChildVitestProcess(
           reject(message.error)
         }
       })
+      vitest.send({
+        type: 'init',
+        meta: meta.map(m => ({
+          vitestNodePath: m.vitestNodePath,
+          folder: m.folder.uri.fsPath,
+        })),
+      })
     })
   })
 }
 
-export async function createVitestRPC(workspace: vscode.WorkspaceFolder): Promise<ResolvedRPC | null> {
+export async function createVitestProcess(folders: readonly vscode.WorkspaceFolder[]): Promise<ResolvedMeta | null> {
   // TODO: respect config? Why does enable exist? Can't you just disable the extension?
   // if (getConfig(workspace).enable === false || getRootConfig().disabledWorkspaceFolders.includes(workspace.name))
   //   return null
   // TODO: check compatibility with version >= 0.34.0(?)
-  const vitestPackagePath = resolveVitestPackagePath(workspace)
-  if (!vitestPackagePath)
+  const meta = resolveVitestFoldersMeta(folders)
+  if (!meta.length)
     return null
-  const pkg = _require(vitestPackagePath)
-  const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
-  log.info('[API]', `Running Vitest ${pkg.version} for "${workspace.name}" workspace folder from ${vitestNodePath}`)
 
-  const vitest = await createChildVitestProcess(workspace, vitestNodePath)
+  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.vitestNodePath})}`).join(', ')}`)
+
+  const vitest = await createChildVitestProcess(meta)
 
   log.info('[Worker]', `Vitest process ${vitest.pid} created`)
 
@@ -319,7 +356,6 @@ export async function createVitestRPC(workspace: vscode.WorkspaceFolder): Promis
   return {
     rpc: api,
     pid: vitest.pid!,
-    version: pkg.version,
     handlers,
   }
 }

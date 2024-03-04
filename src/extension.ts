@@ -3,7 +3,7 @@ import * as vscode from 'vscode'
 // import { effect } from '@vue/reactivity'
 
 // import { StatusBarItem } from './StatusBarItem'
-import { TestFile, WEAKMAP_TEST_DATA, getTestItemFolder } from './TestData'
+import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
 
 // import { Command } from './command'
 import { testControllerId } from './config'
@@ -22,14 +22,13 @@ import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
 import { GlobalTestRunner } from './runner/runner'
-import { startDebugSession } from './debug/startSession'
 
 export async function activate(context: vscode.ExtensionContext) {
   const folders = vscode.workspace.workspaceFolders || []
 
   const api = await resolveVitestAPI(folders)
 
-  if (!api.enabled) {
+  if (!api) {
     log.info('The extension is not activated because no Vitest environment was detected.')
     return
   }
@@ -57,13 +56,12 @@ export async function activate(context: vscode.ExtensionContext) {
   // }
 
   const fileDiscoverer = registerDiscovery(ctrl, context, api)
-  const runner = new GlobalTestRunner(ctrl)
-  // const gebugRunner = new DebugTestRunner(ctrl)
+  const runner = new GlobalTestRunner(api, ctrl)
 
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    (request, token) => runner.runTests(api, request, token),
+    (request, token) => runner.runTests(request, token),
     true,
     undefined,
     true,
@@ -72,17 +70,9 @@ export async function activate(context: vscode.ExtensionContext) {
   ctrl.createRunProfile(
     'Debug Tests',
     vscode.TestRunProfileKind.Debug,
-    async (request, token) => {
-      const folderApi = api.get(getTestItemFolder(request.include![0]))
-      await startDebugSession(
-        folderApi,
-        request,
-        token,
-      )
-    },
+    (request, token) => runner.debugTests(request, token),
     false,
     undefined,
-    // TODO: support continues mode with debug
     true,
   )
 

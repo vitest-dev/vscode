@@ -6,6 +6,8 @@ import type { VitestAPI, VitestFolderAPI } from '../api'
 import type { TestData } from '../TestData'
 import { TestCase, TestFile, WEAKMAP_TEST_DATA, getTestItemFolder } from '../TestData'
 import { log } from '../log'
+import type { DebugSessionAPI } from '../debug/startSession'
+import { startDebugSession } from '../debug/startSession'
 
 function getFilepathFromTask(task: Task) {
   if ('filepath' in task)
@@ -194,14 +196,19 @@ export class GlobalTestRunner extends vscode.Disposable {
   private taskIdToTestData = new Map<string, TestData>()
   private runners: FolderTestRunner[] = []
 
-  private initializedApi = new WeakSet<VitestAPI>()
+  private debug?: DebugSessionAPI
 
   constructor(
+    private readonly api: VitestAPI,
     private readonly controller: vscode.TestController,
   ) {
     super(() => {
       this.taskIdToTestData.clear()
       this.runners.forEach(runner => runner.dispose())
+    })
+
+    api.forEach((folderAPI) => {
+      this.runners.push(new FolderTestRunner(this.controller, this, folderAPI))
     })
   }
 
@@ -229,34 +236,32 @@ export class GlobalTestRunner extends vscode.Disposable {
     return null
   }
 
-  protected initializeApi(api: VitestAPI) {
-    if (!this.initializedApi.has(api)) {
-      this.runners.forEach(runner => runner.dispose())
-      this.runners = []
-      api.forEach((folderAPI) => {
-        this.runners.push(new FolderTestRunner(this.controller, this, folderAPI))
-      })
-    }
+  public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    await this.debug?.stop()
+
+    this.debug = await startDebugSession(
+      this.api,
+      this,
+      request,
+      token,
+    )
   }
 
-  public async runTests(api: VitestAPI, request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    this.initializeApi(api)
-
+  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
     this.currentVscodeRequest = request
     token.onCancellationRequested(() => {
+      // TODO: test how tests are marked since Vitest by default changes the stateMap
+      this.api.cancelRun()
       this.currentVscodeRequest = undefined
     })
 
     const tests = request.include ?? []
 
-    const testNamePatern = formatTestPattern(tests)
-
-    if (!tests.length || api.length === 1) {
-      const files = this.getTestFiles(tests)
-
-      await Promise.all(api.map(folderAPI => folderAPI.runFiles(files, testNamePatern)))
+    if (!tests.length) {
+      await this.api.runFiles()
     }
     else {
+      const testNamePatern = formatTestPattern(tests)
       // run only affected folders
       const workspaces = new Map<vscode.WorkspaceFolder, vscode.TestItem[]>()
       tests.forEach((test) => {
@@ -265,12 +270,11 @@ export class GlobalTestRunner extends vscode.Disposable {
         folderTests.push(test)
         workspaces.set(workspaceFolder, folderTests)
       })
-      const promises = [...workspaces.entries()].map(async ([folder, tests]) => {
-        const folderApi = api.get(folder)
+      for (const [folder, tests] of workspaces.entries()) {
+        const folderAPI = this.api.get(folder)
         const files = this.getTestFiles(tests)
-        await folderApi.runFiles(files, testNamePatern)
-      })
-      await Promise.all(promises)
+        await folderAPI.runFiles(files, testNamePatern)
+      }
     }
 
     if (!request.continuous)

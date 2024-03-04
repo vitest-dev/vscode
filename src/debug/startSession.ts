@@ -1,17 +1,19 @@
 import * as vscode from 'vscode'
 import { log } from '../log'
 import { getConfig } from '../config'
-import type { VitestFolderAPI } from '../api'
+import type { GlobalTestRunner } from '../runner/runner'
+import type { VitestAPI } from '../api'
 
 export interface DebugSessionAPI {
   session: vscode.DebugSession | undefined
-  stop: () => void
+  stop: () => Promise<void>
 }
 
 const DEBUG_DEFAULT_PORT = 9229
 
 export async function startDebugSession(
-  folderAPI: VitestFolderAPI,
+  api: VitestAPI,
+  runner: GlobalTestRunner,
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
 ): Promise<DebugSessionAPI> {
@@ -21,19 +23,20 @@ export async function startDebugSession(
     get session() {
       return thisSession
     },
-    stop() {
+    async stop() {
       if (thisSession)
-        vscode.debug.stopDebugging(thisSession)
+        await vscode.debug.stopDebugging(thisSession)
     },
   }
+  // TODO: refactor this, with "attach", the session is actualy parentSession when "rerun" is triggered
+  // TODO: run tests on "rerun" and "start"!
   const onStartDispose = vscode.debug.onDidStartDebugSession(async (session) => {
-    console.log('debug started new session', session.id, session.name)
     thisSession = session
     onStartDispose.dispose()
+    // await runner.runTests(request, token)
   })
   const onTerminateDispose = vscode.debug.onDidTerminateDebugSession(async (session) => {
-    console.log('debug terminated', thisSession === session, session.id, session.name)
-    if (thisSession !== session)
+    if (thisSession !== session && thisSession !== session.parentSession)
       return
 
     // await folderAPI.stopDebugger()
@@ -41,7 +44,6 @@ export async function startDebugSession(
     let timeout = false
     let restarted = false
     const onNewStartDispose = vscode.debug.onDidStartDebugSession((session) => {
-      console.log('new NEW session started')
       // TODO: start running tests here?
       onNewStartDispose.dispose()
       // session.
@@ -63,19 +65,17 @@ export async function startDebugSession(
     }, 200)
   })
 
-  const config = getConfig(folderAPI.folder)
+  const config = getConfig()
 
-  await folderAPI.startDebugger(DEBUG_DEFAULT_PORT)
+  api.startInspect(DEBUG_DEFAULT_PORT)
 
   vscode.debug.startDebugging(undefined, {
     type: 'pwa-node',
     request: 'attach',
     name: 'Debug Tests',
-    processId: `${folderAPI.processId}:${DEBUG_DEFAULT_PORT}`,
-    // processId: '${command:PickProcess}',
+    processId: `${api.processId}:${DEBUG_DEFAULT_PORT}`,
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
-    cwd: folderAPI.folder.uri.fsPath,
     smartStep: true,
     // TODO: custom env
     env: {

@@ -1,66 +1,85 @@
 import v8 from 'node:v8'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
+import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
 import type { BirpcEvents, BirpcMethods } from '../api'
 import { createWorkerRPC } from './rpc'
 
-interface RunnerOptions {
-  vitestPath: string
+interface VitestMeta {
+  folder: string
+  vitestNodePath: string
 }
 
-async function initVitest(options: RunnerOptions) {
+interface RunnerOptions {
+  type: 'init'
+  meta: VitestMeta[]
+}
+
+class VscodeReporter implements Reporter {
+  private rpc!: BirpcReturn<BirpcEvents, BirpcMethods>
+  private ctx!: Vitest
+  private folder!: string
+
+  initVitest(ctx: Vitest) {
+    this.ctx = ctx
+    this.folder = ctx.config.root
+  }
+
+  initRpc(rpc: BirpcReturn<BirpcEvents, BirpcMethods>) {
+    this.rpc = rpc
+  }
+
+  onUserConsoleLog(log: UserConsoleLog) {
+    this.rpc.onConsoleLog(this.folder, log)
+  }
+
+  onTaskUpdate(packs: TaskResultPack[]) {
+    packs.forEach(([taskId, result]) => {
+      const project = this.ctx.getProjectByTaskId(taskId)
+
+      result?.errors?.forEach((error) => {
+        if (typeof error === 'object' && error) {
+          error.stacks = parseErrorStacktrace(error, {
+            getSourceMap: file => project.getBrowserSourceMapModuleById(file),
+          })
+        }
+      })
+    })
+
+    this.rpc.onTaskUpdate(this.folder, packs)
+  }
+
+  onFinished(files?: File[], errors?: unknown[]) {
+    this.rpc.onFinished(this.folder, files, errors)
+  }
+
+  onCollected(files?: File[]) {
+    this.rpc.onCollected(this.folder, files)
+  }
+
+  onWatcherStart(files?: File[], errors?: unknown[]) {
+    this.rpc.onWatcherStart(this.folder, files, errors)
+  }
+
+  onWatcherRerun(files: string[], trigger?: string) {
+    this.rpc.onWatcherRerun(this.folder, files, trigger)
+  }
+}
+
+async function initVitest(root: string, vitestNodePath: string) {
   try {
-    let rpc: BirpcReturn<BirpcEvents, BirpcMethods>
-    const vitestMode = await import(options.vitestPath) as typeof import('vitest/node')
+    const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
+    const reporter = new VscodeReporter()
     const vitest = await vitestMode.createVitest('test', {
       watch: true,
-      root: process.cwd(),
-      reporters: [
-        {
-          onUserConsoleLog(log) {
-            rpc.onConsoleLog(log)
-          },
-          onTaskUpdate(packs) {
-            packs.forEach(([taskId, result]) => {
-              const project = vitest.getProjectByTaskId(taskId)
-
-              result?.errors?.forEach((error) => {
-                if (typeof error === 'object' && error) {
-                  error.stacks = parseErrorStacktrace(error, {
-                    getSourceMap: file => project.getBrowserSourceMapModuleById(file),
-                  })
-                }
-              })
-            })
-
-            rpc.onTaskUpdate(packs)
-          },
-          onFinished(files, errors) {
-            rpc.onFinished(files, errors)
-          },
-          onCollected(files) {
-            rpc.onCollected(files)
-          },
-          onWatcherStart(files, errors) {
-            rpc.onWatcherStart(files, errors)
-          },
-          onWatcherRerun(files, trigger) {
-            rpc.onWatcherRerun(files, trigger)
-          },
-        },
-      ],
+      root,
+      reporters: [reporter],
     })
-    rpc = createWorkerRPC(vitest, {
-      on(listener) {
-        process.on('message', listener)
-      },
-      post(message) {
-        process.send!(message)
-      },
-      serialize: v8.serialize,
-      deserialize: v => v8.deserialize(Buffer.from(v)),
-    })
-    process.send!({ type: 'ready' })
+    reporter.initVitest(vitest)
+    return {
+      vitest,
+      reporter,
+    }
   }
   catch (err: any) {
     process.send!({
@@ -71,12 +90,28 @@ async function initVitest(options: RunnerOptions) {
         name: err.name,
       },
     })
+    throw err
   }
 }
 
-process.on('message', function init(message: any) {
+process.on('message', async function init(message: any) {
   if (message.type === 'init') {
     process.off('message', init)
-    initVitest(message)
+    const data = message as RunnerOptions
+    const vitest = await Promise.all(data.meta.map((meta) => {
+      return initVitest(meta.folder, meta.vitestNodePath)
+    }))
+    const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
+      on(listener) {
+        process.on('message', listener)
+      },
+      post(message) {
+        process.send!(message)
+      },
+      serialize: v8.serialize,
+      deserialize: v => v8.deserialize(Buffer.from(v)),
+    })
+    vitest.forEach(v => v.reporter.initRpc(rpc))
+    process.send!({ type: 'ready' })
   }
 })
