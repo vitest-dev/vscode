@@ -1,5 +1,5 @@
 import { beforeAll } from 'vitest'
-import { createVscodeTest } from './helper'
+import { vscodeTest } from './helper'
 
 // Vitst extension doesn't work with CI flag
 beforeAll(() => {
@@ -7,13 +7,11 @@ beforeAll(() => {
   delete process.env.GITHUB_ACTIONS
 })
 
-const vscodeTest = createVscodeTest({
-  extensionPath: '.',
-  workspacePath: './samples/e2e',
-  trace: true,
-})
+vscodeTest('basic', async ({ launch }) => {
+  const { page } = await launch({
+    workspacePath: './samples/e2e',
+  })
 
-vscodeTest('basic', async ({ page }) => {
   // open test explorer
   await page.getByRole('tab', { name: 'Testing' }).locator('a').click()
   await page.getByText('No test results yet.').click()
