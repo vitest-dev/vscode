@@ -1,4 +1,4 @@
-import { join, sep } from 'node:path'
+import { sep } from 'node:path'
 import * as vscode from 'vscode'
 import type { TestData } from './TestData'
 import {
@@ -16,21 +16,16 @@ import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
 
 export class TestFileDiscoverer extends vscode.Disposable {
-  private lastWatches = [] as vscode.FileSystemWatcher[]
   // private readonly workspacePaths = [] as string[]
   private workspaceCommonPrefix: Map<string, string> = new Map()
   private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map()
   private pathToFileItem: Map<string, TestFile> = new Map()
-  private api: VitestAPI
 
   constructor(
-    api: VitestAPI,
+    private readonly folders: readonly vscode.WorkspaceFolder[],
+    private readonly api: VitestAPI,
   ) {
     super(() => {
-      for (const watch of this.lastWatches)
-        watch.dispose()
-
-      this.lastWatches = []
       this.workspaceItems.clear()
       this.pathToFileItem.clear()
       this.workspaceCommonPrefix.clear()
@@ -40,73 +35,66 @@ export class TestFileDiscoverer extends vscode.Disposable {
     //   = vscode.workspace.workspaceFolders?.map(x => x.uri.fsPath) || []
   }
 
-  async watchAllTestFilesInWorkspace(
+  async watchTestFilesInWorkspace(
     controller: vscode.TestController,
-  ): Promise<vscode.FileSystemWatcher[]> {
-    for (const watch of this.lastWatches)
-      watch.dispose()
+  ) {
+    const files = await this.discoverAllTestFilesInWorkspace(controller)
+    for (const folderFsPath in files) {
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(folderFsPath, '**/*'),
+      )
 
-    if (!this.api.enabled)
-      return [] // handle the case of no opened folders
-
-    const watchers = [] as vscode.FileSystemWatcher[]
-
-    await Promise.all(
-      this.api.map(async (api) => {
-        const workspacePath = api.folder.uri.fsPath
-        const files = await api.getFiles()
-        for (const file of files) {
-          this.getOrCreateFile(controller, vscode.Uri.file(file), api.folder).data.updateFromDisk(
-            controller,
-            api.folder,
-          )
+      watcher.onDidCreate(file => this.discoverTestFromFile(controller, file))
+      watcher.onDidChange(async (uri) => {
+        const metadata = await this.api.getTestMetadata(uri.fsPath)
+        if (!metadata)
+          return
+        const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(metadata.folder))
+        if (!folder) {
+          log.error(`Cannot find workspace folder for ${metadata.folder}`)
+          return
         }
+        const { data } = this.getOrCreateFile(controller, uri, folder)
+        if (!data.resolved)
+          return
 
-        const watcher = vscode.workspace.createFileSystemWatcher(join(workspacePath, '**'))
-        watcher.onDidCreate(
-          async uri => await api.isTestFile(uri.fsPath) && this.getOrCreateFile(controller, uri, api.folder),
-        )
-
-        watcher.onDidChange(
-          async (uri) => {
-            if (!await api.isTestFile(uri.fsPath))
-              return
-
-            const { data } = this.getOrCreateFile(controller, uri, api.folder)
-            if (!data.resolved)
-              return
-
-            await data.updateFromDisk(controller, api.folder)
-          },
-        )
-
-        watcher.onDidDelete(uri => controller.items.delete(uri.toString()))
-        watchers.push(watcher)
-
-        return watcher
-      }),
-    )
-    this.lastWatches = watchers
-    return watchers
+        await data.updateFromDisk(controller, folder)
+      })
+      watcher.onDidDelete(file => controller.items.delete(file.toString()))
+    }
   }
 
   async discoverAllTestFilesInWorkspace(
     controller: vscode.TestController,
-  ): Promise<void> {
-    if (!this.api.enabled)
-      return
+  ): Promise<Record<string, string[]>> {
+    const files = await this.api.getFiles()
+    for (const folderFsPath in files) {
+      const testFiles = files[folderFsPath]
+      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(folderFsPath))
+      if (!folder) {
+        log.error(`Cannot find workspace folder for ${folderFsPath}`)
+        continue
+      }
+      for (const file of testFiles) {
+        this.getOrCreateFile(controller, vscode.Uri.file(file), folder).data.updateFromDisk(
+          controller,
+          folder,
+        )
+      }
+    }
+    return files
+  }
 
-    await Promise.all(
-      this.api.map(async (api) => {
-        const files = await api.getFiles()
-        for (const file of files) {
-          this.getOrCreateFile(controller, vscode.Uri.file(file), api.folder).data.updateFromDisk(
-            controller,
-            api.folder,
-          )
-        }
-      }),
-    )
+  public async discoverTestFromFile(
+    controller: vscode.TestController,
+    file: vscode.Uri,
+  ) {
+    const metadata = await this.api.getTestMetadata(file.fsPath)
+    if (metadata) {
+      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(metadata.folder))
+      if (folder)
+        this.getOrCreateFile(controller, file, folder)
+    }
   }
 
   public async discoverTestFromDoc(
@@ -116,12 +104,15 @@ export class TestFileDiscoverer extends vscode.Disposable {
     if (e.uri.scheme !== 'file')
       return
 
-    const testFileData = await this.api.getTestFileData(e.uri.fsPath)
+    const testFileData = await this.api.getTestMetadata(e.uri.fsPath)
     if (!testFileData)
       return
+    const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(testFileData.folder))
+    if (!folder)
+      return
 
-    const { file, data } = this.getOrCreateFile(ctrl, e.uri, testFileData.folder)
-    discoverTestFromFileContent(ctrl, e.getText(), file, data, testFileData.folder)
+    const { file, data } = this.getOrCreateFile(ctrl, e.uri, folder)
+    discoverTestFromFileContent(ctrl, e.getText(), file, data, folder)
 
     return file
   }

@@ -33,7 +33,7 @@ export async function startDebugSession(
   const onStartDispose = vscode.debug.onDidStartDebugSession(async (session) => {
     thisSession = session
     onStartDispose.dispose()
-    // await runner.runTests(request, token)
+    await runner.runTests(request, token)
   })
   const onTerminateDispose = vscode.debug.onDidTerminateDebugSession(async (session) => {
     if (thisSession !== session && thisSession !== session.parentSession)
@@ -67,7 +67,7 @@ export async function startDebugSession(
 
   const config = getConfig()
 
-  api.startInspect(DEBUG_DEFAULT_PORT)
+  // api.startInspect(DEBUG_DEFAULT_PORT)
 
   vscode.debug.startDebugging(undefined, {
     type: 'pwa-node',

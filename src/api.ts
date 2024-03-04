@@ -94,12 +94,8 @@ export class VitestAPI {
     protected meta: ResolvedMeta,
   ) {}
 
-  get enabled() {
-    return this.api.length > 0
-  }
-
   get processId() {
-    return this.meta
+    return this.meta.pid
   }
 
   get length() {
@@ -142,15 +138,8 @@ export class VitestAPI {
     return this.meta.rpc.startInspect(port)
   }
 
-  async getTestFileData(file: string) {
-    for (const rpc of this.api) {
-      if (await rpc.isTestFile(file)) {
-        return {
-          folder: rpc.folder,
-        }
-      }
-    }
-    return null
+  async getTestMetadata(file: string) {
+    return this.meta.rpc.getTestMetadata(file)
   }
 
   dispose() {
@@ -332,7 +321,7 @@ export async function createVitestProcess(folders: readonly vscode.WorkspaceFold
 
   const vitest = await createChildVitestProcess(meta)
 
-  log.info('[Worker]', `Vitest process ${vitest.pid} created`)
+  log.info('[API]', `Vitest process ${vitest.pid} created`)
 
   vitest.stdout?.on('data', d => log.info('[Worker]', d.toString()))
   vitest.stderr?.on('data', d => log.error('[Worker]', d.toString()))

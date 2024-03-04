@@ -72,6 +72,7 @@ async function initVitest(root: string, vitestNodePath: string) {
     const reporter = new VscodeReporter()
     const vitest = await vitestMode.createVitest('test', {
       watch: true,
+      api: false,
       root,
       reporters: [reporter],
     })
