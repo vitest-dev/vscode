@@ -14,8 +14,7 @@ const kReplacers = new Map<string, string>([
 ])
 
 export function transformTestPattern(
-  { testName, isEach }:
-  { testName: string; isEach: boolean },
+  { testName, isEach }: { testName: string; isEach: boolean },
 ): string {
   // https://vitest.dev/api/#test-each
   // replace vitest's table test placeholder and treat it as regex

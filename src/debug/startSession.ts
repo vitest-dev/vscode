@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import getPort from 'get-port'
 import { log } from '../log'
 import { getConfig } from '../config'
 import type { GlobalTestRunner } from '../runner/runner'
@@ -58,14 +59,15 @@ export async function startDebugSession(
   })
 
   const config = getConfig()
+  const port = await getPort({ port: DEBUG_DEFAULT_PORT })
 
-  api.startInspect(DEBUG_DEFAULT_PORT)
+  api.startInspect(port)
 
   vscode.debug.startDebugging(undefined, {
     type: 'pwa-node',
     request: 'attach',
     name: 'Debug Tests',
-    processId: `${api.processId}:${DEBUG_DEFAULT_PORT}`,
+    processId: `${api.processId}:${port}`,
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
     __vitest_name: 'vitest-debug',

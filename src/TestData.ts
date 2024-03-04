@@ -115,9 +115,14 @@ export class TestFile {
 }
 
 class TaskName {
-  private readonly pattern: string
+  public readonly pattern: string
+  public readonly regexp: RegExp
   constructor(readonly start: TestCase | TestDescribe) {
-    this.pattern = transformTestPattern({ testName: start.name, isEach: start.isEach })
+    this.pattern = transformTestPattern({
+      testName: start.name,
+      isEach: start.isEach,
+    })
+    this.regexp = new RegExp(`^${this.pattern}$`)
   }
 
   asVitestArgs(): string {

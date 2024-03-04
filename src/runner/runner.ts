@@ -165,7 +165,9 @@ function unwrapTask(task: Task, path: Task[] = []) {
 function findTestItemByTaskPath(path: Task[], filepath: string, item: vscode.TestItem, depth = 0): TestData | null {
   const data = WEAKMAP_TEST_DATA.get(item)!
   const isFile = depth === 0 && data instanceof TestFile && filepath === data.getFilePath()
-  if (isFile || item.label === path[depth].name) {
+  // the names are the same or the name matches the regexp (when "each")
+  // TODO: in the future, collect files with Vitest API instead
+  if (isFile || item.label === path[depth].name || (!(data instanceof TestFile) && data.nameResolver.start.isEach && data.nameResolver.regexp.test(path[depth].name))) {
     if (path.length === depth + 1)
       return data
 
