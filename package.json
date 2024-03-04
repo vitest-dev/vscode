@@ -136,7 +136,6 @@
     "@antfu/eslint-config": "^2.6.4",
     "@babel/parser": "^7.20.15",
     "@babel/types": "^7.20.7",
-    "@hiogawa/vscode-e2e": "0.0.1",
     "@rauschma/stringio": "^1.4.0",
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^7.2.0",
