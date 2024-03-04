@@ -1,14 +1,16 @@
-import { vscodeTest } from '@hiogawa/vscode-e2e/vitest'
-import { beforeEach } from 'vitest'
+import { beforeAll } from 'vitest'
+import { createVscodeTest } from './helper'
 
-beforeEach(({ task }) => {
-  task.meta.vscodeExtensionPath = '.'
-  task.meta.vscodeWorkspacePath = './samples/e2e'
-  task.meta.vscodeTrace = 'on'
-
-  // Vitst extension doesn't work with CI flag
+// Vitst extension doesn't work with CI flag
+beforeAll(() => {
   delete process.env.CI
   delete process.env.GITHUB_ACTIONS
+})
+
+const vscodeTest = createVscodeTest({
+  extensionPath: '.',
+  workspacePath: './samples/e2e',
+  trace: true,
 })
 
 vscodeTest('basic', async ({ page }) => {
