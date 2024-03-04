@@ -17,41 +17,33 @@ export async function startDebugSession(
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
 ): Promise<DebugSessionAPI> {
-  let thisSession: vscode.DebugSession | undefined
-  const terminateListeners: (() => void)[] = []
-  const sessionApi: DebugSessionAPI = {
-    get session() {
-      return thisSession
-    },
-    async stop() {
-      if (thisSession)
-        await vscode.debug.stopDebugging(thisSession)
-    },
-  }
-  // TODO: refactor this, with "attach", the session is actualy parentSession when "rerun" is triggered
-  // TODO: run tests on "rerun" and "start"!
-  const onStartDispose = vscode.debug.onDidStartDebugSession(async (session) => {
-    thisSession = session
+  let mainSession: vscode.DebugSession | undefined
+  const onStartDispose = vscode.debug.onDidStartDebugSession((session) => {
+    mainSession = session
     onStartDispose.dispose()
-    await runner.runTests(request, token)
+  })
+  const onRerunDispose = vscode.debug.onDidStartDebugSession(async (session) => {
+    const baseSession = session.parentSession || session
+    // check if not terminated
+    setTimeout(() => {
+      if (baseSession === mainSession)
+        runner.runTests(request, token)
+    }, 150)
   })
   const onTerminateDispose = vscode.debug.onDidTerminateDebugSession(async (session) => {
-    if (thisSession !== session && thisSession !== session.parentSession)
+    if (mainSession !== session)
       return
-
-    // await folderAPI.stopDebugger()
 
     let timeout = false
     let restarted = false
     const onNewStartDispose = vscode.debug.onDidStartDebugSession((session) => {
-      // TODO: start running tests here?
       onNewStartDispose.dispose()
       // session.
       if (timeout)
         return
 
       restarted = true
-      thisSession = session
+      mainSession = session
     })
 
     setTimeout(() => {
@@ -59,15 +51,15 @@ export async function startDebugSession(
         timeout = true
         onTerminateDispose.dispose()
         onNewStartDispose.dispose()
-        thisSession = undefined
-        terminateListeners.forEach(listener => listener())
+        mainSession = undefined
+        api.stopInspect()
       }
-    }, 200)
+    }, 100)
   })
 
   const config = getConfig()
 
-  // api.startInspect(DEBUG_DEFAULT_PORT)
+  api.startInspect(DEBUG_DEFAULT_PORT)
 
   vscode.debug.startDebugging(undefined, {
     type: 'pwa-node',
@@ -76,6 +68,7 @@ export async function startDebugSession(
     processId: `${api.processId}:${DEBUG_DEFAULT_PORT}`,
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
+    __vitest_name: 'vitest-debug',
     smartStep: true,
     // TODO: custom env
     env: {
@@ -93,5 +86,17 @@ export async function startDebugSession(
     onTerminateDispose.dispose()
   })
 
-  return sessionApi
+  return <DebugSessionAPI>{
+    get session() {
+      return mainSession
+    },
+    async stop() {
+      if (mainSession)
+        await vscode.debug.stopDebugging(mainSession)
+      onStartDispose.dispose()
+      onTerminateDispose.dispose()
+      onRerunDispose.dispose()
+      api.stopInspect()
+    },
+  }
 }
