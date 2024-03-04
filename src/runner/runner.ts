@@ -261,7 +261,6 @@ export class GlobalTestRunner extends vscode.Disposable {
       for (const [folder, tests] of workspaces.entries()) {
         const folderAPI = this.api.get(folder)
         const files = this.getTestFiles(tests)
-        console.log('run', files, testNamePatern)
         await folderAPI.runFiles(files, testNamePatern)
       }
     }
