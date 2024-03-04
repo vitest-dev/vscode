@@ -205,7 +205,7 @@ function createHandler<T extends (...args: any) => any>() {
   return {
     handlers,
     register: (listener: any) => handlers.push(listener),
-    trigger: (data: any) => handlers.forEach(handler => handler(data)),
+    trigger: (...data: any) => handlers.forEach(handler => handler(...data)),
     clear: () => handlers.length = 0,
   }
 }
@@ -317,7 +317,7 @@ export async function createVitestProcess(folders: readonly vscode.WorkspaceFold
   if (!meta.length)
     return null
 
-  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.vitestNodePath})}`).join(', ')}`)
+  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.vitestNodePath})`).join(', ')}`)
 
   const vitest = await createChildVitestProcess(meta)
 

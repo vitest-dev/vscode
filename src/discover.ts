@@ -43,17 +43,17 @@ export class TestFileDiscoverer extends vscode.Disposable {
       const watcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(folderFsPath, '**/*'),
       )
+      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(folderFsPath))
+      if (!folder) {
+        log.error(`Cannot find workspace folder for ${folderFsPath}`)
+        continue
+      }
 
       watcher.onDidCreate(file => this.discoverTestFromFile(controller, file))
       watcher.onDidChange(async (uri) => {
         const metadata = await this.api.getTestMetadata(uri.fsPath)
         if (!metadata)
           return
-        const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(metadata.folder))
-        if (!folder) {
-          log.error(`Cannot find workspace folder for ${metadata.folder}`)
-          return
-        }
         const { data } = this.getOrCreateFile(controller, uri, folder)
         if (!data.resolved)
           return
