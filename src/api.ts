@@ -15,6 +15,7 @@ const _require = require
 export interface BirpcMethods {
   getFiles: () => Promise<Record<string, string[]>>
   runFiles: () => Promise<void>
+  collectTests: (workspaceFolder: string, testFile: string) => Promise<void>
   cancelRun: () => Promise<void>
   runFolderFiles: (folder: string, files?: string[], testNamePattern?: string) => Promise<void>
   getTestMetadata: (file: string) => Promise<{
@@ -74,11 +75,14 @@ export class VitestReporter {
   onWatcherStart = this.createHandler('onWatcherStart')
   onWatcherRerun = this.createHandler('onWatcherRerun')
 
-  clearListeners() {
+  clearListeners(name?: Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>) {
+    if (name)
+      this.handlers.removeListener(name, this.handlers[name])
+
     this.handlers.clearListeners()
   }
 
-  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners'>>(name: K) {
+  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>>(name: K) {
     return (callback: VitestEvents[K]) => {
       this.handlers[name]((folder, ...args) => {
         if (folder === this.folderFsPath)
@@ -102,8 +106,9 @@ export class VitestAPI {
     return this.api.length
   }
 
-  get(folder: vscode.WorkspaceFolder) {
-    return this.api.find(api => api.folder === folder)!
+  get(folder: vscode.WorkspaceFolder | string) {
+    const folderFsPath = typeof folder === 'string' ? folder : folder.uri.fsPath
+    return this.api.find(api => api.workspaceFolder.uri.fsPath === folderFsPath)!
   }
 
   filter(callback: (api: VitestFolderAPI, index: number) => boolean) {
@@ -159,7 +164,7 @@ export class VitestFolderAPI extends VitestReporter {
     WEAKMAP_API_FOLDER.set(this, folder)
   }
 
-  get folder() {
+  get workspaceFolder() {
     return WEAKMAP_API_FOLDER.get(this)!
   }
 
@@ -168,7 +173,11 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
-    await this.rpc.runFolderFiles(this.folder.uri.fsPath, files, testNamePatern)
+    await this.rpc.runFolderFiles(this.workspaceFolder.uri.fsPath, files, testNamePatern)
+  }
+
+  async collectTests(testFile: string) {
+    await this.rpc.collectTests(this.workspaceFolder.uri.fsPath, testFile)
   }
 
   dispose() {
@@ -195,6 +204,7 @@ interface ResolvedMeta {
     onWatcherStart: (listener: BirpcEvents['onWatcherStart']) => void
     onWatcherRerun: (listener: BirpcEvents['onWatcherRerun']) => void
     clearListeners: () => void
+    removeListener: (name: string, listener: any) => void
   }
 }
 
@@ -205,42 +215,48 @@ function createHandler<T extends (...args: any) => any>() {
     register: (listener: any) => handlers.push(listener),
     trigger: (...data: any) => handlers.forEach(handler => handler(...data)),
     clear: () => handlers.length = 0,
+    remove: (listener: T) => {
+      const index = handlers.indexOf(listener)
+      if (index !== -1)
+        handlers.splice(index, 1)
+    },
   }
 }
 
 function createRpcOptions() {
-  const onConsoleLog = createHandler<BirpcEvents['onConsoleLog']>()
-  const onTaskUpdate = createHandler<BirpcEvents['onTaskUpdate']>()
-  const onFinished = createHandler<BirpcEvents['onFinished']>()
-  const onCollected = createHandler<BirpcEvents['onCollected']>()
-  const onWatcherRerun = createHandler<BirpcEvents['onWatcherRerun']>()
-  const onWatcherStart = createHandler<BirpcEvents['onWatcherStart']>()
+  const handlers = {
+    onConsoleLog: createHandler<BirpcEvents['onConsoleLog']>(),
+    onTaskUpdate: createHandler<BirpcEvents['onTaskUpdate']>(),
+    onFinished: createHandler<BirpcEvents['onFinished']>(),
+    onCollected: createHandler<BirpcEvents['onCollected']>(),
+    onWatcherRerun: createHandler<BirpcEvents['onWatcherRerun']>(),
+    onWatcherStart: createHandler<BirpcEvents['onWatcherStart']>(),
+  }
 
   const events: Omit<BirpcEvents, 'onReady' | 'onError'> = {
-    onConsoleLog: onConsoleLog.trigger,
-    onFinished: onFinished.trigger,
-    onTaskUpdate: onTaskUpdate.trigger,
-    onCollected: onCollected.trigger,
-    onWatcherRerun: onWatcherRerun.trigger,
-    onWatcherStart: onWatcherStart.trigger,
+    onConsoleLog: handlers.onConsoleLog.trigger,
+    onFinished: handlers.onFinished.trigger,
+    onTaskUpdate: handlers.onTaskUpdate.trigger,
+    onCollected: handlers.onCollected.trigger,
+    onWatcherRerun: handlers.onWatcherRerun.trigger,
+    onWatcherStart: handlers.onWatcherStart.trigger,
   }
 
   return {
     events,
     handlers: {
-      onConsoleLog: onConsoleLog.register,
-      onTaskUpdate: onTaskUpdate.register,
-      onFinished: onFinished.register,
-      onCollected: onCollected.register,
-      onWatcherRerun: onWatcherRerun.register,
-      onWatcherStart: onWatcherStart.register,
+      onConsoleLog: handlers.onConsoleLog.register,
+      onTaskUpdate: handlers.onTaskUpdate.register,
+      onFinished: handlers.onFinished.register,
+      onCollected: handlers.onCollected.register,
+      onWatcherRerun: handlers.onWatcherRerun.register,
+      onWatcherStart: handlers.onWatcherStart.register,
+      removeListener(name: string, listener: any) {
+        handlers[name as 'onCollected']?.remove(listener)
+      },
       clearListeners() {
-        onConsoleLog.clear()
-        onTaskUpdate.clear()
-        onFinished.clear()
-        onCollected.clear()
-        onWatcherRerun.clear()
-        onWatcherStart.clear()
+        for (const name in handlers)
+          handlers[name as 'onCollected']?.clear()
       },
     },
   }

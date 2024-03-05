@@ -3,25 +3,20 @@ import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
 import type { VitestAPI, VitestFolderAPI } from '../api'
-import type { TestData } from '../TestData'
-import { TestFile, WEAKMAP_TEST_DATA, getTestItemFolder } from '../TestData'
+import type { TestData } from '../testTreeData'
+import { TestFolder, getTestData } from '../testTreeData'
 import { log } from '../log'
 import type { DebugSessionAPI } from '../debug/startSession'
 import { startDebugSession } from '../debug/startSession'
-
-function getFilepathFromTask(task: Task) {
-  if ('filepath' in task)
-    return task.filepath
-  return task.file?.filepath
-}
+import type { TestTree } from '../testTree'
 
 function formatTestPattern(tests: readonly vscode.TestItem[]) {
   if (!tests.length || tests.length > 1)
     return
-  const data = WEAKMAP_TEST_DATA.get(tests[0])!
-  if (!data.nameResolver)
+  const data = getTestData(tests[0])!
+  if (!('getTestNamePattern' in data))
     return
-  return data.nameResolver.asVitestArgs()
+  return data.getTestNamePattern()
 }
 
 export class FolderTestRunner extends vscode.Disposable {
@@ -39,7 +34,9 @@ export class FolderTestRunner extends vscode.Disposable {
       this.taskIdToTestData.clear()
     })
 
-    api.onWatcherRerun(() => this.startTestRun())
+    api.onWatcherRerun(() => {
+      this.startTestRun()
+    })
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
@@ -75,11 +72,16 @@ export class FolderTestRunner extends vscode.Disposable {
 
     api.onConsoleLog(({ content, taskId }) => {
       const data = taskId ? runner.getTestDataByTaskId(taskId) : undefined
-      this.testRun?.appendOutput(
-        content.replace(/(?<!\r)\n/g, '\r\n'),
-        undefined,
-        data?.item,
-      )
+      if (this.testRun) {
+        this.testRun.appendOutput(
+          content.replace(/(?<!\r)\n/g, '\r\n'),
+          undefined,
+          data?.item,
+        )
+      }
+      else {
+        log.info('[TEST]', content)
+      }
     })
   }
 
@@ -155,30 +157,30 @@ export class FolderTestRunner extends vscode.Disposable {
   }
 }
 
-function unwrapTask(task: Task, path: Task[] = []) {
-  path.push(task)
-  if (task.suite)
-    unwrapTask(task.suite, path)
-  return path
-}
+// function unwrapTask(task: Task, path: Task[] = []) {
+//   path.push(task)
+//   if (task.suite)
+//     unwrapTask(task.suite, path)
+//   return path
+// }
 
-function findTestItemByTaskPath(path: Task[], filepath: string, item: vscode.TestItem, depth = 0): TestData | null {
-  const data = WEAKMAP_TEST_DATA.get(item)!
-  const isFile = depth === 0 && data instanceof TestFile && filepath === data.getFilePath()
-  // the names are the same or the name matches the regexp (when "each")
-  // TODO: in the future, collect files with Vitest API instead
-  if (isFile || item.label === path[depth].name || (!(data instanceof TestFile) && data.nameResolver.start.isEach && data.nameResolver.regexp.test(path[depth].name))) {
-    if (path.length === depth + 1)
-      return data
+// function findTestItemByTaskPath(path: Task[], filepath: string, item: vscode.TestItem, depth = 0): TestData | null {
+//   const data = WEAKMAP_TEST_DATA.get(item)!
+//   const isFile = depth === 0 && data instanceof TestFile && filepath === data.getFilePath()
+//   // the names are the same or the name matches the regexp (when "each")
+//   // TODO: in the future, collect files with Vitest API instead
+//   if (isFile || item.label === path[depth].name || (!(data instanceof TestFile) && data.nameResolver.start.isEach && data.nameResolver.regexp.test(path[depth].name))) {
+//     if (path.length === depth + 1)
+//       return data
 
-    for (const [_, child] of item.children) {
-      const found = findTestItemByTaskPath(path, filepath, child, depth + 1)
-      if (found)
-        return found
-    }
-  }
-  return null
-}
+//     for (const [_, child] of item.children) {
+//       const found = findTestItemByTaskPath(path, filepath, child, depth + 1)
+//       if (found)
+//         return found
+//     }
+//   }
+//   return null
+// }
 
 export class GlobalTestRunner extends vscode.Disposable {
   public currentVscodeRequest?: vscode.TestRunRequest
@@ -190,6 +192,7 @@ export class GlobalTestRunner extends vscode.Disposable {
 
   constructor(
     private readonly api: VitestAPI,
+    private readonly tree: TestTree,
     private readonly controller: vscode.TestController,
   ) {
     super(() => {
@@ -203,25 +206,19 @@ export class GlobalTestRunner extends vscode.Disposable {
   }
 
   public getTestDataByTaskId(taskId: string): TestData | null {
-    return this.taskIdToTestData.get(taskId) ?? null
+    const testItem = this.controller.items.get(taskId)
+    if (!testItem)
+      return null
+    return getTestData(testItem) || null
   }
 
   public getTestDataByTask(task: Task): TestData | null {
-    const cached = this.taskIdToTestData.get(task.id)
-    if (cached)
-      return cached
-    const filepath = getFilepathFromTask(task)
-    if (!filepath)
-      return null
-    const fileUrl = vscode.Uri.file(filepath).toString()
-    const fileItem = this.controller.items.get(fileUrl)
-    if (!fileItem)
-      return null
-    const path = unwrapTask(task).reverse()
-    const found = findTestItemByTaskPath(path, filepath, fileItem)
-    if (found) {
-      this.taskIdToTestData.set(task.id, found)
-      return found
+    const cachedItem = this.tree.flatTestItems.get(task.id)
+    if (cachedItem)
+      return getTestData(cachedItem) || null
+    if ('filepath' in task && task.filepath) {
+      const testItem = this.tree.fileItems.get(task.filepath)
+      return testItem ? getTestData(testItem) || null : null
     }
     return null
   }
@@ -255,7 +252,11 @@ export class GlobalTestRunner extends vscode.Disposable {
       // run only affected folders
       const workspaces = new Map<vscode.WorkspaceFolder, vscode.TestItem[]>()
       tests.forEach((test) => {
-        const workspaceFolder = getTestItemFolder(test)
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(test.uri!)
+        if (!workspaceFolder) {
+          log.error('Workspace folder not found for', test.uri?.fsPath)
+          return
+        }
         const folderTests = workspaces.get(workspaceFolder) ?? []
         folderTests.push(test)
         workspaces.set(workspaceFolder, folderTests)
@@ -273,7 +274,13 @@ export class GlobalTestRunner extends vscode.Disposable {
 
   private getTestFiles(tests: readonly vscode.TestItem[]) {
     return Array.from(
-      new Set(tests.map(test => test.uri?.fsPath).filter(Boolean) as string[]),
+      new Set(tests.map((test) => {
+        const data = getTestData(test)
+        const fsPath = test.uri!.fsPath
+        if (data instanceof TestFolder)
+          return `${fsPath}/`
+        return fsPath
+      }).filter(Boolean) as string[]),
     )
   }
 }

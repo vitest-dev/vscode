@@ -13,6 +13,11 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
   }, {} as Record<string, Vitest>)
   const vitestEntries = Object.entries(vitestByFolder)
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
+    async collectTests(workspaceFolder: string, testFile: string) {
+      const vitest = vitestByFolder[workspaceFolder]
+      vitest.configOverride.testNamePattern = /$a/ // force to skip all tests
+      await vitest.rerunFiles([testFile])
+    },
     async cancelRun() {
       for (const [, vitest] of vitestEntries)
         vitest.cancelCurrentRun('keyboard-input')
@@ -46,6 +51,10 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     async getFiles() {
       const filesByFolder = await Promise.all(vitestEntries.map(async ([folder, vitest]) => {
         const files = await vitest.globTestFiles()
+        // reset cached test files list
+        vitest.projects.forEach((project) => {
+          project.testFilesList = null
+        })
         return [folder, files.map(([_, spec]) => spec)] as [string, string[]]
       }))
       return Object.fromEntries(filesByFolder)
