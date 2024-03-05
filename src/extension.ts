@@ -76,7 +76,15 @@ export async function activate(context: vscode.ExtensionContext) {
   ctrl.createRunProfile(
     'Run Tests',
     vscode.TestRunProfileKind.Run,
-    async (request, token) => (await runner).runTests(request, token),
+    async (request, token) => {
+      try {
+        await (await runner).runTests(request, token)
+      }
+      catch (e: any) {
+        if (!e.message.includes('timeout on calling'))
+          log.error('Error while running tests', e)
+      }
+    },
     true,
     undefined,
     true,
@@ -85,7 +93,9 @@ export async function activate(context: vscode.ExtensionContext) {
   ctrl.createRunProfile(
     'Debug Tests',
     vscode.TestRunProfileKind.Debug,
-    async (request, token) => (await runner).debugTests(request, token),
+    async (request, token) => {
+      await (await runner).debugTests(request, token)
+    },
     false,
     undefined,
     true,

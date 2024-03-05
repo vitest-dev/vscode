@@ -104,7 +104,7 @@ export class FolderTestRunner extends vscode.Disposable {
     }
   }
 
-  private endTestRun() {
+  public endTestRun() {
     this.testRun?.end()
     this.testRun = undefined
   }
@@ -214,6 +214,10 @@ export class GlobalTestRunner extends vscode.Disposable {
       request,
       token,
     )
+  }
+
+  public endTestRuns() {
+    this.runners.forEach(runner => runner.endTestRun())
   }
 
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {

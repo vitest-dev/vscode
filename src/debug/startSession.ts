@@ -27,8 +27,13 @@ export async function startDebugSession(
     const baseSession = session.parentSession || session
     // check if not terminated
     setTimeout(() => {
-      if (baseSession === mainSession)
+      if (baseSession === mainSession) {
         runner.runTests(request, token)
+          .catch((e) => {
+            if (!e.message.includes('timeout on calling'))
+              log.error('Error while running tests', e)
+          })
+      }
     }, 150)
   })
   const onTerminateDispose = vscode.debug.onDidTerminateDebugSession(async (session) => {
@@ -54,6 +59,8 @@ export async function startDebugSession(
         onNewStartDispose.dispose()
         mainSession = undefined
         api.stopInspect()
+        // TODO: Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
+        runner.endTestRuns()
       }
     }, 100)
   })
