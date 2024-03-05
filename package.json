@@ -128,7 +128,7 @@
     "test": "vscode-test",
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
     "test-e2e": "vitest --root test-e2e",
-    "typecheck": "tsc -b ./ ./test",
+    "typecheck": "tsc -b ./ ./test ./test-e2e",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
   },
