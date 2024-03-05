@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { spawnVitestVersion } from '../src/pure/utils'
-import { escapeTestPattern } from "../src/pure/runner"
+import { escapeTestPattern } from '../src/pure/runner'
 
 describe('utils', () => {
   describe('spawnVitestVersion', () => {
@@ -17,18 +17,18 @@ describe('utils', () => {
 })
 
 describe(escapeTestPattern.name, () => {
-  const testPattern = 'a (b) "c" d';
+  const testPattern = 'a (b) "c" d'
   const testCases = [
-    {isWindows: false, useCustomStartProcess: false, expected: `a (b) "c" d`},
-    {isWindows: false, useCustomStartProcess: true,  expected: `a (b) "c" d`},
-    {isWindows: true,  useCustomStartProcess: false, expected: `"a (b) \\"c\\" d"`},
-    {isWindows: true,  useCustomStartProcess: true,  expected: `a (b) "c" d`},
+    { isWindows: false, useCustomStartProcess: false, expected: `a (b) "c" d` },
+    { isWindows: false, useCustomStartProcess: true, expected: `a (b) "c" d` },
+    { isWindows: true, useCustomStartProcess: false, expected: `"a (b) \\"c\\" d"` },
+    { isWindows: true, useCustomStartProcess: true, expected: `a (b) "c" d` },
   ]
   testCases.forEach((testCase) => {
     it(JSON.stringify(testCase), () => {
-      const { isWindows, useCustomStartProcess } = testCase;
-      const actual = escapeTestPattern({ testPattern, isWindows, useCustomStartProcess });
-      expect(actual).to.equal(testCase.expected);
+      const { isWindows, useCustomStartProcess } = testCase
+      const actual = escapeTestPattern({ testPattern, isWindows, useCustomStartProcess })
+      expect(actual).to.equal(testCase.expected)
     })
   })
 })
