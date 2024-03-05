@@ -39,7 +39,7 @@ jobs:
         env:
           DISPLAY: ':99'
 
-      - run: pnpm test-e2e
+      - run: pnpm test-e2e --retry 2
         env:
           DISPLAY: ':99'
 
