@@ -26,6 +26,9 @@ devDependencies:
   '@types/micromatch':
     specifier: ^4.0.6
     version: 4.0.6
+  '@types/mocha':
+    specifier: ^10.0.6
+    version: 10.0.6
   '@types/node':
     specifier: ^18.11.18
     version: 18.19.17

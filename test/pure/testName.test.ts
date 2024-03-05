@@ -12,7 +12,7 @@ describe('testName', () => {
       ['%d = %f', '[\\d.eE+-]+? = [\\d.eE+-]+?'],
       ['%j = %o', '.+? = .+?'],
       ['test %i', 'test \\d+?'],
-    ].map(([input, expected]) => {
+    ].forEach(([input, expected]) => {
       it(`isEach=true, value=${input}`, () => {
         expect(transformTestPattern({
           testName: input,
@@ -29,14 +29,14 @@ describe('testName', () => {
       ['%%', '%%'],
       ['%d = %f', '%d = %f'],
       ['%j = %o', '%j = %o'],
-      ['test %i', 'test %i']
-    ].map(([input, expected]) => {
+      ['test %i', 'test %i'],
+    ].forEach(([input, expected]) => {
       it(`isEach=false, value=${input}`, () => {
         expect(transformTestPattern({
           testName: input,
           isEach: false,
         })).to.equal(expected)
       })
-    });
+    })
   })
 })
