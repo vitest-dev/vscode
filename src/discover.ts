@@ -16,16 +16,18 @@ import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
 
 export class TestFileDiscoverer extends vscode.Disposable {
-  // private readonly workspacePaths = [] as string[]
   private workspaceCommonPrefix: Map<string, string> = new Map()
   private workspaceItems: Map<string, Set<vscode.TestItem>> = new Map()
   private pathToFileItem: Map<string, TestFile> = new Map()
 
+  private watchers: vscode.FileSystemWatcher[] = []
+
   constructor(
-    private readonly folders: readonly vscode.WorkspaceFolder[],
     private readonly api: VitestAPI,
   ) {
     super(() => {
+      this.watchers.forEach(x => x.dispose())
+      this.watchers = []
       this.workspaceItems.clear()
       this.pathToFileItem.clear()
       this.workspaceCommonPrefix.clear()
@@ -38,16 +40,20 @@ export class TestFileDiscoverer extends vscode.Disposable {
   async watchTestFilesInWorkspace(
     controller: vscode.TestController,
   ) {
+    this.watchers.forEach(x => x.dispose())
+    this.watchers = []
+
     const files = await this.discoverAllTestFilesInWorkspace(controller)
     for (const folderFsPath in files) {
-      const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(folderFsPath, '**/*'),
-      )
       const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(folderFsPath))
       if (!folder) {
         log.error(`Cannot find workspace folder for ${folderFsPath}`)
         continue
       }
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(folderFsPath, '**/*'),
+      )
+      this.watchers.push(watcher)
 
       watcher.onDidCreate(file => this.discoverTestFromFile(controller, file))
       watcher.onDidChange(async (uri) => {

@@ -176,11 +176,9 @@ export class VitestFolderAPI extends VitestReporter {
   }
 }
 
-export async function resolveVitestAPI(folders: readonly vscode.WorkspaceFolder[]) {
-  const vitest = await createVitestProcess(folders)
-  if (!vitest)
-    return null
-  const apis = folders.map(folder =>
+export async function resolveVitestAPI(meta: VitestMeta[]) {
+  const vitest = await createVitestProcess(meta)
+  const apis = meta.map(({ folder }) =>
     new VitestFolderAPI(folder, vitest.rpc, vitest.handlers),
   )
   return new VitestAPI(apis, vitest)
@@ -258,7 +256,7 @@ interface VitestMeta {
   version: string
 }
 
-function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolder[]): VitestMeta[] {
+export function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolder[]): VitestMeta[] {
   return folders.map((folder) => {
     const vitestPackagePath = resolveVitestPackagePath(folder)
     if (!vitestPackagePath)
@@ -308,15 +306,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
   })
 }
 
-export async function createVitestProcess(folders: readonly vscode.WorkspaceFolder[]): Promise<ResolvedMeta | null> {
-  // TODO: respect config? Why does enable exist? Can't you just disable the extension?
-  // if (getConfig(workspace).enable === false || getRootConfig().disabledWorkspaceFolders.includes(workspace.name))
-  //   return null
-  // TODO: check compatibility with version >= 0.34.0(?)
-  const meta = resolveVitestFoldersMeta(folders)
-  if (!meta.length)
-    return null
-
+export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedMeta> {
   log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.vitestNodePath})`).join(', ')}`)
 
   const vitest = await createChildVitestProcess(meta)
