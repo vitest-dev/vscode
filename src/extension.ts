@@ -61,11 +61,9 @@ export async function activate(context: vscode.ExtensionContext) {
   //   return
   // }
 
-  const tree = registerDiscovery(ctrl, api, folders).then((discoverer) => {
+  const tree = registerDiscovery(ctrl, api, folders, resolveItem).then((discoverer) => {
     context.subscriptions.push(discoverer)
-    discoverer.discoverAllTestFiles().finally(() => {
-      ctrl.items.delete(resolveItem.id)
-    })
+    discoverer.discoverAllTestFiles()
     return discoverer
   })
   const runner = (async () => new GlobalTestRunner(await api, await tree, ctrl))().then((runner) => {
@@ -120,8 +118,13 @@ export async function activate(context: vscode.ExtensionContext) {
   await api
 }
 
-function registerDiscovery(ctrl: vscode.TestController, api: Promise<VitestAPI>, folders: readonly vscode.WorkspaceFolder[]) {
-  const fileDiscoverer = (async () => new TestTree(await api, ctrl, folders))()
+function registerDiscovery(
+  ctrl: vscode.TestController,
+  api: Promise<VitestAPI>,
+  folders: readonly vscode.WorkspaceFolder[],
+  loaderItem: vscode.TestItem,
+) {
+  const fileDiscoverer = (async () => new TestTree(await api, ctrl, folders, loaderItem))()
   // run on refreshing test list
   ctrl.refreshHandler = async () => {
     await (await fileDiscoverer).discoverAllTestFiles()

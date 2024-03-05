@@ -17,10 +17,12 @@ export class TestTree extends vscode.Disposable {
     private readonly api: VitestAPI,
     private readonly controller: vscode.TestController,
     private readonly workspaceFolders: readonly vscode.WorkspaceFolder[],
+    private readonly loaderItem: vscode.TestItem,
   ) {
     super(() => {
-      this.flatTestItems.clear()
       this.folderItems.clear()
+      this.fileItems.clear()
+      this.flatTestItems.clear()
       this.watchers.forEach(x => x.dispose())
       this.watchers = []
     })
@@ -28,14 +30,16 @@ export class TestTree extends vscode.Disposable {
 
   async discoverAllTestFiles() {
     this.folderItems.clear()
+    this.fileItems.clear()
+    this.flatTestItems.clear()
 
     if (this.workspaceFolders.length === 1) {
       const rootItem = this.getOrCreateInlineFolderItem(this.workspaceFolders[0].uri)
-      rootItem.children.replace([])
+      rootItem.children.replace([this.loaderItem])
     }
     else {
       const folderItems = this.workspaceFolders.map(x => this.getOrCreateWorkspaceFolderItem(x.uri))
-      this.controller.items.replace(folderItems)
+      this.controller.items.replace([this.loaderItem, ...folderItems])
     }
 
     const testFiles = await this.api.getFiles()
@@ -45,6 +49,8 @@ export class TestTree extends vscode.Disposable {
       for (const file of files)
         this.getOrCreateFileTestItem(file)
     }
+
+    this.controller.items.delete(this.loaderItem.id)
 
     return testFiles
   }

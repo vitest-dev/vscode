@@ -226,6 +226,7 @@ export class GlobalTestRunner extends vscode.Disposable {
       // TODO: test how tests are marked since Vitest by default changes the stateMap
       this.api.cancelRun()
       this.currentVscodeRequest = undefined
+      this.endTestRuns()
     })
 
     const tests = request.include ?? []
