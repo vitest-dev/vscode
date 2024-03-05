@@ -11,7 +11,7 @@ import { startDebugSession } from '../debug/startSession'
 import type { TestTree } from '../testTree'
 
 function formatTestPattern(tests: readonly vscode.TestItem[]) {
-  if (!tests.length || tests.length > 1)
+  if (tests.length !== 1)
     return
   const data = getTestData(tests[0])!
   if (!('getTestNamePattern' in data))
@@ -27,6 +27,7 @@ export class FolderTestRunner extends vscode.Disposable {
   constructor(
     private readonly controller: vscode.TestController,
     private readonly runner: GlobalTestRunner,
+    private readonly tree: TestTree,
     api: VitestFolderAPI,
   ) {
     super(() => {
@@ -34,22 +35,29 @@ export class FolderTestRunner extends vscode.Disposable {
       this.taskIdToTestData.clear()
     })
 
-    api.onWatcherRerun(() => {
-      this.startTestRun()
-    })
+    api.onWatcherRerun(() => this.startTestRun())
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
         const test = this.runner.getTestDataByTaskId(testId)
-        if (!test)
+        if (!test) {
+          log.error('Cannot find task during onTaskUpdate', testId)
           return
+        }
         this.markResult(test.item, result)
       })
     })
 
     api.onCollected((files) => {
+      if (!files)
+        return
+      files.forEach((file) => {
+        const fileTestItem = this.tree.getOrCreateFileTestItem(file.filepath)
+        this.tree.flatTestItems.set(file.id, fileTestItem)
+        this.tree.collectTasks(file.tasks, fileTestItem)
+      })
       const run = this.testRun
-      if (!files || !run)
+      if (!run)
         return
       this.forEachTask(files, (task, data) => {
         if (task.mode === 'skip' || task.mode === 'todo')
@@ -157,35 +165,9 @@ export class FolderTestRunner extends vscode.Disposable {
   }
 }
 
-// function unwrapTask(task: Task, path: Task[] = []) {
-//   path.push(task)
-//   if (task.suite)
-//     unwrapTask(task.suite, path)
-//   return path
-// }
-
-// function findTestItemByTaskPath(path: Task[], filepath: string, item: vscode.TestItem, depth = 0): TestData | null {
-//   const data = WEAKMAP_TEST_DATA.get(item)!
-//   const isFile = depth === 0 && data instanceof TestFile && filepath === data.getFilePath()
-//   // the names are the same or the name matches the regexp (when "each")
-//   // TODO: in the future, collect files with Vitest API instead
-//   if (isFile || item.label === path[depth].name || (!(data instanceof TestFile) && data.nameResolver.start.isEach && data.nameResolver.regexp.test(path[depth].name))) {
-//     if (path.length === depth + 1)
-//       return data
-
-//     for (const [_, child] of item.children) {
-//       const found = findTestItemByTaskPath(path, filepath, child, depth + 1)
-//       if (found)
-//         return found
-//     }
-//   }
-//   return null
-// }
-
 export class GlobalTestRunner extends vscode.Disposable {
   public currentVscodeRequest?: vscode.TestRunRequest
 
-  private taskIdToTestData = new Map<string, TestData>()
   private runners: FolderTestRunner[] = []
 
   private debug?: DebugSessionAPI
@@ -196,17 +178,17 @@ export class GlobalTestRunner extends vscode.Disposable {
     private readonly controller: vscode.TestController,
   ) {
     super(() => {
-      this.taskIdToTestData.clear()
       this.runners.forEach(runner => runner.dispose())
+      this.runners = []
     })
 
     api.forEach((folderAPI) => {
-      this.runners.push(new FolderTestRunner(this.controller, this, folderAPI))
+      this.runners.push(new FolderTestRunner(this.controller, this, tree, folderAPI))
     })
   }
 
   public getTestDataByTaskId(taskId: string): TestData | null {
-    const testItem = this.controller.items.get(taskId)
+    const testItem = this.tree.flatTestItems.get(taskId)
     if (!testItem)
       return null
     return getTestData(testItem) || null

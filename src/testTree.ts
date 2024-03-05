@@ -1,57 +1,9 @@
 import * as vscode from 'vscode'
 import { basename, dirname } from 'pathe'
 import type { Task } from 'vitest'
-import type { VitestAPI, VitestFolderAPI } from './api'
+import type { VitestAPI } from './api'
 import { TestCase, TestFile, TestFolder, TestSuite, addTestData, getTestData } from './testTreeData'
 import { log } from './log'
-
-class TestCollector {
-  constructor(
-    private readonly controller: vscode.TestController,
-    private readonly api: VitestFolderAPI,
-    private readonly tree: TestTree,
-  ) {
-    this.api.onCollected((files) => {
-      if (!files)
-        return
-      files.forEach((file) => {
-        const fileTestItem = this.tree.getOrCreateFileTestItem(file.filepath)
-        this.collectTasks(this.controller, file.tasks, fileTestItem)
-      })
-    })
-  }
-
-  collectTasks(controller: vscode.TestController, tasks: Task[], item: vscode.TestItem) {
-    for (const task of tasks) {
-      const testItem = controller.createTestItem(
-        task.id,
-        task.name,
-        item.uri,
-      )
-      this.tree.flatTestItems.set(task.id, testItem)
-      item.children.add(testItem)
-      if (task.type === 'suite')
-        addTestData(testItem, new TestSuite(testItem))
-      else if (task.type === 'test' || task.type === 'custom')
-        addTestData(testItem, new TestCase(testItem))
-
-      if ('tasks' in task)
-        this.collectTasks(controller, task.tasks, testItem)
-    }
-  }
-
-  get workspaceFolder() {
-    return this.api.workspaceFolder
-  }
-
-  async collectTests(file: string) {
-    await this.api.collectTests(file)
-  }
-
-  dispose() {
-    // TODO
-  }
-}
 
 export class TestTree extends vscode.Disposable {
   private watchers: vscode.FileSystemWatcher[] = []
@@ -60,7 +12,6 @@ export class TestTree extends vscode.Disposable {
   public fileItems: Map<string, vscode.TestItem> = new Map()
 
   private folderItems: Map<string, vscode.TestItem> = new Map()
-  private collectors: TestCollector[] = []
 
   constructor(
     private readonly api: VitestAPI,
@@ -72,12 +23,6 @@ export class TestTree extends vscode.Disposable {
       this.folderItems.clear()
       this.watchers.forEach(x => x.dispose())
       this.watchers = []
-      this.collectors.forEach(x => x.dispose())
-      this.collectors = []
-    })
-
-    this.api.forEach((api) => {
-      this.collectors.push(new TestCollector(controller, api, this))
     })
   }
 
@@ -238,14 +183,14 @@ export class TestTree extends vscode.Disposable {
 
   async discoverFileTests(testItem: vscode.TestItem) {
     const data = getTestData(testItem) as TestFile
-    const collector = this.collectors.find(x => x.workspaceFolder === data.workspaceFolder)
-    if (!collector) {
+    const api = this.api.get(data.workspaceFolder)
+    if (!api) {
       log.error(`Cannot find collector for ${testItem.uri?.fsPath}`)
       return null
     }
     testItem.busy = true
     try {
-      await collector.collectTests(testItem.uri!.fsPath)
+      await api.collectTests(testItem.uri!.fsPath)
       return testItem
     }
     finally {
@@ -259,5 +204,27 @@ export class TestTree extends vscode.Disposable {
       return null
     await this.discoverFileTests(testItem)
     return testItem
+  }
+
+  collectTasks(tasks: Task[], item: vscode.TestItem) {
+    for (const task of tasks) {
+      if (this.flatTestItems.has(task.id))
+        continue
+
+      const testItem = this.controller.createTestItem(
+        task.id,
+        task.name,
+        item.uri,
+      )
+      this.flatTestItems.set(task.id, testItem)
+      item.children.add(testItem)
+      if (task.type === 'suite')
+        addTestData(testItem, new TestSuite(testItem))
+      else if (task.type === 'test' || task.type === 'custom')
+        addTestData(testItem, new TestCase(testItem))
+
+      if ('tasks' in task)
+        this.collectTasks(task.tasks, testItem)
+    }
   }
 }

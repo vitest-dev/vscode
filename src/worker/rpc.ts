@@ -38,7 +38,17 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
         await vitest.changeNamePattern(testNamePattern, files)
       }
       else if (files?.length) {
-        await vitest.changeNamePattern('', files)
+        // running all files inside a single folder
+        if (files.length === 1 && files[0][files[0].length - 1] === '/') {
+          vitest.filenamePattern = files[0]
+          vitest.configOverride.testNamePattern = undefined
+          const specs = await vitest.globTestFiles()
+          const filteredSpecs = specs.map(([_, spec]) => spec).filter(file => file.startsWith(files[0]))
+          await vitest.rerunFiles(filteredSpecs)
+        }
+        else {
+          await vitest.changeNamePattern('', files)
+        }
       }
       else {
         vitest.configOverride.testNamePattern = undefined
