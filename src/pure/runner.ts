@@ -53,6 +53,18 @@ export interface FormattedTestResults {
   // wasInterrupted: boolean
 }
 
+export function escapeTestPattern({
+  testPattern,
+  isWindows,
+  useCustomStartProcess,
+}: { testPattern: string; isWindows: boolean; useCustomStartProcess: boolean }) {
+  if (isWindows && !useCustomStartProcess) {
+    // Wrap the test pattern in quotes to ensure it is treated as a single argument
+    return `"${testPattern.replace(/"/g, '\\"')}"`
+  }
+  return testPattern
+}
+
 export class TestRunner {
   constructor(
     private workspacePath: string,
@@ -81,12 +93,11 @@ export class TestRunner {
       args.push('--update')
 
     if (testPattern) {
-      let argsValue = testPattern
-      if (isWindows && !customStartProcess) {
-        // Wrap the test pattern in quotes to ensure it is treated as a single argument
-        argsValue = `"${argsValue.replace(/"/g, '\\"')}"`
-      }
-
+      const argsValue = escapeTestPattern({
+        testPattern,
+        isWindows,
+        useCustomStartProcess: !!customStartProcess,
+      })
       args.push('-t', argsValue)
     }
 
