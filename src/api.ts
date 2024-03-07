@@ -1,8 +1,9 @@
 import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
 import v8 from 'node:v8'
+import { pathToFileURL } from 'node:url'
+import { dirname, normalize, resolve } from 'pathe'
 import type * as vscode from 'vscode'
-import { dirname, resolve } from 'pathe'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 import { log } from './log'
@@ -17,7 +18,7 @@ export interface BirpcMethods {
   runFiles: () => Promise<void>
   collectTests: (workspaceFolder: string, testFile: string) => Promise<void>
   cancelRun: () => Promise<void>
-  runFolderFiles: (folder: string, files?: string[], testNamePattern?: string) => Promise<void>
+  runFolderFiles: (workspaceFolder: string, files?: string[], testNamePattern?: string) => Promise<void>
   getTestMetadata: (file: string) => Promise<{
     folder: string
   } | null>
@@ -59,7 +60,7 @@ function resolveVitestPackagePath(workspace: vscode.WorkspaceFolder) {
 }
 
 function resolveVitestNodePath(vitestPkgPath: string) {
-  return resolve(dirname(vitestPkgPath), './dist/node.js')
+  return pathToFileURL(resolve(dirname(vitestPkgPath), './dist/node.js')).toString()
 }
 
 export class VitestReporter {
@@ -160,7 +161,7 @@ export class VitestFolderAPI extends VitestReporter {
     private rpc: VitestRPC,
     handlers: ResolvedMeta['handlers'],
   ) {
-    super(folder.uri.fsPath, handlers)
+    super(normalize(folder.uri.fsPath), handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
   }
 
@@ -173,11 +174,15 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
-    await this.rpc.runFolderFiles(this.workspaceFolder.uri.fsPath, files, testNamePatern)
+    await this.rpc.runFolderFiles(this.workspacePath, files?.map(normalize), testNamePatern)
   }
 
   async collectTests(testFile: string) {
-    await this.rpc.collectTests(this.workspaceFolder.uri.fsPath, testFile)
+    await this.rpc.collectTests(this.workspacePath, normalize(testFile))
+  }
+
+  private get workspacePath() {
+    return normalize(this.workspaceFolder.uri.fsPath)
   }
 
   dispose() {
@@ -315,7 +320,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
         type: 'init',
         meta: meta.map(m => ({
           vitestNodePath: m.vitestNodePath,
-          folder: m.folder.uri.fsPath,
+          folder: normalize(m.folder.uri.fsPath),
         })),
       })
     })

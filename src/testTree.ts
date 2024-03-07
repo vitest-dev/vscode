@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { basename, dirname } from 'pathe'
+import { basename, dirname, normalize } from 'pathe'
 import type { Task } from 'vitest'
 import type { VitestAPI } from './api'
 import { TestCase, TestFile, TestFolder, TestSuite, addTestData, getTestData } from './testTreeData'
@@ -59,7 +59,7 @@ export class TestTree extends vscode.Disposable {
   // this inline folder is required for "createFolderItem" to properly resolve the parent,
   // otherwise it will go into an infinite loop
   getOrCreateInlineFolderItem(folderUri: vscode.Uri) {
-    const id = folderUri.fsPath
+    const id = normalize(folderUri.fsPath)
     const cached = this.folderItems.get(id)
     if (cached)
       return cached
@@ -80,7 +80,7 @@ export class TestTree extends vscode.Disposable {
   }
 
   getOrCreateWorkspaceFolderItem(folderUri: vscode.Uri) {
-    const cached = this.folderItems.get(folderUri.toString())
+    const cached = this.folderItems.get(normalize(folderUri.fsPath))
     if (cached)
       return cached
 
@@ -129,7 +129,7 @@ export class TestTree extends vscode.Disposable {
   }
 
   private _createFolderItem(folderUri: vscode.Uri) {
-    const folderFsPath = folderUri.fsPath
+    const folderFsPath = normalize(folderUri.fsPath)
     const folderItem = this.controller.createTestItem(
       folderFsPath,
       basename(folderFsPath),
