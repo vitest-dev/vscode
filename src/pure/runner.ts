@@ -86,9 +86,18 @@ export class TestRunner {
     cancellation?: CancellationToken,
   ): Promise<{ testResultFiles: File[]; output: string }> {
     const command = vitestCommand.cmd
+
+    if (isWindows && !customStartProcess) {
+      testFile = testFile ? testFile.map(f => addQuotes(sanitizeFilePath(f))) : []
+    }
+    else {
+      // Debug mode automatically adds quotes
+      testFile = testFile ? testFile.map(f => sanitizeFilePath(f)) : []
+    }
+
     const args = [
       ...vitestCommand.args,
-      ...(testFile ? testFile.map(f => addQuotes(sanitizeFilePath(f))) : []),
+      ...testFile,
     ] as string[]
     if (updateSnapshot)
       args.push('--update')
