@@ -65,7 +65,7 @@ export function parse(file: string, data?: string, options?: parser.ParserOption
           name = _data.substring(arg.start + 1, arg.end - 1)
           break
         default:
-          name = _data.substring(arg.start, arg.end)
+          name = ''
           break
       }
     }

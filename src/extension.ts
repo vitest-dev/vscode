@@ -1,7 +1,8 @@
+import path from 'node:path'
 import * as vscode from 'vscode'
-
 import { effect } from '@vue/reactivity'
-
+import type { LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node'
+import { LanguageClient, TransportKind } from 'vscode-languageclient/node'
 import type { ResolvedConfig } from 'vitest'
 import { StatusBarItem } from './StatusBarItem'
 import { TestFile, WEAKMAP_TEST_DATA } from './TestData'
@@ -27,6 +28,7 @@ import type { VitestWorkspaceConfig } from './config'
 import { fetchVitestConfig } from './pure/watch/vitestConfig'
 import { openTestTag } from './tags'
 
+let client: LanguageClient
 export async function activate(context: vscode.ExtensionContext) {
   await detectVitestEnvironmentFolders()
   if (vitestEnvironmentFolders.length === 0) {
@@ -80,6 +82,8 @@ export async function activate(context: vscode.ExtensionContext) {
       fileDiscoverer.discoverTestFromDoc(ctrl, e.document),
     ),
   )
+  // start the language server
+  await activateLanguageClient(context)
 }
 
 function workspacesCompatibilityCheck(workspaceConfigs: VitestWorkspaceConfig[]) {
@@ -247,4 +251,47 @@ function registerRunDebugWatchHandler(
   )
 }
 
-export function deactivate() {}
+async function activateLanguageClient(context: vscode.ExtensionContext) {
+  // The server is implemented in node
+  const serverModule = context.asAbsolutePath(path.join('dist', 'languageServer.js'))
+  // The debug options for the server
+  // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
+  const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] }
+
+  // If the extension is launched in debug mode then the debug server options are used
+  // Otherwise the run options are used
+  const serverOptions: ServerOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: debugOptions,
+    },
+  }
+
+  // Options to control the language client
+  const clientOptions: LanguageClientOptions = {
+    // Register the server for plain text documents
+    documentSelector: [{ scheme: 'file', language: 'typescript' }],
+    synchronize: {
+      // Notify the server about file changes to '.clientrc files contained in the workspace
+      fileEvents: vscode.workspace.createFileSystemWatcher('**/.clientrc'),
+    },
+  }
+
+  // Create the language client and start the client.
+  client = new LanguageClient(
+    'vitestLanguageServer',
+    'Vitest Language Server',
+    serverOptions,
+    clientOptions,
+  )
+
+  // Start the client. This will also launch the server
+  await client.start()
+  log.info('LSP client started')
+}
+
+export function deactivate() {
+  client?.stop()
+}
