@@ -89,6 +89,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       _require('inspector').close()
     },
   }, {
+    timeout: 0,
     eventNames: [
       'onConsoleLog',
       'onTaskUpdate',

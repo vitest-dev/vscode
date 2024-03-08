@@ -130,6 +130,8 @@ function registerDiscovery(
     await (await fileDiscoverer).discoverAllTestFiles()
   }
 
+  // what is it's called in quick succession?
+  // TODO: debounce and queue collects
   ctrl.resolveHandler = async (item) => {
     if (!item) {
       // item == null, when user opened the testing panel

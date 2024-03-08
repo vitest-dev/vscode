@@ -342,6 +342,7 @@ export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedM
   const api = createBirpc<BirpcMethods, BirpcEvents>(
     events,
     {
+      timeout: 0,
       on(listener) {
         vitest.on('message', listener)
       },

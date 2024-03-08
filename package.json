@@ -151,7 +151,7 @@
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
     "@vue/reactivity": "^3.2.33",
-    "birpc": "^0.2.15",
+    "birpc": "^0.2.17",
     "bumpp": "^9.3.0",
     "chai": "^5.1.0",
     "changelogithub": "^0.13.3",
