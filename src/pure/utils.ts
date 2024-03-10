@@ -50,10 +50,19 @@ export function getVitestCommand(
     }
   }
 
-  const node_modules = path.resolve(projectRoot, 'node_modules')
   try {
-    if (!existsSync(node_modules))
+    const yarnLock = path.resolve(projectRoot, 'yarn.lock')
+    if (existsSync(yarnLock)) {
+      return {
+        cmd: 'yarn',
+        args: ['vitest'],
+      }
+    }
+
+    const node_modules = path.resolve(projectRoot, 'node_modules')
+    if (!existsSync(node_modules)) {
       return getVitestCommand(path.dirname(projectRoot))
+    }
 
     const suffixes = ['']
     if (isWindows)
@@ -106,19 +115,26 @@ export async function spawnVitestVersion(command: string, args: string[], env?: 
     env,
   })
 
-  child.on('error', () => {
-    log.info('Command not found')
-  })
+  return new Promise((resolve) => {
+    child.stdout.on('data', (data) => {
+      child.kill()
+      log.info(data.toString())
 
-  for await (const line of chunksToLinesAsync(child.stdout)) {
-    child.kill()
-    log.info(line)
+      const match = data.toString().match(/vitest\/(\d+.\d+.\d+)/)
 
-    const match = line.match(/vitest\/(\d+.\d+.\d+)/)
+      if (match && match.length > 0)
+        resolve(match[1])
+    });
 
-    if (match && match.length > 0)
-      return match[1]
-  }
+    child.on('error', () => {
+      log.info('Command not found')
+      resolve(undefined);
+    })
+
+    child.on('close', (code) => {
+      resolve(undefined);
+    });
+  });
 }
 
 /**

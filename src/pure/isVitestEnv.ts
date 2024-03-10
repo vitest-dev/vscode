@@ -16,7 +16,7 @@ export async function isDefinitelyVitestEnv(projectRoot: string | WorkspaceFolde
 
   const pkgPath = path.join(projectRoot, 'package.json') as string
   const pkg = JSON.parse(await readFile(pkgPath, 'utf-8')) as any
-  if (existsSync(pkg)) {
+  if (existsSync(pkgPath)) {
     if (pkg.devDependencies && pkg.devDependencies.vitest)
       return true
 

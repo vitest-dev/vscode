@@ -4,7 +4,7 @@ import { escapeTestPattern } from '../src/pure/runner'
 
 describe('utils', () => {
   describe('spawnVitestVersion', () => {
-    it('should return undefined when passing an unkown command', async () => {
+    it('should return undefined when passing an unknown command', async () => {
       const result = await spawnVitestVersion('unknown-command', ['xxx'], {})
       expect(result).to.equal(undefined)
     })
