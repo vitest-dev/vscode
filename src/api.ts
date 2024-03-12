@@ -19,9 +19,7 @@ export interface BirpcMethods {
   collectTests: (workspaceFolder: string, testFile: string) => Promise<void>
   cancelRun: () => Promise<void>
   runFolderFiles: (workspaceFolder: string, files?: string[], testNamePattern?: string) => Promise<void>
-  getTestMetadata: (file: string) => Promise<{
-    folder: string
-  } | null>
+  isTestFile: (file: string) => Promise<boolean>
 
   startInspect: (port: number) => void
   stopInspect: () => void
@@ -144,8 +142,8 @@ export class VitestAPI {
     return this.meta.rpc.startInspect(port)
   }
 
-  async getTestMetadata(file: string) {
-    return this.meta.rpc.getTestMetadata(file)
+  async isTestFile(file: string) {
+    return this.meta.rpc.isTestFile(file)
   }
 
   dispose() {
@@ -170,7 +168,7 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   isTestFile(file: string) {
-    return this.rpc.getTestMetadata(file)
+    return this.rpc.isTestFile(file)
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
@@ -305,17 +303,17 @@ function createChildVitestProcess(meta: VitestMeta[]) {
       log.error('[API]', error)
       reject(error)
     })
+    vitest.on('message', function ready(message: any) {
+      if (message.type === 'ready') {
+        vitest.off('message', ready)
+        resolve(vitest)
+      }
+      if (message.type === 'error') {
+        vitest.off('message', ready)
+        reject(message.error)
+      }
+    })
     vitest.on('spawn', () => {
-      vitest.on('message', function ready(message: any) {
-        if (message.type === 'ready') {
-          vitest.off('message', ready)
-          resolve(vitest)
-        }
-        if (message.type === 'error') {
-          vitest.off('message', ready)
-          reject(message.error)
-        }
-      })
       vitest.send({
         type: 'init',
         meta: meta.map(m => ({
@@ -342,7 +340,7 @@ export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedM
   const api = createBirpc<BirpcMethods, BirpcEvents>(
     events,
     {
-      timeout: 0,
+      timeout: -1,
       on(listener) {
         vitest.on('message', listener)
       },

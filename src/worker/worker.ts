@@ -15,7 +15,7 @@ interface RunnerOptions {
   meta: VitestMeta[]
 }
 
-class VscodeReporter implements Reporter {
+class VSCodeReporter implements Reporter {
   private rpc!: BirpcReturn<BirpcEvents, BirpcMethods>
   private ctx!: Vitest
   private folder!: string
@@ -66,10 +66,11 @@ class VscodeReporter implements Reporter {
   }
 }
 
+// TODO: run a sinlge Vitest instance if VitestNodePath is the same
 async function initVitest(root: string, vitestNodePath: string) {
   try {
     const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
-    const reporter = new VscodeReporter()
+    const reporter = new VSCodeReporter()
     const vitest = await vitestMode.createVitest('test', {
       watch: true,
       api: false,

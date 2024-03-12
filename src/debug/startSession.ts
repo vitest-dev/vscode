@@ -53,15 +53,16 @@ export async function startDebugSession(
     })
 
     setTimeout(() => {
-      if (!restarted) {
-        timeout = true
-        onTerminateDispose.dispose()
-        onNewStartDispose.dispose()
-        mainSession = undefined
-        api.stopInspect()
-        // TODO: Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
-        runner.endTestRuns()
-      }
+      if (restarted)
+        return
+
+      timeout = true
+      onTerminateDispose.dispose()
+      onNewStartDispose.dispose()
+      mainSession = undefined
+      api.stopInspect()
+      // TODO: Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
+      runner.endTestRuns()
     }, 100)
   })
 
@@ -89,7 +90,7 @@ export async function startDebugSession(
     else
       log.error('[DEBUG] Debugging failed')
   }, (err) => {
-    log.error('[DEBIG] Start debugging failed')
+    log.error('[DEBUG] Start debugging failed')
     log.error(err.toString())
     onStartDispose.dispose()
     onTerminateDispose.dispose()

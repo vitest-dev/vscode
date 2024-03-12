@@ -105,13 +105,11 @@ export async function activate(context: vscode.ExtensionContext) {
     //   updateSnapshot(ctrl, fileDiscoverer, test)
     // }),
     vscode.workspace.onDidCloseTextDocument(async (e) => {
-      const item = await (await tree).discoverTestsFromDoc(e)
-      if (item)
-        item.tags = item.tags.filter(x => x !== openTestTag)
+      (await tree).removeFileTag(e.uri.fsPath, openTestTag)
     }),
-    vscode.workspace.onDidChangeTextDocument(async e =>
-      (await tree).discoverTestsFromDoc(e.document),
-    ),
+    // vscode.workspace.onDidChangeTextDocument(async e =>
+    //   (await tree).discoverTestsFromDoc(e.document),
+    // ),
     // TODO: update when workspace folder is added/removed
   )
 
@@ -143,9 +141,9 @@ function registerDiscovery(
     }
   }
 
-  vscode.window.visibleTextEditors.forEach(async x =>
-    (await fileDiscoverer).discoverTestsFromDoc(x.document),
-  )
+  // vscode.window.visibleTextEditors.forEach(async x =>
+  //   (await fileDiscoverer).discoverTestsFromDoc(x.document),
+  // )
 
   return fileDiscoverer
 }

@@ -69,17 +69,14 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       }))
       return Object.fromEntries(filesByFolder)
     },
-    async getTestMetadata(file: string) {
-      for (const [folder, vitest] of vitestEntries) {
+    async isTestFile(file: string) {
+      for (const [_, vitest] of vitestEntries) {
         for (const project of vitest.projects) {
-          if (project.isTestFile(file)) {
-            return {
-              folder,
-            }
-          }
+          if (project.isTestFile(file))
+            return true
         }
       }
-      return null
+      return false
     },
     startInspect(port) {
       _require('inspector').open(port)
@@ -89,7 +86,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       _require('inspector').close()
     },
   }, {
-    timeout: 0,
+    timeout: -1,
     eventNames: [
       'onConsoleLog',
       'onTaskUpdate',

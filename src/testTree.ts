@@ -205,11 +205,19 @@ export class TestTree extends vscode.Disposable {
   }
 
   async discoverTestsFromDoc(doc: vscode.TextDocument) {
-    const testItem = this.controller.items.get(doc.uri.fsPath)
-    if (!testItem)
+    const fsPath = normalize(doc.uri.fsPath)
+    const testItem = this.fileItems.get(fsPath)
+    if (!testItem || testItem.busy || testItem.children.size > 0)
       return null
     await this.discoverFileTests(testItem)
     return testItem
+  }
+
+  removeFileTag(file: string, tag: vscode.TestTag) {
+    const testItem = this.fileItems.get(normalize(file))
+    if (!testItem)
+      return
+    testItem.tags = testItem.tags.filter(x => x !== tag)
   }
 
   collectTasks(tasks: Task[], item: vscode.TestItem) {
