@@ -8,8 +8,9 @@ export function getTestData(item: vscode.TestItem): TestData {
   return WEAKMAP_TEST_DATA.get(item)!
 }
 
-export function addTestData(item: vscode.TestItem, data: TestData) {
+export function addTestData<T extends TestData>(item: vscode.TestItem, data: T): T {
   WEAKMAP_TEST_DATA.set(item, data)
+  return data
 }
 
 export class TestFolder {

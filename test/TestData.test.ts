@@ -1,52 +1,69 @@
 import * as path from 'node:path'
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { TestCase, TestDescribe, TestFile } from '../src/TestData'
+import { TestCase, TestFile, TestSuite, addTestData } from '../src/testTreeData'
 
 describe('TestData', () => {
   const ctrl = vscode.tests.createTestController('mocha', 'Vitest')
   describe('TestFile', () => {
-    it('updateFromDisk', async () => {
+    it('getTestNamePattern', async () => {
       const filepath = path.resolve(__dirname, './testdata/discover/00_simple.ts')
+      const uri = vscode.Uri.file(filepath)
       const testItem = ctrl.createTestItem(
         filepath,
         path.basename(filepath),
-        vscode.Uri.file(filepath),
+        uri,
       )
-      const file = new TestFile(testItem)
-      await file.updateFromDisk(ctrl)
+      ctrl.items.add(testItem)
+      const file = addTestData(
+        testItem,
+        new TestFile(
+          testItem,
+          null as any, // not used yet
+        ),
+      )
+      const suiteItem = ctrl.createTestItem(
+        `${filepath}_1`,
+        'describe',
+        uri,
+      )
+      file.item.children.add(suiteItem)
 
-      expect(file.item.error).to.equal(undefined)
-      expect(file.resolved).to.equal(true)
-      expect(file.getFilePath()).to.equal(filepath)
+      const testItem1 = ctrl.createTestItem(
+        `${filepath}_1_1`,
+        'test',
+        uri,
+      )
 
-      expect(file.children.length).to.equal(1)
-      const [describe] = file.children
-      if (!(describe instanceof TestDescribe))
-        throw new Error('not a describe')
+      const testItem2 = ctrl.createTestItem(
+        `${filepath}_1_2`,
+        'test 1',
+        uri,
+      )
 
-      expect(describe.name).to.equal('describe')
-      expect(describe.getFilePath()).to.equal(filepath)
-      expect(describe.nameResolver.asVitestArgs()).to.equal('^\\s?describe')
-      expect(describe.nameResolver.asFullMatchPattern()).to.equal('^\\s?describe$')
+      const testItem3 = ctrl.createTestItem(
+        `${filepath}_1_3`,
+        'test 2',
+        uri,
+      )
 
-      expect(describe.children.length).to.equal(2)
-      const [test, eachTest] = describe.children
-      if (!(test instanceof TestCase) || !(eachTest instanceof TestCase))
-        throw new Error('not a test')
+      suiteItem.children.add(testItem1)
+      suiteItem.children.add(testItem2)
+      suiteItem.children.add(testItem3)
 
-      expect(test.name).to.equal('test')
-      expect(test.index).to.equal(0)
-      expect(test.getFilePath()).to.equal(filepath)
-      expect(test.nameResolver.asVitestArgs()).to.equal('^\\s?describe test$')
-      expect(test.nameResolver.asFullMatchPattern()).to.equal('^\\s?describe test$')
+      const suite = addTestData(suiteItem, new TestSuite(suiteItem))
 
-      expect(eachTest.name).to.equal('test %i')
-      expect(eachTest.isEach).to.equal(true)
-      expect(eachTest.index).to.equal(1)
-      expect(eachTest.getFilePath()).to.equal(filepath)
-      expect(eachTest.nameResolver.asVitestArgs()).to.equal('^\\s?describe test \\d+?$')
-      expect(eachTest.nameResolver.asFullMatchPattern()).to.equal('^\\s?describe test \\d+?$')
+      expect(suite.getTestNamePattern()).to.equal('^\\s?describe')
+
+      const test1 = addTestData(testItem1, new TestCase(testItem1))
+      const test2 = addTestData(testItem2, new TestCase(testItem2))
+      const test3 = addTestData(testItem3, new TestCase(testItem3))
+
+      expect(test1.item.parent).to.exist
+
+      expect(test1.getTestNamePattern()).to.equal('^\\s?describe test$')
+      expect(test2.getTestNamePattern()).to.equal('^\\s?describe test 1$')
+      expect(test3.getTestNamePattern()).to.equal('^\\s?describe test 2$')
     })
   })
 })
