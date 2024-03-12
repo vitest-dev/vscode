@@ -1,4 +1,5 @@
 import v8 from 'node:v8'
+import { register } from 'node:module'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
@@ -13,6 +14,7 @@ interface VitestMeta {
 interface RunnerOptions {
   type: 'init'
   meta: VitestMeta[]
+  loader?: string
 }
 
 class VSCodeReporter implements Reporter {
@@ -100,6 +102,23 @@ process.on('message', async function init(message: any) {
   if (message.type === 'init') {
     process.off('message', init)
     const data = message as RunnerOptions
+
+    try {
+      if (data.loader)
+        register(data.loader)
+    }
+    catch (err: any) {
+      process.send!({
+        type: 'error',
+        error: {
+          message: err.message,
+          stack: String(err.stack),
+          name: err.name,
+        },
+      })
+      return
+    }
+
     const vitest = await Promise.all(data.meta.map((meta) => {
       return initVitest(meta.folder, meta.vitestNodePath)
     }))

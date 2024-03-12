@@ -2,6 +2,7 @@ import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
 import v8 from 'node:v8'
 import { pathToFileURL } from 'node:url'
+import { gte } from 'semver'
 import { dirname, normalize, resolve } from 'pathe'
 import type * as vscode from 'vscode'
 import { type BirpcReturn, createBirpc } from 'birpc'
@@ -51,8 +52,30 @@ function resolveVitestPackagePath(workspace: vscode.WorkspaceFolder) {
       paths: [workspace.uri.fsPath],
     })
   }
-  catch (err: any) {
-    log.info('[API]', `Vitest not found in "${workspace.name}" workspace folder`)
+  catch (_) {
+    return null
+  }
+}
+
+function resolveVitestPnpPackagePath(workspace: vscode.WorkspaceFolder) {
+  try {
+    const pnpPath = require.resolve('./.pnp.cjs', {
+      paths: [workspace.uri.fsPath],
+    })
+    const pnp = _require(pnpPath)
+    const vitestPath = pnp.resolveToUnqualified(
+      'vitest/package.json',
+      workspace.uri.fsPath,
+    ) as string
+    return {
+      pnpLoader: require.resolve('./.pnp.loader.mjs', {
+        paths: [workspace.uri.fsPath],
+      }),
+      vitestPath,
+      pnpPath,
+    }
+  }
+  catch (_) {
     return null
   }
 }
@@ -273,13 +296,25 @@ interface VitestMeta {
   folder: vscode.WorkspaceFolder
   vitestNodePath: string
   version: string
+  loader?: string
+  pnp?: string
 }
 
 export function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolder[]): VitestMeta[] {
   return folders.map((folder) => {
     const vitestPackagePath = resolveVitestPackagePath(folder)
-    if (!vitestPackagePath)
-      return null
+    if (!vitestPackagePath) {
+      const pnp = resolveVitestPnpPackagePath(folder)
+      if (!pnp)
+        return null
+      return {
+        folder,
+        vitestNodePath: resolveVitestNodePath(pnp.vitestPath),
+        version: 'yarn pnp',
+        loader: pnp.pnpLoader,
+        pnp: pnp.pnpPath,
+      }
+    }
     const pkg = _require(vitestPackagePath)
     const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
     return { folder, vitestNodePath, version: pkg.version }
@@ -287,15 +322,33 @@ export function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolde
 }
 
 function createChildVitestProcess(meta: VitestMeta[]) {
+  const pnpLoaders = [
+    ...new Set(meta.map(meta => meta.loader).filter(Boolean) as string[]),
+  ]
+  const pnp = meta.find(meta => meta.pnp)?.pnp as string
+  if (pnpLoaders.length > 1)
+    throw new Error(`Multiple loaders are not supported: ${pnpLoaders.join(', ')}`)
+  if (pnpLoaders.length && !pnp)
+    throw new Error('pnp file is required if loader option is used')
+  const execArgv = pnpLoaders[0] && gte(process.version, '18.19.0')
+    ? undefined
+    : [
+        '--require',
+        pnp,
+        '--experimental-loader',
+        pnpLoaders[0],
+      ]
   const vitest = fork(
     workerPath,
     {
       // TODO: use user's execPath to use the local node version (also expose an option?)
       execPath: undefined,
+      execArgv,
       env: {
         VITEST_VSCODE: 'true',
       },
       stdio: 'overlapped',
+      cwd: dirname(pnp),
     },
   )
   return new Promise<ChildProcess>((resolve, reject) => {
@@ -320,6 +373,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
           vitestNodePath: m.vitestNodePath,
           folder: normalize(m.folder.uri.fsPath),
         })),
+        loader: pnpLoaders[0] && gte(process.version, '18.19.0') ? pnpLoaders[0] : undefined,
       })
     })
   })

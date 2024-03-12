@@ -6,3 +6,5 @@ node_modules
 .DS_Store
 .eslintcache
 test-results
+.yarn
+.pnp.*
