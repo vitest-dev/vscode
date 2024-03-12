@@ -70,31 +70,18 @@ class VSCodeReporter implements Reporter {
 
 // TODO: run a sinlge Vitest instance if VitestNodePath is the same
 async function initVitest(root: string, vitestNodePath: string) {
-  try {
-    const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
-    const reporter = new VSCodeReporter()
-    const vitest = await vitestMode.createVitest('test', {
-      watch: true,
-      api: false,
-      root,
-      reporters: [reporter],
-    })
-    reporter.initVitest(vitest)
-    return {
-      vitest,
-      reporter,
-    }
-  }
-  catch (err: any) {
-    process.send!({
-      type: 'error',
-      error: {
-        message: err.message,
-        stack: String(err.stack),
-        name: err.name,
-      },
-    })
-    throw err
+  const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
+  const reporter = new VSCodeReporter()
+  const vitest = await vitestMode.createVitest('test', {
+    watch: true,
+    api: false,
+    root,
+    reporters: [reporter],
+  })
+  reporter.initVitest(vitest)
+  return {
+    vitest,
+    reporter,
   }
 }
 
@@ -106,33 +93,36 @@ process.on('message', async function init(message: any) {
     try {
       if (data.loader)
         register(data.loader)
+
+      const vitest = await Promise.all(data.meta.map((meta) => {
+        return initVitest(meta.folder, meta.vitestNodePath)
+      }))
+      const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
+        on(listener) {
+          process.on('message', listener)
+        },
+        post(message) {
+          process.send!(message)
+        },
+        serialize: v8.serialize,
+        deserialize: v => v8.deserialize(Buffer.from(v)),
+      })
+      vitest.forEach(v => v.reporter.initRpc(rpc))
+      process.send!({ type: 'ready' })
     }
     catch (err: any) {
-      process.send!({
-        type: 'error',
-        error: {
-          message: err.message,
-          stack: String(err.stack),
-          name: err.name,
-        },
-      })
-      return
+      error(err)
     }
-
-    const vitest = await Promise.all(data.meta.map((meta) => {
-      return initVitest(meta.folder, meta.vitestNodePath)
-    }))
-    const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
-      on(listener) {
-        process.on('message', listener)
-      },
-      post(message) {
-        process.send!(message)
-      },
-      serialize: v8.serialize,
-      deserialize: v => v8.deserialize(Buffer.from(v)),
-    })
-    vitest.forEach(v => v.reporter.initRpc(rpc))
-    process.send!({ type: 'ready' })
   }
 })
+
+function error(err: any) {
+  process.send!({
+    type: 'error',
+    error: {
+      message: err.message,
+      stack: String(err.stack),
+      name: err.name,
+    },
+  })
+}
