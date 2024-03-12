@@ -126,3 +126,10 @@ function error(err: any) {
     },
   })
 }
+
+function _debug(...args: any[]) {
+  process.send!({
+    type: 'debug',
+    args,
+  })
+}

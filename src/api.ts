@@ -330,14 +330,14 @@ function createChildVitestProcess(meta: VitestMeta[]) {
     throw new Error(`Multiple loaders are not supported: ${pnpLoaders.join(', ')}`)
   if (pnpLoaders.length && !pnp)
     throw new Error('pnp file is required if loader option is used')
-  const execArgv = pnpLoaders[0] && gte(process.version, '18.19.0')
-    ? undefined
-    : [
+  const execArgv = pnpLoaders[0] && !gte(process.version, '18.19.0')
+    ? [
         '--require',
         pnp,
         '--experimental-loader',
         pnpLoaders[0],
       ]
+    : undefined
   const vitest = fork(
     workerPath,
     {
@@ -348,7 +348,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
         VITEST_VSCODE: 'true',
       },
       stdio: 'overlapped',
-      cwd: dirname(pnp),
+      cwd: pnp ? dirname(pnp) : undefined,
     },
   )
   return new Promise<ChildProcess>((resolve, reject) => {
@@ -357,6 +357,9 @@ function createChildVitestProcess(meta: VitestMeta[]) {
       reject(error)
     })
     vitest.on('message', function ready(message: any) {
+      if (message.type === 'debug')
+        log.info('[WORKER]', ...message.args)
+
       if (message.type === 'ready') {
         vitest.off('message', ready)
         resolve(vitest)
