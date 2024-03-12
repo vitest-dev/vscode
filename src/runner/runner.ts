@@ -53,6 +53,7 @@ export class FolderTestRunner extends vscode.Disposable {
         return
       files.forEach((file) => {
         const fileTestItem = this.tree.getOrCreateFileTestItem(file.filepath)
+        fileTestItem.children.replace([])
         this.tree.flatTestItems.set(file.id, fileTestItem)
         this.tree.collectTasks(file.tasks, fileTestItem)
       })

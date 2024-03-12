@@ -45,7 +45,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const tree = registerDiscovery(ctrl, api, folders, resolveItem).then((discoverer) => {
     context.subscriptions.push(discoverer)
-    discoverer.discoverAllTestFiles()
+    discoverer.watchTestFilesInWorkspace()
     return discoverer
   })
   const runner = (async () => new GlobalTestRunner(await api, await tree, ctrl))().then((runner) => {
@@ -110,17 +110,11 @@ function registerDiscovery(
     await (await fileDiscoverer).discoverAllTestFiles()
   }
 
-  // what is it's called in quick succession?
+  // what if it's called in quick succession?
   // TODO: debounce and queue collects
   ctrl.resolveHandler = async (item) => {
-    if (!item) {
-      // item == null, when user opened the testing panel
-      // in this case, we should discover and watch all the testing files
-      await (await fileDiscoverer).watchTestFilesInWorkspace()
-    }
-    else {
+    if (item)
       await (await fileDiscoverer).discoverFileTests(item)
-    }
   }
 
   // vscode.window.visibleTextEditors.forEach(async x =>

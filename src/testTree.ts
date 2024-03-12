@@ -170,7 +170,7 @@ export class TestTree extends vscode.Disposable {
       //   await data.updateFromDisk(controller, folder)
       // })
       watcher.onDidDelete((file) => {
-        const item = this.controller.items.get(file.toString())
+        const item = this.fileItems.get(normalize(file.fsPath))
         if (item)
           this.recursiveDelete(this.controller.items, item)
       })
@@ -222,8 +222,10 @@ export class TestTree extends vscode.Disposable {
 
   collectTasks(tasks: Task[], item: vscode.TestItem) {
     for (const task of tasks) {
-      if (this.flatTestItems.has(task.id))
-        continue
+      if (this.flatTestItems.has(task.id)) {
+        const item = this.flatTestItems.get(task.id)
+        item?.parent?.children.delete(task.id)
+      }
 
       const testItem = this.controller.createTestItem(
         task.id,
