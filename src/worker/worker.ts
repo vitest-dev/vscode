@@ -77,6 +77,11 @@ async function initVitest(root: string, vitestNodePath: string) {
     api: false,
     root,
     reporters: [reporter],
+    ui: false,
+  }, {
+    server: {
+      middlewareMode: true,
+    },
   })
   reporter.initVitest(vitest)
   return {
