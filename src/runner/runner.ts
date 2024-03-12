@@ -137,13 +137,13 @@ export class FolderTestRunner extends vscode.Disposable {
           if (!errors)
             return
           test.error = errors.map(e => e.message.toString()).join('\n')
-          this.testRun.failed(test, errors, result.duration)
+          this.testRun.errored(test, errors, result.duration)
           return
         }
         const errors = result.errors?.map(err =>
           testMessageForTestError(test, err),
         ) || []
-        this.testRun.errored(test, errors, result.duration)
+        this.testRun.failed(test, errors, result.duration)
         break
       }
       case 'pass':
