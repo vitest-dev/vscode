@@ -80,7 +80,6 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     },
     startInspect(port) {
       _require('inspector').open(port)
-      // TODO: force pool to be non-parallel?
     },
     stopInspect() {
       _require('inspector').close()

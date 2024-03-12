@@ -7,7 +7,6 @@ import { resolveVitestAPI, resolveVitestFoldersMeta } from './api'
 import { GlobalTestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 
-// TODO: more error handling for lazy loaded API
 export async function activate(context: vscode.ExtensionContext) {
   const folders = vscode.workspace.workspaceFolders || []
 
@@ -20,9 +19,12 @@ export async function activate(context: vscode.ExtensionContext) {
   const meta = resolveVitestFoldersMeta(folders)
 
   if (!meta.length) {
+    // Should we wait for the user to install Vitest?
     log.info('The extension is not activated because no Vitest environment was detected.')
     return
   }
+
+  // TODO: when Vitest 1.4.0 is released, we should check for compatibility
 
   // we know Vitest is installed, so we can create a test controller
   const ctrl = vscode.tests.createTestController(testControllerId, 'Vitest')
@@ -40,26 +42,6 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(api)
     return api
   })
-
-  // TODO: check compatibility with version >= 0.34.0(?)
-  // const workspaceConfigs = await getVitestWorkspaceConfigs()
-  // // enable run/debug/watch tests only if vitest version >= 0.12.0
-  // if (!workspacesCompatibilityCheck(workspaceConfigs)) {
-  //   const msg = 'Because Vitest version < 0.12.0 for every workspace folder, run/debug/watch tests from Vitest extension disabled.\n'
-  //   log.error(msg)
-  //   // if the vitest detection is false positive, we may still reach here.
-  //   // but we can still use `.version` to filter some false positive
-  //   if (workspaceConfigs.some(x => x.isUsingVitestForSure))
-  //     vscode.window.showWarningMessage(msg)
-
-  // context.subscriptions.push(
-  //   vscode.commands.registerCommand(Command.UpdateSnapshot, () => {
-  //     vscode.window.showWarningMessage(msg)
-  //   }),
-  // )
-
-  //   return
-  // }
 
   const tree = registerDiscovery(ctrl, api, folders, resolveItem).then((discoverer) => {
     context.subscriptions.push(discoverer)
@@ -148,4 +130,4 @@ function registerDiscovery(
   return fileDiscoverer
 }
 
-// export function deactivate() {}
+export function deactivate() {}

@@ -223,7 +223,6 @@ export class GlobalTestRunner extends vscode.Disposable {
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
     this.currentVscodeRequest = request
     token.onCancellationRequested(() => {
-      // TODO: test how tests are marked since Vitest by default changes the stateMap
       this.api.cancelRun()
       this.currentVscodeRequest = undefined
       this.endTestRuns()

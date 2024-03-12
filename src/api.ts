@@ -9,6 +9,7 @@ import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 import { log } from './log'
 import { workerPath } from './constants'
+import { getConfig } from './config'
 
 const _require = require
 
@@ -46,10 +47,13 @@ export interface VitestEvents {
 
 type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
 
-function resolveVitestPackagePath(workspace: vscode.WorkspaceFolder) {
+function resolveVitestPackagePath(folder: vscode.WorkspaceFolder) {
+  const customPackagePath = getConfig(folder).packagePath
+  if (customPackagePath && !customPackagePath.endsWith('package.json'))
+    throw new Error(`"vitest.packagePath" must point to a package.json file, instead got: ${customPackagePath}`)
   try {
-    return require.resolve('vitest/package.json', {
-      paths: [workspace.uri.fsPath],
+    return customPackagePath || require.resolve('vitest/package.json', {
+      paths: [folder.uri.fsPath],
     })
   }
   catch (_) {
@@ -57,19 +61,19 @@ function resolveVitestPackagePath(workspace: vscode.WorkspaceFolder) {
   }
 }
 
-function resolveVitestPnpPackagePath(workspace: vscode.WorkspaceFolder) {
+function resolveVitestPnpPackagePath(folder: vscode.WorkspaceFolder) {
   try {
     const pnpPath = require.resolve('./.pnp.cjs', {
-      paths: [workspace.uri.fsPath],
+      paths: [folder.uri.fsPath],
     })
     const pnp = _require(pnpPath)
     const vitestPath = pnp.resolveToUnqualified(
       'vitest/package.json',
-      workspace.uri.fsPath,
+      folder.uri.fsPath,
     ) as string
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
-        paths: [workspace.uri.fsPath],
+        paths: [folder.uri.fsPath],
       }),
       vitestPath,
       pnpPath,
@@ -121,7 +125,7 @@ export class VitestAPI {
   ) {}
 
   get processId() {
-    return this.meta.pid
+    return this.meta.process.pid
   }
 
   get length() {
@@ -170,7 +174,7 @@ export class VitestAPI {
   }
 
   dispose() {
-    // TODO: terminate?
+    this.meta.process.kill()
   }
 }
 
@@ -207,7 +211,8 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   dispose() {
-    // TODO: terminate?
+    WEAKMAP_API_FOLDER.delete(this)
+    this.handlers.clearListeners()
   }
 }
 
@@ -221,7 +226,7 @@ export async function resolveVitestAPI(meta: VitestMeta[]) {
 
 interface ResolvedMeta {
   rpc: VitestRPC
-  pid: number
+  process: ChildProcess
   handlers: {
     onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
@@ -341,8 +346,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
   const vitest = fork(
     workerPath,
     {
-      // TODO: use user's execPath to use the local node version (also expose an option?)
-      execPath: undefined,
+      execPath: getConfig().nodeExecutable,
       execArgv,
       env: {
         VITEST_VSCODE: 'true',
@@ -375,6 +379,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
         meta: meta.map(m => ({
           vitestNodePath: m.vitestNodePath,
           folder: normalize(m.folder.uri.fsPath),
+          env: getConfig(m.folder).env || undefined,
         })),
         loader: pnpLoaders[0] && gte(process.version, '18.19.0') ? pnpLoaders[0] : undefined,
       })
@@ -411,7 +416,7 @@ export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedM
 
   return {
     rpc: api,
-    pid: vitest.pid!,
+    process: vitest,
     handlers,
   }
 }

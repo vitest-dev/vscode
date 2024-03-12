@@ -23,23 +23,17 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
   const folderConfig = vscode.workspace.getConfiguration('vitest', workspace)
   const rootConfig = vscode.workspace.getConfiguration('vitest')
 
-  const get = <T>(key: string, defaultValue?: T) => getConfigValue<T>(rootConfig, folderConfig, key, defaultValue)
+  const get = <T>(key: string, defaultValue?: T) => getConfigValue<T>(
+    rootConfig,
+    folderConfig,
+    key,
+    defaultValue,
+  )
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
-    commandLine: get<string | undefined>('commandLine', undefined),
-    watchOnStartup: get<boolean>('watchOnStartup', false),
-    enable: get<boolean>('enable', true),
     debugExclude: get<string[]>('debugExclude', []),
-  }
-}
-
-export function getRootConfig() {
-  const rootConfig = vscode.workspace.getConfiguration('vitest')
-
-  return {
-    showFailMessages: rootConfig.get('showFailMessages', false),
-    changeBackgroundColor: rootConfig.get('changeBackgroundColor', true),
-    disabledWorkspaceFolders: rootConfig.get<string[]>('disabledWorkspaceFolders', []),
+    packagePath: get<string | undefined>('packagePath'),
+    nodeExecutable: get<string | undefined>('nodeExecutable'),
   }
 }

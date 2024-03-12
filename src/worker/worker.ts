@@ -9,6 +9,7 @@ import { createWorkerRPC } from './rpc'
 interface VitestMeta {
   folder: string
   vitestNodePath: string
+  env: Record<string, any> | undefined
 }
 
 interface RunnerOptions {
@@ -68,8 +69,7 @@ class VSCodeReporter implements Reporter {
   }
 }
 
-// TODO: run a sinlge Vitest instance if VitestNodePath is the same
-async function initVitest(root: string, vitestNodePath: string) {
+async function initVitest(root: string, vitestNodePath: string, env: Record<string, any> | undefined) {
   const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
   const vitest = await vitestMode.createVitest('test', {
@@ -78,6 +78,7 @@ async function initVitest(root: string, vitestNodePath: string) {
     root,
     reporters: [reporter],
     ui: false,
+    env,
   }, {
     server: {
       middlewareMode: true,
@@ -100,7 +101,7 @@ process.on('message', async function init(message: any) {
         register(data.loader)
 
       const vitest = await Promise.all(data.meta.map((meta) => {
-        return initVitest(meta.folder, meta.vitestNodePath)
+        return initVitest(meta.folder, meta.vitestNodePath, meta.env)
       }))
       const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
         on(listener) {

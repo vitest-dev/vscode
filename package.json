@@ -63,23 +63,15 @@
     "configuration": {
       "title": "Vitest",
       "properties": {
-        "vitest.enable": {
-          "description": "This plugin will try to detect whether the current project is set up with Vitest to activate itself. When it failed, you can enable the plugin manually.",
-          "type": "boolean",
-          "scope": "resource",
-          "default": false
-        },
-        "vitest.watchOnStartup": {
-          "description": "Start watching tests on startup",
-          "type": "boolean",
-          "scope": "resource",
-          "default": false
-        },
-        "vitest.commandLine": {
-          "markdownDescription": "The command line to start vitest tests. **It should have with the ability to append extra arguments**. For example `npx vitest` or `yarn test --`\n\nThis is a workspace setting. Do not change it in the user setting directly, which will affect all the projects you open",
+        "vitest.packagePath": {
+          "description": "The path to the Vitest `package.json` file.",
           "type": "string",
-          "scope": "resource",
-          "default": ""
+          "scope": "resource"
+        },
+        "vitest.nodeExecutable": {
+          "description": "The path to the Node.js executable. If not assigned, uses VSCode's Node.js instance.",
+          "type": "string",
+          "scope": "window"
         },
         "vitest.debugExclude": {
           "markdownDescription": "Automatically skip files covered by these glob patterns. \nDefault: `[\"<node_internals>/**\", \"**/node_modules/**\"]`",
@@ -98,24 +90,6 @@
           ],
           "default": null,
           "scope": "resource"
-        },
-        "vitest.showFailMessages": {
-          "description": "Get instant feedback when using Watch Mode. Pop-ups an error when a test fails.",
-          "type": "boolean",
-          "scope": "window",
-          "default": false
-        },
-        "vitest.changeBackgroundColor": {
-          "description": "Change background color of status bar item on failing tests.",
-          "type": "boolean",
-          "scope": "window",
-          "default": true
-        },
-        "vitest.disabledWorkspaceFolders": {
-          "description": "Disabled workspace folders names in multiroot environment",
-          "type": "array",
-          "scope": "resource",
-          "default": []
         }
       }
     }

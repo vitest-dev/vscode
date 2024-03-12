@@ -61,7 +61,7 @@ export async function startDebugSession(
       onNewStartDispose.dispose()
       mainSession = undefined
       api.stopInspect()
-      // TODO: Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
+      // Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
       runner.endTestRuns()
     }, 100)
   })
@@ -80,7 +80,6 @@ export async function startDebugSession(
     skipFiles: config.debugExclude,
     __vitest_name: 'vitest-debug',
     smartStep: true,
-    // TODO: custom env
     env: {
       VITEST_VSCODE: 'true',
     },
