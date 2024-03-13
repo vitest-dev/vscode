@@ -49,8 +49,8 @@ export interface FilesMap {
 
 export class VitestAPI {
   constructor(
-    protected api: VitestFolderAPI[],
-    protected meta: ResolvedMeta,
+    private readonly api: VitestFolderAPI[],
+    private readonly meta: ResolvedMeta,
   ) {}
 
   forEach<T>(callback: (api: VitestFolderAPI, index: number) => T) {
@@ -88,6 +88,7 @@ export class VitestFolderAPI extends VitestReporter {
   ) {
     super(normalize(folder.uri.fsPath), meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
+    this.configFile = normalize(configFile)
   }
 
   get processId() {
@@ -103,19 +104,15 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
-    await this.meta.rpc.runFolderFiles(this.workspacePath, files?.map(normalize), testNamePatern)
+    await this.meta.rpc.runFolderFiles(this.configFile, files?.map(normalize), testNamePatern)
   }
 
   getFiles() {
-    return this.meta.rpc.getFiles(this.workspacePath)
+    return this.meta.rpc.getFiles(this.configFile)
   }
 
   async collectTests(testFile: string) {
-    await this.meta.rpc.collectTests(this.workspacePath, normalize(testFile))
-  }
-
-  private get workspacePath() {
-    return normalize(this.workspaceFolder.uri.fsPath)
+    await this.meta.rpc.collectTests(this.configFile, normalize(testFile))
   }
 
   dispose() {
@@ -124,7 +121,7 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async cancelRun() {
-    await this.meta.rpc.cancelRun(this.workspacePath)
+    await this.meta.rpc.cancelRun(this.configFile)
   }
 
   stopInspect() {

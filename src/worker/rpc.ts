@@ -7,31 +7,24 @@ const _require = require
 
 export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
   const vitestByFolder = vitest.reduce((acc, vitest) => {
-    acc[vitest.config.root] = vitest
+    acc[vitest.server.config.configFile || vitest.config.root] = vitest
     return acc
   }, {} as Record<string, Vitest>)
   const vitestEntries = Object.entries(vitestByFolder)
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
-    async collectTests(workspaceFolder: string, testFile: string) {
-      const vitest = vitestByFolder[workspaceFolder]
+    async collectTests(config: string, testFile: string) {
+      const vitest = vitestByFolder[config]
       vitest.configOverride.testNamePattern = /$a/ // force to skip all tests
       await vitest.rerunFiles([testFile])
     },
-    async cancelRun(workspaceFile: string) {
-      await vitestByFolder[workspaceFile]?.cancelCurrentRun('keyboard-input')
+    async cancelRun(config: string) {
+      await vitestByFolder[config]?.cancelCurrentRun('keyboard-input')
     },
-    async runFiles() {
-      for (const [_, vitest] of vitestEntries) {
-        vitest.configOverride.testNamePattern = undefined
-        const specs = await vitest.globTestFiles()
-        const files = specs.map(([_, spec]) => spec)
-        await vitest.rerunFiles(files)
-      }
-    },
-    async runFolderFiles(folder, files, testNamePattern) {
-      const vitest = vitestByFolder[folder]
+    async runFolderFiles(config, files, testNamePattern) {
+      const vitest = vitestByFolder[config]
       if (!vitest)
-        return
+        throw new Error(`Vitest instance not found for config: ${config}`)
+
       if (testNamePattern) {
         await vitest.changeNamePattern(testNamePattern, files)
       }
@@ -56,8 +49,8 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
         await vitest.rerunFiles(files)
       }
     },
-    async getFiles(workspaceFolder: string) {
-      const vitest = vitestByFolder[workspaceFolder]
+    async getFiles(config: string) {
+      const vitest = vitestByFolder[config]
       const files = await vitest.globTestFiles()
       // reset cached test files list
       vitest.projects.forEach((project) => {

@@ -93,7 +93,7 @@ export class TestTree extends vscode.Disposable {
   }
 
   private _getFileId(api: VitestFolderAPI, file: string) {
-    return `${api.workspaceFolder.uri.toString()}|${file}`
+    return `${api.configFile}|${file}`
   }
 
   getOrCreateFileTestItem(api: VitestFolderAPI, file: string) {
@@ -218,23 +218,18 @@ export class TestTree extends vscode.Disposable {
 
   collectFile(api: VitestFolderAPI, file: File) {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
-    fileTestItem.children.replace([])
     this.flatTestItems.set(file.id, fileTestItem)
     this.collectTasks(file.tasks, fileTestItem)
   }
 
   collectTasks(tasks: Task[], item: vscode.TestItem) {
     for (const task of tasks) {
-      if (this.flatTestItems.has(task.id)) {
-        const item = this.flatTestItems.get(task.id)
-        item?.parent?.children.delete(task.id)
-      }
-
-      const testItem = this.controller.createTestItem(
+      const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
         task.id,
         task.name,
         item.uri,
       )
+      testItem.label = task.name
       this.flatTestItems.set(task.id, testItem)
       item.children.add(testItem)
       if (task.type === 'suite')
@@ -245,6 +240,13 @@ export class TestTree extends vscode.Disposable {
       if ('tasks' in task)
         this.collectTasks(task.tasks, testItem)
     }
+
+    // remove tasks that are no longer present
+    const ids = new Set(tasks.map(x => x.id))
+    item.children.forEach((child) => {
+      if (!ids.has(child.id))
+        item.children.delete(child.id)
+    })
   }
 }
 
