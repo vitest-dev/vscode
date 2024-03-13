@@ -1,7 +1,5 @@
 import * as vscode from 'vscode'
-import type { Task } from 'vitest'
 import type { VitestAPI } from '../api'
-import type { TestData } from '../testTreeData'
 import { TestFolder, getTestData } from '../testTreeData'
 import { log } from '../log'
 import type { DebugSessionAPI } from '../debug/startSession'
@@ -26,26 +24,8 @@ export class GlobalTestRunner extends vscode.Disposable {
     })
 
     api.forEach((folderAPI) => {
-      this.runners.push(new FolderTestRunner(this.controller, this, tree, folderAPI))
+      this.runners.push(new FolderTestRunner(this.controller, this, this.tree, folderAPI))
     })
-  }
-
-  public getTestDataByTaskId(taskId: string): TestData | null {
-    const testItem = this.tree.flatTestItems.get(taskId)
-    if (!testItem)
-      return null
-    return getTestData(testItem) || null
-  }
-
-  public getTestDataByTask(task: Task): TestData | null {
-    const cachedItem = this.tree.flatTestItems.get(task.id)
-    if (cachedItem)
-      return getTestData(cachedItem) || null
-    if ('filepath' in task && task.filepath) {
-      const testItem = this.tree.fileItems.get(task.filepath)
-      return testItem ? getTestData(testItem) || null : null
-    }
-    return null
   }
 
   public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {

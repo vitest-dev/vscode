@@ -1,15 +1,20 @@
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
-import type { Task } from 'vitest'
+import type { File, Task } from 'vitest'
 import type { VitestAPI } from './api'
+import type { TestData } from './testTreeData'
 import { TestCase, TestFile, TestFolder, TestSuite, addTestData, getTestData } from './testTreeData'
 import { log } from './log'
+
+// testItem -> vscode.TestItem
+// testData -> our wrapper
+// task -> vitest.Task
 
 export class TestTree extends vscode.Disposable {
   private watchers: vscode.FileSystemWatcher[] = []
 
-  public flatTestItems = new Map<string, vscode.TestItem>()
-  public fileItems: Map<string, vscode.TestItem> = new Map()
+  private flatTestItems = new Map<string, vscode.TestItem>()
+  private fileItems: Map<string, vscode.TestItem> = new Map()
 
   private folderItems: Map<string, vscode.TestItem> = new Map()
 
@@ -218,6 +223,31 @@ export class TestTree extends vscode.Disposable {
     if (!testItem)
       return
     testItem.tags = testItem.tags.filter(x => x !== tag)
+  }
+
+  public getTestDataByTaskId(taskId: string): TestData | null {
+    const testItem = this.flatTestItems.get(taskId)
+    if (!testItem)
+      return null
+    return getTestData(testItem) || null
+  }
+
+  public getTestDataByTask(task: Task): TestData | null {
+    const cachedItem = this.flatTestItems.get(task.id)
+    if (cachedItem)
+      return getTestData(cachedItem) || null
+    if ('filepath' in task && task.filepath) {
+      const testItem = this.fileItems.get(task.filepath)
+      return testItem ? getTestData(testItem) || null : null
+    }
+    return null
+  }
+
+  collectFile(file: File) {
+    const fileTestItem = this.getOrCreateFileTestItem(file.filepath)
+    fileTestItem.children.replace([])
+    this.flatTestItems.set(file.id, fileTestItem)
+    this.collectTasks(file.tasks, fileTestItem)
   }
 
   collectTasks(tasks: Task[], item: vscode.TestItem) {

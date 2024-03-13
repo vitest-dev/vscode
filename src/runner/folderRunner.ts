@@ -25,7 +25,7 @@ export class FolderTestRunner extends vscode.Disposable {
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
-        const test = this.runner.getTestDataByTaskId(testId)
+        const test = this.tree.getTestDataByTaskId(testId)
         if (!test) {
           log.error('Cannot find task during onTaskUpdate', testId)
           return
@@ -37,12 +37,7 @@ export class FolderTestRunner extends vscode.Disposable {
     api.onCollected((files) => {
       if (!files)
         return
-      files.forEach((file) => {
-        const fileTestItem = this.tree.getOrCreateFileTestItem(file.filepath)
-        fileTestItem.children.replace([])
-        this.tree.flatTestItems.set(file.id, fileTestItem)
-        this.tree.collectTasks(file.tasks, fileTestItem)
-      })
+      files.forEach(file => this.tree.collectFile(file))
       const run = this.testRun
       if (!run)
         return
@@ -66,7 +61,7 @@ export class FolderTestRunner extends vscode.Disposable {
     })
 
     api.onConsoleLog(({ content, taskId }) => {
-      const data = taskId ? runner.getTestDataByTaskId(taskId) : undefined
+      const data = taskId ? tree.getTestDataByTaskId(taskId) : undefined
       if (this.testRun) {
         this.testRun.appendOutput(
           content.replace(/(?<!\r)\n/g, '\r\n'),
@@ -98,7 +93,7 @@ export class FolderTestRunner extends vscode.Disposable {
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {
     getTasks(tasks).forEach((task) => {
-      const test = this.runner.getTestDataByTask(task)
+      const test = this.tree.getTestDataByTask(task)
       if (!test) {
         log.error(`Test data not found for "${task.name}"`)
         return
