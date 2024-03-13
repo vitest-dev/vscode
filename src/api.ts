@@ -251,13 +251,13 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
       if (message.type === 'ready') {
         vitest.off('message', ready)
         // started _some_ projects, but some failed - log them, this can only happen if there are multiple projects
-        // TODO: show warning
         if (message.errors.length) {
           message.errors.forEach(([configFile, error]: [string, string]) => {
             const metaIndex = meta.findIndex(m => m.configFile === configFile)
             const metaItem = meta[metaIndex]
             const workspaceItem = tree.getOrCreateWorkspaceFolderItem(metaItem.folder.uri)
-            workspaceItem.error = error
+            workspaceItem.error = error // display error message in the tree
+            workspaceItem.canResolveChildren = false
             meta.splice(metaIndex, 1)
             log.error('[API]', `Vitest failed to start for ${configFile}: \n${error}`)
           })
