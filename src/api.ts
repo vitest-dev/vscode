@@ -9,6 +9,7 @@ import { getConfig } from './config'
 import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
 import { resolveVitestPackage } from './api/resolve'
+import type { TestTree } from './testTree'
 
 const _require = require
 
@@ -133,8 +134,8 @@ export class VitestFolderAPI extends VitestReporter {
   }
 }
 
-export async function resolveVitestAPI(meta: VitestMeta[]) {
-  const vitest = await createVitestProcess(meta)
+export async function resolveVitestAPI(tree: TestTree, meta: VitestMeta[]) {
+  const vitest = await createVitestProcess(tree, meta)
   const apis = meta.map(({ folder, configFile }) =>
     new VitestFolderAPI(folder, vitest, configFile),
   )
@@ -209,7 +210,7 @@ export async function resolveVitestPackages(): Promise<VitestMeta[]> {
   }).filter(nonNullable)
 }
 
-function createChildVitestProcess(meta: VitestMeta[]) {
+function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
   const pnpLoaders = [
     ...new Set(meta.map(meta => meta.loader).filter(Boolean) as string[]),
   ]
@@ -249,11 +250,24 @@ function createChildVitestProcess(meta: VitestMeta[]) {
 
       if (message.type === 'ready') {
         vitest.off('message', ready)
+        // started _some_ projects, but some failed - log them, this can only happen if there are multiple projects
+        // TODO: show warning
+        if (message.errors.length) {
+          message.errors.forEach(([configFile, error]: [string, string]) => {
+            const metaIndex = meta.findIndex(m => m.configFile === configFile)
+            const metaItem = meta[metaIndex]
+            const workspaceItem = tree.getOrCreateWorkspaceFolderItem(metaItem.folder.uri)
+            workspaceItem.error = error
+            meta.splice(metaIndex, 1)
+            log.error('[API]', `Vitest failed to start for ${configFile}: \n${error}`)
+          })
+        }
         resolve(vitest)
       }
       if (message.type === 'error') {
         vitest.off('message', ready)
-        reject(message.error)
+        const error = new Error(`Vitest failed to start: \n${message.errors.map((r: any) => r[1]).join('\n')}`)
+        reject(error)
       }
     })
     vitest.on('spawn', () => {
@@ -271,10 +285,10 @@ function createChildVitestProcess(meta: VitestMeta[]) {
   })
 }
 
-export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedMeta> {
+export async function createVitestProcess(tree: TestTree, meta: VitestMeta[]): Promise<ResolvedMeta> {
   log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.folder.name})`).join(', ')}`)
 
-  const vitest = await createChildVitestProcess(meta)
+  const vitest = await createChildVitestProcess(tree, meta)
 
   log.info('[API]', `Vitest process ${vitest.pid} created`)
 

@@ -41,7 +41,7 @@ class VitestExtension {
     const vitest = await resolveVitestPackages()
     this.testTree.reset(vitest.map(x => x.folder))
 
-    this.api = await resolveVitestAPI(vitest)
+    this.api = await resolveVitestAPI(this.testTree, vitest)
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()

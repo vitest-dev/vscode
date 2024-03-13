@@ -107,13 +107,24 @@ process.on('message', async function init(message: any) {
     try {
       if (data.loader)
         register(data.loader)
+      const errors = []
 
       const vitest = []
       for (const meta of data.meta) {
         process.chdir(meta.folder)
-        vitest.push(await initVitest(meta))
+        try {
+          vitest.push(await initVitest(meta))
+        }
+        catch (err: any) {
+          errors.push([meta.configFile, err.stack])
+        }
       }
       process.chdir(cwd)
+
+      if (!vitest.length) {
+        process.send!({ type: 'error', errors })
+        return
+      }
 
       const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
         on(listener) {
@@ -126,7 +137,7 @@ process.on('message', async function init(message: any) {
         deserialize: v => v8.deserialize(Buffer.from(v)),
       })
       vitest.forEach(v => v.reporter.initRpc(rpc))
-      process.send!({ type: 'ready' })
+      process.send!({ type: 'ready', errors })
     }
     catch (err: any) {
       error(err)
@@ -137,11 +148,7 @@ process.on('message', async function init(message: any) {
 function error(err: any) {
   process.send!({
     type: 'error',
-    error: {
-      message: err.message,
-      stack: String(err.stack),
-      name: err.name,
-    },
+    errors: ['', String(err.stack)],
   })
 }
 
