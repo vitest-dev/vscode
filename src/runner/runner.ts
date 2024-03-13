@@ -9,9 +9,10 @@ import { log } from '../log'
 import { type DebugSessionAPI, startDebugSession } from '../debug/startSession'
 
 export class TestRunner extends vscode.Disposable {
-  private testRunRequest?: vscode.TestRunRequest
   private testRun?: vscode.TestRun
   private debug?: DebugSessionAPI
+
+  private testRunRequests = new Set<vscode.TestRunRequest>()
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -89,14 +90,14 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    this.testRunRequest = request
+    this.testRunRequests.add(request)
     token.onCancellationRequested(() => {
       this.api.cancelRun()
-      this.testRunRequest = undefined
+      this.testRunRequests.delete(request)
       this.endTestRun()
     })
 
-    const tests = request.include ?? []
+    const tests = [...this.testRunRequests.values()].flatMap(r => r.include || [])
 
     if (!tests.length) {
       await this.api.runFiles()
@@ -108,11 +109,12 @@ export class TestRunner extends vscode.Disposable {
     }
 
     if (!request.continuous)
-      this.testRunRequest = undefined
+      this.testRunRequests.delete(request)
   }
 
   private startTestRun() {
-    const currentRequest = this.testRunRequest
+    // TODO: refactor to use different requests, otherwise test run doesn't mark the result value!
+    const currentRequest = this.testRunRequests.values().next().value
     if (currentRequest) {
       // report only if continuous mode is enabled or this is the first run
       if (!this.testRun || currentRequest.continuous) {
@@ -147,6 +149,7 @@ export class TestRunner extends vscode.Disposable {
     }
     switch (result.state) {
       case 'fail': {
+        console.log('FAILED', task?.id, result.errors)
         // error in a suite doesn't mean test fail
         if (task?.type === 'suite') {
           const errors = result.errors?.map(err =>
@@ -243,10 +246,14 @@ function getTestFiles(tests: readonly vscode.TestItem[]) {
 }
 
 function formatTestPattern(tests: readonly vscode.TestItem[]) {
-  if (tests.length !== 1)
-    return
-  const data = getTestData(tests[0])!
-  if (!('getTestNamePattern' in data))
-    return
-  return data.getTestNamePattern()
+  const patterns: string[] = []
+  for (const test of tests) {
+    const data = getTestData(test)!
+    if (!('getTestNamePattern' in data))
+      continue
+    patterns.push(data.getTestNamePattern())
+  }
+  if (!patterns.length)
+    return undefined
+  return patterns.join('|')
 }
