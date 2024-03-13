@@ -62,24 +62,26 @@ class VitestExtension {
         runProfile = this.testController.createRunProfile(
           prefix,
           vscode.TestRunProfileKind.Run,
-          (request, token) => runner.runTests(request, token),
+          () => {},
           false,
           undefined,
           true,
         )
       }
+      runProfile.runHandler = (request, token) => runner.runTests(request, token)
       this.runProfiles.set(`${prefix}:run`, runProfile)
       let debugProfile = previousRunProfiles.get(`${prefix}:debug`)
       if (!debugProfile) {
         debugProfile = this.testController.createRunProfile(
           prefix,
           vscode.TestRunProfileKind.Debug,
-          (request, token) => runner.debugTests(request, token),
+          () => {},
           false,
           undefined,
           true,
         )
       }
+      debugProfile.runHandler = (request, token) => runner.debugTests(request, token)
       this.runProfiles.set(`${prefix}:debug`, debugProfile)
     })
 
