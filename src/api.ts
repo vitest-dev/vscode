@@ -2,9 +2,9 @@ import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
 import { gte } from 'semver'
 import { dirname, normalize } from 'pathe'
-import type * as vscode from 'vscode'
+import * as vscode from 'vscode'
 import { log } from './log'
-import { workerPath } from './constants'
+import { configGlob, minimumVersion, workerPath } from './constants'
 import { getConfig } from './config'
 import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
@@ -176,24 +176,39 @@ interface VitestMeta {
   pnp?: string
 }
 
-export function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolder[]): VitestMeta[] {
-  return folders.map((folder) => {
-    const vitestPackage = resolveVitestPackage(folder)
-    if (!vitestPackage)
+export async function resolveVitestPackages(): Promise<VitestMeta[]> {
+  const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
+
+  return configs.map((configFile) => {
+    const folder = vscode.workspace.getWorkspaceFolder(configFile)!
+    const vitest = resolveVitestPackage(folder)
+
+    if (!vitest) {
+      log.error('[API]', `Vitest not found for ${configFile.fsPath}. Please run \`npm i --save-dev vitest\` to install Vitest.`)
       return null
-    if (vitestPackage.pnp) {
+    }
+
+    if (vitest.pnp) {
+      // TODO: try to load vitest package version from pnp
       return {
         folder,
-        vitestNodePath: vitestPackage.vitestNodePath,
-        version: 'yarn pnp',
-        loader: vitestPackage.pnp.loaderPath,
-        pnp: vitestPackage.pnp.pnpPath,
+        vitestNodePath: vitest.vitestNodePath,
+        version: 'pnp',
+        loader: vitest.pnp.loaderPath,
+        pnp: vitest.pnp.pnpPath,
       }
     }
-    const pkg = _require(vitestPackage.vitestPackageJsonPath)
+
+    const pkg = _require(vitest.vitestPackageJsonPath)
+    if (!gte(pkg.version, minimumVersion)) {
+      // TODO: show warning
+      log.error('[API]', `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
+      return null
+    }
+
     return {
       folder,
-      vitestNodePath: vitestPackage.vitestNodePath,
+      vitestNodePath: vitest.vitestNodePath,
       version: pkg.version,
     }
   }).filter(nonNullable)
@@ -261,7 +276,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
 }
 
 export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedMeta> {
-  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.vitestNodePath})`).join(', ')}`)
+  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.folder.name})`).join(', ')}`)
 
   const vitest = await createChildVitestProcess(meta)
 

@@ -33,11 +33,8 @@
     "vscode": "^1.77.0"
   },
   "activationEvents": [
-    "workspaceContains:**/vitest.config.js",
-    "workspaceContains:**/vite.config.js",
-    "workspaceContains:**/vitest.config.ts",
-    "workspaceContains:**/vite.config.ts",
-    "workspaceContains:**/package.json"
+    "workspaceContains:**/*{vite,vitest}*.config.{ts,js,mjs,cjs,cts,mts}",
+    "workspaceContains:node_modules/.bin/vitest"
   ],
   "contributes": {
     "commands": [
