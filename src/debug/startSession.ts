@@ -2,8 +2,8 @@ import * as vscode from 'vscode'
 import getPort from 'get-port'
 import { log } from '../log'
 import { getConfig } from '../config'
-import type { GlobalTestRunner } from '../runner/runner'
-import type { VitestAPI } from '../api'
+import type { TestRunner } from '../runner/runner'
+import type { VitestFolderAPI } from '../api'
 
 export interface DebugSessionAPI {
   session: vscode.DebugSession | undefined
@@ -13,8 +13,8 @@ export interface DebugSessionAPI {
 const DEBUG_DEFAULT_PORT = 9229
 
 export async function startDebugSession(
-  api: VitestAPI,
-  runner: GlobalTestRunner,
+  api: VitestFolderAPI,
+  runner: TestRunner,
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
 ): Promise<DebugSessionAPI> {
@@ -62,7 +62,7 @@ export async function startDebugSession(
       mainSession = undefined
       api.stopInspect()
       // Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
-      runner.endTestRuns()
+      runner.endTestRun()
     }, 100)
   })
 

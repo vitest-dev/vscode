@@ -9,6 +9,7 @@ import { createWorkerRPC } from './rpc'
 interface VitestMeta {
   folder: string
   vitestNodePath: string
+  configFile: string
   env: Record<string, any> | undefined
 }
 
@@ -69,18 +70,19 @@ class VSCodeReporter implements Reporter {
   }
 }
 
-async function initVitest(root: string, vitestNodePath: string, env: Record<string, any> | undefined) {
-  const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
+async function initVitest(meta: VitestMeta) {
+  const vitestMode = await import(meta.vitestNodePath) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
   const vitest = await vitestMode.createVitest(
     'test',
     {
+      config: meta.configFile,
       watch: true,
       api: false,
-      root,
+      root: meta.folder,
       reporters: [reporter],
       ui: false,
-      env,
+      env: meta.env,
     },
     {
       server: {
@@ -95,6 +97,8 @@ async function initVitest(root: string, vitestNodePath: string, env: Record<stri
   }
 }
 
+const cwd = process.cwd()
+
 process.on('message', async function init(message: any) {
   if (message.type === 'init') {
     process.off('message', init)
@@ -104,9 +108,13 @@ process.on('message', async function init(message: any) {
       if (data.loader)
         register(data.loader)
 
-      const vitest = await Promise.all(data.meta.map((meta) => {
-        return initVitest(meta.folder, meta.vitestNodePath, meta.env)
-      }))
+      const vitest = []
+      for (const meta of data.meta) {
+        process.chdir(meta.folder)
+        vitest.push(await initVitest(meta))
+      }
+      process.chdir(cwd)
+
       const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
         on(listener) {
           process.on('message', listener)

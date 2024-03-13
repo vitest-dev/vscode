@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import type { File, Task } from 'vitest'
-import type { VitestAPI } from './api'
 import type { TestData } from './testTreeData'
 import { TestCase, TestFile, TestFolder, TestSuite, addTestData, getTestData } from './testTreeData'
 import { log } from './log'
+import type { FilesMap, VitestFolderAPI } from './api'
 
 // testItem -> vscode.TestItem
 // testData -> our wrapper
@@ -15,13 +15,10 @@ export class TestTree extends vscode.Disposable {
 
   private flatTestItems = new Map<string, vscode.TestItem>()
   private fileItems: Map<string, vscode.TestItem> = new Map()
-
   private folderItems: Map<string, vscode.TestItem> = new Map()
 
   constructor(
-    private readonly api: VitestAPI,
     private readonly controller: vscode.TestController,
-    private readonly workspaceFolders: readonly vscode.WorkspaceFolder[],
     private readonly loaderItem: vscode.TestItem,
   ) {
     super(() => {
@@ -33,26 +30,27 @@ export class TestTree extends vscode.Disposable {
     })
   }
 
-  async discoverAllTestFiles() {
+  public reset(workspaceFolders: vscode.WorkspaceFolder[]) {
     this.folderItems.clear()
     this.fileItems.clear()
     this.flatTestItems.clear()
 
-    if (this.workspaceFolders.length === 1) {
-      const rootItem = this.getOrCreateInlineFolderItem(this.workspaceFolders[0].uri)
+    this.loaderItem.busy = true
+
+    if (workspaceFolders.length === 1) {
+      const rootItem = this.getOrCreateInlineFolderItem(workspaceFolders[0].uri)
       rootItem.children.replace([this.loaderItem])
     }
     else {
-      const folderItems = this.workspaceFolders.map(x => this.getOrCreateWorkspaceFolderItem(x.uri))
+      const folderItems = workspaceFolders.map(x => this.getOrCreateWorkspaceFolderItem(x.uri))
       this.controller.items.replace([this.loaderItem, ...folderItems])
     }
+  }
 
-    const testFiles = await this.api.getFiles()
-
-    for (const folderFsPath in testFiles) {
-      const files = testFiles[folderFsPath]
+  async discoverAllTestFiles(testFiles: FilesMap[]) {
+    for (const { api, files } of testFiles) {
       for (const file of files)
-        this.getOrCreateFileTestItem(file)
+        this.getOrCreateFileTestItem(api, file)
     }
 
     this.controller.items.delete(this.loaderItem.id)
@@ -94,8 +92,13 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  getOrCreateFileTestItem(file: string) {
-    const cached = this.fileItems.get(file)
+  private _getFileId(api: VitestFolderAPI, file: string) {
+    return `${api.workspaceFolder.uri.toString()}|${file}`
+  }
+
+  getOrCreateFileTestItem(api: VitestFolderAPI, file: string) {
+    const fileId = this._getFileId(api, file)
+    const cached = this.fileItems.get(fileId)
     if (cached)
       return cached
 
@@ -108,13 +111,10 @@ export class TestTree extends vscode.Disposable {
     )
     testFileItem.canResolveChildren = true
     parentItem.children.add(testFileItem)
-    this.fileItems.set(file, testFileItem)
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(fileUri)
-    if (!workspaceFolder)
-      throw new Error(`Cannot find workspace folder for ${fileUri.toString()}`)
+    this.fileItems.set(fileId, testFileItem)
     addTestData(
       testFileItem,
-      new TestFile(testFileItem, workspaceFolder),
+      new TestFile(testFileItem, api),
     )
 
     return testFileItem
@@ -145,35 +145,18 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  async watchTestFilesInWorkspace() {
+  async watchTestFilesInWorkspace(testFiles: FilesMap[]) {
     this.watchers.forEach(x => x.dispose())
     this.watchers = []
 
-    const files = await this.discoverAllTestFiles()
+    const files = await this.discoverAllTestFiles(testFiles)
 
-    for (const folderFsPath in files) {
-      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(folderFsPath))
-      if (!folder) {
-        log.error(`Cannot find workspace folder for ${folderFsPath}`)
-        continue
-      }
+    for (const { api } of files) {
       const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(folderFsPath, '**/*'),
+        new vscode.RelativePattern(api.workspaceFolder, '**/*'),
       )
       this.watchers.push(watcher)
 
-      // TODO: implement these, debounce discovery
-      // watcher.onDidCreate(file => this.discoverTestFromFile(controller, file))
-      // watcher.onDidChange(async (uri) => {
-      //   const metadata = await this.api.getTestMetadata(uri.fsPath)
-      //   if (!metadata)
-      //     return
-      //   const { data } = this.getOrCreateFile(controller, uri, folder)
-      //   if (!data.resolved)
-      //     return
-
-      //   await data.updateFromDisk(controller, folder)
-      // })
       watcher.onDidDelete((file) => {
         const item = this.fileItems.get(normalize(file.fsPath))
         if (item)
@@ -193,8 +176,7 @@ export class TestTree extends vscode.Disposable {
   }
 
   async discoverFileTests(testItem: vscode.TestItem) {
-    const data = getTestData(testItem) as TestFile
-    const api = this.api.get(data.workspaceFolder)
+    const api = getAPIFromTestItem(testItem)
     if (!api) {
       log.error(`Cannot find collector for ${testItem.uri?.fsPath}`)
       return null
@@ -207,15 +189,6 @@ export class TestTree extends vscode.Disposable {
     finally {
       testItem.busy = false
     }
-  }
-
-  async discoverTestsFromDoc(doc: vscode.TextDocument) {
-    const fsPath = normalize(doc.uri.fsPath)
-    const testItem = this.fileItems.get(fsPath)
-    if (!testItem || testItem.busy || testItem.children.size > 0)
-      return null
-    await this.discoverFileTests(testItem)
-    return testItem
   }
 
   removeFileTag(file: string, tag: vscode.TestTag) {
@@ -243,8 +216,8 @@ export class TestTree extends vscode.Disposable {
     return null
   }
 
-  collectFile(file: File) {
-    const fileTestItem = this.getOrCreateFileTestItem(file.filepath)
+  collectFile(api: VitestFolderAPI, file: File) {
+    const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
     fileTestItem.children.replace([])
     this.flatTestItems.set(file.id, fileTestItem)
     this.collectTasks(file.tasks, fileTestItem)
@@ -273,4 +246,36 @@ export class TestTree extends vscode.Disposable {
         this.collectTasks(task.tasks, testItem)
     }
   }
+}
+
+function getAPIFromFolder(folder: vscode.TestItem): VitestFolderAPI | null {
+  const data = getTestData(folder)
+  if (data instanceof TestFile)
+    return data.api
+  if (!(data instanceof TestFolder))
+    return null
+  for (const [, child] of folder.children) {
+    const api = getAPIFromTestItem(child)
+    if (api)
+      return api
+  }
+  return null
+}
+
+function getAPIFromTestItem(testItem: vscode.TestItem): VitestFolderAPI | null {
+  let iter: vscode.TestItem | undefined = testItem
+  // API is stored in test files - if this is a folder, try to find a file inside,
+  // otherwise go up until we find a file
+  if (getTestData(iter) instanceof TestFolder) {
+    return getAPIFromFolder(iter)
+  }
+  else {
+    while (iter) {
+      const data = getTestData(iter)
+      if (data instanceof TestFile)
+        return data.api
+      iter = iter.parent
+    }
+  }
+  return null
 }

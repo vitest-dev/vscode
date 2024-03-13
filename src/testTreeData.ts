@@ -1,4 +1,5 @@
 import type * as vscode from 'vscode'
+import type { VitestFolderAPI } from './api'
 
 export type TestData = TestFolder | TestFile | TestCase | TestSuite
 
@@ -22,7 +23,7 @@ export class TestFolder {
 export class TestFile {
   constructor(
     public readonly item: vscode.TestItem,
-    public readonly workspaceFolder: vscode.WorkspaceFolder,
+    public readonly api: VitestFolderAPI,
   ) {}
 }
 

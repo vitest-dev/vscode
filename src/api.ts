@@ -42,55 +42,30 @@ export class VitestReporter {
   }
 }
 
+export interface FilesMap {
+  api: VitestFolderAPI
+  files: string[]
+}
+
 export class VitestAPI {
   constructor(
     protected api: VitestFolderAPI[],
     protected meta: ResolvedMeta,
   ) {}
 
-  get processId() {
-    return this.meta.process.pid
-  }
-
-  get length() {
-    return this.api.length
-  }
-
-  get(folder: vscode.WorkspaceFolder | string) {
-    const folderFsPath = typeof folder === 'string' ? folder : folder.uri.fsPath
-    return this.api.find(api => api.workspaceFolder.uri.fsPath === folderFsPath)!
-  }
-
-  filter(callback: (api: VitestFolderAPI, index: number) => boolean) {
-    return this.api.filter(callback)
-  }
-
-  map<T>(callback: (api: VitestFolderAPI, index: number) => T) {
-    return this.api.map(callback)
-  }
-
   forEach<T>(callback: (api: VitestFolderAPI, index: number) => T) {
     return this.api.forEach(callback)
   }
 
-  cancelRun() {
-    return this.meta.rpc.cancelRun()
-  }
-
-  getFiles() {
-    return this.meta.rpc.getFiles()
-  }
-
-  async runFiles() {
-    await this.meta.rpc.runFiles()
-  }
-
-  stopInspect() {
-    return this.meta.rpc.stopInspect()
-  }
-
-  startInspect(port: number) {
-    return this.meta.rpc.startInspect(port)
+  getFiles(): Promise<FilesMap[]> {
+    const promises = this.api.map(async (api) => {
+      const files = await api.getFiles()
+      return {
+        api,
+        files,
+      }
+    })
+    return Promise.all(promises)
   }
 
   async isTestFile(file: string) {
@@ -108,11 +83,15 @@ const WEAKMAP_API_FOLDER = new WeakMap<VitestFolderAPI, vscode.WorkspaceFolder>(
 export class VitestFolderAPI extends VitestReporter {
   constructor(
     folder: vscode.WorkspaceFolder,
-    private rpc: VitestRPC,
-    handlers: ResolvedMeta['handlers'],
+    private meta: ResolvedMeta,
+    public readonly configFile: string,
   ) {
-    super(normalize(folder.uri.fsPath), handlers)
+    super(normalize(folder.uri.fsPath), meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
+  }
+
+  get processId() {
+    return this.meta.process.pid
   }
 
   get workspaceFolder() {
@@ -120,15 +99,19 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   isTestFile(file: string) {
-    return this.rpc.isTestFile(file)
+    return this.meta.rpc.isTestFile(file)
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
-    await this.rpc.runFolderFiles(this.workspacePath, files?.map(normalize), testNamePatern)
+    await this.meta.rpc.runFolderFiles(this.workspacePath, files?.map(normalize), testNamePatern)
+  }
+
+  getFiles() {
+    return this.meta.rpc.getFiles(this.workspacePath)
   }
 
   async collectTests(testFile: string) {
-    await this.rpc.collectTests(this.workspacePath, normalize(testFile))
+    await this.meta.rpc.collectTests(this.workspacePath, normalize(testFile))
   }
 
   private get workspacePath() {
@@ -139,12 +122,24 @@ export class VitestFolderAPI extends VitestReporter {
     WEAKMAP_API_FOLDER.delete(this)
     this.handlers.clearListeners()
   }
+
+  async cancelRun() {
+    await this.meta.rpc.cancelRun(this.workspacePath)
+  }
+
+  stopInspect() {
+    return this.meta.rpc.stopInspect()
+  }
+
+  startInspect(port: number) {
+    return this.meta.rpc.startInspect(port)
+  }
 }
 
 export async function resolveVitestAPI(meta: VitestMeta[]) {
   const vitest = await createVitestProcess(meta)
-  const apis = meta.map(({ folder }) =>
-    new VitestFolderAPI(folder, vitest.rpc, vitest.handlers),
+  const apis = meta.map(({ folder, configFile }) =>
+    new VitestFolderAPI(folder, vitest, configFile),
   )
   return new VitestAPI(apis, vitest)
 }
@@ -171,6 +166,7 @@ function nonNullable<T>(value: T | null | undefined): value is T {
 interface VitestMeta {
   folder: vscode.WorkspaceFolder
   vitestNodePath: string
+  configFile: string
   version: string
   loader?: string
   pnp?: string
@@ -192,6 +188,7 @@ export async function resolveVitestPackages(): Promise<VitestMeta[]> {
       // TODO: try to load vitest package version from pnp
       return {
         folder,
+        configFile: normalize(configFile.fsPath),
         vitestNodePath: vitest.vitestNodePath,
         version: 'pnp',
         loader: vitest.pnp.loaderPath,
@@ -202,12 +199,13 @@ export async function resolveVitestPackages(): Promise<VitestMeta[]> {
     const pkg = _require(vitest.vitestPackageJsonPath)
     if (!gte(pkg.version, minimumVersion)) {
       // TODO: show warning
-      log.error('[API]', `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
+      log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
       return null
     }
 
     return {
       folder,
+      configFile: normalize(configFile.fsPath),
       vitestNodePath: vitest.vitestNodePath,
       version: pkg.version,
     }
@@ -268,6 +266,7 @@ function createChildVitestProcess(meta: VitestMeta[]) {
           vitestNodePath: m.vitestNodePath,
           folder: normalize(m.folder.uri.fsPath),
           env: getConfig(m.folder).env || undefined,
+          configFile: m.configFile,
         })),
         loader: pnpLoaders[0] && gte(process.version, '18.19.0') ? pnpLoaders[0] : undefined,
       })

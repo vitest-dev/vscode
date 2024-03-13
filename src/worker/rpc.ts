@@ -17,9 +17,8 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       vitest.configOverride.testNamePattern = /$a/ // force to skip all tests
       await vitest.rerunFiles([testFile])
     },
-    async cancelRun() {
-      for (const [, vitest] of vitestEntries)
-        vitest.cancelCurrentRun('keyboard-input')
+    async cancelRun(workspaceFile: string) {
+      await vitestByFolder[workspaceFile]?.cancelCurrentRun('keyboard-input')
     },
     async runFiles() {
       for (const [_, vitest] of vitestEntries) {
@@ -57,16 +56,14 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
         await vitest.rerunFiles(files)
       }
     },
-    async getFiles() {
-      const filesByFolder = await Promise.all(vitestEntries.map(async ([folder, vitest]) => {
-        const files = await vitest.globTestFiles()
-        // reset cached test files list
-        vitest.projects.forEach((project) => {
-          project.testFilesList = null
-        })
-        return [folder, files.map(([_, spec]) => spec)] as [string, string[]]
-      }))
-      return Object.fromEntries(filesByFolder)
+    async getFiles(workspaceFolder: string) {
+      const vitest = vitestByFolder[workspaceFolder]
+      const files = await vitest.globTestFiles()
+      // reset cached test files list
+      vitest.projects.forEach((project) => {
+        project.testFilesList = null
+      })
+      return files.map(([_, spec]) => spec)
     },
     async isTestFile(file: string) {
       for (const [_, vitest] of vitestEntries) {

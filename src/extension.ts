@@ -1,120 +1,134 @@
+import { sep } from 'node:path'
 import * as vscode from 'vscode'
+import { basename, dirname } from 'pathe'
 import { testControllerId } from './config'
-import { log } from './log'
-import { openTestTag } from './tags'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI, resolveVitestPackages } from './api'
-import { GlobalTestRunner } from './runner/runner'
+import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
+import { configGlob } from './constants'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const start = performance.now()
-  const meta = await resolveVitestPackages()
-
-  if (!meta.length) {
-    // TODO: have a watcher that reruns vitest resolution if workspace folder changes
-    log.info('The extension is not activated because no Vitest environment was detected.')
-    return
-  }
-
-  // we know Vitest is installed, so we can create a test controller
-  const ctrl = vscode.tests.createTestController(testControllerId, 'Vitest')
-
-  const resolveItem = ctrl.createTestItem('_resolving', 'Resolving Vitest...')
-  resolveItem.busy = true
-  ctrl.items.add(resolveItem)
-
-  context.subscriptions.push(ctrl)
-
-  // start discover spinner as soon as possible, so we await it only when accessed
-  const api = await resolveVitestAPI(meta).then((api) => {
-    const end = performance.now()
-    log.info('[API]', `Vitest API resolved in ${end - start}ms`)
-    context.subscriptions.push(api)
-    return api
-  })
-
-  const tree = registerDiscovery(ctrl, api, meta.map(m => m.folder), resolveItem)
-  context.subscriptions.push(tree)
-  tree.watchTestFilesInWorkspace().catch((e) => {
-    log.error('Error while discovering test files', e.stack)
-  })
-
-  const runner = new GlobalTestRunner(api, tree, ctrl)
-  context.subscriptions.push(runner)
-
-  ctrl.createRunProfile(
-    'Run Tests',
-    vscode.TestRunProfileKind.Run,
-    async (request, token) => {
-      try {
-        await runner.runTests(request, token)
-      }
-      catch (e: any) {
-        if (!e.message.includes('timeout on calling'))
-          log.error('Error while running tests', e)
-      }
-    },
-    true,
-    undefined,
-    true,
-  )
-
-  ctrl.createRunProfile(
-    'Debug Tests',
-    vscode.TestRunProfileKind.Debug,
-    async (request, token) => {
-      await runner.debugTests(request, token)
-    },
-    false,
-    undefined,
-    true,
-  )
-
-  context.subscriptions.push(
-    ctrl,
-    // vscode.commands.registerCommand(Command.UpdateSnapshot, (test) => {
-    //   updateSnapshot(ctrl, fileDiscoverer, test)
-    // }),
-    vscode.workspace.onDidCloseTextDocument((e) => {
-      tree.removeFileTag(e.uri.fsPath, openTestTag)
-    }),
-    // vscode.workspace.onDidChangeTextDocument(async e =>
-    //   (await tree).discoverTestsFromDoc(e.document),
-    // ),
-    // TODO: update when workspace folder is added/removed
-  )
-}
-
-function registerDiscovery(
-  ctrl: vscode.TestController,
-  api: VitestAPI,
-  folders: readonly vscode.WorkspaceFolder[],
-  loaderItem: vscode.TestItem,
-) {
-  const fileDiscoverer = new TestTree(api, ctrl, folders, loaderItem)
-  // run on refreshing test list
-  ctrl.refreshHandler = async () => {
-    try {
-      await fileDiscoverer.discoverAllTestFiles()
-    }
-    catch (e) {
-      log.error('Error during discovering', e)
-    }
-  }
-
-  // what if it's called in quick succession?
-  // TODO: debounce and queue collects
-  ctrl.resolveHandler = async (item) => {
-    if (item)
-      await fileDiscoverer.discoverFileTests(item)
-  }
-
-  // vscode.window.visibleTextEditors.forEach(async x =>
-  //   (await fileDiscoverer).discoverTestsFromDoc(x.document),
-  // )
-
-  return fileDiscoverer
+  const extension = new VitestExtension()
+  context.subscriptions.push(extension)
+  await extension.activate()
 }
 
 export function deactivate() {}
+
+class VitestExtension {
+  private testController: vscode.TestController
+  private loadingTestItem: vscode.TestItem
+
+  private runProfiles = new Map<string, vscode.TestRunProfile>()
+
+  private testTree: TestTree
+  private api: VitestAPI | undefined
+
+  private disposables: vscode.Disposable[] = []
+
+  constructor() {
+    this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
+    this.testController.refreshHandler = () => this.defineTestProfiles().catch(() => {})
+    this.testController.resolveHandler = item => this.resolveTest(item)
+    this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
+    this.testTree = new TestTree(this.testController, this.loadingTestItem)
+  }
+
+  private async defineTestProfiles() {
+    this.api?.dispose()
+
+    const vitest = await resolveVitestPackages()
+    this.testTree.reset(vitest.map(x => x.folder))
+
+    this.api = await resolveVitestAPI(vitest)
+
+    const previousRunProfiles = this.runProfiles
+    this.runProfiles = new Map()
+
+    await this.testTree.discoverAllTestFiles(
+      await this.api.getFiles(),
+    )
+
+    this.api.forEach((api) => {
+      const runner = new TestRunner(this.testController, this.testTree, api)
+
+      const configFile = basename(api.configFile)
+      const folderName = basename(dirname(api.configFile))
+
+      const prefix = `${folderName}${sep}${configFile}`
+      let runProfile = previousRunProfiles.get(`${prefix}:run`)
+      if (!runProfile) {
+        runProfile = this.testController.createRunProfile(
+          prefix,
+          vscode.TestRunProfileKind.Run,
+          (request, token) => runner.runTests(request, token),
+          false,
+          undefined,
+          true,
+        )
+      }
+      this.runProfiles.set(`${prefix}:run`, runProfile)
+      let debugProfile = previousRunProfiles.get(`${prefix}:debug`)
+      if (!debugProfile) {
+        debugProfile = this.testController.createRunProfile(
+          prefix,
+          vscode.TestRunProfileKind.Debug,
+          (request, token) => runner.debugTests(request, token),
+          false,
+          undefined,
+          true,
+        )
+      }
+      this.runProfiles.set(`${prefix}:debug`, debugProfile)
+    })
+
+    for (const [id, profile] of previousRunProfiles) {
+      if (!this.runProfiles.has(id))
+        profile.dispose()
+    }
+  }
+
+  private async resolveTest(item?: vscode.TestItem) {
+    if (!item)
+      return
+    await this.testTree.discoverFileTests(item)
+  }
+
+  async activate() {
+    this.loadingTestItem.busy = true
+    this.testController.items.replace([this.loadingTestItem])
+
+    this.disposables = [
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles()),
+      vscode.workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration('vitest'))
+          this.defineTestProfiles()
+      }),
+    ]
+
+    // if the config changes, re-define all test profiles
+    const configWatcher = vscode.workspace.createFileSystemWatcher(configGlob)
+    this.disposables.push(configWatcher)
+
+    const redefineTestProfiles = (uri: vscode.Uri) => {
+      if (uri.fsPath.includes('node_modules'))
+        return
+      this.defineTestProfiles()
+    }
+
+    configWatcher.onDidChange(redefineTestProfiles)
+    configWatcher.onDidCreate(redefineTestProfiles)
+    configWatcher.onDidDelete(redefineTestProfiles)
+
+    await this.defineTestProfiles()
+  }
+
+  dispose() {
+    this.api?.dispose()
+    this.testTree.dispose()
+    this.testController.dispose()
+    this.runProfiles.forEach(profile => profile.dispose())
+    this.disposables.forEach(x => x.dispose())
+  }
+}
