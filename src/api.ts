@@ -1,92 +1,16 @@
 import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
-import v8 from 'node:v8'
-import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
-import { dirname, normalize, resolve } from 'pathe'
+import { dirname, normalize } from 'pathe'
 import type * as vscode from 'vscode'
-import { type BirpcReturn, createBirpc } from 'birpc'
-import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 import { log } from './log'
 import { workerPath } from './constants'
 import { getConfig } from './config'
+import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
+import { createVitestRpc } from './api/rpc'
+import { resolveVitestPackage } from './api/resolve'
 
 const _require = require
-
-// import { getConfig, getRootConfig } from './config'
-
-export interface BirpcMethods {
-  getFiles: () => Promise<Record<string, string[]>>
-  runFiles: () => Promise<void>
-  collectTests: (workspaceFolder: string, testFile: string) => Promise<void>
-  cancelRun: () => Promise<void>
-  runFolderFiles: (workspaceFolder: string, files?: string[], testNamePattern?: string) => Promise<void>
-  isTestFile: (file: string) => Promise<boolean>
-
-  startInspect: (port: number) => void
-  stopInspect: () => void
-}
-
-export interface BirpcEvents {
-  onConsoleLog: (folder: string, log: UserConsoleLog) => void
-  onTaskUpdate: (folder: string, task: TaskResultPack[]) => void
-  onFinished: (folder: string, files?: File[], errors?: unknown[]) => void
-  onCollected: (folder: string, files?: File[]) => void
-  onWatcherStart: (folder: string, files?: File[], errors?: unknown[]) => void
-  onWatcherRerun: (folder: string, files: string[], trigger?: string) => void
-}
-
-export interface VitestEvents {
-  onConsoleLog: (log: UserConsoleLog) => void
-  onTaskUpdate: (task: TaskResultPack[]) => void
-  onFinished: (files?: File[], errors?: unknown[]) => void
-  onCollected: (files?: File[]) => void
-  onWatcherStart: (files?: File[], errors?: unknown[]) => void
-  onWatcherRerun: (files: string[], trigger?: string) => void
-}
-
-type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
-
-function resolveVitestPackagePath(folder: vscode.WorkspaceFolder) {
-  const customPackagePath = getConfig(folder).packagePath
-  if (customPackagePath && !customPackagePath.endsWith('package.json'))
-    throw new Error(`"vitest.packagePath" must point to a package.json file, instead got: ${customPackagePath}`)
-  try {
-    return customPackagePath || require.resolve('vitest/package.json', {
-      paths: [folder.uri.fsPath],
-    })
-  }
-  catch (_) {
-    return null
-  }
-}
-
-function resolveVitestPnpPackagePath(folder: vscode.WorkspaceFolder) {
-  try {
-    const pnpPath = require.resolve('./.pnp.cjs', {
-      paths: [folder.uri.fsPath],
-    })
-    const pnp = _require(pnpPath)
-    const vitestPath = pnp.resolveToUnqualified(
-      'vitest/package.json',
-      folder.uri.fsPath,
-    ) as string
-    return {
-      pnpLoader: require.resolve('./.pnp.loader.mjs', {
-        paths: [folder.uri.fsPath],
-      }),
-      vitestPath,
-      pnpPath,
-    }
-  }
-  catch (_) {
-    return null
-  }
-}
-
-function resolveVitestNodePath(vitestPkgPath: string) {
-  return pathToFileURL(resolve(dirname(vitestPkgPath), './dist/node.js')).toString()
-}
 
 export class VitestReporter {
   constructor(
@@ -174,6 +98,7 @@ export class VitestAPI {
   }
 
   dispose() {
+    this.forEach(api => api.dispose())
     this.meta.process.kill()
   }
 }
@@ -239,60 +164,6 @@ interface ResolvedMeta {
   }
 }
 
-function createHandler<T extends (...args: any) => any>() {
-  const handlers: T[] = []
-  return {
-    handlers,
-    register: (listener: any) => handlers.push(listener),
-    trigger: (...data: any) => handlers.forEach(handler => handler(...data)),
-    clear: () => handlers.length = 0,
-    remove: (listener: T) => {
-      const index = handlers.indexOf(listener)
-      if (index !== -1)
-        handlers.splice(index, 1)
-    },
-  }
-}
-
-function createRpcOptions() {
-  const handlers = {
-    onConsoleLog: createHandler<BirpcEvents['onConsoleLog']>(),
-    onTaskUpdate: createHandler<BirpcEvents['onTaskUpdate']>(),
-    onFinished: createHandler<BirpcEvents['onFinished']>(),
-    onCollected: createHandler<BirpcEvents['onCollected']>(),
-    onWatcherRerun: createHandler<BirpcEvents['onWatcherRerun']>(),
-    onWatcherStart: createHandler<BirpcEvents['onWatcherStart']>(),
-  }
-
-  const events: Omit<BirpcEvents, 'onReady' | 'onError'> = {
-    onConsoleLog: handlers.onConsoleLog.trigger,
-    onFinished: handlers.onFinished.trigger,
-    onTaskUpdate: handlers.onTaskUpdate.trigger,
-    onCollected: handlers.onCollected.trigger,
-    onWatcherRerun: handlers.onWatcherRerun.trigger,
-    onWatcherStart: handlers.onWatcherStart.trigger,
-  }
-
-  return {
-    events,
-    handlers: {
-      onConsoleLog: handlers.onConsoleLog.register,
-      onTaskUpdate: handlers.onTaskUpdate.register,
-      onFinished: handlers.onFinished.register,
-      onCollected: handlers.onCollected.register,
-      onWatcherRerun: handlers.onWatcherRerun.register,
-      onWatcherStart: handlers.onWatcherStart.register,
-      removeListener(name: string, listener: any) {
-        handlers[name as 'onCollected']?.remove(listener)
-      },
-      clearListeners() {
-        for (const name in handlers)
-          handlers[name as 'onCollected']?.clear()
-      },
-    },
-  }
-}
-
 function nonNullable<T>(value: T | null | undefined): value is T {
   return value != null
 }
@@ -307,22 +178,24 @@ interface VitestMeta {
 
 export function resolveVitestFoldersMeta(folders: readonly vscode.WorkspaceFolder[]): VitestMeta[] {
   return folders.map((folder) => {
-    const vitestPackagePath = resolveVitestPackagePath(folder)
-    if (!vitestPackagePath) {
-      const pnp = resolveVitestPnpPackagePath(folder)
-      if (!pnp)
-        return null
+    const vitestPackage = resolveVitestPackage(folder)
+    if (!vitestPackage)
+      return null
+    if (vitestPackage.pnp) {
       return {
         folder,
-        vitestNodePath: resolveVitestNodePath(pnp.vitestPath),
+        vitestNodePath: vitestPackage.vitestNodePath,
         version: 'yarn pnp',
-        loader: pnp.pnpLoader,
-        pnp: pnp.pnpPath,
+        loader: vitestPackage.pnp.loaderPath,
+        pnp: vitestPackage.pnp.pnpPath,
       }
     }
-    const pkg = _require(vitestPackagePath)
-    const vitestNodePath = resolveVitestNodePath(vitestPackagePath)
-    return { folder, vitestNodePath, version: pkg.version }
+    const pkg = _require(vitestPackage.vitestPackageJsonPath)
+    return {
+      folder,
+      vitestNodePath: vitestPackage.vitestNodePath,
+      version: pkg.version,
+    }
   }).filter(nonNullable)
 }
 
@@ -397,22 +270,7 @@ export async function createVitestProcess(meta: VitestMeta[]): Promise<ResolvedM
   vitest.stdout?.on('data', d => log.info('[Worker]', d.toString()))
   vitest.stderr?.on('data', d => log.error('[Worker]', d.toString()))
 
-  const { events, handlers } = createRpcOptions()
-
-  const api = createBirpc<BirpcMethods, BirpcEvents>(
-    events,
-    {
-      timeout: -1,
-      on(listener) {
-        vitest.on('message', listener)
-      },
-      post(message) {
-        vitest.send(message)
-      },
-      serialize: v8.serialize,
-      deserialize: v => v8.deserialize(Buffer.from(v)),
-    },
-  )
+  const { handlers, api } = createVitestRpc(vitest)
 
   return {
     rpc: api,

@@ -3,7 +3,7 @@ import { register } from 'node:module'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
-import type { BirpcEvents, BirpcMethods } from '../api'
+import type { BirpcEvents, BirpcMethods } from '../api/rpc'
 import { createWorkerRPC } from './rpc'
 
 interface VitestMeta {
@@ -72,18 +72,22 @@ class VSCodeReporter implements Reporter {
 async function initVitest(root: string, vitestNodePath: string, env: Record<string, any> | undefined) {
   const vitestMode = await import(vitestNodePath) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
-  const vitest = await vitestMode.createVitest('test', {
-    watch: true,
-    api: false,
-    root,
-    reporters: [reporter],
-    ui: false,
-    env,
-  }, {
-    server: {
-      middlewareMode: true,
+  const vitest = await vitestMode.createVitest(
+    'test',
+    {
+      watch: true,
+      api: false,
+      root,
+      reporters: [reporter],
+      ui: false,
+      env,
     },
-  })
+    {
+      server: {
+        middlewareMode: true,
+      },
+    },
+  )
   reporter.initVitest(vitest)
   return {
     vitest,

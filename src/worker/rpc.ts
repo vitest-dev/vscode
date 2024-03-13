@@ -1,10 +1,9 @@
-import { createRequire } from 'node:module'
 import type { ChannelOptions } from 'birpc'
 import { createBirpc } from 'birpc'
 import type { Vitest } from 'vitest'
-import type { BirpcEvents, BirpcMethods } from '../api'
+import type { BirpcEvents, BirpcMethods } from '../api/rpc'
 
-const _require = createRequire(__filename)
+const _require = require
 
 export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
   const vitestByFolder = vitest.reduce((acc, vitest) => {
