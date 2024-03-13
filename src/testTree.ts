@@ -229,6 +229,7 @@ export class TestTree extends vscode.Disposable {
         task.name,
         item.uri,
       )
+      testItem.sortText = task.id
       testItem.label = task.name
       this.flatTestItems.set(task.id, testItem)
       item.children.add(testItem)
