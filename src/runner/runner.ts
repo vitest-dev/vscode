@@ -21,7 +21,7 @@ export class TestRunner extends vscode.Disposable {
   ) {
     super(() => {
       api.clearListeners()
-      this.endTestRun()
+      this.endTestRuns()
     })
 
     api.onWatcherRerun(() => this.startTestRun())
@@ -60,7 +60,7 @@ export class TestRunner extends vscode.Disposable {
           this.markResult(data.item, task.result, task)
       })
 
-      this.endTestRun()
+      this.endTestRuns()
     })
 
     api.onConsoleLog(({ content, taskId }) => {
@@ -94,7 +94,7 @@ export class TestRunner extends vscode.Disposable {
     token.onCancellationRequested(() => {
       this.api.cancelRun()
       this.testRunRequests.delete(request)
-      this.endTestRun()
+      this.endTestRuns()
     })
 
     const tests = [...this.testRunRequests.values()].flatMap(r => r.include || [])
@@ -124,7 +124,7 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  public endTestRun() {
+  public endTestRuns() {
     this.testRun?.end()
     this.testRun = undefined
   }
@@ -149,7 +149,6 @@ export class TestRunner extends vscode.Disposable {
     }
     switch (result.state) {
       case 'fail': {
-        console.log('FAILED', task?.id, result.errors)
         // error in a suite doesn't mean test fail
         if (task?.type === 'suite') {
           const errors = result.errors?.map(err =>
