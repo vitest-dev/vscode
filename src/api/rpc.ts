@@ -7,7 +7,7 @@ export interface BirpcMethods {
   getFiles: (configFle: string) => Promise<string[]>
   collectTests: (configFile: string, testFile: string) => Promise<void>
   cancelRun: (configFile: string) => Promise<void>
-  runFolderFiles: (configFile: string, files?: string[], testNamePattern?: string) => Promise<void>
+  runTests: (configFile: string, files?: string[], testNamePattern?: string) => Promise<void>
   isTestFile: (file: string) => Promise<boolean>
 
   startInspect: (port: number) => void

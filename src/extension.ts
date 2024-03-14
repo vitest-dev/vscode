@@ -36,7 +36,7 @@ class VitestExtension {
   }
 
   private async defineTestProfiles() {
-    this.api?.dispose()
+    await this.api?.dispose()
 
     const vitest = await resolveVitestPackages()
     this.testTree.reset(vitest.map(x => x.folder))

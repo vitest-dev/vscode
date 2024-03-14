@@ -6,47 +6,46 @@ import type { BirpcEvents, BirpcMethods } from '../api/rpc'
 const _require = require
 
 export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
+  let debuggerEnabled = false
   const vitestByFolder = vitest.reduce((acc, vitest) => {
     acc[vitest.server.config.configFile || vitest.config.root] = vitest
     return acc
   }, {} as Record<string, Vitest>)
   const vitestEntries = Object.entries(vitestByFolder)
+
+  async function runTests(vitest: Vitest, files: string[], testNamePattern?: string) {
+    vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
+
+    if (!debuggerEnabled) {
+      await vitest.rerunFiles(files)
+    }
+    else {
+      for (const file of files)
+        await vitest.rerunFiles([file])
+    }
+  }
+
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
     async collectTests(config: string, testFile: string) {
       const vitest = vitestByFolder[config]
       vitest.configOverride.testNamePattern = /$a/ // force to skip all tests
       await vitest.rerunFiles([testFile])
+      vitest.configOverride.testNamePattern = undefined
     },
     async cancelRun(config: string) {
       await vitestByFolder[config]?.cancelCurrentRun('keyboard-input')
     },
-    async runFolderFiles(config, files, testNamePattern) {
+    async runTests(config, files, testNamePattern) {
       const vitest = vitestByFolder[config]
       if (!vitest)
         throw new Error(`Vitest instance not found for config: ${config}`)
 
       if (testNamePattern) {
-        await vitest.changeNamePattern(testNamePattern, files)
-      }
-      else if (files?.length) {
-        // running all files inside a single folder
-        if (files.length === 1 && files[0][files[0].length - 1] === '/') {
-          vitest.filenamePattern = files[0]
-          vitest.configOverride.testNamePattern = undefined
-          const specs = await vitest.globTestFiles()
-          const filteredSpecs = specs.map(([_, spec]) => spec).filter(file => file.startsWith(files[0]))
-          await vitest.rerunFiles(filteredSpecs)
-        }
-        else {
-          await vitest.changeNamePattern('', files)
-        }
+        await runTests(vitest, files || vitest.state.getFilepaths(), testNamePattern)
       }
       else {
-        vitest.configOverride.testNamePattern = undefined
-
-        const specs = await vitest.globTestFiles()
-        const files = specs.map(([_, spec]) => spec)
-        await vitest.rerunFiles(files)
+        const specs = await vitest.globTestFiles(files)
+        await runTests(vitest, specs.map(([_, spec]) => spec))
       }
     },
     async getFiles(config: string) {
@@ -69,8 +68,10 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     },
     startInspect(port) {
       _require('inspector').open(port)
+      debuggerEnabled = true
     },
     stopInspect() {
+      debuggerEnabled = false
       _require('inspector').close()
     },
     async close() {
