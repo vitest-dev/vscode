@@ -126,8 +126,8 @@ class VitestExtension {
     await this.defineTestProfiles()
   }
 
-  dispose() {
-    this.api?.dispose()
+  async dispose() {
+    await this.api?.dispose()
     this.testTree.dispose()
     this.testController.dispose()
     this.runProfiles.forEach(profile => profile.dispose())

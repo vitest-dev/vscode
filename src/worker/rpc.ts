@@ -73,6 +73,16 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     stopInspect() {
       _require('inspector').close()
     },
+    async close() {
+      for (const vitest of vitestEntries) {
+        try {
+          await vitest[1].close()
+        }
+        catch {
+          // ignore
+        }
+      }
+    },
   }, {
     timeout: -1,
     eventNames: [

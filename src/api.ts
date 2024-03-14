@@ -73,8 +73,9 @@ export class VitestAPI {
     return this.meta.rpc.isTestFile(file)
   }
 
-  dispose() {
+  async dispose() {
     this.forEach(api => api.dispose())
+    await this.meta.rpc.close()
     this.meta.process.kill()
   }
 }

@@ -12,6 +12,7 @@ export interface BirpcMethods {
 
   startInspect: (port: number) => void
   stopInspect: () => void
+  close: () => void
 }
 
 export interface VitestEvents {
