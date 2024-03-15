@@ -52,7 +52,8 @@ class VitestExtension {
       return
     }
 
-    this.testTree.reset(vitest.map(x => x.folder))
+    const folders = new Set(vitest.map(x => x.folder))
+    this.testTree.reset(Array.from(folders))
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()

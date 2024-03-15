@@ -180,7 +180,7 @@ interface VitestMeta {
 
 function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri) {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
-  const vitest = resolveVitestPackage(folder)
+  const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
 
   if (!vitest) {
     if (showWarning)
