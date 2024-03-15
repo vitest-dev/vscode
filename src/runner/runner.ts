@@ -114,11 +114,12 @@ export class TestRunner extends vscode.Disposable {
 
   private startTestRun() {
     // TODO: refactor to use different requests, otherwise test run doesn't mark the result value!
-    const currentRequest = this.testRunRequests.values().next().value
+    const currentRequest = this.testRunRequests.values().next().value as vscode.TestRunRequest | undefined
     if (currentRequest) {
       // report only if continuous mode is enabled or this is the first run
       if (!this.testRun || currentRequest.continuous) {
-        const name = currentRequest.include?.length ? undefined : 'Running all tests'
+        const testName = currentRequest.include?.length === 1 ? currentRequest.include[0].label : undefined
+        const name = currentRequest.include?.length ? testName : 'Running all tests'
         this.testRun = this.controller.createTestRun(currentRequest, name)
       }
     }

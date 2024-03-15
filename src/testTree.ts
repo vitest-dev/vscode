@@ -229,6 +229,11 @@ export class TestTree extends vscode.Disposable {
       )
       testItem.sortText = task.id
       testItem.label = task.name
+      const location = task.location
+      if (location) {
+        const position = new vscode.Position(location.line - 1, location.column)
+        testItem.range = new vscode.Range(position, position)
+      }
       this.flatTestItems.set(task.id, testItem)
       item.children.add(testItem)
       if (task.type === 'suite')

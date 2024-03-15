@@ -15,7 +15,7 @@
 ## Requirements
 
 - Visual Studio Code version >= July 2021 (version 1.59).
-- Vitest version >= v0.12.0
+- Vitest version >= v1.4.0
 
 # Introduction
 

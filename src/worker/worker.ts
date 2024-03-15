@@ -83,6 +83,7 @@ async function initVitest(meta: VitestMeta) {
       reporters: [reporter],
       ui: false,
       env: meta.env,
+      includeTaskLocation: true,
     },
     {
       server: {
