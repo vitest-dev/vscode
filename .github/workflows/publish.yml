@@ -30,19 +30,29 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Publish to Open VSX Registry
-        id: publishToOpenVSX
-        uses: HaaLeo/publish-vscode-extension@v1
+      - uses: actions/github-script@v7
+        id: checkPrerelease
+        name: Check if prerelease
         with:
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-          dependencies: false
+          script: |
+            const version = context.ref.replace('refs/tags/v', '');
+            core.setOutput('preRelease', String(version.split('.').length > 3))
 
       - name: Publish to Visual Studio Marketplace
+        id: publishToVSMarketplace
         uses: HaaLeo/publish-vscode-extension@v1
         with:
+          preRelease: ${{ steps.checkPrerelease.outputs.preRelease == 'true' }}
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+          dependencies: false
+
+      - name: Publish to Open VSX Registry
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          preRelease: ${{ steps.checkPrerelease.outputs.preRelease == 'true' }}
+          extensionFile: ${{ steps.publishToVSMarketplace.outputs.vsixPath }}
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
 
       - name: Generate Changelog
         run: npx changelogithub
