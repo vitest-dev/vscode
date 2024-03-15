@@ -4,7 +4,7 @@ import type { File, Task } from 'vitest'
 import type { TestData } from './testTreeData'
 import { TestCase, TestFile, TestFolder, TestSuite, addTestData, getTestData } from './testTreeData'
 import { log } from './log'
-import type { FilesMap, VitestFolderAPI } from './api'
+import type { VitestFolderAPI } from './api'
 
 // testItem -> vscode.TestItem
 // testData -> our wrapper
@@ -47,13 +47,11 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  async discoverAllTestFiles(testFiles: FilesMap[]) {
-    for (const { api, files } of testFiles) {
-      for (const file of files)
-        this.getOrCreateFileTestItem(api, file)
-    }
+  async discoverAllTestFiles(api: VitestFolderAPI, files: string[]) {
+    for (const file of files)
+      this.getOrCreateFileTestItem(api, file)
 
-    return testFiles
+    return files
   }
 
   // in cases where there is only a single workspace, we don't show it as a folder
@@ -143,24 +141,22 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  async watchTestFilesInWorkspace(testFiles: FilesMap[]) {
+  async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: string[]) {
     this.watchers.forEach(x => x.dispose())
     this.watchers = []
 
-    const files = await this.discoverAllTestFiles(testFiles)
+    await this.discoverAllTestFiles(api, testFiles)
 
-    for (const { api } of files) {
-      const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(api.workspaceFolder, '**/*'),
-      )
-      this.watchers.push(watcher)
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(api.workspaceFolder, '**/*'),
+    )
+    this.watchers.push(watcher)
 
-      watcher.onDidDelete((file) => {
-        const item = this.fileItems.get(normalize(file.fsPath))
-        if (item)
-          this.recursiveDelete(this.controller.items, item)
-      })
-    }
+    watcher.onDidDelete((file) => {
+      const item = this.fileItems.get(normalize(file.fsPath))
+      if (item)
+        this.recursiveDelete(this.controller.items, item)
+    })
   }
 
   private recursiveDelete(collection: vscode.TestItemCollection, item: vscode.TestItem) {
@@ -218,6 +214,7 @@ export class TestTree extends vscode.Disposable {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
     this.flatTestItems.set(file.id, fileTestItem)
     this.collectTasks(file.tasks, fileTestItem)
+    fileTestItem.canResolveChildren = false
   }
 
   collectTasks(tasks: Task[], item: vscode.TestItem) {

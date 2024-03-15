@@ -25,6 +25,14 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     }
   }
 
+  async function globTestFiles(vitest: Vitest, filters?: string[]) {
+    const cwd = process.cwd()
+    process.chdir(vitest.config.root)
+    const files = await vitest.globTestFiles(filters)
+    process.chdir(cwd)
+    return files.map(([_, spec]) => spec)
+  }
+
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
     async collectTests(config: string, testFile: string) {
       const vitest = vitestByFolder[config]
@@ -44,18 +52,18 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
         await runTests(vitest, files || vitest.state.getFilepaths(), testNamePattern)
       }
       else {
-        const specs = await vitest.globTestFiles(files)
-        await runTests(vitest, specs.map(([_, spec]) => spec))
+        const specs = await globTestFiles(vitest, files)
+        await runTests(vitest, specs)
       }
     },
     async getFiles(config: string) {
       const vitest = vitestByFolder[config]
-      const files = await vitest.globTestFiles()
+      const files = await globTestFiles(vitest)
       // reset cached test files list
       vitest.projects.forEach((project) => {
         project.testFilesList = null
       })
-      return files.map(([_, spec]) => spec)
+      return files
     },
     async isTestFile(file: string) {
       for (const [_, vitest] of vitestEntries) {

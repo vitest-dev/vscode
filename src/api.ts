@@ -58,6 +58,10 @@ export class VitestAPI {
     return this.api.forEach(callback)
   }
 
+  get folderAPIs() {
+    return this.api
+  }
+
   getFiles(): Promise<FilesMap[]> {
     const promises = this.api.map(async (api) => {
       const files = await api.getFiles()

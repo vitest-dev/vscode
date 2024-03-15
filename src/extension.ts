@@ -7,6 +7,7 @@ import { resolveVitestAPI, resolveVitestPackages } from './api'
 import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 import { configGlob } from './constants'
+import { log } from './log'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -28,6 +29,8 @@ class VitestExtension {
   private disposables: vscode.Disposable[] = []
 
   constructor() {
+    log.info('[Vitest] Extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.')
+
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
     this.testController.refreshHandler = () => this.defineTestProfiles(true).catch(() => {})
     this.testController.resolveHandler = item => this.resolveTest(item)
@@ -58,9 +61,12 @@ class VitestExtension {
     this.runProfiles = new Map()
 
     try {
-      await this.testTree.discoverAllTestFiles(
-        await this.api.getFiles(),
-      )
+      for (const api of this.api.folderAPIs) {
+        await this.testTree.watchTestFilesInWorkspace(
+          api,
+          await api.getFiles(),
+        )
+      }
     }
     finally {
       this.testController.items.delete(this.loadingTestItem.id)
