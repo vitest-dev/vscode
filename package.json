@@ -93,7 +93,6 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm compile",
-    "check-script": "tsx ./scripts/release.mts",
     "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
     "compile": "tsup --minify",
     "package": "vsce package --no-dependencies",
