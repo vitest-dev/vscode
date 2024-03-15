@@ -35,8 +35,8 @@ jobs:
         name: Check if prerelease
         with:
           script: |
-            const version = context.ref.replace('refs/tags/v', '');
-            core.setOutput('preRelease', String(version.split('.').length > 3))
+            const version = context.ref.replace('refs/tags/v', '').split('.');
+            core.setOutput('preRelease', String(version[1] % 2 !== 0))
 
       - name: Publish to Visual Studio Marketplace
         id: publishToVSMarketplace

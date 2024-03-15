@@ -32,6 +32,9 @@ devDependencies:
   '@types/node':
     specifier: ^18.11.18
     version: 18.19.17
+  '@types/prompts':
+    specifier: ^2.4.9
+    version: 2.4.9
   '@types/semver':
     specifier: ^7.3.9
     version: 7.5.7
@@ -101,9 +104,15 @@ devDependencies:
   pathe:
     specifier: ^1.1.2
     version: 1.1.2
+  picocolors:
+    specifier: ^1.0.0
+    version: 1.0.0
   playwright:
     specifier: ^1.42.1
     version: 1.42.1
+  prompts:
+    specifier: ^2.4.2
+    version: 2.4.2
   semver:
     specifier: ^7.3.5
     version: 7.6.0
@@ -908,6 +917,13 @@ packages:
 
   /@types/normalize-package-data@2.4.4:
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
+    dev: true
+
+  /@types/prompts@2.4.9:
+    resolution: {integrity: sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==}
+    dependencies:
+      '@types/node': 18.19.17
+      kleur: 3.0.3
     dev: true
 
   /@types/semver@7.5.7:
