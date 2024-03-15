@@ -53,8 +53,6 @@ export class TestTree extends vscode.Disposable {
         this.getOrCreateFileTestItem(api, file)
     }
 
-    this.controller.items.delete(this.loaderItem.id)
-
     return testFiles
   }
 

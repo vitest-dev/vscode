@@ -29,26 +29,42 @@ class VitestExtension {
 
   constructor() {
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
-    this.testController.refreshHandler = () => this.defineTestProfiles().catch(() => {})
+    this.testController.refreshHandler = () => this.defineTestProfiles(true).catch(() => {})
     this.testController.resolveHandler = item => this.resolveTest(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
+    this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
   }
 
-  private async defineTestProfiles() {
-    await this.api?.dispose()
+  private async defineTestProfiles(showWarning: boolean) {
+    this.testTree.reset([])
 
-    const vitest = await resolveVitestPackages()
+    const vitest = await resolveVitestPackages(showWarning)
+    // don't show any errors, they are already shown in resolveVitestPackages
+    if (!vitest.length) {
+      this.testController.items.delete(this.loadingTestItem.id)
+
+      await this.api?.dispose()
+      return
+    }
+
     this.testTree.reset(vitest.map(x => x.folder))
+
+    await this.api?.dispose()
 
     this.api = await resolveVitestAPI(this.testTree, vitest)
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()
 
-    await this.testTree.discoverAllTestFiles(
-      await this.api.getFiles(),
-    )
+    try {
+      await this.testTree.discoverAllTestFiles(
+        await this.api.getFiles(),
+      )
+    }
+    finally {
+      this.testController.items.delete(this.loadingTestItem.id)
+    }
 
     this.api.forEach((api) => {
       const runner = new TestRunner(this.testController, this.testTree, api)
@@ -102,10 +118,10 @@ class VitestExtension {
     this.testController.items.replace([this.loadingTestItem])
 
     this.disposables = [
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles()),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('vitest'))
-          this.defineTestProfiles()
+          this.defineTestProfiles(false)
       }),
     ]
 
@@ -116,14 +132,14 @@ class VitestExtension {
     const redefineTestProfiles = (uri: vscode.Uri) => {
       if (uri.fsPath.includes('node_modules'))
         return
-      this.defineTestProfiles()
+      this.defineTestProfiles(false)
     }
 
     configWatcher.onDidChange(redefineTestProfiles)
     configWatcher.onDidCreate(redefineTestProfiles)
     configWatcher.onDidDelete(redefineTestProfiles)
 
-    await this.defineTestProfiles()
+    await this.defineTestProfiles(true)
   }
 
   async dispose() {

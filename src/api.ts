@@ -171,15 +171,20 @@ interface VitestMeta {
   pnp?: string
 }
 
-export async function resolveVitestPackages(): Promise<VitestMeta[]> {
+export async function resolveVitestPackages(showWarning: boolean): Promise<VitestMeta[]> {
   const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
+
+  if (!configs.length)
+    log.error('[API]', 'Failed to start Vitest: No vitest config files found')
 
   return configs.map((configFile) => {
     const folder = vscode.workspace.getWorkspaceFolder(configFile)!
     const vitest = resolveVitestPackage(folder)
 
     if (!vitest) {
-      log.error('[API]', `Vitest not found for ${configFile.fsPath}. Please run \`npm i --save-dev vitest\` to install Vitest.`)
+      if (showWarning)
+        vscode.window.showWarningMessage('Vitest not found. Please run `npm i --save-dev vitest` to install Vitest.')
+      log.error('[API]', `Vitest not found for ${configFile.fsPath}.`)
       return null
     }
 
@@ -197,8 +202,11 @@ export async function resolveVitestPackages(): Promise<VitestMeta[]> {
 
     const pkg = _require(vitest.vitestPackageJsonPath)
     if (!gte(pkg.version, minimumVersion)) {
-      // TODO: show warning
-      log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
+      const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
+      if (showWarning)
+        vscode.window.showWarningMessage(warning)
+      else
+        log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
       return null
     }
 
