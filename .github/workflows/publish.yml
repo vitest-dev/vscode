@@ -50,11 +50,17 @@ jobs:
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v1
         with:
-          preRelease: ${{ steps.checkPrerelease.outputs.preRelease == 'true' }}
           extensionFile: ${{ steps.publishToVSMarketplace.outputs.vsixPath }}
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
 
       - name: Generate Changelog
+        if: steps.checkPrerelease.outputs.preRelease == 'false'
         run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Prerelease Changelog
+        if: steps.checkPrerelease.outputs.preRelease == 'true'
+        run: npx changelogithub --prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
