@@ -16,11 +16,11 @@ vscodeTest('basic', async ({ launch }) => {
   await page.getByRole('tab', { name: 'Testing' }).locator('a').click()
   await page.getByText('No test results yet.').click()
 
-  // run tests
-  await page.getByRole('button', { name: 'Run Tests' }).click()
-
   // open nested folders
   await page.getByText(/^test$/).click()
+
+  // run tests
+  await page.getByRole('button', { name: 'Run Tests' }).click()
 
   // check results
   await page.locator(`[title*="pass.test.ts (Passed)"]`).click()
