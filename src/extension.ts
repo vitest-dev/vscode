@@ -75,8 +75,8 @@ class VitestExtension {
     this.api.forEach((api) => {
       const runner = new TestRunner(this.testController, this.testTree, api)
 
-      const configFile = basename(api.configFile)
-      const folderName = basename(dirname(api.configFile))
+      const configFile = basename(api.id)
+      const folderName = basename(dirname(api.id))
 
       const prefix = `${folderName}${sep}${configFile}`
       let runProfile = previousRunProfiles.get(`${prefix}:run`)

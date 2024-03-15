@@ -4,7 +4,7 @@ import { gte } from 'semver'
 import { dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import { configGlob, minimumVersion, workerPath } from './constants'
+import { configGlob, minimumVersion, workerPath, workspaceGlob } from './constants'
 import { getConfig } from './config'
 import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
@@ -90,11 +90,11 @@ export class VitestFolderAPI extends VitestReporter {
   constructor(
     folder: vscode.WorkspaceFolder,
     private meta: ResolvedMeta,
-    public readonly configFile: string,
+    public readonly id: string,
   ) {
     super(normalize(folder.uri.fsPath), meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
-    this.configFile = normalize(configFile)
+    this.id = normalize(id)
   }
 
   get processId() {
@@ -110,15 +110,15 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
-    await this.meta.rpc.runTests(this.configFile, files?.map(normalize), testNamePatern)
+    await this.meta.rpc.runTests(this.id, files?.map(normalize), testNamePatern)
   }
 
   getFiles() {
-    return this.meta.rpc.getFiles(this.configFile)
+    return this.meta.rpc.getFiles(this.id)
   }
 
   async collectTests(testFile: string) {
-    await this.meta.rpc.collectTests(this.configFile, normalize(testFile))
+    await this.meta.rpc.collectTests(this.id, normalize(testFile))
   }
 
   dispose() {
@@ -127,7 +127,7 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async cancelRun() {
-    await this.meta.rpc.cancelRun(this.configFile)
+    await this.meta.rpc.cancelRun(this.id)
   }
 
   stopInspect() {
@@ -141,8 +141,8 @@ export class VitestFolderAPI extends VitestReporter {
 
 export async function resolveVitestAPI(tree: TestTree, meta: VitestMeta[]) {
   const vitest = await createVitestProcess(tree, meta)
-  const apis = meta.map(({ folder, configFile }) =>
-    new VitestFolderAPI(folder, vitest, configFile),
+  const apis = meta.map(({ folder, id }) =>
+    new VitestFolderAPI(folder, vitest, id),
   )
   return new VitestAPI(apis, vitest)
 }
@@ -169,56 +169,85 @@ function nonNullable<T>(value: T | null | undefined): value is T {
 interface VitestMeta {
   folder: vscode.WorkspaceFolder
   vitestNodePath: string
-  configFile: string
+  // path to a config file or a workspace config file
+  id: string
+  configFile?: string
+  workspaceFile?: string
   version: string
   loader?: string
   pnp?: string
 }
 
+function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri) {
+  const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
+  const vitest = resolveVitestPackage(folder)
+
+  if (!vitest) {
+    if (showWarning)
+      vscode.window.showWarningMessage('Vitest not found. Please run `npm i --save-dev vitest` to install Vitest.')
+    log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
+    return null
+  }
+
+  if (vitest.pnp) {
+    // TODO: try to load vitest package version from pnp
+    return {
+      folder,
+      id: normalize(configOrWorkspaceFile.fsPath),
+      vitestNodePath: vitest.vitestNodePath,
+      version: 'pnp',
+      loader: vitest.pnp.loaderPath,
+      pnp: vitest.pnp.pnpPath,
+    }
+  }
+
+  const pkg = _require(vitest.vitestPackageJsonPath)
+  if (!gte(pkg.version, minimumVersion)) {
+    const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
+    if (showWarning)
+      vscode.window.showWarningMessage(warning)
+    else
+      log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
+    return null
+  }
+
+  return {
+    folder,
+    id: normalize(configOrWorkspaceFile.fsPath),
+    vitestNodePath: vitest.vitestNodePath,
+    version: pkg.version,
+  }
+}
+
 export async function resolveVitestPackages(showWarning: boolean): Promise<VitestMeta[]> {
+  const vitestWorkspaces = await vscode.workspace.findFiles(workspaceGlob, '**/node_modules/**')
+
+  if (vitestWorkspaces.length) {
+    // if there is a workspace config, use it as root
+    return vitestWorkspaces.map((config) => {
+      const vitest = resolveVitestConfig(showWarning, config)
+      log.info('[API]', vitest)
+      if (!vitest)
+        return null
+      return {
+        ...vitest,
+        workspaceFile: vitest.id,
+      }
+    }).filter(nonNullable)
+  }
+
   const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
 
   if (!configs.length)
     log.error('[API]', 'Failed to start Vitest: No vitest config files found')
 
-  return configs.map((configFile) => {
-    const folder = vscode.workspace.getWorkspaceFolder(configFile)!
-    const vitest = resolveVitestPackage(folder)
-
-    if (!vitest) {
-      if (showWarning)
-        vscode.window.showWarningMessage('Vitest not found. Please run `npm i --save-dev vitest` to install Vitest.')
-      log.error('[API]', `Vitest not found for ${configFile.fsPath}.`)
+  return configs.map((config) => {
+    const vitest = resolveVitestConfig(showWarning, config)
+    if (!vitest)
       return null
-    }
-
-    if (vitest.pnp) {
-      // TODO: try to load vitest package version from pnp
-      return {
-        folder,
-        configFile: normalize(configFile.fsPath),
-        vitestNodePath: vitest.vitestNodePath,
-        version: 'pnp',
-        loader: vitest.pnp.loaderPath,
-        pnp: vitest.pnp.pnpPath,
-      }
-    }
-
-    const pkg = _require(vitest.vitestPackageJsonPath)
-    if (!gte(pkg.version, minimumVersion)) {
-      const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
-      if (showWarning)
-        vscode.window.showWarningMessage(warning)
-      else
-        log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
-      return null
-    }
-
     return {
-      folder,
-      configFile: normalize(configFile.fsPath),
-      vitestNodePath: vitest.vitestNodePath,
-      version: pkg.version,
+      ...vitest,
+      configFile: vitest.id,
     }
   }).filter(nonNullable)
 }
@@ -266,7 +295,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
         // started _some_ projects, but some failed - log them, this can only happen if there are multiple projects
         if (message.errors.length) {
           message.errors.forEach(([configFile, error]: [string, string]) => {
-            const metaIndex = meta.findIndex(m => m.configFile === configFile)
+            const metaIndex = meta.findIndex(m => m.id === configFile)
             const metaItem = meta[metaIndex]
             const workspaceItem = tree.getOrCreateWorkspaceFolderItem(metaItem.folder.uri)
             workspaceItem.error = error // display error message in the tree
@@ -291,6 +320,8 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
           folder: normalize(m.folder.uri.fsPath),
           env: getConfig(m.folder).env || undefined,
           configFile: m.configFile,
+          workspaceFile: m.workspaceFile,
+          id: m.id,
         })),
         loader: pnpLoaders[0] && gte(process.version, '18.19.0') ? pnpLoaders[0] : undefined,
       })

@@ -89,7 +89,7 @@ export class TestTree extends vscode.Disposable {
   }
 
   private _getFileId(api: VitestFolderAPI, file: string) {
-    return `${api.configFile}|${file}`
+    return `${api.id}|${file}`
   }
 
   getOrCreateFileTestItem(api: VitestFolderAPI, file: string) {

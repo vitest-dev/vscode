@@ -8,20 +8,27 @@ const _require = require
 export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
   let debuggerEnabled = false
   const vitestByFolder = vitest.reduce((acc, vitest) => {
-    acc[vitest.server.config.configFile || vitest.config.root] = vitest
+    acc[vitest.server.config.configFile || vitest.config.workspace || vitest.config.root] = vitest
     return acc
   }, {} as Record<string, Vitest>)
   const vitestEntries = Object.entries(vitestByFolder)
 
   async function runTests(vitest: Vitest, files: string[], testNamePattern?: string) {
-    vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
+    const cwd = process.cwd()
+    process.chdir(vitest.config.root)
+    try {
+      vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
 
-    if (!debuggerEnabled) {
-      await vitest.rerunFiles(files)
+      if (!debuggerEnabled) {
+        await vitest.rerunFiles(files)
+      }
+      else {
+        for (const file of files)
+          await vitest.rerunFiles([file])
+      }
     }
-    else {
-      for (const file of files)
-        await vitest.rerunFiles([file])
+    finally {
+      process.chdir(cwd)
     }
   }
 
@@ -36,8 +43,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
     async collectTests(config: string, testFile: string) {
       const vitest = vitestByFolder[config]
-      vitest.configOverride.testNamePattern = /$a/ // force to skip all tests
-      await vitest.rerunFiles([testFile])
+      await runTests(vitest, [testFile], '$a')
       vitest.configOverride.testNamePattern = undefined
     },
     async cancelRun(config: string) {

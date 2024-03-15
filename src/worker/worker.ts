@@ -9,7 +9,9 @@ import { createWorkerRPC } from './rpc'
 interface VitestMeta {
   folder: string
   vitestNodePath: string
-  configFile: string
+  id: string
+  configFile?: string
+  workspaceFile?: string
   env: Record<string, any> | undefined
 }
 
@@ -77,6 +79,7 @@ async function initVitest(meta: VitestMeta) {
     'test',
     {
       config: meta.configFile,
+      workspace: meta.workspaceFile,
       watch: true,
       api: false,
       root: meta.folder,
