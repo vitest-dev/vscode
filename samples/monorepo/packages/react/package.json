@@ -18,7 +18,7 @@
     "jsdom": "latest",
     "react-test-renderer": "17.0.2",
     "vite": "^5.1.6",
-    "vitest": "^0.18.0"
+    "vitest": "^1.4.0"
   },
   "stackblitz": {
     "startCommand": "npm run test:ui"
