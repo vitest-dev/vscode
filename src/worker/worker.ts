@@ -73,9 +73,13 @@ class VSCodeReporter implements Reporter {
 }
 
 async function initVitest(meta: VitestMeta) {
-  const vitestMode = await import(meta.vitestNodePath) as typeof import('vitest/node')
+  _debug('importing vitest node', meta.vitestNodePath)
+  const vitestNode = await import(meta.vitestNodePath) as typeof import('vitest/node')
+  
   const reporter = new VSCodeReporter()
-  const vitest = await vitestMode.createVitest(
+
+  _debug('creating vitest instance', meta.configFile)
+  const vitest = await vitestNode.createVitest(
     'test',
     {
       config: meta.configFile,
@@ -94,7 +98,10 @@ async function initVitest(meta: VitestMeta) {
       },
     },
   )
+
+  _debug('initializing reporter')
   reporter.initVitest(vitest)
+
   return {
     vitest,
     reporter,
@@ -107,16 +114,23 @@ process.on('message', async function init(message: any) {
   _debug('onMessage', JSON.stringify(message));
 
   if (message.type === 'init') {
+    _debug('initializing');
+
     process.off('message', init)
     const data = message as RunnerOptions
 
     try {
-      if (data.loader)
+      if (data.loader) {
+        _debug('registering loader', data.loader);
         register(data.loader)
+      }
+
       const errors = []
 
       const vitest = []
       for (const meta of data.meta) {
+        _debug('loading vitest instance', JSON.stringify(meta));
+  
         try {
           process.chdir(meta.folder)
           try {
@@ -130,10 +144,14 @@ process.on('message', async function init(message: any) {
         }
       }
 
+      _debug(`loaded ${vitest.length} vitest instances`)
+
       if (!vitest.length) {
         process.send!({ type: 'error', errors })
         return
       }
+
+      _debug('Vitest created', JSON.stringify(vitest))
 
       const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
         on(listener) {
