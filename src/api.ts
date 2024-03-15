@@ -226,7 +226,6 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
     // if there is a workspace config, use it as root
     return vitestWorkspaces.map((config) => {
       const vitest = resolveVitestConfig(showWarning, config)
-      log.info('[API]', vitest)
       if (!vitest)
         return null
       return {
@@ -237,9 +236,6 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
   }
 
   const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
-
-  if (!configs.length)
-    log.error('[API]', 'Failed to start Vitest: No vitest config files found')
 
   return configs.map((config) => {
     const vitest = resolveVitestConfig(showWarning, config)
@@ -272,6 +268,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
   const vitest = fork(
     workerPath,
     {
+      // TODO: use findNode API
       execPath: getConfig().nodeExecutable,
       execArgv,
       env: {

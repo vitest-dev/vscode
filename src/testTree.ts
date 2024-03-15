@@ -34,6 +34,8 @@ export class TestTree extends vscode.Disposable {
     this.folderItems.clear()
     this.fileItems.clear()
     this.flatTestItems.clear()
+    this.watchers.forEach(x => x.dispose())
+    this.watchers = []
 
     this.loaderItem.busy = true
 
@@ -142,9 +144,6 @@ export class TestTree extends vscode.Disposable {
   }
 
   async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: string[]) {
-    this.watchers.forEach(x => x.dispose())
-    this.watchers = []
-
     await this.discoverAllTestFiles(api, testFiles)
 
     const watcher = vscode.workspace.createFileSystemWatcher(
