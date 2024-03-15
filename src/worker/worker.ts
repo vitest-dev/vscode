@@ -117,15 +117,18 @@ process.on('message', async function init(message: any) {
 
       const vitest = []
       for (const meta of data.meta) {
-        process.chdir(meta.folder)
         try {
-          vitest.push(await initVitest(meta))
-        }
-        catch (err: any) {
-          errors.push([meta.configFile, err.stack])
+          process.chdir(meta.folder)
+          try {
+            vitest.push(await initVitest(meta))
+          }
+          catch (err: any) {
+            errors.push([meta.configFile, err.stack])
+          }
+        } finally {
+          process.chdir(cwd)
         }
       }
-      process.chdir(cwd)
 
       if (!vitest.length) {
         process.send!({ type: 'error', errors })
