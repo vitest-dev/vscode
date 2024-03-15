@@ -14,8 +14,8 @@ interface VitestPackage {
   }
 }
 
-export function resolveVitestPackage(folder: vscode.WorkspaceFolder): VitestPackage | null {
-  const vitestPackageJsonPath = resolveVitestPackagePath(folder)
+export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder): VitestPackage | null {
+  const vitestPackageJsonPath = resolveVitestPackagePath(cwd, folder)
   if (vitestPackageJsonPath) {
     return {
       vitestNodePath: resolveVitestNodePath(vitestPackageJsonPath),
@@ -36,13 +36,13 @@ export function resolveVitestPackage(folder: vscode.WorkspaceFolder): VitestPack
   }
 }
 
-export function resolveVitestPackagePath(folder: vscode.WorkspaceFolder) {
+export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFolder) {
   const customPackagePath = getConfig(folder).packagePath
   if (customPackagePath && !customPackagePath.endsWith('package.json'))
     throw new Error(`"vitest.packagePath" must point to a package.json file, instead got: ${customPackagePath}`)
   try {
     return customPackagePath || require.resolve('vitest/package.json', {
-      paths: [folder.uri.fsPath],
+      paths: [cwd],
     })
   }
   catch (_) {

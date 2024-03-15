@@ -180,7 +180,7 @@ interface VitestMeta {
 
 function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri) {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
-  const vitest = resolveVitestPackage(folder)
+  const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
 
   if (!vitest) {
     if (showWarning)
@@ -238,9 +238,6 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
 
   const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
 
-  if (!configs.length)
-    log.error('[API]', 'Failed to start Vitest: No vitest config files found')
-
   return configs.map((config) => {
     const vitest = resolveVitestConfig(showWarning, config)
     if (!vitest)
@@ -272,6 +269,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
   const vitest = fork(
     workerPath,
     {
+      // TODO: use findNode API
       execPath: getConfig().nodeExecutable,
       execArgv,
       env: {
