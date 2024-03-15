@@ -78,7 +78,7 @@ async function initVitest(meta: VitestMeta) {
   
   const reporter = new VSCodeReporter()
 
-  _debug('creating vitest instance', meta.configFile)
+  _debug('creating vitest instance', meta.configFile, meta.workspaceFile)
   const vitest = await vitestNode.createVitest(
     'test',
     {
@@ -151,7 +151,7 @@ process.on('message', async function init(message: any) {
         return
       }
 
-      _debug('Vitest created', JSON.stringify(vitest))
+      _debug('Vitest created')
 
       const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
         on(listener) {
