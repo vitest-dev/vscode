@@ -75,7 +75,7 @@ class VSCodeReporter implements Reporter {
 async function initVitest(meta: VitestMeta) {
   _debug('importing vitest node', meta.vitestNodePath)
   const vitestNode = await import(meta.vitestNodePath) as typeof import('vitest/node')
-  
+
   const reporter = new VSCodeReporter()
 
   _debug('creating vitest instance', meta.configFile, meta.workspaceFile)
@@ -111,17 +111,17 @@ async function initVitest(meta: VitestMeta) {
 const cwd = process.cwd()
 
 process.on('message', async function init(message: any) {
-  _debug('onMessage', JSON.stringify(message));
+  _debug('onMessage', JSON.stringify(message))
 
   if (message.type === 'init') {
-    _debug('initializing');
+    _debug('initializing')
 
     process.off('message', init)
     const data = message as RunnerOptions
 
     try {
       if (data.loader) {
-        _debug('registering loader', data.loader);
+        _debug('registering loader', data.loader)
         register(data.loader)
       }
 
@@ -129,8 +129,8 @@ process.on('message', async function init(message: any) {
 
       const vitest = []
       for (const meta of data.meta) {
-        _debug('loading vitest instance', JSON.stringify(meta));
-  
+        _debug('loading vitest instance', JSON.stringify(meta))
+
         try {
           process.chdir(meta.folder)
           try {
@@ -139,7 +139,8 @@ process.on('message', async function init(message: any) {
           catch (err: any) {
             errors.push([meta.configFile, err.stack])
           }
-        } finally {
+        }
+        finally {
           process.chdir(cwd)
         }
       }
