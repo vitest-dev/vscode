@@ -43,24 +43,26 @@ class VitestExtension {
     this.testTree.reset([])
 
     const vitest = await resolveVitestPackages(showWarning)
-    // don't show any errors, they are already shown in resolveVitestPackages
+
     if (!vitest.length) {
+      log.error('[API]', 'Failed to start Vitest: No vitest config files found')
       this.testController.items.delete(this.loadingTestItem.id)
 
       await this.api?.dispose()
       return
     }
 
-    this.testTree.reset(vitest.map(x => x.folder))
-
-    await this.api?.dispose()
-
-    this.api = await resolveVitestAPI(this.testTree, vitest)
+    const folders = new Set(vitest.map(x => x.folder))
+    this.testTree.reset(Array.from(folders))
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()
 
     try {
+      await this.api?.dispose()
+
+      this.api = await resolveVitestAPI(this.testTree, vitest)
+
       for (const api of this.api.folderAPIs) {
         await this.testTree.watchTestFilesInWorkspace(
           api,
