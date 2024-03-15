@@ -33,11 +33,8 @@
     "vscode": "^1.77.0"
   },
   "activationEvents": [
-    "workspaceContains:**/vitest.config.js",
-    "workspaceContains:**/vite.config.js",
-    "workspaceContains:**/vitest.config.ts",
-    "workspaceContains:**/vite.config.ts",
-    "workspaceContains:**/package.json"
+    "workspaceContains:**/*{vite,vitest}*.config.{ts,js,mjs,cjs,cts,mts}",
+    "workspaceContains:node_modules/.bin/vitest"
   ],
   "contributes": {
     "commands": [
@@ -63,23 +60,15 @@
     "configuration": {
       "title": "Vitest",
       "properties": {
-        "vitest.enable": {
-          "description": "This plugin will try to detect whether the current project is set up with Vitest to activate itself. When it failed, you can enable the plugin manually.",
-          "type": "boolean",
-          "scope": "resource",
-          "default": false
-        },
-        "vitest.watchOnStartup": {
-          "description": "Start watching tests on startup",
-          "type": "boolean",
-          "scope": "resource",
-          "default": false
-        },
-        "vitest.commandLine": {
-          "markdownDescription": "The command line to start vitest tests. **It should have with the ability to append extra arguments**. For example `npx vitest` or `yarn test --`\n\nThis is a workspace setting. Do not change it in the user setting directly, which will affect all the projects you open",
+        "vitest.packagePath": {
+          "description": "The path to the Vitest `package.json` file.",
           "type": "string",
-          "scope": "resource",
-          "default": ""
+          "scope": "resource"
+        },
+        "vitest.nodeExecutable": {
+          "description": "The path to the Node.js executable. If not assigned, uses VSCode's Node.js instance.",
+          "type": "string",
+          "scope": "window"
         },
         "vitest.debugExclude": {
           "markdownDescription": "Automatically skip files covered by these glob patterns. \nDefault: `[\"<node_internals>/**\", \"**/node_modules/**\"]`",
@@ -98,24 +87,6 @@
           ],
           "default": null,
           "scope": "resource"
-        },
-        "vitest.showFailMessages": {
-          "description": "Get instant feedback when using Watch Mode. Pop-ups an error when a test fails.",
-          "type": "boolean",
-          "scope": "window",
-          "default": false
-        },
-        "vitest.changeBackgroundColor": {
-          "description": "Change background color of status bar item on failing tests.",
-          "type": "boolean",
-          "scope": "window",
-          "default": true
-        },
-        "vitest.disabledWorkspaceFolders": {
-          "description": "Disabled workspace folders names in multiroot environment",
-          "type": "array",
-          "scope": "resource",
-          "default": []
         }
       }
     }
@@ -124,6 +95,7 @@
     "vscode:prepublish": "pnpm compile",
     "release": "bumpp package.json --commit --push --tag && git update-ref refs/heads/release refs/heads/main && git push origin release",
     "compile": "tsup --minify",
+    "package": "vsce package --no-dependencies",
     "watch": "tsup --watch --sourcemap",
     "test": "vscode-test",
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
@@ -145,11 +117,12 @@
     "@types/semver": "^7.3.9",
     "@types/vscode": "^1.77.0",
     "@types/ws": "^8.5.10",
+    "@vitest/utils": "^1.3.0",
     "@vitest/ws-client": "^1.3.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
     "@vue/reactivity": "^3.2.33",
-    "birpc": "^0.2.15",
+    "birpc": "^0.2.17",
     "bumpp": "^9.3.0",
     "chai": "^5.1.0",
     "changelogithub": "^0.13.3",
@@ -170,7 +143,7 @@
     "tsup": "^8.0.1",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.3.1",
+    "vitest": "^1.4.0",
     "ws": "^8.16.0"
   },
   "lint-staged": {

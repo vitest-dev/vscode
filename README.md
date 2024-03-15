@@ -10,23 +10,23 @@
 
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
 - NX support (see the [NX sample](./samples/monorepo-nx/)).
-- A `@open` tag can be used when filtering tests, to only show the tests open in the editor.
+- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
 
 ## Requirements
 
 - Visual Studio Code version >= July 2021 (version 1.59).
-- Vitest version >= v0.12.0
+- Vitest version >= v1.4.0
+
+# Introduction
+
+You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
 
 ## Configuration
 
-- `vitest.enable`: Extension will automatically detect if the current project is using Vitest. If detection fails, extension can be manually enabled via this option.
-- `vitest.watchOnStartup`: Whether to activate Watch mode by default when the extension starts.
+- `vitest.packagePath`: The path to a custom Vitest's `package.json` file. It will be used to resolve Vitest API paths.
+- `vitest.nodeExecutable`: This extension spawns another process and will use this value as `execPath` argument.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to
   `process.env`
-- `vitest.commandLine`: Command to execute Vitest tests. **It should have the ability
-  to append extra arguments**. For example
-  `npx vitest` or `yarn test --`. This is a workspace setting. Do not change it in
-  the user settings, since it will affect all the projects you open)
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
   `[\"<node_internals>/**\", \"**/node_modules/**\"]`
 

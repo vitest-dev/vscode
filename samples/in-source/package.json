@@ -1,5 +1,5 @@
 {
-  "name": "basic",
+  "name": "in-source",
   "version": "1.0.0",
   "description": "",
   "author": "",
@@ -8,11 +8,8 @@
   "scripts": {
     "test": "vitest run"
   },
-  "dependencies": {
-    "birpc": "^0.2.2"
-  },
   "devDependencies": {
-    "vite": "^2.8.6",
-    "vitest": "^1.4.0"
+    "vite": "^5.1.6",
+    "vitest": "^1.3.0"
   }
 }

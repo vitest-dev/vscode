@@ -1,0 +1,9 @@
+// tsconfig.json
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "vitest/importMeta"
+    ]
+  }
+}
