@@ -14,8 +14,6 @@ export default defineWorkspace([
       maxWorkers: 10,
       hookTimeout: 60_000 * 3,
       globals: true,
-      globalSetup: ['./jest.global-setup.ts'],
-      setupFiles: ['./jest.setup.ts'],
       environment: 'node',
       include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     },
