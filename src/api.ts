@@ -226,7 +226,7 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
     // if there is a workspace config, use it as root
     return vitestWorkspaces.map((config) => {
       const vitest = resolveVitestConfig(showWarning, config)
-      log.info('[API]', vitest)
+      log.info('[API]', 'Vitest config', JSON.stringify(vitest))
       if (!vitest)
         return null
       return {
@@ -283,7 +283,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
   )
   return new Promise<ChildProcess>((resolve, reject) => {
     vitest.on('error', (error) => {
-      log.error('[API]', error)
+      log.error('[API]', 'Error', JSON.stringify(error))
       reject(error)
     })
     vitest.on('message', function ready(message: any) {

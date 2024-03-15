@@ -104,6 +104,8 @@ async function initVitest(meta: VitestMeta) {
 const cwd = process.cwd()
 
 process.on('message', async function init(message: any) {
+  _debug('onMessage', JSON.stringify(message));
+
   if (message.type === 'init') {
     process.off('message', init)
     const data = message as RunnerOptions
