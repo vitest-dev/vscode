@@ -1,4 +1,5 @@
 import path from 'node:path'
+import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
@@ -187,13 +188,16 @@ export class TestRunner extends vscode.Disposable {
 }
 
 function testMessageForTestError(testItem: vscode.TestItem, error: ErrorWithDiff | undefined): vscode.TestMessage {
-  let testMessage
-  if (error?.actual != null && error?.expected != null && error?.actual !== 'undefined' && error?.expected !== 'undefined')
-    testMessage = vscode.TestMessage.diff(error?.message ?? '', error.expected, error.actual)
-  else
-    testMessage = new vscode.TestMessage(error?.message ?? '')
+  if (!error)
+    return new vscode.TestMessage('Unknown error')
 
-  const location = parseLocationFromStacks(testItem, error?.stacks ?? [])
+  let testMessage
+  if (error.actual != null && error.expected != null && error.actual !== 'undefined' && error.expected !== 'undefined')
+    testMessage = vscode.TestMessage.diff(stripAnsi(error.message) ?? '', error.expected, error.actual)
+  else
+    testMessage = new vscode.TestMessage(stripAnsi(error.message) ?? '')
+
+  const location = parseLocationFromStacks(testItem, error.stacks ?? [])
   if (location) {
     const position = new vscode.Position(location.line - 1, location.column - 1)
     testMessage.location = new vscode.Location(vscode.Uri.file(location.path), position)
