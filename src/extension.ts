@@ -55,7 +55,7 @@ class VitestExtension {
 
     const configFiles = vitest.filter(x => x.configFile)
 
-    if (configFiles.length > 3 && getConfig().disableWorkspaceNotification !== true) {
+    if (configFiles.length > 3 && configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
       vscode.window.showWarningMessage(
         `Vitest found ${configFiles.length} config files. For better performance, consider using a workspace configuration.`,
         'Create vitest.workspace.js',
@@ -67,8 +67,10 @@ class VitestExtension {
           createVitestWorkspaceFile(configFiles).catch(noop)
 
         if (result === 'Disable notification') {
-          const rootConfig = vscode.workspace.getConfiguration('vitest')
-          rootConfig.update('disableWorkspaceNotification', true)
+          configFiles.forEach((c) => {
+            const rootConfig = vscode.workspace.getConfiguration('vitest', c.folder)
+            rootConfig.update('disableWorkspaceWarning', true)
+          })
         }
       })
     }
