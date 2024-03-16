@@ -15,6 +15,8 @@ export class TestTree extends vscode.Disposable {
   private fileItems: Map<string, vscode.TestItem> = new Map()
   private folderItems: Map<string, vscode.TestItem> = new Map()
 
+  private testItemsByFile = new Map<string, vscode.TestItem[]>()
+
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
 
   constructor(
@@ -25,6 +27,7 @@ export class TestTree extends vscode.Disposable {
       this.folderItems.clear()
       this.fileItems.clear()
       this.flatTestItems.clear()
+      this.testItemsByFile.clear()
       this.watcherByFolder.forEach(x => x.dispose())
       this.watcherByFolder.clear()
     })
@@ -32,6 +35,7 @@ export class TestTree extends vscode.Disposable {
 
   public reset(workspaceFolders: vscode.WorkspaceFolder[]) {
     this.folderItems.clear()
+    this.testItemsByFile.clear()
     this.fileItems.clear()
     this.flatTestItems.clear()
     this.watcherByFolder.forEach(x => x.dispose())
@@ -49,9 +53,9 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  async discoverAllTestFiles(api: VitestFolderAPI, files: string[]) {
-    for (const file of files)
-      this.getOrCreateFileTestItem(api, file)
+  async discoverAllTestFiles(api: VitestFolderAPI, files: [project: string, file: string][]) {
+    for (const [project, file] of files)
+      this.getOrCreateFileTestItem(api, project, file)
 
     return files
   }
@@ -91,25 +95,30 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  getOrCreateFileTestItem(api: VitestFolderAPI, file: string) {
-    const fileId = normalize(file)
+  getOrCreateFileTestItem(api: VitestFolderAPI, name: string, file: string) {
+    const normalizedFile = normalize(file)
+    const fileId = `${normalizedFile}${name}`
     const cached = this.fileItems.get(fileId)
     if (cached)
       return cached
 
     const fileUri = vscode.Uri.file(file)
     const parentItem = this.getOrCreateFolderTestItem(dirname(file))
+    const label = name ? `|${name}| ${basename(file)}` : basename(file)
     const testFileItem = this.controller.createTestItem(
-      fileUri.toString(),
-      basename(file),
+      fileId,
+      label,
       fileUri,
     )
     testFileItem.canResolveChildren = true
     parentItem.children.add(testFileItem)
     this.fileItems.set(fileId, testFileItem)
+    const cachedItems = this.testItemsByFile.get(normalizedFile) || []
+    cachedItems.push(testFileItem)
+    this.testItemsByFile.set(normalizedFile, cachedItems)
     addTestData(
       testFileItem,
-      new TestFile(testFileItem, fileId, api),
+      new TestFile(testFileItem, fileId, normalizedFile, api),
     )
 
     return testFileItem
@@ -140,7 +149,7 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: string[]) {
+  async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: [prject: string, file: string][]) {
     await this.discoverAllTestFiles(api, testFiles)
 
     if (this.watcherByFolder.has(api.workspaceFolder))
@@ -152,9 +161,8 @@ export class TestTree extends vscode.Disposable {
     this.watcherByFolder.set(api.workspaceFolder, watcher)
 
     watcher.onDidDelete((file) => {
-      const item = this.fileItems.get(normalize(file.fsPath))
-      if (item)
-        this.recursiveDelete(item)
+      const items = this.testItemsByFile.get(normalize(file.fsPath))
+      items?.forEach(item => this.recursiveDelete(item))
     })
   }
 
@@ -165,8 +173,10 @@ export class TestTree extends vscode.Disposable {
     this.flatTestItems.delete(item.id)
     const data = getTestData(item)
 
-    if (data instanceof TestFile)
+    if (data instanceof TestFile) {
+      this.testItemsByFile.delete(data.filepath)
       this.fileItems.delete(data.fileId)
+    }
     if (data instanceof TestFolder)
       this.folderItems.delete(data.folderId)
 
@@ -191,10 +201,12 @@ export class TestTree extends vscode.Disposable {
   }
 
   removeFileTag(file: string, tag: vscode.TestTag) {
-    const testItem = this.fileItems.get(normalize(file))
-    if (!testItem)
+    const testItems = this.testItemsByFile.get(normalize(file))
+    if (!testItems)
       return
-    testItem.tags = testItem.tags.filter(x => x !== tag)
+    testItems.forEach((item) => {
+      item.tags = item.tags.filter(x => x !== tag)
+    })
   }
 
   public getTestDataByTaskId(taskId: string): TestData | null {
@@ -209,14 +221,14 @@ export class TestTree extends vscode.Disposable {
     if (cachedItem)
       return getTestData(cachedItem) || null
     if ('filepath' in task && task.filepath) {
-      const testItem = this.fileItems.get(task.filepath)
+      const testItem = this.fileItems.get(`${task.filepath}${task.projectName || ''}`)
       return testItem ? getTestData(testItem) || null : null
     }
     return null
   }
 
   collectFile(api: VitestFolderAPI, file: File) {
-    const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
+    const fileTestItem = this.getOrCreateFileTestItem(api, file.projectName || '', file.filepath)
     fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
     if (!file.tasks.length && !file.result?.errors) {

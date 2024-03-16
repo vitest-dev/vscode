@@ -1,3 +1,4 @@
+import { dirname } from 'pathe'
 import type { ChannelOptions } from 'birpc'
 import { createBirpc } from 'birpc'
 import type { Vitest } from 'vitest'
@@ -8,14 +9,18 @@ const _require = require
 export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
   let debuggerEnabled = false
   const vitestByFolder = vitest.reduce((acc, vitest) => {
-    acc[vitest.server.config.configFile || vitest.config.workspace || vitest.config.root] = vitest
+    acc[getId(vitest)] = vitest
     return acc
   }, {} as Record<string, Vitest>)
   const vitestEntries = Object.entries(vitestByFolder)
 
+  function getId(vitest: Vitest) {
+    return vitest.server.config.configFile || vitest.config.workspace || vitest.config.root
+  }
+
   async function runTests(vitest: Vitest, files: string[], testNamePattern?: string) {
     const cwd = process.cwd()
-    process.chdir(vitest.config.root)
+    process.chdir(dirname(getId(vitest)))
     try {
       vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
 
@@ -38,7 +43,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     process.chdir(vitest.config.root)
     const files = await vitest.globTestFiles(filters)
     process.chdir(cwd)
-    return files.map(([_, spec]) => spec)
+    return files
   }
 
   const rpc = createBirpc<BirpcEvents, BirpcMethods>({
@@ -59,7 +64,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       }
       else {
         const specs = await globTestFiles(vitest, files)
-        await runTests(vitest, specs)
+        await runTests(vitest, specs.map(([_, spec]) => spec))
       }
     },
     async getFiles(config: string) {
@@ -69,7 +74,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       vitest.projects.forEach((project) => {
         project.testFilesList = null
       })
-      return files
+      return files.map(([project, spec]) => [project.config.name || '', spec])
     },
     async isTestFile(file: string) {
       for (const [_, vitest] of vitestEntries) {

@@ -25,6 +25,7 @@ export class TestFile {
   constructor(
     public readonly item: vscode.TestItem,
     public readonly fileId: string,
+    public readonly filepath: string,
     public readonly api: VitestFolderAPI,
   ) {}
 }

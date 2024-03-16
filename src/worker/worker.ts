@@ -1,5 +1,6 @@
 import v8 from 'node:v8'
 import { register } from 'node:module'
+import { dirname } from 'pathe'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
@@ -82,7 +83,7 @@ async function initVitest(meta: VitestMeta) {
       workspace: meta.workspaceFile,
       watch: true,
       api: false,
-      root: meta.folder,
+      root: dirname(meta.id),
       reporters: [reporter],
       ui: false,
       env: meta.env,
@@ -115,7 +116,7 @@ process.on('message', async function init(message: any) {
 
       const vitest = []
       for (const meta of data.meta) {
-        process.chdir(meta.folder)
+        process.chdir(dirname(meta.id))
         try {
           vitest.push(await initVitest(meta))
         }
