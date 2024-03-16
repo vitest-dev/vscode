@@ -13,6 +13,6 @@
   },
   "devDependencies": {
     "happy-dom": "^2.49.0",
-    "vitest": "^1.3.0"
+    "vitest": "^1.4.0"
   }
 }
