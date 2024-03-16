@@ -121,9 +121,14 @@ export class TestRunner extends vscode.Disposable {
 
   private enqueueTests(testRun: vscode.TestRun, tests: vscode.TestItemCollection) {
     for (const [_, item] of tests) {
-      testRun.enqueued(item)
-      if (item.children.size)
+      if (item.children.size) {
         this.enqueueTests(testRun, item.children)
+      }
+      else {
+        // enqueue only tests themselves, not folders
+        // they will be queued automatically if children are enqueued
+        testRun.enqueued(item)
+      }
     }
   }
 
