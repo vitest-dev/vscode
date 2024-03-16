@@ -74,6 +74,8 @@ export class VitestAPI {
 const WEAKMAP_API_FOLDER = new WeakMap<VitestFolderAPI, vscode.WorkspaceFolder>()
 
 export class VitestFolderAPI extends VitestReporter {
+  readonly tag: vscode.TestTag
+
   constructor(
     folder: vscode.WorkspaceFolder,
     private meta: ResolvedMeta,
@@ -82,6 +84,7 @@ export class VitestFolderAPI extends VitestReporter {
     super(normalize(folder.uri.fsPath), meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
     this.id = normalize(id)
+    this.tag = new vscode.TestTag(this.id)
   }
 
   get processId() {

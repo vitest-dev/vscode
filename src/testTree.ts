@@ -106,13 +106,14 @@ export class TestTree extends vscode.Disposable {
       return cached
 
     const fileUri = vscode.Uri.file(file)
-    const parentItem = this.getOrCreateFolderTestItem(dirname(file))
+    const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
     const label = project ? `|${project}| ${basename(file)}` : basename(file)
     const testFileItem = this.controller.createTestItem(
       fileId,
       label,
       fileUri,
     )
+    testFileItem.tags = [api.tag]
     testFileItem.canResolveChildren = true
     parentItem.children.add(testFileItem)
     this.fileItems.set(fileId, testFileItem)
@@ -128,14 +129,18 @@ export class TestTree extends vscode.Disposable {
     return testFileItem
   }
 
-  getOrCreateFolderTestItem(normalizedFolder: string) {
+  getOrCreateFolderTestItem(api: VitestFolderAPI, normalizedFolder: string) {
     const cached = this.folderItems.get(normalizedFolder)
-    if (cached)
+    if (cached) {
+      if (!cached.tags.includes(api.tag))
+        cached.tags = [...cached.tags, api.tag]
       return cached
+    }
 
     const folderUri = vscode.Uri.file(normalizedFolder)
-    const parentItem = this.getOrCreateFolderTestItem(dirname(normalizedFolder))
+    const parentItem = this.getOrCreateFolderTestItem(api, dirname(normalizedFolder))
     const folderItem = this._createFolderItem(folderUri)
+    folderItem.tags = [api.tag]
     parentItem.children.add(folderItem)
     this.folderItems.set(normalizedFolder, folderItem)
     return folderItem
@@ -239,7 +244,7 @@ export class TestTree extends vscode.Disposable {
       this.recursiveDelete(fileTestItem)
     }
     else {
-      this.collectTasks(file.tasks, fileTestItem)
+      this.collectTasks(api.tag, file.tasks, fileTestItem)
       if (file.result?.errors) {
         const error = file.result.errors.map(error => error.stack || error.message).join('\n')
         fileTestItem.error = error
@@ -248,13 +253,14 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  collectTasks(tasks: Task[], item: vscode.TestItem) {
+  collectTasks(tag: vscode.TestTag, tasks: Task[], item: vscode.TestItem) {
     for (const task of tasks) {
       const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
         task.id,
         task.name,
         item.uri,
       )
+      testItem.tags = [tag]
       testItem.error = undefined
       testItem.label = task.name
       const location = task.location
@@ -275,7 +281,7 @@ export class TestTree extends vscode.Disposable {
       }
 
       if ('tasks' in task)
-        this.collectTasks(task.tasks, testItem)
+        this.collectTasks(tag, task.tasks, testItem)
     }
 
     // remove tasks that are no longer present

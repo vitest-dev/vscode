@@ -104,7 +104,7 @@ class VitestExtension {
       const folderName = basename(dirname(api.id))
 
       const prefix = `${folderName}${sep}${configFile}`
-      let runProfile = previousRunProfiles.get(`${prefix}:run`)
+      let runProfile = previousRunProfiles.get(`${api.id}:run`)
       if (!runProfile) {
         runProfile = this.testController.createRunProfile(
           prefix,
@@ -115,9 +115,10 @@ class VitestExtension {
           true,
         )
       }
+      runProfile.tag = api.tag
       runProfile.runHandler = (request, token) => runner.runTests(request, token)
-      this.runProfiles.set(`${prefix}:run`, runProfile)
-      let debugProfile = previousRunProfiles.get(`${prefix}:debug`)
+      this.runProfiles.set(`${api.id}:run`, runProfile)
+      let debugProfile = previousRunProfiles.get(`${api.id}:debug`)
       if (!debugProfile) {
         debugProfile = this.testController.createRunProfile(
           prefix,
@@ -128,8 +129,9 @@ class VitestExtension {
           true,
         )
       }
+      debugProfile.tag = api.tag
       debugProfile.runHandler = (request, token) => runner.debugTests(request, token)
-      this.runProfiles.set(`${prefix}:debug`, debugProfile)
+      this.runProfiles.set(`${api.id}:debug`, debugProfile)
     })
 
     for (const [id, profile] of previousRunProfiles) {

@@ -150,7 +150,7 @@ export class TestRunner extends vscode.Disposable {
           const workspaceFolderPath = normalize(this.api.workspaceFolder.uri.fsPath)
           this.enqueueTests(
             this.testRun,
-            this.tree.getOrCreateFolderTestItem(workspaceFolderPath).children,
+            this.tree.getOrCreateFolderTestItem(this.api, workspaceFolderPath).children,
           )
         }
       }
