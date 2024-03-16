@@ -1,0 +1,24 @@
+{
+  "name": "imba",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^9.3.4",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@vitest/ui": "*",
+    "imba": "^2.0.0-alpha.235",
+    "jsdom": "^24.0.0",
+    "vite": "^5.1.6",
+    "vite-plugin-imba": "^0.10.3",
+    "vitest": "*",
+    "vitest-github-actions-reporter-temp": "^0.8.3"
+  }
+}
