@@ -275,6 +275,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
       execPath: getConfig().nodeExecutable,
       execArgv,
       env: {
+        ...process.env,
         VITEST_VSCODE: 'true',
       },
       stdio: 'overlapped',
