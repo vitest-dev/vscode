@@ -28,6 +28,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
       }
     }
     finally {
+      vitest.configOverride.testNamePattern = /$a/ // don't "run" tests on change, but still collect them
       process.chdir(cwd)
     }
   }
@@ -44,7 +45,6 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
     async collectTests(config: string, testFile: string) {
       const vitest = vitestByFolder[config]
       await runTests(vitest, [testFile], '$a')
-      vitest.configOverride.testNamePattern = undefined
     },
     async cancelRun(config: string) {
       await vitestByFolder[config]?.cancelCurrentRun('keyboard-input')
