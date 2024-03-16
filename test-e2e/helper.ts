@@ -4,7 +4,7 @@ import path from 'node:path'
 import { download } from '@vscode/test-electron'
 import { _electron } from 'playwright'
 import type { Page } from 'playwright'
-import { test } from 'vitest'
+import { test as baseTest } from 'vitest'
 
 // based on
 // https://github.com/microsoft/playwright-vscode/blob/1c2f766a3ef4b7633fb19103a3d930ebe385250e/tests-integration/tests/baseTest.ts#L41
@@ -22,7 +22,7 @@ const defaultConfig = process.env as {
   VSCODE_E2E_TRACE?: 'on' | 'off'
 }
 
-export const vscodeTest = test.extend<{ launch: LaunchFixture }>({
+export const test = baseTest.extend<{ launch: LaunchFixture }>({
   launch: async ({ task }, use) => {
     const teardowns: (() => Promise<void>)[] = []
 
