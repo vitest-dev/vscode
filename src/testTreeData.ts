@@ -17,12 +17,14 @@ export function addTestData<T extends TestData>(item: vscode.TestItem, data: T):
 export class TestFolder {
   constructor(
     public readonly item: vscode.TestItem,
+    public readonly folderId: string,
   ) {}
 }
 
 export class TestFile {
   constructor(
     public readonly item: vscode.TestItem,
+    public readonly fileId: string,
     public readonly api: VitestFolderAPI,
   ) {}
 }

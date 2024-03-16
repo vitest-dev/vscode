@@ -81,12 +81,13 @@ export class TestTree extends vscode.Disposable {
   }
 
   getOrCreateWorkspaceFolderItem(folderUri: vscode.Uri) {
-    const cached = this.folderItems.get(normalize(folderUri.fsPath))
+    const folderId = normalize(folderUri.fsPath)
+    const cached = this.folderItems.get(folderId)
     if (cached)
       return cached
 
-    const folderItem = this._createFolderItem(folderUri)
-    this.folderItems.set(folderItem.id, folderItem)
+    const folderItem = this._createFolderItem(folderId, folderUri)
+    this.folderItems.set(folderId, folderItem)
     return folderItem
   }
 
@@ -108,7 +109,7 @@ export class TestTree extends vscode.Disposable {
     this.fileItems.set(fileId, testFileItem)
     addTestData(
       testFileItem,
-      new TestFile(testFileItem, api),
+      new TestFile(testFileItem, fileId, api),
     )
 
     return testFileItem
@@ -121,20 +122,20 @@ export class TestTree extends vscode.Disposable {
 
     const folderUri = vscode.Uri.file(folder)
     const parentItem = this.getOrCreateFolderTestItem(dirname(folder))
-    const folderItem = this._createFolderItem(folderUri)
+    const folderItem = this._createFolderItem(folder, folderUri)
     parentItem.children.add(folderItem)
     this.folderItems.set(folder, folderItem)
     return folderItem
   }
 
-  private _createFolderItem(folderUri: vscode.Uri) {
+  private _createFolderItem(folderId: string, folderUri: vscode.Uri) {
     const folderFsPath = normalize(folderUri.fsPath)
     const folderItem = this.controller.createTestItem(
       folderFsPath,
       basename(folderFsPath),
       folderUri,
     )
-    addTestData(folderItem, new TestFolder(folderItem))
+    addTestData(folderItem, new TestFolder(folderItem, folderId))
     folderItem.canResolveChildren = false
     return folderItem
   }
@@ -162,6 +163,13 @@ export class TestTree extends vscode.Disposable {
       return
     item.parent.children.delete(item.id)
     this.flatTestItems.delete(item.id)
+    const data = getTestData(item)
+
+    if (data instanceof TestFile)
+      this.fileItems.delete(data.fileId)
+    if (data instanceof TestFolder)
+      this.folderItems.delete(data.folderId)
+
     if (!item.parent.children.size)
       this.recursiveDelete(item.parent)
   }
@@ -211,13 +219,13 @@ export class TestTree extends vscode.Disposable {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
     fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
-    if (!file.tasks.length) {
+    if (!file.tasks.length && !file.result?.errors) {
       this.recursiveDelete(fileTestItem)
     }
     else {
       this.collectTasks(file.tasks, fileTestItem)
       if (file.result?.errors) {
-        const error = file.result.errors.map(error => error.stack).join('\n')
+        const error = file.result.errors.map(error => error.stack || error.message).join('\n')
         fileTestItem.error = error
       }
       fileTestItem.canResolveChildren = false
