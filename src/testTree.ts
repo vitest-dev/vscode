@@ -212,6 +212,10 @@ export class TestTree extends vscode.Disposable {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
     this.flatTestItems.set(file.id, fileTestItem)
     this.collectTasks(file.tasks, fileTestItem)
+    if (file.result?.errors) {
+      const error = file.result.errors.map(error => error.stack).join('\n')
+      fileTestItem.error = error
+    }
     fileTestItem.canResolveChildren = false
   }
 
