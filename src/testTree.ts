@@ -11,11 +11,11 @@ import type { VitestFolderAPI } from './api'
 // task -> vitest.Task
 
 export class TestTree extends vscode.Disposable {
-  private watchers: vscode.FileSystemWatcher[] = []
-
   private flatTestItems = new Map<string, vscode.TestItem>()
   private fileItems: Map<string, vscode.TestItem> = new Map()
   private folderItems: Map<string, vscode.TestItem> = new Map()
+
+  private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -25,8 +25,8 @@ export class TestTree extends vscode.Disposable {
       this.folderItems.clear()
       this.fileItems.clear()
       this.flatTestItems.clear()
-      this.watchers.forEach(x => x.dispose())
-      this.watchers = []
+      this.watcherByFolder.forEach(x => x.dispose())
+      this.watcherByFolder.clear()
     })
   }
 
@@ -34,8 +34,8 @@ export class TestTree extends vscode.Disposable {
     this.folderItems.clear()
     this.fileItems.clear()
     this.flatTestItems.clear()
-    this.watchers.forEach(x => x.dispose())
-    this.watchers = []
+    this.watcherByFolder.forEach(x => x.dispose())
+    this.watcherByFolder.clear()
 
     this.loaderItem.busy = true
 
@@ -90,12 +90,8 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  private _getFileId(api: VitestFolderAPI, file: string) {
-    return `${api.id}|${file}`
-  }
-
   getOrCreateFileTestItem(api: VitestFolderAPI, file: string) {
-    const fileId = this._getFileId(api, file)
+    const fileId = normalize(file)
     const cached = this.fileItems.get(fileId)
     if (cached)
       return cached
@@ -146,10 +142,13 @@ export class TestTree extends vscode.Disposable {
   async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: string[]) {
     await this.discoverAllTestFiles(api, testFiles)
 
+    if (this.watcherByFolder.has(api.workspaceFolder))
+      return
+
     const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(api.workspaceFolder, '**/*'),
     )
-    this.watchers.push(watcher)
+    this.watcherByFolder.set(api.workspaceFolder, watcher)
 
     watcher.onDidDelete((file) => {
       const item = this.fileItems.get(normalize(file.fsPath))
