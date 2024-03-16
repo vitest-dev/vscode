@@ -153,18 +153,17 @@ export class TestTree extends vscode.Disposable {
     watcher.onDidDelete((file) => {
       const item = this.fileItems.get(normalize(file.fsPath))
       if (item)
-        this.recursiveDelete(this.controller.items, item)
+        this.recursiveDelete(item)
     })
   }
 
-  private recursiveDelete(collection: vscode.TestItemCollection, item: vscode.TestItem) {
-    collection.delete(item.id)
+  private recursiveDelete(item: vscode.TestItem) {
+    if (!item.parent)
+      return
+    item.parent.children.delete(item.id)
     this.flatTestItems.delete(item.id)
-    if (item.parent) {
-      item.parent.children.delete(item.id)
-      if (item.parent.children.size === 0)
-        this.recursiveDelete(collection, item.parent)
-    }
+    if (!item.parent.children.size)
+      this.recursiveDelete(item.parent)
   }
 
   async discoverFileTests(testItem: vscode.TestItem) {
@@ -212,12 +211,17 @@ export class TestTree extends vscode.Disposable {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
     fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
-    this.collectTasks(file.tasks, fileTestItem)
-    if (file.result?.errors) {
-      const error = file.result.errors.map(error => error.stack).join('\n')
-      fileTestItem.error = error
+    if (!file.tasks.length) {
+      this.recursiveDelete(fileTestItem)
     }
-    fileTestItem.canResolveChildren = false
+    else {
+      this.collectTasks(file.tasks, fileTestItem)
+      if (file.result?.errors) {
+        const error = file.result.errors.map(error => error.stack).join('\n')
+        fileTestItem.error = error
+      }
+      fileTestItem.canResolveChildren = false
+    }
   }
 
   collectTasks(tasks: Task[], item: vscode.TestItem) {

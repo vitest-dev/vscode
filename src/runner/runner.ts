@@ -3,7 +3,7 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
-import { normalize } from 'pathe'
+import { basename, normalize } from 'pathe'
 import { type TestData, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
@@ -102,11 +102,16 @@ export class TestRunner extends vscode.Disposable {
     const tests = [...this.testRunRequests.values()].flatMap(r => r.include || [])
 
     if (!tests.length) {
+      log.info(`Running all tests in ${basename(this.api.workspaceFolder.uri.fsPath)}`)
       await this.api.runFiles()
     }
     else {
       const testNamePatern = formatTestPattern(tests)
       const files = getTestFiles(tests)
+      if (testNamePatern)
+        log.info(`Running ${files.length} files with name pattern: ${testNamePatern}`)
+      else
+        log.info(`Running ${files.length} files`)
       await this.api.runFiles(files, testNamePatern)
     }
 
