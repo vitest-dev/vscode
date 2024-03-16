@@ -71,6 +71,12 @@
           "type": "string",
           "scope": "window"
         },
+        "vitest.disableWorkspaceNotification": {
+          "description": "Disable workspace notification.",
+          "type": "boolean",
+          "default": false,
+          "scope": "window"
+        },
         "vitest.debugExclude": {
           "markdownDescription": "Automatically skip files covered by these glob patterns. \nDefault: `[\"<node_internals>/**\", \"**/node_modules/**\"]`",
           "type": "array",

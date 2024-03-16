@@ -1,13 +1,14 @@
 import { sep } from 'node:path'
 import * as vscode from 'vscode'
 import { basename, dirname } from 'pathe'
-import { testControllerId } from './config'
+import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI, resolveVitestPackages } from './api'
 import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
+import { createVitestWorkspaceFile, noop } from './utils'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -50,6 +51,26 @@ class VitestExtension {
 
       await this.api?.dispose()
       return
+    }
+
+    const configFiles = vitest.filter(x => x.configFile)
+
+    if (configFiles.length > 3 && getConfig().disableWorkspaceNotification !== true) {
+      vscode.window.showWarningMessage(
+        `Vitest found ${configFiles.length} config files. For better performance, consider using a workspace configuration.`,
+        'Create vitest.workspace.js',
+        'Disable notification',
+      ).then((result) => {
+        if (!result)
+          return
+        if (result === 'Create vitest.workspace.js')
+          createVitestWorkspaceFile(configFiles).catch(noop)
+
+        if (result === 'Disable notification') {
+          const rootConfig = vscode.workspace.getConfiguration('vitest')
+          rootConfig.update('disableWorkspaceNotification', true)
+        }
+      })
     }
 
     const folders = new Set(vitest.map(x => x.folder))
@@ -128,7 +149,7 @@ class VitestExtension {
     this.disposables = [
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('vitest'))
+        if (event.affectsConfiguration('vitest.packagePath') || event.affectsConfiguration('vitest.nodeExecutable'))
           this.defineTestProfiles(false)
       }),
     ]

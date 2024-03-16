@@ -35,5 +35,6 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     debugExclude: get<string[]>('debugExclude', []),
     packagePath: get<string | undefined>('packagePath'),
     nodeExecutable: get<string | undefined>('nodeExecutable'),
+    disableWorkspaceNotification: get<boolean>('disableWorkspaceNotification', false),
   }
 }

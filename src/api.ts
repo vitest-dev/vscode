@@ -1,7 +1,7 @@
 import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
 import { gte } from 'semver'
-import { dirname, normalize } from 'pathe'
+import { basename, dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
 import { configGlob, minimumVersion, workerPath, workspaceGlob } from './constants'
@@ -79,7 +79,10 @@ export class VitestAPI {
 
   async dispose() {
     this.forEach(api => api.dispose())
-    await this.meta.rpc.close()
+    try {
+      await this.meta.rpc.close()
+    }
+    catch {}
     this.meta.process.kill()
   }
 }
@@ -166,7 +169,7 @@ function nonNullable<T>(value: T | null | undefined): value is T {
   return value != null
 }
 
-interface VitestMeta {
+export interface VitestMeta {
   folder: vscode.WorkspaceFolder
   vitestNodePath: string
   // path to a config file or a workspace config file
@@ -184,7 +187,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 
   if (!vitest) {
     if (showWarning)
-      vscode.window.showWarningMessage('Vitest not found. Please run `npm i --save-dev vitest` to install Vitest.')
+      vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.'`)
     log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
     return null
   }
