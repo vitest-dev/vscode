@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import type { File, Task } from 'vitest'
 import type { TestData } from './testTreeData'
-import { TestCase, TestFile, TestFolder, TestSuite, addTestData, getTestData } from './testTreeData'
+import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
 import { log } from './log'
 import type { VitestFolderAPI } from './api'
 
@@ -15,6 +15,9 @@ export class TestTree extends vscode.Disposable {
   private fileItems: Map<string, vscode.TestItem> = new Map()
   private folderItems: Map<string, vscode.TestItem> = new Map()
 
+  // it's possible to have several test items for the same file
+  // file test items have the project name in their id, so we need a separate map
+  // to store all of them
   private testItemsByFile = new Map<string, vscode.TestItem[]>()
 
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
@@ -116,9 +119,10 @@ export class TestTree extends vscode.Disposable {
     const cachedItems = this.testItemsByFile.get(normalizedFile) || []
     cachedItems.push(testFileItem)
     this.testItemsByFile.set(normalizedFile, cachedItems)
-    addTestData(
+    TestFile.register(
       testFileItem,
-      new TestFile(testFileItem, normalizedFile, api),
+      normalizedFile,
+      api,
     )
 
     return testFileItem
@@ -144,7 +148,7 @@ export class TestTree extends vscode.Disposable {
       basename(folderFsPath),
       folderUri,
     )
-    addTestData(folderItem, new TestFolder(folderItem))
+    TestFolder.register(folderItem)
     folderItem.canResolveChildren = false
     return folderItem
   }
@@ -262,9 +266,9 @@ export class TestTree extends vscode.Disposable {
       this.flatTestItems.set(task.id, testItem)
       item.children.add(testItem)
       if (task.type === 'suite')
-        addTestData(testItem, new TestSuite(testItem))
+        TestSuite.register(testItem)
       else if (task.type === 'test' || task.type === 'custom')
-        addTestData(testItem, new TestCase(testItem))
+        TestCase.register(testItem)
 
       if (task.result?.errors) {
         const error = task.result.errors.map(error => error.stack).join('\n')

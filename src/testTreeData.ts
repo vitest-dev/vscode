@@ -15,17 +15,29 @@ export function addTestData<T extends TestData>(item: vscode.TestItem, data: T):
 }
 
 export class TestFolder {
-  constructor(
+  private constructor(
     public readonly item: vscode.TestItem,
   ) {}
+
+  public static register(item: vscode.TestItem) {
+    addTestData(item, new TestFolder(item))
+  }
 }
 
 export class TestFile {
-  constructor(
+  private constructor(
     public readonly item: vscode.TestItem,
     public readonly filepath: string,
     public readonly api: VitestFolderAPI,
   ) {}
+
+  public static register(
+    item: vscode.TestItem,
+    filepath: string,
+    api: VitestFolderAPI,
+  ) {
+    addTestData(item, new TestFile(item, filepath, api))
+  }
 }
 
 class TaskName {
@@ -53,10 +65,14 @@ class TaskName {
 export class TestCase {
   private nameResolver: TaskName
 
-  constructor(
+  private constructor(
     public readonly item: vscode.TestItem,
   ) {
     this.nameResolver = new TaskName(this)
+  }
+
+  public static register(item: vscode.TestItem) {
+    addTestData(item, new TestCase(item))
   }
 
   getTestNamePattern() {
@@ -67,10 +83,14 @@ export class TestCase {
 export class TestSuite {
   private nameResolver: TaskName
 
-  constructor(
+  private constructor(
     public readonly item: vscode.TestItem,
   ) {
     this.nameResolver = new TaskName(this)
+  }
+
+  public static register(item: vscode.TestItem) {
+    addTestData(item, new TestSuite(item))
   }
 
   getTestNamePattern() {
