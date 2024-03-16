@@ -227,15 +227,33 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
 
   const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
 
-  return configs.map((config) => {
-    const vitest = resolveVitestConfig(showWarning, config)
-    if (!vitest)
-      return null
-    return {
-      ...vitest,
-      configFile: vitest.id,
-    }
-  }).filter(nonNullable)
+  const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
+    const dir = dirname(config.fsPath)
+    if (!acc[dir])
+      acc[dir] = []
+    acc[dir].push(config)
+    return acc
+  }, {})
+
+  const resolvedMeta: VitestMeta[] = []
+
+  for (const [_, configFiles] of Object.entries(configsByFolder)) {
+    // vitest config always overrides vite config - if there is a Vitest config, we assume vite was overriden,
+    // but it's possible to have several Vitest configs (vitest.e2e. vitest.unit, etc.)
+    const hasViteAndVitestConfig = configFiles.some(file => basename(file.fsPath).includes('vite.'))
+      && configFiles.some(file => basename(file.fsPath).includes('vitest.'))
+    // remove all vite configs from a folder if there is at least one Vitest config
+    const filteredConfigFiles = hasViteAndVitestConfig
+      ? configFiles.filter(file => !basename(file.fsPath).includes('vite.'))
+      : configFiles
+    filteredConfigFiles.forEach((config) => {
+      const vitest = resolveVitestConfig(showWarning, config)
+      if (vitest)
+        resolvedMeta.push(vitest)
+    })
+  }
+
+  return resolvedMeta
 }
 
 function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
