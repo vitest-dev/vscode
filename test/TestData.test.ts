@@ -20,7 +20,6 @@ describe('TestData', () => {
         new TestFile(
           testItem,
           filepath,
-          filepath,
           null as any, // not used yet
         ),
       )
