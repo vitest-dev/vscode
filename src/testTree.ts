@@ -210,6 +210,7 @@ export class TestTree extends vscode.Disposable {
 
   collectFile(api: VitestFolderAPI, file: File) {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.filepath)
+    fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
     this.collectTasks(file.tasks, fileTestItem)
     if (file.result?.errors) {
@@ -226,6 +227,7 @@ export class TestTree extends vscode.Disposable {
         task.name,
         item.uri,
       )
+      testItem.error = undefined
       testItem.sortText = task.id
       testItem.label = task.name
       const location = task.location
@@ -239,6 +241,11 @@ export class TestTree extends vscode.Disposable {
         addTestData(testItem, new TestSuite(testItem))
       else if (task.type === 'test' || task.type === 'custom')
         addTestData(testItem, new TestCase(testItem))
+
+      if (task.result?.errors) {
+        const error = task.result.errors.map(error => error.stack).join('\n')
+        testItem.error = error
+      }
 
       if ('tasks' in task)
         this.collectTasks(task.tasks, testItem)
