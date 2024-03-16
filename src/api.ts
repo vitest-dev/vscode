@@ -43,11 +43,6 @@ export class VitestReporter {
   }
 }
 
-export interface FilesMap {
-  api: VitestFolderAPI
-  files: string[]
-}
-
 export class VitestAPI {
   constructor(
     private readonly api: VitestFolderAPI[],
@@ -60,17 +55,6 @@ export class VitestAPI {
 
   get folderAPIs() {
     return this.api
-  }
-
-  getFiles(): Promise<FilesMap[]> {
-    const promises = this.api.map(async (api) => {
-      const files = await api.getFiles()
-      return {
-        api,
-        files,
-      }
-    })
-    return Promise.all(promises)
   }
 
   async isTestFile(file: string) {
