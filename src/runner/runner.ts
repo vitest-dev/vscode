@@ -3,6 +3,7 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
+import { normalize } from 'pathe'
 import { type TestData, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
@@ -113,6 +114,14 @@ export class TestRunner extends vscode.Disposable {
       this.testRunRequests.delete(request)
   }
 
+  private enqueueTests(testRun: vscode.TestRun, tests: vscode.TestItemCollection) {
+    for (const [_, item] of tests) {
+      testRun.enqueued(item)
+      if (item.children.size)
+        this.enqueueTests(testRun, item.children)
+    }
+  }
+
   private startTestRun() {
     // TODO: refactor to use different requests, otherwise test run doesn't mark the result value!
     const currentRequest = this.testRunRequests.values().next().value as vscode.TestRunRequest | undefined
@@ -122,6 +131,18 @@ export class TestRunner extends vscode.Disposable {
         const testName = currentRequest.include?.length === 1 ? currentRequest.include[0].label : undefined
         const name = currentRequest.include?.length ? testName : 'Running all tests'
         this.testRun = this.controller.createTestRun(currentRequest, name)
+        if (currentRequest.include) {
+          currentRequest.include.forEach((testItem) => {
+            this.enqueueTests(this.testRun!, testItem.children)
+          })
+        }
+        else {
+          const workspaceFolderPath = normalize(this.api.workspaceFolder.uri.fsPath)
+          this.enqueueTests(
+            this.testRun,
+            this.tree.getOrCreateFolderTestItem(workspaceFolderPath).children,
+          )
+        }
       }
     }
   }
