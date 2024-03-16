@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { TestCase, TestFile, TestSuite, addTestData } from '../src/testTreeData'
+import { TestCase, TestFile, TestSuite } from '../src/testTreeData'
 
 describe('TestData', () => {
   const ctrl = vscode.tests.createTestController('mocha', 'Vitest')
@@ -15,13 +15,10 @@ describe('TestData', () => {
         uri,
       )
       ctrl.items.add(testItem)
-      const file = addTestData(
+      const file = TestFile.register(
         testItem,
-        new TestFile(
-          testItem,
-          filepath,
-          null as any, // not used yet
-        ),
+        filepath,
+        null as any, // not used yet
       )
       const suiteItem = ctrl.createTestItem(
         `${filepath}_1`,
@@ -52,13 +49,13 @@ describe('TestData', () => {
       suiteItem.children.add(testItem2)
       suiteItem.children.add(testItem3)
 
-      const suite = addTestData(suiteItem, new TestSuite(suiteItem))
+      const suite = TestSuite.register(suiteItem)
 
       expect(suite.getTestNamePattern()).to.equal('^\\s?describe')
 
-      const test1 = addTestData(testItem1, new TestCase(testItem1))
-      const test2 = addTestData(testItem2, new TestCase(testItem2))
-      const test3 = addTestData(testItem3, new TestCase(testItem3))
+      const test1 = TestCase.register(testItem1)
+      const test2 = TestCase.register(testItem2)
+      const test3 = TestCase.register(testItem3)
 
       expect(test1.item.parent).to.exist
 

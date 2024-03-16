@@ -20,7 +20,7 @@ export class TestFolder {
   ) {}
 
   public static register(item: vscode.TestItem) {
-    addTestData(item, new TestFolder(item))
+    return addTestData(item, new TestFolder(item))
   }
 }
 
@@ -36,7 +36,7 @@ export class TestFile {
     filepath: string,
     api: VitestFolderAPI,
   ) {
-    addTestData(item, new TestFile(item, filepath, api))
+    return addTestData(item, new TestFile(item, filepath, api))
   }
 }
 
@@ -72,7 +72,7 @@ export class TestCase {
   }
 
   public static register(item: vscode.TestItem) {
-    addTestData(item, new TestCase(item))
+    return addTestData(item, new TestCase(item))
   }
 
   getTestNamePattern() {
@@ -90,7 +90,7 @@ export class TestSuite {
   }
 
   public static register(item: vscode.TestItem) {
-    addTestData(item, new TestSuite(item))
+    return addTestData(item, new TestSuite(item))
   }
 
   getTestNamePattern() {
