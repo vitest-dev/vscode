@@ -256,7 +256,6 @@ export class TestTree extends vscode.Disposable {
         item.uri,
       )
       testItem.error = undefined
-      testItem.sortText = task.id
       testItem.label = task.name
       const location = task.location
       if (location) {
