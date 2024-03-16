@@ -6,7 +6,7 @@ import type { VitestAPI } from './api'
 import { resolveVitestAPI, resolveVitestPackages } from './api'
 import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
-import { configGlob } from './constants'
+import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -134,8 +134,11 @@ class VitestExtension {
     ]
 
     // if the config changes, re-define all test profiles
-    const configWatcher = vscode.workspace.createFileSystemWatcher(configGlob)
-    this.disposables.push(configWatcher)
+    const configWatchers = [
+      vscode.workspace.createFileSystemWatcher(configGlob),
+      vscode.workspace.createFileSystemWatcher(workspaceGlob),
+    ]
+    this.disposables.push(...configWatchers)
 
     const redefineTestProfiles = (uri: vscode.Uri) => {
       if (uri.fsPath.includes('node_modules'))
@@ -143,9 +146,9 @@ class VitestExtension {
       this.defineTestProfiles(false)
     }
 
-    configWatcher.onDidChange(redefineTestProfiles)
-    configWatcher.onDidCreate(redefineTestProfiles)
-    configWatcher.onDidDelete(redefineTestProfiles)
+    configWatchers.forEach(watcher => watcher.onDidChange(redefineTestProfiles))
+    configWatchers.forEach(watcher => watcher.onDidCreate(redefineTestProfiles))
+    configWatchers.forEach(watcher => watcher.onDidDelete(redefineTestProfiles))
 
     await this.defineTestProfiles(true)
   }
