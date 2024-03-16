@@ -116,6 +116,9 @@ devDependencies:
   semver:
     specifier: ^7.3.5
     version: 7.6.0
+  strip-ansi:
+    specifier: ^7.1.0
+    version: 7.1.0
   tree-kill:
     specifier: ^1.2.2
     version: 1.2.2
