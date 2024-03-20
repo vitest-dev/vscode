@@ -1,5 +1,7 @@
 {
-  "vitest.nodeEnv": {},
+  "vitest.nodeEnv": {
+    "TEST_CUSTOM_ENV": "hello"
+  },
   "vitest.exclude": [
     "**/node_modules/**",
     "**/dist/**",
