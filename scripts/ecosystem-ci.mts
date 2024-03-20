@@ -20,7 +20,7 @@ async function main() {
       pkg2.overrides = pkg.pnpm.overrides
       return pkg2
     })
-    await $({ cwd: 'samples/e2e' })`npm i`
+    await $({ cwd: 'samples/imba' })`npm i`
   }
 
   if (process.env.CI === 'true' && process.platform === 'linux') {
