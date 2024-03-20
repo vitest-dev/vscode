@@ -31,13 +31,13 @@ jobs:
 
       - name: test
         run: |
-          xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' test
+          xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm test
 
       - name: test-e2e
         run: |
           cd samples/e2e && pnpm i --no-frozen-lockfile
           cd samples/imba && npm i
-          xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' test-e2e --retry 2
+          xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm test-e2e --retry 2
 
       - uses: actions/upload-artifact@v3
         if: always()
