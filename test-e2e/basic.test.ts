@@ -1,5 +1,7 @@
 import { beforeAll } from 'vitest'
 import { test } from './helper'
+import { execa } from "execa"
+import { expect } from "@playwright/test"
 
 // Vitst extension doesn't work with CI flag
 beforeAll(() => {
@@ -8,6 +10,7 @@ beforeAll(() => {
 })
 
 test('basic', async ({ launch }) => {
+  await execa("pnpm", ["i"], { cwd: "./samples/e2e" });
   const { page } = await launch({
     workspacePath: './samples/e2e',
   })
@@ -23,13 +26,14 @@ test('basic', async ({ launch }) => {
   await page.getByRole('button', { name: 'Run Tests' }).click()
 
   // check results
-  await page.locator(`[title*="pass.test.ts (Passed)"]`).click()
-  await page.locator(`[title*="fail.test.ts (Failed)"]`).click()
-  await page.locator(`[title*="mix.test.ts (Failed)"]`).click()
-  await page.locator(`[title*="3/7 tests passed"]`).click()
+  await expect(page.locator(`[title*="pass.test.ts (Passed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="fail.test.ts (Failed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="mix.test.ts (Failed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="3/7 tests passed"]`)).toBeVisible()
 })
 
 test('imba', async ({ launch }) => {
+  await execa("npm", ["i"], { cwd: "./samples/imba" });
   const { page } = await launch({
     workspacePath: './samples/imba',
   })
@@ -46,7 +50,8 @@ test('imba', async ({ launch }) => {
   await page.getByRole('button', { name: 'Run Tests' }).click()
 
   // check results
-  await page.locator(`[title*="basic.test.imba (Passed)"]`).click()
-  await page.locator(`[title*="utils.imba (Passed)"]`).click()
-  await page.locator(`[title*="counter.imba (Failed)"]`).click()
+  await expect(page.locator(`[title*="5/7 tests passed"]`)).toBeVisible()
+  await expect(page.locator(`[title*="basic.test.imba (Passed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="utils.imba (Passed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="counter.imba (Failed)"]`)).toBeVisible()
 })

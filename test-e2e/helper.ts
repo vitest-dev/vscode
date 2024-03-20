@@ -2,8 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { download } from '@vscode/test-electron'
-import { _electron } from 'playwright'
-import type { Page } from 'playwright'
+import { _electron } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { test as baseTest } from 'vitest'
 
 // based on
