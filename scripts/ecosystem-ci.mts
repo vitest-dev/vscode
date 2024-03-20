@@ -11,12 +11,14 @@ async function main() {
     // pnpm
     await editJson('samples/e2e/package.json', (pkg2) => {
       pkg2.pnpm = pkg.pnpm
+      return pkg2
     })
     await $({ cwd: 'samples/e2e' })`pnpm i`
 
     // npm
     await editJson('samples/imba/package.json', (pkg2) => {
       pkg2.overrides = pkg.pnpm.overrides
+      return pkg2
     })
     await $({ cwd: 'samples/e2e' })`npm i`
   }
