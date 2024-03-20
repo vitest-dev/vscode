@@ -17,8 +17,6 @@
 - Visual Studio Code version >= 1.77.0.
 - Vitest version >= v1.4.0
 
-# Introduction
-
 ## Configuration
 
 You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
