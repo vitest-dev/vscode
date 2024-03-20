@@ -14,6 +14,9 @@ devDependencies:
   '@babel/types':
     specifier: ^7.20.7
     version: 7.23.9
+  '@playwright/test':
+    specifier: ^1.42.1
+    version: 1.42.1
   '@rauschma/stringio':
     specifier: ^1.4.0
     version: 1.4.0
@@ -110,9 +113,6 @@ devDependencies:
   picocolors:
     specifier: ^1.0.0
     version: 1.0.0
-  playwright:
-    specifier: ^1.42.1
-    version: 1.42.1
   prompts:
     specifier: ^2.4.2
     version: 2.4.2
@@ -663,6 +663,14 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@playwright/test@1.42.1:
+    resolution: {integrity: sha512-Gq9rmS54mjBL/7/MvBaNOBwbfnh7beHvS6oS4srqXFcQHpQCV1+c8JXWE8VLPyRDhgS3H8x8A7hztqI9VnwrAQ==}
+    engines: {node: '>=16'}
+    hasBin: true
+    dependencies:
+      playwright: 1.42.1
+    dev: true
 
   /@rauschma/stringio@1.4.0:
     resolution: {integrity: sha512-3uor2f/MXZkmX5RJf8r+OC3WvZVzpSme0yyL0rQDPEnatE02qRcqwEwnsgpgriEck0S/n4vWtUd6tTtrJwk45Q==}
