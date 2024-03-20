@@ -40,7 +40,7 @@ export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
 
   async function globTestFiles(vitest: Vitest, filters?: string[]) {
     const cwd = process.cwd()
-    process.chdir(vitest.config.root)
+    process.chdir(dirname(getId(vitest)))
     const files = await vitest.globTestFiles(filters)
     process.chdir(cwd)
     return files

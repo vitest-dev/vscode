@@ -26,7 +26,7 @@ export class TestRunner extends vscode.Disposable {
       this.endTestRuns()
     })
 
-    api.onWatcherRerun(() => this.startTestRun())
+    api.onWatcherRerun(files => this.startTestRun(files))
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
@@ -108,9 +108,9 @@ export class TestRunner extends vscode.Disposable {
       const testNamePatern = formatTestPattern(tests)
       const files = getTestFiles(tests)
       if (testNamePatern)
-        log.info(`Running ${files.length} files with name pattern: ${testNamePatern}`)
+        log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
-        log.info(`Running ${files.length} files`)
+        log.info(`Running ${files.length} file(s):`, files)
       await this.api.runFiles(files, testNamePatern)
     }
 
@@ -131,7 +131,7 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  private startTestRun() {
+  private startTestRun(_files: string[]) {
     // TODO: refactor to use different requests, otherwise test run doesn't mark the result value!
     const currentRequest = this.testRunRequests.values().next().value as vscode.TestRunRequest | undefined
     if (currentRequest) {

@@ -1,5 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
+import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import { basename, dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
@@ -10,12 +11,13 @@ import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
 import { resolveVitestPackage } from './api/resolve'
 import type { TestTree } from './testTree'
+import type { WorkerRunnerOptions } from './worker/types'
 
 const _require = require
 
 export class VitestReporter {
   constructor(
-    protected folderFsPath: string,
+    protected id: string,
     protected handlers: ResolvedMeta['handlers'],
   ) {}
 
@@ -35,8 +37,8 @@ export class VitestReporter {
 
   private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>>(name: K) {
     return (callback: VitestEvents[K]) => {
-      this.handlers[name]((folder, ...args) => {
-        if (folder === this.folderFsPath)
+      this.handlers[name]((id, ...args) => {
+        if (id === this.id)
           (callback as any)(...args)
       })
     }
@@ -79,11 +81,12 @@ export class VitestFolderAPI extends VitestReporter {
   constructor(
     folder: vscode.WorkspaceFolder,
     private meta: ResolvedMeta,
-    public readonly id: string,
+    id: string,
   ) {
-    super(normalize(folder.uri.fsPath), meta.handlers)
+    const normalizedId = normalize(id)
+    super(normalizedId, meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
-    this.id = normalize(id)
+    this.id = normalizedId
     // TODO: make it prettier, but still unique
     this.tag = new vscode.TestTag(this.id)
   }
@@ -271,7 +274,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
         '--require',
         pnp,
         '--experimental-loader',
-        pnpLoaders[0],
+        pathToFileURL(pnpLoaders[0]).toString(),
       ]
     : undefined
   const vitest = fork(
@@ -325,18 +328,19 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
       }
     })
     vitest.on('spawn', () => {
-      vitest.send({
+      const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
         meta: meta.map(m => ({
           vitestNodePath: m.vitestNodePath,
-          folder: normalize(m.folder.uri.fsPath),
           env: getConfig(m.folder).env || undefined,
           configFile: m.configFile,
           workspaceFile: m.workspaceFile,
           id: m.id,
         })),
         loader: pnpLoaders[0] && gte(process.version, '18.19.0') ? pnpLoaders[0] : undefined,
-      })
+      }
+
+      vitest.send(runnerOptions)
     })
   })
 }

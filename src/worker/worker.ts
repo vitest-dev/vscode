@@ -6,30 +6,16 @@ import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
 import type { BirpcEvents, BirpcMethods } from '../api/rpc'
 import { createWorkerRPC } from './rpc'
-
-interface VitestMeta {
-  folder: string
-  vitestNodePath: string
-  id: string
-  configFile?: string
-  workspaceFile?: string
-  env: Record<string, any> | undefined
-}
-
-interface RunnerOptions {
-  type: 'init'
-  meta: VitestMeta[]
-  loader?: string
-}
+import type { WorkerMeta, WorkerRunnerOptions } from './types'
 
 class VSCodeReporter implements Reporter {
   private rpc!: BirpcReturn<BirpcEvents, BirpcMethods>
   private ctx!: Vitest
-  private folder!: string
+  private id!: string
 
-  initVitest(ctx: Vitest) {
+  initVitest(ctx: Vitest, id: string) {
     this.ctx = ctx
-    this.folder = ctx.config.root
+    this.id = id
   }
 
   initRpc(rpc: BirpcReturn<BirpcEvents, BirpcMethods>) {
@@ -37,7 +23,7 @@ class VSCodeReporter implements Reporter {
   }
 
   onUserConsoleLog(log: UserConsoleLog) {
-    this.rpc.onConsoleLog(this.folder, log)
+    this.rpc.onConsoleLog(this.id, log)
   }
 
   onTaskUpdate(packs: TaskResultPack[]) {
@@ -53,29 +39,30 @@ class VSCodeReporter implements Reporter {
       })
     })
 
-    this.rpc.onTaskUpdate(this.folder, packs)
+    this.rpc.onTaskUpdate(this.id, packs)
   }
 
   onFinished(files?: File[], errors?: unknown[]) {
-    this.rpc.onFinished(this.folder, files, errors)
+    this.rpc.onFinished(this.id, files, errors)
   }
 
   onCollected(files?: File[]) {
-    this.rpc.onCollected(this.folder, files)
+    this.rpc.onCollected(this.id, files)
   }
 
   onWatcherStart(files?: File[], errors?: unknown[]) {
-    this.rpc.onWatcherStart(this.folder, files, errors)
+    this.rpc.onWatcherStart(this.id, files, errors)
   }
 
   onWatcherRerun(files: string[], trigger?: string) {
-    this.rpc.onWatcherRerun(this.folder, files, trigger)
+    this.rpc.onWatcherRerun(this.id, files, trigger)
   }
 }
 
-async function initVitest(meta: VitestMeta) {
+async function initVitest(meta: WorkerMeta) {
   const vitestMode = await import(meta.vitestNodePath) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
+  _debug('root', dirname(meta.id))
   const vitest = await vitestMode.createVitest(
     'test',
     {
@@ -95,7 +82,7 @@ async function initVitest(meta: VitestMeta) {
       },
     },
   )
-  reporter.initVitest(vitest)
+  reporter.initVitest(vitest, meta.id)
   return {
     vitest,
     reporter,
@@ -107,7 +94,7 @@ const cwd = process.cwd()
 process.on('message', async function init(message: any) {
   if (message.type === 'init') {
     process.off('message', init)
-    const data = message as RunnerOptions
+    const data = message as WorkerRunnerOptions
 
     try {
       if (data.loader)
