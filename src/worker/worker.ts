@@ -80,6 +80,21 @@ async function initVitest(meta: WorkerMeta) {
       server: {
         middlewareMode: true,
       },
+      plugins: [
+        {
+          name: 'vitest:vscode-extension',
+          configResolved(config) {
+            // stub a server so Vite doesn't start a websocket connection,
+            // because we don't need it in the extension and it messes up Vite dev command
+            config.server.hmr = {
+              server: {
+                on: () => {},
+                off: () => {},
+              } as any,
+            }
+          },
+        },
+      ],
     },
   )
   reporter.initVitest(vitest, meta.id)
