@@ -1,9 +1,17 @@
+/* eslint-disable no-console */
+
 import { window } from 'vscode'
 
 const _log = window.createOutputChannel('Vitest')
 export const log = {
+  worker: (type: 'info' | 'error', ...args: any[]) => {
+    if (typeof args.at(-1) === 'string' && args.at(-1).endsWith('\n'))
+      args[args.length - 1] = args.at(-1).slice(0, process.platform === 'win32' ? -2 : -1)
+
+    console[type]('[Worker]', ...args)
+    _log.appendLine(`[Worker] ${args.join(' ')}`)
+  },
   info: (...args: any[]) => {
-    // eslint-disable-next-line no-console
     console.log(...args)
     const time = new Date().toLocaleTimeString()
     _log.appendLine(`[INFO ${time}] ${args.join(' ')}`)

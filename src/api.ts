@@ -84,6 +84,7 @@ export class VitestFolderAPI extends VitestReporter {
     super(normalize(folder.uri.fsPath), meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
     this.id = normalize(id)
+    // TODO: make it prettier, but still unique
     this.tag = new vscode.TestTag(this.id)
   }
 
@@ -299,7 +300,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
     })
     vitest.on('message', function ready(message: any) {
       if (message.type === 'debug')
-        log.info('[WORKER]', ...message.args)
+        log.worker('info', ...message.args)
 
       if (message.type === 'ready') {
         vitest.off('message', ready)
@@ -347,8 +348,8 @@ export async function createVitestProcess(tree: TestTree, meta: VitestMeta[]): P
 
   log.info('[API]', `Vitest process ${vitest.pid} created`)
 
-  vitest.stdout?.on('data', d => log.info('[Worker]', d.toString()))
-  vitest.stderr?.on('data', d => log.error('[Worker]', d.toString()))
+  vitest.stdout?.on('data', d => log.worker('info', d.toString()))
+  vitest.stderr?.on('data', d => log.worker('error', d.toString()))
 
   const { handlers, api } = createVitestRpc(vitest)
 

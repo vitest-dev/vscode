@@ -55,11 +55,10 @@ export class TestRunner extends vscode.Disposable {
     })
 
     api.onFinished((files = []) => {
-      this.forEachTask(files, (task, data) => {
-        if (!task.result)
-          this.testRun?.skipped(data.item)
-        else
-          this.markResult(data.item, task.result, task)
+      files.forEach((file) => {
+        const data = this.tree.getTestDataByTask(file)
+        if (data)
+          this.markResult(data.item, file.result, file)
       })
 
       this.endTestRuns()
