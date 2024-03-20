@@ -1,5 +1,11 @@
 import { defineConfig } from 'vitest/config'
 
+// to open playwright inspector either run with `PWDEBUG`
+//   PWDEBUG=1 pnpm test-e2e
+//
+// or use `page.pause` inside a test code
+//   await page.pase()
+
 export default defineConfig({
   test: {
     // use Infinity on local for `page.pause()`
