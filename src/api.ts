@@ -17,7 +17,7 @@ const _require = require
 
 export class VitestReporter {
   constructor(
-    protected id: string,
+    public readonly id: string,
     protected handlers: ResolvedMeta['handlers'],
   ) {}
 
@@ -86,7 +86,6 @@ export class VitestFolderAPI extends VitestReporter {
     const normalizedId = normalize(id)
     super(normalizedId, meta.handlers)
     WEAKMAP_API_FOLDER.set(this, folder)
-    this.id = normalizedId
     // TODO: make it prettier, but still unique
     this.tag = new vscode.TestTag(this.id)
   }
