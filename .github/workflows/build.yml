@@ -29,19 +29,15 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
 
-      # see: https://github.com/microsoft/vscode-test/blob/main/sample/azure-pipelines.yml
-      - name: xvfb
+      - name: test
         run: |
-          /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-          echo ">>> Started xvfb"
+          xvfb-run pnpm test
 
-      - run: pnpm test
-        env:
-          DISPLAY: ':99'
-
-      - run: pnpm test-e2e --retry 2
-        env:
-          DISPLAY: ':99'
+      - name: test-e2e
+        run: |
+          pnpm -C samples/e2e i
+          npm -C samples/imba i
+          xvfb-run pnpm test-e2e --retry 2
 
       - uses: actions/upload-artifact@v3
         if: always()
