@@ -19,11 +19,11 @@
 
 # Introduction
 
-You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
-
 ## Configuration
 
-- `vitest.packagePath`: The path to a custom Vitest's `package.json` file. It will be used to resolve Vitest API paths.
+You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
+
+- `vitest.packagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix. If the extension cannot find Vitest, please open an issue.
 - `vitest.nodeExecutable`: This extension spawns another process and will use this value as `execPath` argument.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to
   `process.env`
