@@ -13,7 +13,7 @@ async function main() {
       pkg2.pnpm = pkg.pnpm
       return pkg2
     })
-    await $({ cwd: 'samples/e2e' })`pnpm i`
+    await $({ cwd: 'samples/e2e' })`pnpm i --no-frozen-lockfile`
 
     // npm
     await editJson('samples/imba/package.json', (pkg2) => {
