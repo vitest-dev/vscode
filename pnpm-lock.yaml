@@ -74,6 +74,9 @@ devDependencies:
   eslint:
     specifier: ^8.56.0
     version: 8.56.0
+  execa:
+    specifier: ^8.0.1
+    version: 8.0.1
   fast-glob:
     specifier: ^3.3.2
     version: 3.3.2

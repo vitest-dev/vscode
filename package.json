@@ -107,6 +107,8 @@
     "test": "vscode-test",
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
     "test-e2e": "vitest --root test-e2e",
+    "ecosystem-ci:build": "pnpm compile",
+    "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
     "typecheck": "tsc -b ./ ./test ./test-e2e",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
@@ -135,6 +137,7 @@
     "chai": "^5.1.0",
     "changelogithub": "^0.13.3",
     "eslint": "^8.56.0",
+    "execa": "^8.0.1",
     "fast-glob": "^3.3.2",
     "flatted": "^3.2.9",
     "fs-extra": "^10.0.1",
