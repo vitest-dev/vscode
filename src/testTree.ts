@@ -107,7 +107,7 @@ export class TestTree extends vscode.Disposable {
 
     const fileUri = vscode.Uri.file(file)
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
-    const label = project ? `|${project}| ${basename(file)}` : basename(file)
+    const label = project ? `[${project}] ${basename(file)}` : basename(file)
     const testFileItem = this.controller.createTestItem(
       fileId,
       label,
