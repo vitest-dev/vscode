@@ -1,7 +1,7 @@
 import { beforeAll } from 'vitest'
+import { execa } from 'execa'
+import { expect } from '@playwright/test'
 import { test } from './helper'
-import { execa } from "execa"
-import { expect } from "@playwright/test"
 
 // Vitst extension doesn't work with CI flag
 beforeAll(() => {
@@ -10,7 +10,7 @@ beforeAll(() => {
 })
 
 test('basic', async ({ launch }) => {
-  await execa("pnpm", ["i"], { cwd: "./samples/e2e" });
+  await execa('pnpm', ['i'], { cwd: './samples/e2e' })
   const { page } = await launch({
     workspacePath: './samples/e2e',
   })
@@ -33,7 +33,7 @@ test('basic', async ({ launch }) => {
 })
 
 test('imba', async ({ launch }) => {
-  await execa("npm", ["i"], { cwd: "./samples/imba" });
+  await execa('npm', ['i'], { cwd: './samples/imba' })
   const { page } = await launch({
     workspacePath: './samples/imba',
   })
