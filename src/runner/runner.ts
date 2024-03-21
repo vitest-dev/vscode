@@ -9,28 +9,7 @@ import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
 import { type DebugSessionAPI, startDebugSession } from '../debug/startSession'
-
-const WEAK_TEST_RUNS_DATA = new WeakMap<vscode.TestRun, TestRunData>()
-
-class TestRunData {
-  private constructor(
-    public readonly run: vscode.TestRun,
-    public readonly file: string,
-    public readonly request: vscode.TestRunRequest,
-  ) {}
-
-  static register(
-    run: vscode.TestRun,
-    file: string,
-    request: vscode.TestRunRequest,
-  ) {
-    return WEAK_TEST_RUNS_DATA.set(run, new TestRunData(run, file, request))
-  }
-
-  static get(run: vscode.TestRun) {
-    return WEAK_TEST_RUNS_DATA.get(run)!
-  }
-}
+import { TestRunData } from './testRunData'
 
 export class TestRunner extends vscode.Disposable {
   private debug?: DebugSessionAPI
