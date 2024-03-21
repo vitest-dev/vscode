@@ -48,14 +48,14 @@ class TaskName {
   ) {}
 
   getTestNamePattern() {
-    const patterns = [this.data.item.label]
+    const patterns = [escapeRegex(this.data.item.label)]
     let iter = this.data.item.parent
     while (iter) {
       // if we reached test file, then stop
       const data = getTestData(iter)
       if (data instanceof TestFile || data instanceof TestFolder)
         break
-      patterns.push(iter.label)
+      patterns.push(escapeRegex(iter.label))
       iter = iter.parent
     }
     // vitest's test task name starts with ' ' of root suite
@@ -100,4 +100,8 @@ export class TestSuite {
   getTestNamePattern() {
     return `^${this.nameResolver.getTestNamePattern()}`
   }
+}
+
+function escapeRegex(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
