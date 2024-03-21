@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
 import { relative } from 'pathe'
-import type { VitestMeta } from './api'
+import type { VitestPackage } from './api'
 
 export function noop() {}
 
-export async function createVitestWorkspaceFile(vitest: VitestMeta[]) {
+export async function createVitestWorkspaceFile(vitest: VitestPackage[]) {
   const folders = new Set(vitest.map(x => x.folder))
   const encoder = new TextEncoder()
   const promises = [...folders].map(async (folder) => {

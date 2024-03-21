@@ -65,6 +65,9 @@ export class VitestAPI {
 
   async dispose() {
     this.forEach(api => api.dispose())
+    this.meta.packages.forEach((pkg) => {
+      delete require.cache[pkg.vitestPackageJsonPath]
+    })
     try {
       await this.meta.rpc.close()
     }
@@ -132,7 +135,7 @@ export class VitestFolderAPI extends VitestReporter {
   }
 }
 
-export async function resolveVitestAPI(tree: TestTree, meta: VitestMeta[]) {
+export async function resolveVitestAPI(tree: TestTree, meta: VitestPackage[]) {
   const vitest = await createVitestProcess(tree, meta)
   const apis = meta.map(({ folder, id }) =>
     new VitestFolderAPI(folder, vitest, id),
@@ -143,6 +146,7 @@ export async function resolveVitestAPI(tree: TestTree, meta: VitestMeta[]) {
 interface ResolvedMeta {
   rpc: VitestRPC
   process: ChildProcess
+  packages: VitestPackage[]
   handlers: {
     onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: BirpcEvents['onTaskUpdate']) => void
@@ -159,9 +163,10 @@ function nonNullable<T>(value: T | null | undefined): value is T {
   return value != null
 }
 
-export interface VitestMeta {
+export interface VitestPackage {
   folder: vscode.WorkspaceFolder
   vitestNodePath: string
+  vitestPackageJsonPath: string
   // path to a config file or a workspace config file
   id: string
   configFile?: string
@@ -188,6 +193,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
       folder,
       id: normalize(configOrWorkspaceFile.fsPath),
       vitestNodePath: vitest.vitestNodePath,
+      vitestPackageJsonPath: vitest.vitestPackageJsonPath,
       version: 'pnp',
       loader: vitest.pnp.loaderPath,
       pnp: vitest.pnp.pnpPath,
@@ -201,18 +207,20 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
       vscode.window.showWarningMessage(warning)
     else
       log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
+    delete require.cache[vitest.vitestPackageJsonPath]
     return null
   }
 
   return {
     folder,
     id: normalize(configOrWorkspaceFile.fsPath),
+    vitestPackageJsonPath: vitest.vitestPackageJsonPath,
     vitestNodePath: vitest.vitestNodePath,
     version: pkg.version,
   }
 }
 
-export async function resolveVitestPackages(showWarning: boolean): Promise<VitestMeta[]> {
+export async function resolveVitestPackages(showWarning: boolean): Promise<VitestPackage[]> {
   const vitestWorkspaces = await vscode.workspace.findFiles(workspaceGlob, '**/node_modules/**')
 
   if (vitestWorkspaces.length) {
@@ -238,7 +246,7 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
     return acc
   }, {})
 
-  const resolvedMeta: VitestMeta[] = []
+  const resolvedMeta: VitestPackage[] = []
 
   for (const [_, configFiles] of Object.entries(configsByFolder)) {
     // vitest config always overrides vite config - if there is a Vitest config, we assume vite was overriden,
@@ -259,7 +267,7 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
   return resolvedMeta
 }
 
-function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
+function createChildVitestProcess(tree: TestTree, meta: VitestPackage[]) {
   const pnpLoaders = [
     ...new Set(meta.map(meta => meta.loader).filter(Boolean) as string[]),
   ]
@@ -289,7 +297,7 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
         // https://github.com/vitest-dev/vitest/blob/5c7e9ca05491aeda225ce4616f06eefcd068c0b4/packages/vitest/src/node/cli/cli-api.ts
         TEST: 'true',
         VITEST: 'true',
-        NODE_ENV: process.env.NODE_ENV ?? 'true',
+        NODE_ENV: getConfig().env?.NODE_ENV ?? process.env.NODE_ENV ?? 'true',
       },
       stdio: 'overlapped',
       cwd: pnp ? dirname(pnp) : undefined,
@@ -344,10 +352,10 @@ function createChildVitestProcess(tree: TestTree, meta: VitestMeta[]) {
   })
 }
 
-export async function createVitestProcess(tree: TestTree, meta: VitestMeta[]): Promise<ResolvedMeta> {
-  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${x.folder.name})`).join(', ')}`)
+export async function createVitestProcess(tree: TestTree, packages: VitestPackage[]): Promise<ResolvedMeta> {
+  log.info('[API]', `Running Vitest: ${packages.map(x => `v${x.version} (${x.id})`).join(', ')}`)
 
-  const vitest = await createChildVitestProcess(tree, meta)
+  const vitest = await createChildVitestProcess(tree, packages)
 
   log.info('[API]', `Vitest process ${vitest.pid} created`)
 
@@ -360,5 +368,6 @@ export async function createVitestProcess(tree: TestTree, meta: VitestMeta[]): P
     rpc: api,
     process: vitest,
     handlers,
+    packages,
   }
 }
