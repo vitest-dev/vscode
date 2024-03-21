@@ -1,0 +1,13 @@
+{
+  "name": "@vitest/vscode-sample-yarn-pnp",
+  "type": "module",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "yarn@4.1.1",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^1.4.0"
+  }
+}
