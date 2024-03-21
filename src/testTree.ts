@@ -128,6 +128,7 @@ export class TestTree extends vscode.Disposable {
       testFileItem,
       normalizedFile,
       api,
+      project,
     )
 
     return testFileItem

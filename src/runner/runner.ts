@@ -14,7 +14,7 @@ export class TestRunner extends vscode.Disposable {
   private testRun?: vscode.TestRun
   private debug?: DebugSessionAPI
 
-  private testRunRequests = new Set<vscode.TestRunRequest>()
+  private testRunRequests = new Map<vscode.TestRunRequest, vscode.TestRun[]>()
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -91,14 +91,16 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    this.testRunRequests.add(request)
+    this.testRunRequests.set(request, [])
+
     token.onCancellationRequested(() => {
-      this.api.cancelRun()
+      const files = getTestFiles(request.include || [])
+      this.api.cancelRun(files, request.continuous)
+      this.testRunRequests.get(request)?.forEach(run => run.end())
       this.testRunRequests.delete(request)
-      this.endTestRuns()
     })
 
-    const tests = [...this.testRunRequests.values()].flatMap(r => r.include || [])
+    const tests = [...this.testRunRequests.keys()].flatMap(r => r.include || [])
 
     if (!tests.length) {
       log.info(`Running all tests in ${basename(this.api.workspaceFolder.uri.fsPath)}`)

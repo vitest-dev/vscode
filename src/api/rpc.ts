@@ -4,10 +4,10 @@ import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 
 export interface BirpcMethods {
-  getFiles: (configFle: string) => Promise<[project: string, file: string][]>
-  collectTests: (configFile: string, testFile: string) => Promise<void>
-  cancelRun: (configFile: string) => Promise<void>
-  runTests: (configFile: string, files?: string[], testNamePattern?: string) => Promise<void>
+  getFiles: (id: string) => Promise<[project: string, file: string][]>
+  collectTests: (id: string, testFile: string) => Promise<void>
+  cancelRun: (id: string, files: string[], continuous?: boolean) => Promise<void>
+  runTests: (id: string, files?: string[], testNamePattern?: string, continuous?: boolean) => Promise<void>
   isTestFile: (file: string) => Promise<boolean>
 
   startInspect: (port: number) => void

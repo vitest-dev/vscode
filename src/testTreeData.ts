@@ -29,14 +29,16 @@ export class TestFile {
     public readonly item: vscode.TestItem,
     public readonly filepath: string,
     public readonly api: VitestFolderAPI,
+    public readonly project: string,
   ) {}
 
   public static register(
     item: vscode.TestItem,
     filepath: string,
     api: VitestFolderAPI,
+    project: string,
   ) {
-    return addTestData(item, new TestFile(item, filepath, api))
+    return addTestData(item, new TestFile(item, filepath, api, project))
   }
 }
 

@@ -122,8 +122,8 @@ export class VitestFolderAPI extends VitestReporter {
     this.handlers.clearListeners()
   }
 
-  async cancelRun() {
-    await this.meta.rpc.cancelRun(this.id)
+  async cancelRun(files: string[], continuous?: boolean) {
+    await this.meta.rpc.cancelRun(this.id, files, continuous)
   }
 
   stopInspect() {
