@@ -6,9 +6,12 @@ import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 export interface BirpcMethods {
   getFiles: (id: string) => Promise<[project: string, file: string][]>
   collectTests: (id: string, testFile: string) => Promise<void>
-  cancelRun: (id: string, files: string[], continuous?: boolean) => Promise<void>
-  runTests: (id: string, files?: string[], testNamePattern?: string, continuous?: boolean) => Promise<void>
+  cancelRun: (id: string) => Promise<void>
+  runTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
   isTestFile: (file: string) => Promise<boolean>
+
+  watchTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
+  unwatchTests: (id: string) => Promise<void>
 
   startInspect: (port: number) => void
   stopInspect: () => void

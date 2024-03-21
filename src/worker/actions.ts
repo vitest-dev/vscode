@@ -5,31 +5,62 @@ import type { BirpcMethods } from '../api/rpc'
 const _require = require
 
 export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
-  const continuousFiles = new Set<string>()
-  let continuesFullRun = false
-
   let debuggerEnabled = false
   const vitestById = vitest.reduce((acc, vitest) => {
     acc[getId(vitest)] = vitest
     return acc
   }, {} as Record<string, Vitest>)
+
+  const watchStateById: Record<string, {
+    files: string[]
+    testNamePattern: string | undefined
+    watchEveryFile: boolean
+  } | null> = {}
+
+  vitest.forEach((vitest) => {
+    const id = getId(vitest)
+    // @ts-expect-error modifying a private property
+    const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
+    // @ts-expect-error modifying a private property
+    vitest.scheduleRerun = async function (files: string[]) {
+      // disable reruning on changes outside of the test files for now
+      const tests = this.changedTests
+      for (const file of files) {
+        if (!tests.has(file))
+          return
+      }
+      const state = watchStateById[id]
+      // no continuous files for this Vitest instance, just collect tests
+      if (!state) {
+        vitest.configOverride.testNamePattern = /$a/
+        return await originalScheduleRerun.call(this, files)
+      }
+
+      vitest.configOverride.testNamePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
+      if (state.watchEveryFile)
+        return originalScheduleRerun.call(this, files)
+
+      const allowedTests = state.files
+      const testFilesToRun = new Set(tests)
+      // remove tests that are not watched
+      tests.forEach((file) => {
+        if (!allowedTests.includes(file))
+          testFilesToRun.delete(file)
+      })
+
+      // only collect tests, but don't run them
+      if (!testFilesToRun.size)
+        vitest.configOverride.testNamePattern = /$a/
+
+      return originalScheduleRerun.call(this, files)
+    }
+  })
+
   const vitestEntries = Object.entries(vitestById)
 
   function getId(vitest: Vitest) {
     return vitest.server.config.configFile || vitest.config.workspace || vitest.config.root
   }
-
-  function disableWatch(vitest: Vitest) {
-    vitest.watchTests(['/non-existing-name$^/'])
-  }
-
-  function watchEverything(vitest: Vitest) {
-    vitest.watchTests([])
-  }
-
-  // start by disabling all watchers
-  for (const instance of vitest)
-    disableWatch(instance)
 
   async function rerunTests(vitest: Vitest, files: string[]) {
     await vitest.report('onWatcherRerun', files)
@@ -66,48 +97,37 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
   }
 
   return {
+    async watchTests(id: string, files, testNamePattern) {
+      const vitest = vitestById[id]
+      if (!vitest)
+        throw new Error(`Vitest instance not found with id: ${id}`)
+      watchStateById[id] = {
+        files: files || [],
+        watchEveryFile: !files,
+        testNamePattern,
+      }
+    },
+    async unwatchTests(id) {
+      const vitest = vitestById[id]
+      if (!vitest)
+        throw new Error(`Vitest instance not found with id: ${id}`)
+      watchStateById[id] = null
+    },
     async collectTests(id: string, testFile: string) {
       const vitest = vitestById[id]
       await runTests(vitest, [testFile], '$a')
       vitest.configOverride.testNamePattern = undefined
     },
-    async cancelRun(id: string, files: string[], continuous) {
+    async cancelRun(id: string) {
       const vitest = vitestById[id]
       if (!vitest)
         throw new Error(`Vitest instance with id "${id}" not found.`)
-
-      if (continuous) {
-        if (!files.length)
-          continuesFullRun = false
-        else
-          files.forEach(file => continuousFiles.delete(file))
-      }
-
-      // we put a non existing file to avoid watching all files
-      if (!continuesFullRun && !continuousFiles.size)
-        disableWatch(vitest)
-      else if (continuesFullRun)
-        watchEverything(vitest)
-      else
-        vitest.watchTests(Array.from(continuousFiles))
-
       await vitest.cancelCurrentRun('keyboard-input')
     },
-    async runTests(id, files, testNamePattern, continuous) {
+    async runTests(id, files, testNamePattern) {
       const vitest = vitestById[id]
       if (!vitest)
-        throw new Error(`Vitest instance not found for config: ${id}`)
-
-      if (continuous) {
-        if (!files) {
-          continuesFullRun = true
-          watchEverything(vitest)
-        }
-        else {
-          files.forEach(file => continuousFiles.add(file))
-          vitest.watchTests(Array.from(continuousFiles))
-        }
-      }
+        throw new Error(`Vitest instance not found for id: ${id}`)
 
       if (testNamePattern) {
         await runTests(vitest, files || vitest.state.getFilepaths(), testNamePattern)

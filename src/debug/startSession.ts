@@ -62,7 +62,7 @@ export async function startDebugSession(
       mainSession = undefined
       api.stopInspect()
       // Vitest has 60s of waiting for RPC, and it never resolves when running with debugger, so we manually stop all runs
-      runner.endTestRuns()
+      // runner.endTestRuns()
     }, 100)
   })
 

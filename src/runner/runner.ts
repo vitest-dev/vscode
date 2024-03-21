@@ -36,9 +36,7 @@ export class TestRunner extends vscode.Disposable {
   private debug?: DebugSessionAPI
 
   private continuousRequests = new Set<vscode.TestRunRequest>()
-  private simpleRequests = new Set<vscode.TestRunRequest>()
-
-  private testRunRequests = new Map<vscode.TestRunRequest, vscode.TestRun[]>()
+  private simpleTestRunRequest: vscode.TestRunRequest | null = null
 
   // TODO: doesn't support "projects" - run every project because Vitest doesn't support
   // granular filters yet (coming in Vitest 1.4.1)
@@ -51,7 +49,10 @@ export class TestRunner extends vscode.Disposable {
   ) {
     super(() => {
       api.clearListeners()
-      this.endTestRuns()
+      this.testRunsByFile.clear()
+      this.simpleTestRunRequest = null
+      this.continuousRequests.clear()
+      this.api.cancelRun()
     })
 
     api.onWatcherRerun(files => this.startTestRun(files))
@@ -128,13 +129,41 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    this.testRunRequests.set(request, [])
+    if (request.continuous) {
+      // TODO: call API to mark files as continuous
+
+      this.continuousRequests.add(request)
+
+      token.onCancellationRequested(() => {
+        // TODO
+        this.continuousRequests.delete(request)
+        if (!this.continuousRequests.size)
+          this.api.unwatchTests()
+      })
+
+      if (!request.include?.length) {
+        await this.api.watchTests()
+      }
+      else {
+        const include = [...this.continuousRequests].map(r => r.include || []).flat()
+        const files = getTestFiles(include)
+        const testNamePatern = formatTestPattern(include)
+        await this.api.watchTests(files, testNamePatern)
+      }
+
+      return
+    }
+
+    // TODO: stagger this function call to avoid running all tests at once
+
+    this.simpleTestRunRequest = request
 
     token.onCancellationRequested(() => {
-      this.endTestRuns(request)
+      this.simpleTestRunRequest = null
+      // TODO
     })
 
-    const tests = [...this.testRunRequests.keys()].flatMap(r => r.include || [])
+    const tests = request.include || []
 
     if (!tests.length) {
       log.info(`Running all tests in ${basename(this.api.workspaceFolder.uri.fsPath)}`)
@@ -147,11 +176,10 @@ export class TestRunner extends vscode.Disposable {
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
         log.info(`Running ${files.length} file(s):`, files)
-      await this.api.runFiles(files, testNamePatern, request.continuous)
+      await this.api.runFiles(files, testNamePatern)
     }
 
-    if (!request.continuous)
-      this.endTestRuns(request)
+    this.simpleTestRunRequest = null
   }
 
   private enqueueRequest(testRun: vscode.TestRun, request: vscode.TestRunRequest) {
@@ -213,21 +241,6 @@ export class TestRunner extends vscode.Disposable {
     return false
   }
 
-  private getTestRequestsByFile(file: string) {
-    const requests: vscode.TestRunRequest[] = []
-
-    this.testRunRequests.forEach((_, request) => {
-      if (!request.include) {
-        requests.push(request)
-        return
-      }
-
-      if (this.isFileIncluded(file, request.include))
-        requests.push(request)
-    })
-    return requests
-  }
-
   private getTestFilesInFolder(path: string) {
     function getFiles(folder: vscode.TestItem): string[] {
       const files: string[] = []
@@ -245,28 +258,42 @@ export class TestRunner extends vscode.Disposable {
     return getFiles(folder)
   }
 
-  private startTestRun(files: string[]) {
-    const request = new vscode.TestRunRequest() // ? create a single request instead for all continuous runs ?
+  private createContinuousRequest() {
+    if (!this.continuousRequests.size)
+      return null
+    const include = []
+    let primaryRequest: vscode.TestRunRequest | null = null
+    for (const request of this.continuousRequests) {
+      if (!request.include?.length)
+        return request
+      if (!primaryRequest)
+        primaryRequest = request
+      include.push(...request.include)
+    }
+    return new vscode.TestRunRequest(
+      include,
+      undefined,
+      primaryRequest?.profile,
+      true,
+    )
+  }
+
+  private startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
+    const request = primaryRequest || this.simpleTestRunRequest || this.createContinuousRequest()
+
+    if (!request)
+      return
 
     for (const file of files) {
       if (file[file.length - 1] === '/') {
         const files = this.getTestFilesInFolder(file)
-        this.startTestRun(files)
+        this.startTestRun(files, request)
         continue
       }
       const testRun = this.testRunsByFile.get(file)
       if (testRun)
         continue
-      const requests = this.getTestRequestsByFile(file)
-      if (requests.length > 1)
-        log.info('Multiple test run requests for a single file', file)
-      // it's possible to have no requests when collecting tests
-      if (!requests.length) {
-        log.info('No test run requests for file', file)
-        continue
-      }
 
-      const request = requests[0]
       const base = basename(file)
       const dir = basename(dirname(file))
       const name = `${dir}${path.sep}${base}`
@@ -275,9 +302,6 @@ export class TestRunner extends vscode.Disposable {
       TestRunData.register(run, file, request)
 
       this.testRunsByFile.set(file, run)
-      const cachedRuns = this.testRunRequests.get(request) || []
-      cachedRuns.push(run)
-      this.testRunRequests.set(request, cachedRuns)
       // this.enqueueRequest(run, request)
     }
   }
@@ -285,35 +309,7 @@ export class TestRunner extends vscode.Disposable {
   public endTestRun(run: vscode.TestRun) {
     const data = TestRunData.get(run)
     this.testRunsByFile.delete(data.file)
-    const requestRuns = this.testRunRequests.get(data.request)
-    if (requestRuns)
-      requestRuns.splice(requestRuns.indexOf(run), 1)
     run.end()
-  }
-
-  public endTestRuns(request?: vscode.TestRunRequest) {
-    if (request) {
-      this.testRunRequests.get(request)?.forEach((run) => {
-        const data = TestRunData.get(run)
-        this.testRunsByFile.delete(data.file)
-        run.end()
-      })
-      this.testRunRequests.delete(request)
-      const files = getTestFiles(request.include || [])
-      this.api.cancelRun(files, request.continuous)
-    }
-    else {
-      this.testRunRequests.forEach((runs, request) => {
-        const files = getTestFiles(request.include || [])
-        this.api.cancelRun(files, request.continuous)
-        runs.forEach((run) => {
-          const data = TestRunData.get(run)
-          this.testRunsByFile.delete(data.file)
-          run.end()
-        })
-      })
-      this.testRunRequests.clear()
-    }
   }
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {

@@ -105,8 +105,8 @@ export class VitestFolderAPI extends VitestReporter {
     return this.meta.rpc.isTestFile(file)
   }
 
-  async runFiles(files?: string[], testNamePatern?: string, continuous?: boolean) {
-    await this.meta.rpc.runTests(this.id, files?.map(normalize), testNamePatern, continuous)
+  async runFiles(files?: string[], testNamePatern?: string) {
+    await this.meta.rpc.runTests(this.id, files?.map(normalize), testNamePatern)
   }
 
   getFiles() {
@@ -122,8 +122,16 @@ export class VitestFolderAPI extends VitestReporter {
     this.handlers.clearListeners()
   }
 
-  async cancelRun(files: string[], continuous?: boolean) {
-    await this.meta.rpc.cancelRun(this.id, files, continuous)
+  async cancelRun() {
+    await this.meta.rpc.cancelRun(this.id)
+  }
+
+  async watchTests(files?: string[], testNamePattern?: string) {
+    await this.meta.rpc.watchTests(this.id, files?.map(normalize), testNamePattern)
+  }
+
+  async unwatchTests() {
+    await this.meta.rpc.unwatchTests(this.id)
   }
 
   stopInspect() {
