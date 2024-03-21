@@ -36,6 +36,10 @@ export class TestTree extends vscode.Disposable {
     })
   }
 
+  public getFileTestItems(uri: vscode.Uri) {
+    return this.testItemsByFile.get(normalize(uri.fsPath)) || []
+  }
+
   public reset(workspaceFolders: vscode.WorkspaceFolder[]) {
     this.folderItems.clear()
     this.testItemsByFile.clear()

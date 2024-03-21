@@ -34,7 +34,7 @@ class VitestExtension {
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
     this.testController.refreshHandler = () => this.defineTestProfiles(true).catch(() => {})
-    this.testController.resolveHandler = item => this.resolveTest(item)
+    this.testController.resolveHandler = item => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
@@ -138,9 +138,16 @@ class VitestExtension {
       if (!this.runProfiles.has(id))
         profile.dispose()
     }
+
+    // collect tests inside a test file
+    vscode.window.visibleTextEditors.forEach(async (editor) => {
+      const testItems = this.testTree.getFileTestItems(editor.document.uri)
+      for (const item of testItems)
+        await this.resolveTestFile(item)
+    })
   }
 
-  private async resolveTest(item?: vscode.TestItem) {
+  private async resolveTestFile(item?: vscode.TestItem) {
     if (!item)
       return
     await this.testTree.discoverFileTests(item)
