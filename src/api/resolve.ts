@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url'
+import { existsSync } from 'node:fs'
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
@@ -38,6 +39,8 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
 
 export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFolder) {
   const customPackagePath = getConfig(folder).vitestPackagePath
+  if (existsSync(`${cwd}/.pnp.cjs`))
+    return null
   if (customPackagePath && !customPackagePath.endsWith('package.json'))
     throw new Error(`"vitest.vitestPackagePath" must point to a package.json file, instead got: ${customPackagePath}`)
   try {
@@ -56,10 +59,10 @@ export function resolveVitestPnpPackagePath(folder: vscode.WorkspaceFolder) {
       paths: [folder.uri.fsPath],
     })
     const pnp = _require(pnpPath)
-    const vitestPath = pnp.resolveToUnqualified(
+    const vitestPath = pnp.resolveVirtual(pnp.resolveToUnqualified(
       'vitest/package.json',
       folder.uri.fsPath,
-    ) as string
+    ))
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
         paths: [folder.uri.fsPath],

@@ -77,3 +77,24 @@ describe('continuous testing', () => {
     ])
   })
 })
+
+test('yarn-pnp', async ({ launch }) => {
+  const { page } = await launch({
+    workspacePath: './samples/yarn-pnp',
+  })
+
+  // open test explorer
+  await page.getByRole('tab', { name: 'Testing' }).locator('a').click()
+
+  // open nested folders
+  await page.getByText(/^test$/).click()
+
+  // run tests
+  await page.getByRole('button', { name: 'Run Tests' }).click()
+
+  // check results
+  await expect(page.locator(`[title*="3/7 tests passed"]`)).toBeVisible()
+  await expect(page.locator(`[title*="pass.test.ts (Passed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="fail.test.ts (Failed)"]`)).toBeVisible()
+  await expect(page.locator(`[title*="mix.test.ts (Failed)"]`)).toBeVisible()
+})

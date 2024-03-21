@@ -8,7 +8,10 @@ import { VSCodeReporter } from './reporter'
 import { Vitest } from './vitest'
 
 async function initVitest(meta: WorkerMeta) {
-  const vitestModule = await import(meta.vitestNodePath) as typeof import('vitest/node')
+  if (process.versions.pnp)
+    meta.vitestNodePath = 'vitest/node'
+
+  const vitestModule = await import(meta.vitestNodePath)
   const reporter = new VSCodeReporter(meta)
   const vitest = await vitestModule.createVitest(
     'test',
@@ -61,7 +64,7 @@ process.on('message', async function init(message: any) {
     const data = message as WorkerRunnerOptions
 
     try {
-      if (data.loader)
+      if (!process.versions.pnp && data.loader)
         register(data.loader)
       const errors = []
 
