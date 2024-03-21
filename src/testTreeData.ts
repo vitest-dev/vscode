@@ -69,12 +69,13 @@ export class TestCase {
 
   private constructor(
     public readonly item: vscode.TestItem,
+    public readonly file: TestFile,
   ) {
     this.nameResolver = new TaskName(this)
   }
 
-  public static register(item: vscode.TestItem) {
-    return addTestData(item, new TestCase(item))
+  public static register(item: vscode.TestItem, file: TestFile) {
+    return addTestData(item, new TestCase(item, file))
   }
 
   getTestNamePattern() {
@@ -87,12 +88,13 @@ export class TestSuite {
 
   private constructor(
     public readonly item: vscode.TestItem,
+    public readonly file: TestFile,
   ) {
     this.nameResolver = new TaskName(this)
   }
 
-  public static register(item: vscode.TestItem) {
-    return addTestData(item, new TestSuite(item))
+  public static register(item: vscode.TestItem, file: TestFile) {
+    return addTestData(item, new TestSuite(item, file))
   }
 
   getTestNamePattern() {

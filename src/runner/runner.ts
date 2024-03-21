@@ -1,20 +1,48 @@
-import path from 'node:path'
+import path, { normalize } from 'node:path'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
-import { basename, normalize } from 'pathe'
-import { type TestData, TestFolder, getTestData } from '../testTreeData'
+import { basename, dirname } from 'pathe'
+import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
 import { type DebugSessionAPI, startDebugSession } from '../debug/startSession'
 
+const WEAK_TEST_RUNS_DATA = new WeakMap<vscode.TestRun, TestRunData>()
+
+class TestRunData {
+  private constructor(
+    public readonly run: vscode.TestRun,
+    public readonly file: string,
+    public readonly request: vscode.TestRunRequest,
+  ) {}
+
+  static register(
+    run: vscode.TestRun,
+    file: string,
+    request: vscode.TestRunRequest,
+  ) {
+    return WEAK_TEST_RUNS_DATA.set(run, new TestRunData(run, file, request))
+  }
+
+  static get(run: vscode.TestRun) {
+    return WEAK_TEST_RUNS_DATA.get(run)!
+  }
+}
+
 export class TestRunner extends vscode.Disposable {
-  private testRun?: vscode.TestRun
   private debug?: DebugSessionAPI
 
+  private continuousRequests = new Set<vscode.TestRunRequest>()
+  private simpleRequests = new Set<vscode.TestRunRequest>()
+
   private testRunRequests = new Map<vscode.TestRunRequest, vscode.TestRun[]>()
+
+  // TODO: doesn't support "projects" - run every project because Vitest doesn't support
+  // granular filters yet (coming in Vitest 1.4.1)
+  private testRunsByFile = new Map<string, vscode.TestRun>()
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -35,7 +63,12 @@ export class TestRunner extends vscode.Disposable {
           log.error('Cannot find task during onTaskUpdate', testId)
           return
         }
-        this.markResult(test.item, result)
+        const testRun = this.getTestRunByData(test)
+        if (!testRun) {
+          log.error('Cannot find test run for task', test.item.label)
+          return
+        }
+        this.markResult(testRun, test.item, result)
       })
     })
 
@@ -43,31 +76,35 @@ export class TestRunner extends vscode.Disposable {
       if (!files)
         return
       files.forEach(file => this.tree.collectFile(this.api, file))
-      const run = this.testRun
-      if (!run)
-        return
       this.forEachTask(files, (task, data) => {
+        const testRun = this.getTestRunByData(data)
+        if (!testRun) {
+          log.error('Cannot find test run for task', task.name)
+          return
+        }
         if (task.mode === 'skip' || task.mode === 'todo')
-          run.skipped(data.item)
+          testRun.skipped(data.item)
         else
-          this.markResult(data.item, task.result, task)
+          this.markResult(testRun, data.item, task.result, task)
       })
     })
 
     api.onFinished((files = []) => {
       files.forEach((file) => {
-        const data = this.tree.getTestDataByTask(file)
-        if (data)
-          this.markResult(data.item, file.result, file)
+        const data = this.tree.getTestDataByTask(file) as TestFile | undefined
+        const testRun = data && this.getTestRunByData(data)
+        if (testRun && data) {
+          this.markResult(testRun, data.item, file.result, file)
+          this.endTestRun(testRun)
+        }
       })
-
-      this.endTestRuns()
     })
 
     api.onConsoleLog(({ content, taskId }) => {
       const data = taskId ? tree.getTestDataByTaskId(taskId) : undefined
-      if (this.testRun) {
-        this.testRun.appendOutput(
+      const testRun = data && this.getTestRunByData(data)
+      if (testRun) {
+        testRun.appendOutput(
           content.replace(/(?<!\r)\n/g, '\r\n'),
           undefined,
           data?.item,
@@ -94,10 +131,7 @@ export class TestRunner extends vscode.Disposable {
     this.testRunRequests.set(request, [])
 
     token.onCancellationRequested(() => {
-      const files = getTestFiles(request.include || [])
-      this.api.cancelRun(files, request.continuous)
-      this.testRunRequests.get(request)?.forEach(run => run.end())
-      this.testRunRequests.delete(request)
+      this.endTestRuns(request)
     })
 
     const tests = [...this.testRunRequests.keys()].flatMap(r => r.include || [])
@@ -113,11 +147,26 @@ export class TestRunner extends vscode.Disposable {
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
         log.info(`Running ${files.length} file(s):`, files)
-      await this.api.runFiles(files, testNamePatern)
+      await this.api.runFiles(files, testNamePatern, request.continuous)
     }
 
     if (!request.continuous)
-      this.testRunRequests.delete(request)
+      this.endTestRuns(request)
+  }
+
+  private enqueueRequest(testRun: vscode.TestRun, request: vscode.TestRunRequest) {
+    if (request.include) {
+      request.include.forEach((testItem) => {
+        this.enqueueTests(testRun, testItem.children)
+      })
+    }
+    else {
+      const workspaceFolderPath = normalize(this.api.workspaceFolder.uri.fsPath)
+      this.enqueueTests(
+        testRun,
+        this.tree.getOrCreateFolderTestItem(this.api, workspaceFolderPath).children,
+      )
+    }
   }
 
   private enqueueTests(testRun: vscode.TestRun, tests: vscode.TestItemCollection) {
@@ -133,34 +182,138 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  private startTestRun(_files: string[]) {
-    // TODO: refactor to use different requests, otherwise test run doesn't mark the result value!
-    const currentRequest = this.testRunRequests.values().next().value as vscode.TestRunRequest | undefined
-    if (currentRequest) {
-      // report only if continuous mode is enabled or this is the first run
-      if (!this.testRun || currentRequest.continuous) {
-        const testName = currentRequest.include?.length === 1 ? currentRequest.include[0].label : undefined
-        const name = currentRequest.include?.length ? testName : 'Running all tests'
-        this.testRun = this.controller.createTestRun(currentRequest, name)
-        if (currentRequest.include) {
-          currentRequest.include.forEach((testItem) => {
-            this.enqueueTests(this.testRun!, testItem.children)
-          })
-        }
-        else {
-          const workspaceFolderPath = normalize(this.api.workspaceFolder.uri.fsPath)
-          this.enqueueTests(
-            this.testRun,
-            this.tree.getOrCreateFolderTestItem(this.api, workspaceFolderPath).children,
-          )
-        }
+  private getTestRunByData(data: TestData): vscode.TestRun | null {
+    if (data instanceof TestFolder)
+      return null
+    if (data instanceof TestFile)
+      return this.testRunsByFile.get(data.filepath) || null
+
+    if ('file' in data)
+      return this.getTestRunByData(data.file)
+    return null
+  }
+
+  private isFileIncluded(file: string, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
+    for (const _item of include) {
+      const item = 'id' in _item ? _item : _item[1]
+      const data = getTestData(item)
+      if (data instanceof TestFile) {
+        if (data.filepath === file)
+          return true
       }
+      else if (data instanceof TestFolder) {
+        if (this.isFileIncluded(file, item.children))
+          return true
+      }
+      else {
+        if (data.file.filepath === file)
+          return true
+      }
+    }
+    return false
+  }
+
+  private getTestRequestsByFile(file: string) {
+    const requests: vscode.TestRunRequest[] = []
+
+    this.testRunRequests.forEach((_, request) => {
+      if (!request.include) {
+        requests.push(request)
+        return
+      }
+
+      if (this.isFileIncluded(file, request.include))
+        requests.push(request)
+    })
+    return requests
+  }
+
+  private getTestFilesInFolder(path: string) {
+    function getFiles(folder: vscode.TestItem): string[] {
+      const files: string[] = []
+      for (const [_, item] of folder.children) {
+        const data = getTestData(item)
+        if (data instanceof TestFile)
+          files.push(data.filepath)
+        else if (data instanceof TestFolder)
+          files.push(...getFiles(item))
+      }
+      return files
+    }
+
+    const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
+    return getFiles(folder)
+  }
+
+  private startTestRun(files: string[]) {
+    const request = new vscode.TestRunRequest() // ? create a single request instead for all continuous runs ?
+
+    for (const file of files) {
+      if (file[file.length - 1] === '/') {
+        const files = this.getTestFilesInFolder(file)
+        this.startTestRun(files)
+        continue
+      }
+      const testRun = this.testRunsByFile.get(file)
+      if (testRun)
+        continue
+      const requests = this.getTestRequestsByFile(file)
+      if (requests.length > 1)
+        log.info('Multiple test run requests for a single file', file)
+      // it's possible to have no requests when collecting tests
+      if (!requests.length) {
+        log.info('No test run requests for file', file)
+        continue
+      }
+
+      const request = requests[0]
+      const base = basename(file)
+      const dir = basename(dirname(file))
+      const name = `${dir}${path.sep}${base}`
+      const run = this.controller.createTestRun(request, name)
+
+      TestRunData.register(run, file, request)
+
+      this.testRunsByFile.set(file, run)
+      const cachedRuns = this.testRunRequests.get(request) || []
+      cachedRuns.push(run)
+      this.testRunRequests.set(request, cachedRuns)
+      // this.enqueueRequest(run, request)
     }
   }
 
-  public endTestRuns() {
-    this.testRun?.end()
-    this.testRun = undefined
+  public endTestRun(run: vscode.TestRun) {
+    const data = TestRunData.get(run)
+    this.testRunsByFile.delete(data.file)
+    const requestRuns = this.testRunRequests.get(data.request)
+    if (requestRuns)
+      requestRuns.splice(requestRuns.indexOf(run), 1)
+    run.end()
+  }
+
+  public endTestRuns(request?: vscode.TestRunRequest) {
+    if (request) {
+      this.testRunRequests.get(request)?.forEach((run) => {
+        const data = TestRunData.get(run)
+        this.testRunsByFile.delete(data.file)
+        run.end()
+      })
+      this.testRunRequests.delete(request)
+      const files = getTestFiles(request.include || [])
+      this.api.cancelRun(files, request.continuous)
+    }
+    else {
+      this.testRunRequests.forEach((runs, request) => {
+        const files = getTestFiles(request.include || [])
+        this.api.cancelRun(files, request.continuous)
+        runs.forEach((run) => {
+          const data = TestRunData.get(run)
+          this.testRunsByFile.delete(data.file)
+          run.end()
+        })
+      })
+      this.testRunRequests.clear()
+    }
   }
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {
@@ -174,11 +327,9 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  private markResult(test: vscode.TestItem, result?: TaskResult, task?: Task) {
-    if (!this.testRun)
-      return
+  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult, task?: Task) {
     if (!result) {
-      this.testRun.started(test)
+      testRun.started(test)
       return
     }
     switch (result.state) {
@@ -191,25 +342,25 @@ export class TestRunner extends vscode.Disposable {
           if (!errors)
             return
           test.error = errors.map(e => e.message.toString()).join('\n')
-          this.testRun.errored(test, errors, result.duration)
+          testRun.errored(test, errors, result.duration)
           return
         }
         const errors = result.errors?.map(err =>
           testMessageForTestError(test, err),
         ) || []
-        this.testRun.failed(test, errors, result.duration)
+        testRun.failed(test, errors, result.duration)
         break
       }
       case 'pass':
-        this.testRun.passed(test, result.duration)
+        testRun.passed(test, result.duration)
         break
       case 'todo':
       case 'skip':
-        this.testRun.skipped(test)
+        testRun.skipped(test)
         break
       case 'only':
       case 'run':
-        this.testRun.started(test)
+        testRun.started(test)
         break
       default: {
         const _never: never = result.state
