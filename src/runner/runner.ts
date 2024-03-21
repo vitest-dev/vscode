@@ -1,4 +1,4 @@
-import path, { normalize } from 'node:path'
+import path from 'node:path'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
@@ -44,10 +44,10 @@ export class TestRunner extends vscode.Disposable {
           return
         }
         const testRun = this.getTestRunByData(test)
-        if (!testRun) {
-          log.error('Cannot find test run for task', test.item.label)
+        // there is no test run for collected tests
+        if (!testRun)
           return
-        }
+
         this.markResult(testRun, test.item, result)
       })
     })
@@ -58,10 +58,8 @@ export class TestRunner extends vscode.Disposable {
       files.forEach(file => this.tree.collectFile(this.api, file))
       this.forEachTask(files, (task, data) => {
         const testRun = this.getTestRunByData(data)
-        if (!testRun) {
-          log.error('Cannot find test run for task', task.name)
+        if (!testRun)
           return
-        }
         if (task.mode === 'skip' || task.mode === 'todo')
           testRun.skipped(data.item)
         else
@@ -107,39 +105,36 @@ export class TestRunner extends vscode.Disposable {
     )
   }
 
-  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    if (request.continuous) {
-      // TODO: call API to mark files as continuous
+  private async watchContinuousTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    this.continuousRequests.add(request)
 
-      this.continuousRequests.add(request)
+    token.onCancellationRequested(() => {
+      this.continuousRequests.delete(request)
+      if (!this.continuousRequests.size)
+        this.api.unwatchTests()
+    })
 
-      token.onCancellationRequested(() => {
-        // TODO
-        this.continuousRequests.delete(request)
-        if (!this.continuousRequests.size)
-          this.api.unwatchTests()
-      })
-
-      if (!request.include?.length) {
-        await this.api.watchTests()
-      }
-      else {
-        const include = [...this.continuousRequests].map(r => r.include || []).flat()
-        const files = getTestFiles(include)
-        const testNamePatern = formatTestPattern(include)
-        await this.api.watchTests(files, testNamePatern)
-      }
-
-      return
+    if (!request.include?.length) {
+      await this.api.watchTests()
     }
+    else {
+      const include = [...this.continuousRequests].map(r => r.include || []).flat()
+      const files = getTestFiles(include)
+      const testNamePatern = formatTestPattern(include)
+      await this.api.watchTests(files, testNamePatern)
+    }
+  }
 
-    // TODO: stagger this function call to avoid running all tests at once
+  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    // if request is continuous, we just mark it and wait for the changes to files
+    // users can also click on "run" button to trigger the run
+    if (request.continuous)
+      return await this.watchContinuousTests(request, token)
 
     this.simpleTestRunRequest = request
 
     token.onCancellationRequested(() => {
       this.simpleTestRunRequest = null
-      // TODO
     })
 
     const tests = request.include || []
@@ -159,34 +154,6 @@ export class TestRunner extends vscode.Disposable {
     }
 
     this.simpleTestRunRequest = null
-  }
-
-  private enqueueRequest(testRun: vscode.TestRun, request: vscode.TestRunRequest) {
-    if (request.include) {
-      request.include.forEach((testItem) => {
-        this.enqueueTests(testRun, testItem.children)
-      })
-    }
-    else {
-      const workspaceFolderPath = normalize(this.api.workspaceFolder.uri.fsPath)
-      this.enqueueTests(
-        testRun,
-        this.tree.getOrCreateFolderTestItem(this.api, workspaceFolderPath).children,
-      )
-    }
-  }
-
-  private enqueueTests(testRun: vscode.TestRun, tests: vscode.TestItemCollection) {
-    for (const [_, item] of tests) {
-      if (item.children.size) {
-        this.enqueueTests(testRun, item.children)
-      }
-      else {
-        // enqueue only tests themselves, not folders
-        // they will be queued automatically if children are enqueued
-        testRun.enqueued(item)
-      }
-    }
   }
 
   private getTestRunByData(data: TestData): vscode.TestRun | null {
@@ -269,6 +236,11 @@ export class TestRunner extends vscode.Disposable {
         this.startTestRun(files, request)
         continue
       }
+
+      // during test collection, we don't have test runs
+      if (request.include && !this.isFileIncluded(file, request.include))
+        continue
+
       const testRun = this.testRunsByFile.get(file)
       if (testRun)
         continue
@@ -281,7 +253,6 @@ export class TestRunner extends vscode.Disposable {
       TestRunData.register(run, file, request)
 
       this.testRunsByFile.set(file, run)
-      // this.enqueueRequest(run, request)
     }
   }
 
