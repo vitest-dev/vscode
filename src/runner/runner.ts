@@ -135,6 +135,7 @@ export class TestRunner extends vscode.Disposable {
 
     token.onCancellationRequested(() => {
       this.simpleTestRunRequest = null
+      this.api.cancelRun()
     })
 
     const tests = request.include || []
