@@ -1,14 +1,13 @@
-import { sep } from 'node:path'
 import * as vscode from 'vscode'
-import { basename, dirname } from 'pathe'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
-import { resolveVitestAPI, resolveVitestPackages } from './api'
+import { resolveVitestAPI } from './api'
 import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
 import { createVitestWorkspaceFile, noop } from './utils'
+import { resolveVitestPackages } from './api/pkg'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -100,10 +99,7 @@ class VitestExtension {
     this.api.forEach((api) => {
       const runner = new TestRunner(this.testController, this.testTree, api)
 
-      const configFile = basename(api.id)
-      const folderName = basename(dirname(api.id))
-
-      const prefix = `${folderName}${sep}${configFile}`
+      const prefix = api.prefix
       let runProfile = previousRunProfiles.get(`${api.id}:run`)
       if (!runProfile) {
         runProfile = this.testController.createRunProfile(

@@ -2,18 +2,16 @@ import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
-import { basename, dirname, normalize } from 'pathe'
+import { dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import { configGlob, minimumVersion, workerPath, workspaceGlob } from './constants'
+import { workerPath } from './constants'
 import { getConfig } from './config'
 import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
-import { resolveVitestPackage } from './api/resolve'
 import type { TestTree } from './testTree'
 import type { WorkerRunnerOptions } from './worker/types'
-
-const _require = require
+import type { VitestPackage } from './api/pkg'
 
 export class VitestReporter {
   constructor(
@@ -82,19 +80,21 @@ export class VitestFolderAPI extends VitestReporter {
   readonly tag: vscode.TestTag
 
   constructor(
-    folder: vscode.WorkspaceFolder,
+    private pkg: VitestPackage,
     private meta: ResolvedMeta,
-    id: string,
   ) {
-    const normalizedId = normalize(id)
+    const normalizedId = normalize(pkg.id)
     super(normalizedId, meta.handlers)
-    WEAKMAP_API_FOLDER.set(this, folder)
-    // TODO: make it prettier, but still unique
-    this.tag = new vscode.TestTag(this.id)
+    WEAKMAP_API_FOLDER.set(this, pkg.folder)
+    this.tag = new vscode.TestTag(pkg.prefix)
   }
 
   get processId() {
     return this.meta.process.pid
+  }
+
+  get prefix() {
+    return this.pkg.prefix
   }
 
   get workspaceFolder() {
@@ -143,10 +143,10 @@ export class VitestFolderAPI extends VitestReporter {
   }
 }
 
-export async function resolveVitestAPI(tree: TestTree, meta: VitestPackage[]) {
-  const vitest = await createVitestProcess(tree, meta)
-  const apis = meta.map(({ folder, id }) =>
-    new VitestFolderAPI(folder, vitest, id),
+export async function resolveVitestAPI(tree: TestTree, packages: VitestPackage[]) {
+  const vitest = await createVitestProcess(tree, packages)
+  const apis = packages.map(pkg =>
+    new VitestFolderAPI(pkg, vitest),
   )
   return new VitestAPI(apis, vitest)
 }
@@ -165,114 +165,6 @@ interface ResolvedMeta {
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
   }
-}
-
-function nonNullable<T>(value: T | null | undefined): value is T {
-  return value != null
-}
-
-export interface VitestPackage {
-  folder: vscode.WorkspaceFolder
-  vitestNodePath: string
-  vitestPackageJsonPath: string
-  // path to a config file or a workspace config file
-  id: string
-  configFile?: string
-  workspaceFile?: string
-  version: string
-  loader?: string
-  pnp?: string
-}
-
-function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri) {
-  const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
-  const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
-
-  if (!vitest) {
-    if (showWarning)
-      vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.'`)
-    log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
-    return null
-  }
-
-  if (vitest.pnp) {
-    // TODO: try to load vitest package version from pnp
-    return {
-      folder,
-      id: normalize(configOrWorkspaceFile.fsPath),
-      vitestNodePath: vitest.vitestNodePath,
-      vitestPackageJsonPath: vitest.vitestPackageJsonPath,
-      version: 'pnp',
-      loader: vitest.pnp.loaderPath,
-      pnp: vitest.pnp.pnpPath,
-    }
-  }
-
-  const pkg = _require(vitest.vitestPackageJsonPath)
-  if (!gte(pkg.version, minimumVersion)) {
-    const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
-    if (showWarning)
-      vscode.window.showWarningMessage(warning)
-    else
-      log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
-    delete require.cache[vitest.vitestPackageJsonPath]
-    return null
-  }
-
-  return {
-    folder,
-    id: normalize(configOrWorkspaceFile.fsPath),
-    vitestPackageJsonPath: vitest.vitestPackageJsonPath,
-    vitestNodePath: vitest.vitestNodePath,
-    version: pkg.version,
-  }
-}
-
-export async function resolveVitestPackages(showWarning: boolean): Promise<VitestPackage[]> {
-  const vitestWorkspaces = await vscode.workspace.findFiles(workspaceGlob, '**/node_modules/**')
-
-  if (vitestWorkspaces.length) {
-    // if there is a workspace config, use it as root
-    return vitestWorkspaces.map((config) => {
-      const vitest = resolveVitestConfig(showWarning, config)
-      if (!vitest)
-        return null
-      return {
-        ...vitest,
-        workspaceFile: vitest.id,
-      }
-    }).filter(nonNullable)
-  }
-
-  const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
-
-  const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
-    const dir = dirname(config.fsPath)
-    if (!acc[dir])
-      acc[dir] = []
-    acc[dir].push(config)
-    return acc
-  }, {})
-
-  const resolvedMeta: VitestPackage[] = []
-
-  for (const [_, configFiles] of Object.entries(configsByFolder)) {
-    // vitest config always overrides vite config - if there is a Vitest config, we assume vite was overriden,
-    // but it's possible to have several Vitest configs (vitest.e2e. vitest.unit, etc.)
-    const hasViteAndVitestConfig = configFiles.some(file => basename(file.fsPath).includes('vite.'))
-      && configFiles.some(file => basename(file.fsPath).includes('vitest.'))
-    // remove all vite configs from a folder if there is at least one Vitest config
-    const filteredConfigFiles = hasViteAndVitestConfig
-      ? configFiles.filter(file => !basename(file.fsPath).includes('vite.'))
-      : configFiles
-    filteredConfigFiles.forEach((config) => {
-      const vitest = resolveVitestConfig(showWarning, config)
-      if (vitest)
-        resolvedMeta.push(vitest)
-    })
-  }
-
-  return resolvedMeta
 }
 
 function createChildVitestProcess(tree: TestTree, meta: VitestPackage[]) {
