@@ -126,6 +126,14 @@ export class VitestFolderAPI extends VitestReporter {
     await this.meta.rpc.cancelRun(this.id)
   }
 
+  async watchTests(files?: string[], testNamePattern?: string) {
+    await this.meta.rpc.watchTests(this.id, files?.map(normalize), testNamePattern)
+  }
+
+  async unwatchTests() {
+    await this.meta.rpc.unwatchTests(this.id)
+  }
+
   stopInspect() {
     return this.meta.rpc.stopInspect()
   }

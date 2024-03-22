@@ -128,6 +128,7 @@ export class TestTree extends vscode.Disposable {
       testFileItem,
       normalizedFile,
       api,
+      project,
     )
 
     return testFileItem
@@ -248,7 +249,8 @@ export class TestTree extends vscode.Disposable {
       this.recursiveDelete(fileTestItem)
     }
     else {
-      this.collectTasks(api.tag, file.tasks, fileTestItem)
+      const data = getTestData(fileTestItem) as TestFile
+      this.collectTasks(api.tag, data, file.tasks, fileTestItem)
       if (file.result?.errors) {
         const error = file.result.errors.map(error => error.stack || error.message).join('\n')
         fileTestItem.error = error
@@ -257,7 +259,7 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  collectTasks(tag: vscode.TestTag, tasks: Task[], item: vscode.TestItem) {
+  collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: Task[], item: vscode.TestItem) {
     for (const task of tasks) {
       const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
         task.id,
@@ -275,9 +277,9 @@ export class TestTree extends vscode.Disposable {
       this.flatTestItems.set(task.id, testItem)
       item.children.add(testItem)
       if (task.type === 'suite')
-        TestSuite.register(testItem)
+        TestSuite.register(testItem, fileData)
       else if (task.type === 'test' || task.type === 'custom')
-        TestCase.register(testItem)
+        TestCase.register(testItem, fileData)
 
       if (task.result?.errors) {
         const error = task.result.errors.map(error => error.stack).join('\n')
@@ -285,7 +287,7 @@ export class TestTree extends vscode.Disposable {
       }
 
       if ('tasks' in task)
-        this.collectTasks(tag, task.tasks, testItem)
+        this.collectTasks(tag, fileData, task.tasks, testItem)
     }
 
     // remove tasks that are no longer present

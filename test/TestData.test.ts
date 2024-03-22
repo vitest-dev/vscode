@@ -19,6 +19,7 @@ describe('TestData', () => {
         testItem,
         filepath,
         null as any, // not used yet
+        '',
       )
       const suiteItem = ctrl.createTestItem(
         `${filepath}_1`,
@@ -49,13 +50,13 @@ describe('TestData', () => {
       suiteItem.children.add(testItem2)
       suiteItem.children.add(testItem3)
 
-      const suite = TestSuite.register(suiteItem)
+      const suite = TestSuite.register(suiteItem, file)
 
       expect(suite.getTestNamePattern()).to.equal('^\\s?describe')
 
-      const test1 = TestCase.register(testItem1)
-      const test2 = TestCase.register(testItem2)
-      const test3 = TestCase.register(testItem3)
+      const test1 = TestCase.register(testItem1, file)
+      const test2 = TestCase.register(testItem2, file)
+      const test3 = TestCase.register(testItem3, file)
 
       expect(test1.item.parent).to.exist
 
