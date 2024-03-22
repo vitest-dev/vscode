@@ -3,7 +3,7 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
-import { basename, dirname } from 'pathe'
+import { basename, dirname, normalize } from 'pathe'
 import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
@@ -371,7 +371,7 @@ function getTestFiles(tests: readonly vscode.TestItem[]) {
   return Array.from(
     new Set(tests.map((test) => {
       const data = getTestData(test)
-      const fsPath = test.uri!.fsPath
+      const fsPath = normalize(test.uri!.fsPath)
       if (data instanceof TestFolder)
         return `${fsPath}/`
       return fsPath
