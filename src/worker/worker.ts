@@ -62,7 +62,6 @@ class VSCodeReporter implements Reporter {
 async function initVitest(meta: WorkerMeta) {
   const vitestMode = await import(meta.vitestNodePath) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
-  _debug('root', dirname(meta.id))
   const vitest = await vitestMode.createVitest(
     'test',
     {

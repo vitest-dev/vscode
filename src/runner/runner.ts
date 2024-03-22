@@ -252,6 +252,12 @@ export class TestRunner extends vscode.Disposable {
       const run = this.controller.createTestRun(request, name)
 
       TestRunData.register(run, file, request)
+      const testItems = this.tree.getFileTestItems(vscode.Uri.file(file))
+      function enqueue(test: vscode.TestItem) {
+        run.enqueued(test)
+        test.children.forEach(enqueue)
+      }
+      testItems.forEach(test => enqueue(test))
 
       this.testRunsByFile.set(file, run)
     }
