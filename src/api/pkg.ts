@@ -120,7 +120,8 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
 
   return resolvePackagUniquePrefixes(resolvedMeta)
 }
-function findFirstUniqueFolderNames(paths: string[]) {
+
+export function findFirstUniqueFolderNames(paths: string[]) {
   const folders: string[] = []
   const mapCount: Record<string, number> = {}
   const segments = paths.map(p => p.split('/').reverse().slice(2))
