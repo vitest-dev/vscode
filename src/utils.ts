@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { relative } from 'pathe'
-import type { VitestPackage } from './api'
+import type { VitestPackage } from './api/pkg'
 
 export function noop() {}
 
