@@ -42,6 +42,12 @@ body:
         - pnpm
     validations:
       required: true
+  - type: input
+    id: extension-version
+    attributes:
+      description: Specify the version of the extension
+    validations:
+      required: true
   - type: checkboxes
     id: checkboxes
     attributes:
