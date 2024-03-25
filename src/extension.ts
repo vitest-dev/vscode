@@ -9,6 +9,8 @@ import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
 import { createVitestWorkspaceFile, noop } from './utils'
 import { resolveVitestPackages } from './api/pkg'
+import type { TestFile } from './testTreeData'
+import { getTestData } from './testTreeData'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -139,8 +141,14 @@ class VitestExtension {
     // collect tests inside a test file
     vscode.window.visibleTextEditors.forEach(async (editor) => {
       const testItems = this.testTree.getFileTestItems(editor.document.uri)
-      for (const item of testItems)
-        await this.resolveTestFile(item)
+      const apis = new Set()
+      for (const item of testItems) {
+        const data = getTestData(item) as TestFile
+        if (!apis.has(data.api)) {
+          await this.resolveTestFile(item)
+          apis.add(data.api)
+        }
+      }
     })
   }
 

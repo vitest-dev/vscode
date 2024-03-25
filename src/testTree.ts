@@ -314,19 +314,13 @@ function getAPIFromFolder(folder: vscode.TestItem): VitestFolderAPI | null {
 }
 
 function getAPIFromTestItem(testItem: vscode.TestItem): VitestFolderAPI | null {
-  let iter: vscode.TestItem | undefined = testItem
+  const data = getTestData(testItem)
   // API is stored in test files - if this is a folder, try to find a file inside,
-  // otherwise go up until we find a file
-  if (getTestData(iter) instanceof TestFolder) {
-    return getAPIFromFolder(iter)
-  }
-  else {
-    while (iter) {
-      const data = getTestData(iter)
-      if (data instanceof TestFile)
-        return data.api
-      iter = iter.parent
-    }
-  }
-  return null
+  // otherwise go up until we find a file, this should never be a folder
+  if (data instanceof TestFolder)
+    return getAPIFromFolder(testItem)
+
+  if (data instanceof TestFile)
+    return data.api
+  return data.file.api
 }
