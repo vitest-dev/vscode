@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
@@ -29,7 +30,7 @@ class VitestExtension {
   private disposables: vscode.Disposable[] = []
 
   constructor() {
-    log.info('[Vitest] Extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.')
+    log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
     this.testController.refreshHandler = () => this.defineTestProfiles(true).catch(() => {})
