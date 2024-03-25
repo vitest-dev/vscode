@@ -59,7 +59,7 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
   const vitestEntries = Object.entries(vitestById)
 
   function getId(vitest: Vitest) {
-    return vitest.server.config.configFile || vitest.config.workspace || vitest.config.root
+    return vitest.config.workspace || vitest.server.config.configFile || vitest.config.root
   }
 
   async function rerunTests(vitest: Vitest, files: string[]) {
