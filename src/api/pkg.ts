@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import { gte } from 'semver'
@@ -25,6 +26,23 @@ export interface VitestPackage {
   pnp?: string
 }
 
+function resolveVitestVersion(vitestPackageJsonPath: string, workspaceDir: string, isPnp: boolean): string {
+  let version
+  if (isPnp) {
+    const child = spawnSync('yarn', ['vitest', '-v'], {
+      cwd: workspaceDir,
+      encoding: 'utf8',
+    })
+
+    version = child.stdout?.match(/vitest\/(\d+\.\d+\.\d+)/)?.[1]
+  }
+  else {
+    ({ version } = _require(vitestPackageJsonPath))
+    delete require.cache[vitestPackageJsonPath]
+  }
+  return version
+}
+
 function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri): VitestPackage | null {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
   const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
@@ -38,29 +56,15 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 
   const id = normalize(configOrWorkspaceFile.fsPath)
   const prefix = `${basename(dirname(id))}:${basename(id)}`
+  const version = resolveVitestVersion(vitest.vitestPackageJsonPath, dirname(configOrWorkspaceFile.fsPath), !!vitest.pnp)
 
-  if (vitest.pnp) {
-    // TODO: try to load vitest package version from pnp
-    return {
-      folder,
-      id,
-      prefix,
-      vitestNodePath: vitest.vitestNodePath,
-      vitestPackageJsonPath: vitest.vitestPackageJsonPath,
-      version: 'pnp',
-      loader: vitest.pnp.loaderPath,
-      pnp: vitest.pnp.pnpPath,
-    }
-  }
-
-  const pkg = _require(vitest.vitestPackageJsonPath)
-  if (!gte(pkg.version, minimumVersion)) {
-    const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
+  if (!gte(version, minimumVersion)) {
+    const warning = `Vitest v${version} is not supported. Vitest v${minimumVersion} or newer is required.`
     if (showWarning)
       vscode.window.showWarningMessage(warning)
     else
-      log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
-    delete require.cache[vitest.vitestPackageJsonPath]
+      log.error('[API]', `[${folder}] Vitest v${version} is not supported. Vitest v${minimumVersion} or newer is required.`)
+
     return null
   }
 
@@ -68,9 +72,16 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
     folder,
     id,
     prefix,
-    vitestPackageJsonPath: vitest.vitestPackageJsonPath,
     vitestNodePath: vitest.vitestNodePath,
-    version: pkg.version,
+    vitestPackageJsonPath: vitest.vitestPackageJsonPath,
+    version,
+    ...(vitest.pnp
+      ? {
+          loader: vitest.pnp.loaderPath,
+          pnp: vitest.pnp.pnpPath,
+        }
+      : {}
+    ),
   }
 }
 

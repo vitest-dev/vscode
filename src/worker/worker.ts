@@ -60,7 +60,11 @@ class VSCodeReporter implements Reporter {
 }
 
 async function initVitest(meta: WorkerMeta) {
-  const vitestMode = await import(meta.vitestNodePath) as typeof import('vitest/node')
+  if (process.versions.pnp)
+    meta.vitestNodePath = 'vitest/node'
+
+  const vitestMode = await import(meta.vitestNodePath)
+
   const reporter = new VSCodeReporter()
   const vitest = await vitestMode.createVitest(
     'test',
@@ -112,7 +116,7 @@ process.on('message', async function init(message: any) {
     const data = message as WorkerRunnerOptions
 
     try {
-      if (data.loader)
+      if (!process.versions.pnp && data.loader)
         register(data.loader)
       const errors = []
 
