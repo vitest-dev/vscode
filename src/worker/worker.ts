@@ -100,6 +100,7 @@ async function initVitest(meta: WorkerMeta) {
   return {
     vitest,
     reporter,
+    meta,
   }
 }
 
@@ -132,7 +133,8 @@ process.on('message', async function init(message: any) {
         return
       }
 
-      const rpc = createWorkerRPC(vitest.map(v => v.vitest), {
+      const vitestById = Object.fromEntries(vitest.map(v => [v.meta.id, v.vitest]))
+      const rpc = createWorkerRPC(vitestById, {
         on(listener) {
           process.on('message', listener)
         },
