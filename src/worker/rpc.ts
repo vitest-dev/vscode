@@ -4,8 +4,8 @@ import type { Vitest } from 'vitest'
 import type { BirpcEvents, BirpcMethods } from '../api/rpc'
 import { createWorkerMethods } from './actions'
 
-export function createWorkerRPC(vitest: Vitest[], channel: ChannelOptions) {
-  const rpc = createBirpc<BirpcEvents, BirpcMethods>(createWorkerMethods(vitest), {
+export function createWorkerRPC(vitestById: Record<string, Vitest>, channel: ChannelOptions) {
+  const rpc = createBirpc<BirpcEvents, BirpcMethods>(createWorkerMethods(vitestById), {
     timeout: -1,
     eventNames: [
       'onConsoleLog',

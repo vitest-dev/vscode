@@ -4,12 +4,8 @@ import type { BirpcMethods } from '../api/rpc'
 
 const _require = require
 
-export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
+export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMethods {
   let debuggerEnabled = false
-  const vitestById = vitest.reduce((acc, vitest) => {
-    acc[getId(vitest)] = vitest
-    return acc
-  }, {} as Record<string, Vitest>)
 
   const watchStateById: Record<string, {
     files: string[]
@@ -17,8 +13,8 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
     watchEveryFile: boolean
   } | null> = {}
 
-  vitest.forEach((vitest) => {
-    const id = getId(vitest)
+  const vitestEntries = Object.entries(vitestById)
+  vitestEntries.forEach(([id, vitest]) => {
     // @ts-expect-error modifying a private property
     const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
     // @ts-expect-error modifying a private property
@@ -56,12 +52,6 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
     }
   })
 
-  const vitestEntries = Object.entries(vitestById)
-
-  function getId(vitest: Vitest) {
-    return vitest.server.config.configFile || vitest.config.workspace || vitest.config.root
-  }
-
   async function rerunTests(vitest: Vitest, files: string[]) {
     await vitest.report('onWatcherRerun', files)
     await vitest.runFiles(files.flatMap(file => vitest.getProjectsByTestFile(file)), false)
@@ -69,9 +59,9 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
     await vitest.report('onWatcherStart', vitest.state.getFiles(files))
   }
 
-  async function runTests(vitest: Vitest, files: string[], testNamePattern?: string) {
+  async function runTests(id: string, vitest: Vitest, files: string[], testNamePattern?: string) {
     const cwd = process.cwd()
-    process.chdir(dirname(getId(vitest)))
+    process.chdir(dirname(id))
     try {
       vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
 
@@ -88,9 +78,9 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
     }
   }
 
-  async function globTestFiles(vitest: Vitest, filters?: string[]) {
+  async function globTestFiles(id: string, vitest: Vitest, filters?: string[]) {
     const cwd = process.cwd()
-    process.chdir(dirname(getId(vitest)))
+    process.chdir(dirname(id))
     const files = await vitest.globTestFiles(filters)
     process.chdir(cwd)
     return files
@@ -115,7 +105,7 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
     },
     async collectTests(id: string, testFile: string) {
       const vitest = vitestById[id]
-      await runTests(vitest, [testFile], '$a')
+      await runTests(id, vitest, [testFile], '$a')
       vitest.configOverride.testNamePattern = undefined
     },
     async cancelRun(id: string) {
@@ -130,16 +120,16 @@ export function createWorkerMethods(vitest: Vitest[]): BirpcMethods {
         throw new Error(`Vitest instance not found for id: ${id}`)
 
       if (testNamePattern) {
-        await runTests(vitest, files || vitest.state.getFilepaths(), testNamePattern)
+        await runTests(id, vitest, files || vitest.state.getFilepaths(), testNamePattern)
       }
       else {
-        const specs = await globTestFiles(vitest, files)
-        await runTests(vitest, specs.map(([_, spec]) => spec))
+        const specs = await globTestFiles(id, vitest, files)
+        await runTests(id, vitest, specs.map(([_, spec]) => spec))
       }
     },
     async getFiles(id: string) {
       const vitest = vitestById[id]
-      const files = await globTestFiles(vitest)
+      const files = await globTestFiles(id, vitest)
       // reset cached test files list
       vitest.projects.forEach((project) => {
         project.testFilesList = null
