@@ -75,7 +75,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 }
 
 export async function resolveVitestPackages(showWarning: boolean): Promise<VitestPackage[]> {
-  const vitestWorkspaces = await vscode.workspace.findFiles(workspaceGlob, '**/node_modules/**')
+  const vitestWorkspaces = await vscode.workspace.findFiles(workspaceGlob, '**/{node_modules,.*}/**')
 
   if (vitestWorkspaces.length) {
     // if there is a workspace config, use it as root
@@ -90,7 +90,7 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
     }).filter(nonNullable))
   }
 
-  const configs = await vscode.workspace.findFiles(configGlob, '**/node_modules/**')
+  const configs = await vscode.workspace.findFiles(configGlob, '**/{node_modules,.*}/**')
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)
