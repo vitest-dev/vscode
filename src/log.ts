@@ -33,4 +33,7 @@ export const log = {
   workspaceError: (folder: string, ...args: any[]) => {
     log.error(`[Workspace ${folder}]`, ...args)
   },
+  openOuput() {
+    _log.show()
+  },
 } as const

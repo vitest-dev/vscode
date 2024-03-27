@@ -29,3 +29,7 @@ export default defineWorkspace([
 
   await vscode.window.showInformationMessage('Created vitest.workspace.js. You might need to run \`npm i --save-dev vitest\` in the root folder to install Vitest.')
 }
+
+export function pluralize(count: number, singular: string) {
+  return `${count} ${singular}${count === 1 ? '' : 's'}`
+}

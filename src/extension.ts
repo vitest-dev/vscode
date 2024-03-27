@@ -86,7 +86,7 @@ class VitestExtension {
     try {
       await this.api?.dispose()
 
-      this.api = await resolveVitestAPI(this.testTree, vitest)
+      this.api = await resolveVitestAPI(showWarning, vitest)
 
       for (const api of this.api.folderAPIs) {
         await this.testTree.watchTestFilesInWorkspace(
@@ -167,6 +167,9 @@ class VitestExtension {
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('vitest.packagePath') || event.affectsConfiguration('vitest.nodeExecutable'))
           this.defineTestProfiles(false)
+      }),
+      vscode.commands.registerCommand('vitest.openOutput', () => {
+        log.openOuput()
       }),
     ]
 

@@ -123,7 +123,7 @@ process.on('message', async function init(message: any) {
           vitest.push(await initVitest(meta))
         }
         catch (err: any) {
-          errors.push([meta.configFile, err.stack])
+          errors.push([meta.id, err.stack])
         }
       }
       process.chdir(cwd)

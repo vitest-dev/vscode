@@ -43,6 +43,11 @@
         "title": "Update Snapshot",
         "command": "vitest.updateSnapshot",
         "category": "Vitest"
+      },
+      {
+        "title": "Show Output Channel",
+        "command": "vitest.openOutput",
+        "category": "Vitest"
       }
     ],
     "menus": {
