@@ -1,3 +1,4 @@
+import { dirname, resolve } from 'node:path'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import * as vscode from 'vscode'
 
@@ -30,11 +31,28 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     defaultValue,
   )
 
+  const nodeExecutable = get<string | undefined>('nodeExecutable')
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
     packagePath: get<string | undefined>('packagePath'),
-    nodeExecutable: get<string | undefined>('nodeExecutable'),
+    nodeExecutable: resolveNodeExecutable(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
   }
+}
+
+function resolveNodeExecutable(nodeExecutable: string | undefined) {
+  if (!nodeExecutable)
+    return nodeExecutable
+  // if there is a workspace file, then it should be relative to it because
+  // this option cannot be configured on a workspace folder level
+  if (vscode.workspace.workspaceFile)
+    return resolve(dirname(vscode.workspace.workspaceFile.fsPath), nodeExecutable)
+  const workspaceFolders = vscode.workspace.workspaceFolders
+  // if there is no workspace file, then it's probably a single folder workspace
+  if (workspaceFolders?.length === 1)
+    return resolve(workspaceFolders[0].uri.fsPath, nodeExecutable)
+  // if there are still several folders, then we can't reliably resolve the path
+  return nodeExecutable
 }

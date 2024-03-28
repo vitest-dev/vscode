@@ -190,7 +190,18 @@ class VitestExtension {
     configWatchers.forEach(watcher => watcher.onDidCreate(redefineTestProfiles))
     configWatchers.forEach(watcher => watcher.onDidDelete(redefineTestProfiles))
 
-    await this.defineTestProfiles(true)
+    try {
+      await this.defineTestProfiles(true)
+    }
+    catch (err) {
+      vscode.window.showErrorMessage(
+        `There was an error during Vitest startup. Check the output for more details.`,
+        'See error',
+      ).then((result) => {
+        if (result === 'See error')
+          vscode.commands.executeCommand('vitest.openOutput')
+      })
+    }
   }
 
   async dispose() {
