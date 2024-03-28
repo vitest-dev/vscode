@@ -45,6 +45,7 @@ body:
   - type: input
     id: extension-version
     attributes:
+      label: Version
       description: Specify the version of the extension
     validations:
       required: true
