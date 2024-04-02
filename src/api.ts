@@ -11,7 +11,7 @@ import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
 import type { WorkerRunnerOptions } from './worker/types'
 import type { VitestPackage } from './api/pkg'
-import { pluralize } from './utils'
+import { pluralize, showVitestError } from './utils'
 
 export class VitestReporter {
   constructor(
@@ -44,10 +44,24 @@ export class VitestReporter {
 }
 
 export class VitestAPI {
+  private disposing = false
+
   constructor(
     private readonly api: VitestFolderAPI[],
     private readonly meta: ResolvedMeta,
-  ) {}
+  ) {
+    meta.process.on('error', () => {
+      if (!this.disposing)
+        showVitestError('Vitest process failed')
+    })
+  }
+
+  onUnexpectedExit(callback: (code: number | null) => void) {
+    this.meta.process.on('exit', (code) => {
+      if (!this.disposing)
+        callback(code)
+    })
+  }
 
   forEach<T>(callback: (api: VitestFolderAPI, index: number) => T) {
     return this.api.forEach(callback)
@@ -62,15 +76,23 @@ export class VitestAPI {
   }
 
   async dispose() {
-    this.forEach(api => api.dispose())
-    this.meta.packages.forEach((pkg) => {
-      delete require.cache[pkg.vitestPackageJsonPath]
-    })
+    this.disposing = true
     try {
-      await this.meta.rpc.close()
+      this.forEach(api => api.dispose())
+      this.meta.packages.forEach((pkg) => {
+        delete require.cache[pkg.vitestPackageJsonPath]
+      })
+      if (!this.meta.process.killed) {
+        try {
+          await this.meta.rpc.close()
+        }
+        catch {}
+        this.meta.process.kill()
+      }
     }
-    catch {}
-    this.meta.process.kill()
+    finally {
+      this.disposing = false
+    }
   }
 }
 
@@ -206,11 +228,7 @@ function createChildVitestProcess(showWarning: boolean, meta: VitestPackage[]) {
     },
   )
   return new Promise<ChildProcess>((resolve, reject) => {
-    vitest.on('error', (error) => {
-      log.error('[API]', error)
-      reject(error)
-    })
-    vitest.on('message', function ready(message: any) {
+    function ready(message: any) {
       if (message.type === 'debug')
         log.worker('info', ...message.args)
 
@@ -242,8 +260,20 @@ function createChildVitestProcess(showWarning: boolean, meta: VitestPackage[]) {
         const error = new Error(`Vitest failed to start: \n${message.errors.map((r: any) => r[1]).join('\n')}`)
         reject(error)
       }
-    })
-    vitest.on('spawn', () => {
+      vitest.off('error', error)
+      vitest.off('message', ready)
+    }
+
+    function error(err: Error) {
+      log.error('[API]', err)
+      reject(err)
+      vitest.off('error', error)
+      vitest.off('message', ready)
+    }
+
+    vitest.on('error', error)
+    vitest.on('message', ready)
+    vitest.once('spawn', () => {
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
         meta: meta.map(m => ({

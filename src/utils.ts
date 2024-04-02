@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import { relative } from 'pathe'
 import type { VitestPackage } from './api/pkg'
+import { log } from './log'
 
 export function noop() {}
 
@@ -28,6 +29,19 @@ export default defineWorkspace([
     await vscode.window.showTextDocument(results[0])
 
   await vscode.window.showInformationMessage('Created vitest.workspace.js. You might need to run \`npm i --save-dev vitest\` in the root folder to install Vitest.')
+}
+
+export function showVitestError(message: string, error?: any) {
+  if (error)
+    log.error(error)
+
+  vscode.window.showErrorMessage(
+    `${message}. Check the output for more details.`,
+    'See error',
+  ).then((result) => {
+    if (result === 'See error')
+      vscode.commands.executeCommand('vitest.openOutput')
+  })
 }
 
 export function pluralize(count: number, singular: string) {

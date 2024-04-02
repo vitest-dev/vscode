@@ -7,7 +7,7 @@ import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
-import { createVitestWorkspaceFile, noop } from './utils'
+import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
@@ -86,6 +86,16 @@ class VitestExtension {
 
       this.api = await resolveVitestAPI(showWarning, vitest)
 
+      this.api.onUnexpectedExit((code) => {
+        if (code) {
+          showVitestError('Vitest process exited unexpectedly')
+          this.testTree.reset([])
+          this.testController.items.delete(this.loadingTestItem.id)
+          this.api?.dispose()
+          this.api = undefined
+        }
+      })
+
       for (const api of this.api.folderAPIs) {
         await this.testTree.watchTestFilesInWorkspace(
           api,
@@ -153,19 +163,31 @@ class VitestExtension {
   private async resolveTestFile(item?: vscode.TestItem) {
     if (!item)
       return
-    await this.testTree.discoverFileTests(item)
+    try {
+      await this.testTree.discoverFileTests(item)
+    }
+    catch (err) {
+      showVitestError('There was an error during test discovery', err)
+    }
   }
 
   async activate() {
     this.loadingTestItem.busy = true
     this.testController.items.replace([this.loadingTestItem])
 
+    const reloadConfigNames = [
+      'vitest.packagePath',
+      'vitest.nodeExecutable',
+      'vitest.workspaceConfig',
+      'vitest.rootConfig',
+    ]
+
     this.disposables = [
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('vitest.packagePath') || event.affectsConfiguration('vitest.nodeExecutable'))
+        if (reloadConfigNames.some(x => event.affectsConfiguration(x)))
           this.defineTestProfiles(false)
       }),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
       }),
@@ -192,13 +214,7 @@ class VitestExtension {
       await this.defineTestProfiles(true)
     }
     catch (err) {
-      vscode.window.showErrorMessage(
-        `There was an error during Vitest startup. Check the output for more details.`,
-        'See error',
-      ).then((result) => {
-        if (result === 'See error')
-          vscode.commands.executeCommand('vitest.openOutput')
-      })
+      showVitestError('There was an error during Vitest startup', err)
     }
   }
 
