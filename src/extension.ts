@@ -11,6 +11,7 @@ import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
+import { TagsManager } from './tags'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -27,6 +28,7 @@ class VitestExtension {
   private runProfiles = new Map<string, vscode.TestRunProfile>()
 
   private testTree: TestTree
+  private tagsManager: TagsManager
   private api: VitestAPI | undefined
 
   private disposables: vscode.Disposable[] = []
@@ -40,6 +42,7 @@ class VitestExtension {
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
+    this.tagsManager = new TagsManager(this.testTree)
   }
 
   private async defineTestProfiles(showWarning: boolean) {
@@ -148,7 +151,7 @@ class VitestExtension {
 
     // collect tests inside a test file
     vscode.window.visibleTextEditors.forEach(async (editor) => {
-      const testItems = this.testTree.getFileTestItems(editor.document.uri)
+      const testItems = this.testTree.getFileTestItems(editor.document.uri.fsPath)
       const apis = new Set()
       for (const item of testItems) {
         const data = getTestData(item) as TestFile
@@ -212,6 +215,8 @@ class VitestExtension {
 
     try {
       await this.defineTestProfiles(true)
+
+      this.tagsManager.activate()
     }
     catch (err) {
       showVitestError('There was an error during Vitest startup', err)
@@ -219,10 +224,11 @@ class VitestExtension {
   }
 
   async dispose() {
-    await this.api?.dispose()
+    this.api?.dispose()
     this.testTree.dispose()
+    this.tagsManager.dispose()
     this.testController.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
-    this.disposables.forEach(x => x.dispose())
+    this.disposables.forEach(d => d.dispose())
   }
 }

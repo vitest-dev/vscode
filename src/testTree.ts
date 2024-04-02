@@ -36,8 +36,8 @@ export class TestTree extends vscode.Disposable {
     })
   }
 
-  public getFileTestItems(uri: vscode.Uri) {
-    return this.testItemsByFile.get(normalize(uri.fsPath)) || []
+  public getFileTestItems(fsPath: string) {
+    return this.testItemsByFile.get(normalize(fsPath)) || []
   }
 
   public reset(workspaceFolders: vscode.WorkspaceFolder[]) {
@@ -214,15 +214,6 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  removeFileTag(file: string, tag: vscode.TestTag) {
-    const testItems = this.testItemsByFile.get(normalize(file))
-    if (!testItems)
-      return
-    testItems.forEach((item) => {
-      item.tags = item.tags.filter(x => x !== tag)
-    })
-  }
-
   public getTestDataByTaskId(taskId: string): TestData | null {
     const testItem = this.flatTestItems.get(taskId)
     if (!testItem)
@@ -266,7 +257,7 @@ export class TestTree extends vscode.Disposable {
         task.name,
         item.uri,
       )
-      testItem.tags = [tag]
+      testItem.tags = Array.from(new Set([...item.tags, tag]))
       testItem.error = undefined
       testItem.label = task.name
       const location = task.location
