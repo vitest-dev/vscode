@@ -47,3 +47,13 @@ export function showVitestError(message: string, error?: any) {
 export function pluralize(count: number, singular: string) {
   return `${count} ${singular}${count === 1 ? '' : 's'}`
 }
+
+export function debounce<T extends Function>(cb: T, wait = 20) {
+  let h: NodeJS.Timeout | undefined
+  const callable = (...args: any) => {
+    if (h)
+      clearTimeout(h)
+    h = setTimeout(() => cb(...args), wait)
+  }
+  return <T>(<any>callable)
+}

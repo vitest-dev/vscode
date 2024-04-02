@@ -7,7 +7,7 @@ import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
-import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
+import { createVitestWorkspaceFile, debounce, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
@@ -203,11 +203,11 @@ class VitestExtension {
     ]
     this.disposables.push(...configWatchers)
 
-    const redefineTestProfiles = (uri: vscode.Uri) => {
-      if (uri.fsPath.includes('node_modules'))
+    const redefineTestProfiles = debounce((uri: vscode.Uri) => {
+      if (uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
         return
       this.defineTestProfiles(false)
-    }
+    }, 300)
 
     configWatchers.forEach(watcher => watcher.onDidChange(redefineTestProfiles))
     configWatchers.forEach(watcher => watcher.onDidCreate(redefineTestProfiles))
