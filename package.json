@@ -38,6 +38,25 @@
     "workspaceContains:node_modules/.bin/vitest"
   ],
   "contributes": {
+    "languages": [
+      {
+        "id": "vitest-snapshot",
+        "extensions": [
+          ".js.snap",
+          ".jsx.snap",
+          ".ts.snap",
+          ".tsx.snap"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "vitest-snapshot",
+        "scopeName": "source.vitest.snap",
+        "path": "./syntaxes/vitest-snapshot.tmLanguage"
+      }
+    ],
     "commands": [
       {
         "title": "Update Snapshot",
