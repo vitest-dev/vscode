@@ -13,6 +13,10 @@ class VSCodeReporter implements Reporter {
   private ctx!: Vitest
   private id!: string
 
+  get isCollecting(): boolean {
+    return this.ctx.configOverride.testNamePattern?.toString() === '/$a/'
+  }
+
   initVitest(ctx: Vitest, id: string) {
     this.ctx = ctx
     this.id = id
@@ -43,19 +47,19 @@ class VSCodeReporter implements Reporter {
   }
 
   onFinished(files?: File[], errors?: unknown[]) {
-    this.rpc.onFinished(this.id, files, errors)
+    this.rpc.onFinished(this.id, files, errors, this.isCollecting)
   }
 
   onCollected(files?: File[]) {
-    this.rpc.onCollected(this.id, files)
+    this.rpc.onCollected(this.id, files, this.isCollecting)
   }
 
   onWatcherStart(files?: File[], errors?: unknown[]) {
-    this.rpc.onWatcherStart(this.id, files, errors)
+    this.rpc.onWatcherStart(this.id, files, errors, this.isCollecting)
   }
 
   onWatcherRerun(files: string[], trigger?: string) {
-    this.rpc.onWatcherRerun(this.id, files, trigger)
+    this.rpc.onWatcherRerun(this.id, files, trigger, this.isCollecting)
   }
 }
 

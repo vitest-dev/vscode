@@ -34,7 +34,7 @@ export class TestRunner extends vscode.Disposable {
       this.api.cancelRun()
     })
 
-    api.onWatcherRerun(files => this.startTestRun(files))
+    api.onWatcherRerun((files, _trigger, collecting) => !collecting && this.startTestRun(files))
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
@@ -52,10 +52,12 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onCollected((files) => {
+    api.onCollected((files, collecting) => {
       if (!files)
         return
       files.forEach(file => this.tree.collectFile(this.api, file))
+      if (collecting)
+        return
       this.forEachTask(files, (task, data) => {
         const testRun = this.getTestRunByData(data)
         if (!testRun)

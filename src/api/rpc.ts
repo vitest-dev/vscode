@@ -21,10 +21,10 @@ export interface BirpcMethods {
 export interface VitestEvents {
   onConsoleLog: (log: UserConsoleLog) => void
   onTaskUpdate: (task: TaskResultPack[]) => void
-  onFinished: (files?: File[], errors?: unknown[]) => void
-  onCollected: (files?: File[]) => void
-  onWatcherStart: (files?: File[], errors?: unknown[]) => void
-  onWatcherRerun: (files: string[], trigger?: string) => void
+  onFinished: (files?: File[], errors?: unknown[], collecting?: boolean) => void
+  onCollected: (files?: File[], collecting?: boolean) => void
+  onWatcherStart: (files?: File[], errors?: unknown[], collecting?: boolean) => void
+  onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
 }
 
 export type BirpcEvents = {
