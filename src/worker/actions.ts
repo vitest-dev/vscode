@@ -19,12 +19,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
     // @ts-expect-error modifying a private property
     vitest.scheduleRerun = async function (files: string[]) {
-      // disable reruning on changes outside of the test files for now
       const tests = this.changedTests
-      for (const file of files) {
-        if (!tests.has(file))
-          return
-      }
       const state = watchStateById[id]
       // no continuous files for this Vitest instance, just collect tests
       if (!state) {
@@ -43,6 +38,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         if (!allowedTests.includes(file))
           testFilesToRun.delete(file)
       })
+      this.changedTests = testFilesToRun
 
       // only collect tests, but don't run them
       if (!testFilesToRun.size)
