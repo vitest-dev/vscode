@@ -43,6 +43,8 @@ body:
       label: Validations
       description: Before submitting the issue, please make sure you do the following
       options:
+        - label: Check that you are using the latest version of the extension
+          required: true
         - label: Check that there isn't [already an issue](https://github.com/vitest-dev/vscode/issues) that reports the same bug to avoid creating a duplicate.
           required: true
         - label: Check that this is a concrete bug. For Q&A open a [GitHub Discussion](https://github.com/vitest-dev/vscode/discussions) or join our [Discord Chat Server](https://chat.vitest.dev).
