@@ -23,6 +23,7 @@ You can identify if your config is loaded by the extension with `process.env.VIT
 
 - `vitest.rootConfig`: The path to your root config file. If you have several Vitest configs, consider using a [Vitest workspace](https://vitest.dev/guide/workspace).
 - `vitest.workspaceConfig`: The path to the [Vitest workspace](https://vitest.dev/guide/workspace) config file. You can only have a single workspace config per VSCode workspace.
+- `vitest.configSearchPatternExclude`: Glob pattern that should be ignored when this extension looks for config files when the extension is activated. Note that this is applied to _config_ files, not test files inside configs.
 - `vitest.packagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix. If the extension cannot find Vitest, please open an issue.
 - `vitest.nodeExecutable`: This extension spawns another process and will use this value as `execPath` argument.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to

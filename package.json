@@ -86,6 +86,12 @@
           "type": "string",
           "scope": "window"
         },
+        "vitest.configSearchPatternExclude": {
+          "markdownDescription": "A VSCode [glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) to exclude files from the search for Vitest config files. This pattern affects both workspace and regular config files.",
+          "type": "string",
+          "default": "**/{node_modules,.*}/**",
+          "scope": "window"
+        },
         "vitest.disableWorkspaceWarning": {
           "markdownDescription": "Disable a warning about too many config files that recommends creating a single `vitest.workspace.js` file.",
           "type": "boolean",
@@ -93,7 +99,7 @@
           "scope": "resource"
         },
         "vitest.debugExclude": {
-          "markdownDescription": "Automatically skip files covered by these glob patterns. \nDefault: `[\"<node_internals>/**\", \"**/node_modules/**\"]`",
+          "markdownDescription": "Automatically skip files covered by these glob patterns.",
           "type": "array",
           "default": [
             "<node_internals>/**",

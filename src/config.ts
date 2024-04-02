@@ -35,12 +35,15 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
   const workspaceConfig = get<string | undefined>('workspaceConfig')
   const rootConfigFile = get<string | undefined>('rootConfig')
 
+  const configSearchPatternExclude = get<string>('configSearchPatternExclude', '**/{node_modules,.*}/**')!
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
     packagePath: get<string | undefined>('packagePath'),
     workspaceConfig: resolvePath(workspaceConfig),
     rootConfig: resolvePath(rootConfigFile),
+    configSearchPatternExclude,
     nodeExecutable: resolvePath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
   }
