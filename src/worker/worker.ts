@@ -72,7 +72,6 @@ async function initVitest(meta: WorkerMeta) {
       root: dirname(meta.id),
       reporters: [reporter],
       ui: false,
-      env: meta.env,
       includeTaskLocation: true,
     },
     {
