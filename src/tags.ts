@@ -11,6 +11,7 @@ export class TagsManager extends vscode.Disposable {
   ) {
     super(() => {
       this.disposables.forEach(d => d.dispose())
+      this.disposables = []
     })
   }
 
