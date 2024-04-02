@@ -46,6 +46,8 @@ class VitestExtension {
   }
 
   private async defineTestProfiles(showWarning: boolean) {
+    // TODO: this function can be called multiple times in quick succession
+    // we need to make sure that the previous call is cancelled/finished before starting a new one
     this.testTree.reset([])
 
     const vitest = await resolveVitestPackages(showWarning)
