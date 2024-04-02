@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
 import type { TestTree } from './testTree'
 
-export const openTestTag = new vscode.TestTag('open')
-
 export class TagsManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
+
+  private openTestTag = new vscode.TestTag('open')
 
   constructor(
     private testTree: TestTree,
@@ -18,15 +18,15 @@ export class TagsManager extends vscode.Disposable {
   activate() {
     this.disposables.push(
       vscode.workspace.onDidOpenTextDocument((doc) => {
-        this.addFileTag(doc.uri, openTestTag)
+        this.addFileTag(doc.uri, this.openTestTag)
       }),
       vscode.workspace.onDidCloseTextDocument((doc) => {
-        this.removeFileTag(doc.uri, openTestTag)
+        this.removeFileTag(doc.uri, this.openTestTag)
       }),
     )
 
     vscode.window.visibleTextEditors.forEach(({ document }) => {
-      this.addFileTag(document.uri, openTestTag)
+      this.addFileTag(document.uri, this.openTestTag)
     })
   }
 
