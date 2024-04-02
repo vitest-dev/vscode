@@ -55,7 +55,7 @@ class VitestExtension {
       return
     }
 
-    const configFiles = vitest.filter(x => x.configFile)
+    const configFiles = vitest.filter(x => x.configFile && !x.workspaceFile)
 
     if (configFiles.length > 3 && configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
       vscode.window.showWarningMessage(

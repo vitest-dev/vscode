@@ -32,17 +32,21 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
   )
 
   const nodeExecutable = get<string | undefined>('nodeExecutable')
+  const workspaceConfig = get<string | undefined>('workspaceConfig')
+  const rootConfigFile = get<string | undefined>('rootConfig')
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
     packagePath: get<string | undefined>('packagePath'),
-    nodeExecutable: resolveNodeExecutable(nodeExecutable),
+    workspaceConfig: resolvePath(workspaceConfig),
+    rootConfig: resolvePath(rootConfigFile),
+    nodeExecutable: resolvePath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
   }
 }
 
-function resolveNodeExecutable(nodeExecutable: string | undefined) {
+function resolvePath(nodeExecutable: string | undefined) {
   if (!nodeExecutable)
     return nodeExecutable
   // if there is a workspace file, then it should be relative to it because

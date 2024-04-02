@@ -3,6 +3,7 @@ import { basename, dirname, normalize } from 'pathe'
 import { gte } from 'semver'
 import { log } from '../log'
 import { configGlob, minimumVersion, workspaceGlob } from '../constants'
+import { getConfig } from '../config'
 import { resolveVitestPackage } from './resolve'
 
 const _require = require
@@ -75,7 +76,15 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 }
 
 export async function resolveVitestPackages(showWarning: boolean): Promise<VitestPackage[]> {
-  const vitestWorkspaces = await vscode.workspace.findFiles(workspaceGlob, '**/{node_modules,.*}/**')
+  const userWorkspace = getConfig().workspaceConfig
+  const rootConfig = getConfig().rootConfig
+
+  if (userWorkspace)
+    log.info('[API] Using user workspace config:', userWorkspace)
+
+  const vitestWorkspaces = userWorkspace
+    ? [vscode.Uri.file(userWorkspace)]
+    : await vscode.workspace.findFiles(workspaceGlob, '**/{node_modules,.*}/**')
 
   if (vitestWorkspaces.length) {
     // if there is a workspace config, use it as root
@@ -85,12 +94,15 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
         return null
       return {
         ...vitest,
+        configFile: rootConfig,
         workspaceFile: vitest.id,
       }
     }).filter(nonNullable))
   }
 
-  const configs = await vscode.workspace.findFiles(configGlob, '**/{node_modules,.*}/**')
+  const configs = rootConfig
+    ? [vscode.Uri.file(rootConfig)]
+    : await vscode.workspace.findFiles(configGlob, '**/{node_modules,.*}/**')
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)
