@@ -17,7 +17,10 @@ async function main() {
 
     // npm
     await editJson('samples/imba/package.json', (pkg2) => {
-      pkg2.devDependencies.vitest = pkg.pnpm.overrides.vitest
+      for (const dep in pkg.pnpm.overrides) {
+        if (dep in pkg2.devDependencies)
+          pkg2.devDependencies[dep] = pkg.pnpm.overrides[dep]
+      }
       pkg2.overrides = pkg.pnpm.overrides
       return pkg2
     })
