@@ -63,8 +63,6 @@ class VitestExtension {
         'Create vitest.workspace.js',
         'Disable notification',
       ).then((result) => {
-        if (!result)
-          return
         if (result === 'Create vitest.workspace.js')
           createVitestWorkspaceFile(configFiles).catch(noop)
 
