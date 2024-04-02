@@ -11,7 +11,7 @@ import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
-import { TagsManager } from './tags'
+import { TagsManager } from './tagsManager'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
