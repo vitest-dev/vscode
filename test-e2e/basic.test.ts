@@ -1,4 +1,4 @@
-import { beforeAll, describe } from 'vitest'
+import { beforeAll } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './helper'
 
@@ -42,8 +42,4 @@ test('custom imba language', async ({ launch }) => {
   await expect(tester.tree.getFileItem('basic.test.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('utils.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')
-})
-
-describe('continuous testing', () => {
-
 })
