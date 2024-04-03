@@ -4,17 +4,26 @@ import path from 'node:path'
 import { download } from '@vscode/test-electron'
 import { _electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import type { Awaitable } from 'vitest'
 import { test as baseTest } from 'vitest'
 import { VSCodeTester } from './tester'
 
 // based on
 // https://github.com/microsoft/playwright-vscode/blob/1c2f766a3ef4b7633fb19103a3d930ebe385250e/tests-integration/tests/baseTest.ts#L41
 
+interface Context {
+  page: Page
+  tester: VSCodeTester
+
+}
+
 type LaunchFixture = (options: {
   extensionPath?: string
   workspacePath?: string
   trace?: 'on' | 'off'
-}) => Promise<{ page: Page; tester: VSCodeTester }>
+}) => Promise<Context & {
+  step: (name: string, fn: (context: Context) => Awaitable<void>) => Promise<void>
+}>
 
 const defaultConfig = process.env as {
   VSCODE_E2E_DOWNLOAD_PATH?: string
@@ -66,7 +75,19 @@ export const test = baseTest.extend<{ launch: LaunchFixture }>({
 
       const tester = new VSCodeTester(page)
 
-      return { page, tester }
+      async function step(name: string, fn: (context: Context) => Awaitable<void>) {
+        await page.reload()
+        try {
+          await fn({ page, tester })
+        }
+        catch (err) {
+          throw new Error(`Error during step "${name}"`, { cause: err })
+        }
+      }
+
+      await tester.openTestTab()
+
+      return { page, tester, step }
     })
 
     for (const teardown of teardowns)

@@ -2,7 +2,10 @@ import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 import type { TesterTestItem } from './tester'
 
-type TestState = 'passed' | 'failed' | 'skipped'
+type TestState = 'passed' | 'failed' | 'skipped' | 'waiting'
+interface TestsTree {
+  [test: string]: TestState | TestsTree
+}
 
 function getTitleFromState(state: TestState) {
   switch (state) {
@@ -12,6 +15,8 @@ function getTitleFromState(state: TestState) {
       return '(Failed)'
     case 'skipped':
       return '(Skipped)'
+    case 'waiting':
+      return '(Not yet run)'
   }
 }
 
@@ -44,6 +49,35 @@ expect.extend({
       name: 'toHaveState',
     }
   },
+  async toHaveTests(item: TesterTestItem, tests: TestsTree) {
+    const page = item.page
+    const depth = Number(await item.locator.getAttribute('aria-level'))
+
+    async function assert(test: string, level: number, state: TestState) {
+      await expect(page.locator(`[aria-label*="${test} ${getTitleFromState(state)}"][aria-level="${level}"]`)).toBeVisible()
+    }
+
+    async function traverse(tests: TestsTree, level = depth + 1) {
+      for (const test in tests) {
+        const item = tests[test]
+        if (typeof item === 'string') {
+          await assert(test, level, item)
+        }
+        else {
+          await expect(page.locator(`[aria-label*="${test}"][aria-level="${level}"]`)).toBeVisible()
+
+          await traverse(item, level + 1)
+        }
+      }
+    }
+
+    await traverse(tests)
+
+    return {
+      pass: true,
+      message: () => '',
+    }
+  },
 })
 
 declare global {
@@ -53,6 +87,17 @@ declare global {
     export interface Matchers<R, T = unknown> {
       toHaveState: (state: TestState) => Promise<R>
       toHaveResults: (state: string) => Promise<R>
+      /**
+       * @example
+       * expect(tester.tree.getFileItem('no-import.test.ts')).toHaveTests({
+       *   multiply: 'waiting',
+       *   divide: 'waiting',
+       *   suite: {
+       *     'some old test name': 'waiting',
+       *   },
+       * })
+       */
+      toHaveTests: (tests: TestsTree) => Promise<R>
     }
   }
 }

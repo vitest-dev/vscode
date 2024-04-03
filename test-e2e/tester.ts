@@ -1,5 +1,7 @@
 import { basename } from 'node:path'
+import fs from 'node:fs'
 import type { Locator, Page } from '@playwright/test'
+import { afterEach } from 'vitest'
 
 export class VSCodeTester {
   public tree: TesterTree
@@ -30,7 +32,8 @@ class TesterTree {
   ) {}
 
   getFileItem(file: string) {
-    return new TesterTestItem(this.page.locator(`[title*="${basename(file)} "]`))
+    const name = basename(file)
+    return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} "]`), this.page)
   }
 
   async expand(path: string) {
@@ -51,26 +54,30 @@ class TesterErrorOutput {
     private page: Page,
   ) {}
 
-  getInlineErrors() {
-    return this.page.locator('[class="test-message-inline-content"]')
+  async getInlineErrors() {
+    const locator = this.page.locator('.test-message-inline-content')
+    const text = await locator.allInnerTexts()
+    return text.map(t => t.trim().replace(/\s/g, ' '))
   }
 
   async getInlineExpectedOutput() {
     return await this.page.locator(
-      '[class="test-output-peek"] [class="editor original"] [class="view-lines"][role="presentation"]',
+      '.test-output-peek .editor.original .view-lines[role="presentation"]',
     ).textContent()
   }
 
   async getInlineActualOutput() {
     return await this.page.locator(
-      '[class="test-output-peek"] [class="editor modified"] [class="view-lines"][role="presentation"]',
+      '.test-output-peek .editor.modified .view-lines[role="presentation"]',
     ).textContent()
   }
 }
 
 export class TesterTestItem {
   constructor(
+    public name: string,
     public locator: Locator,
+    public page: Page,
   ) {}
 
   async run() {
@@ -87,5 +94,28 @@ export class TesterTestItem {
 
   async navigate() {
     await this.locator.getByLabel(/Go to Test/).click()
+    // wait until the page is navigated
+    await this.page.getByRole('tab', { name: new RegExp(this.name) }).waitFor()
   }
+}
+
+const originalFiles = new Map<string, string>()
+const createdFiles = new Set<string>()
+afterEach(() => {
+  originalFiles.forEach((content, file) => {
+    fs.writeFileSync(file, content, 'utf-8')
+  })
+  createdFiles.forEach((file) => {
+    if (fs.existsSync(file))
+      fs.unlinkSync(file)
+  })
+  originalFiles.clear()
+  createdFiles.clear()
+})
+
+export function editFile(file: string, callback: (content: string) => string) {
+  const content = fs.readFileSync(file, 'utf-8')
+  if (!originalFiles.has(file))
+    originalFiles.set(file, content)
+  fs.writeFileSync(file, callback(content), 'utf-8')
 }
