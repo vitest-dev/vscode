@@ -83,6 +83,8 @@ export async function startDebugSession(
     env: {
       VITEST_VSCODE: 'true',
     },
+  }, {
+    suppressDebugView: true,
   }).then((fulfilled) => {
     if (fulfilled)
       log.info('[DEBUG] Debugging started')
