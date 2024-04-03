@@ -9,5 +9,8 @@ export default defineConfig({
       VSCODE_E2E_EXTENSION_PATH: './',
       VSCODE_E2E_TRACE: 'on',
     },
+    setupFiles: [
+      './assertions.ts',
+    ],
   },
 })

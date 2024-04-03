@@ -5,6 +5,7 @@ import { download } from '@vscode/test-electron'
 import { _electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { test as baseTest } from 'vitest'
+import { VSCodeTester } from './tester'
 
 // based on
 // https://github.com/microsoft/playwright-vscode/blob/1c2f766a3ef4b7633fb19103a3d930ebe385250e/tests-integration/tests/baseTest.ts#L41
@@ -13,7 +14,7 @@ type LaunchFixture = (options: {
   extensionPath?: string
   workspacePath?: string
   trace?: 'on' | 'off'
-}) => Promise<{ page: Page }>
+}) => Promise<{ page: Page; tester: VSCodeTester }>
 
 const defaultConfig = process.env as {
   VSCODE_E2E_DOWNLOAD_PATH?: string
@@ -63,7 +64,9 @@ export const test = baseTest.extend<{ launch: LaunchFixture }>({
       }
       teardowns.push(teardown)
 
-      return { page }
+      const tester = new VSCodeTester(page)
+
+      return { page, tester }
     })
 
     for (const teardown of teardowns)

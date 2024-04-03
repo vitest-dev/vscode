@@ -9,46 +9,37 @@ beforeAll(() => {
 })
 
 test('basic', async ({ launch }) => {
-  const { page } = await launch({
+  const { page, tester } = await launch({
     workspacePath: './samples/e2e',
   })
 
-  // open test explorer
-  await page.getByRole('tab', { name: 'Testing' }).locator('a').click()
-  await page.getByText('No test results yet.').click()
+  await tester.openTestTab()
+  await expect(page.getByText('No test results yet.')).toBeVisible()
 
-  // open nested folders
-  await page.getByText(/^test$/).click()
+  await tester.uncollapse('test')
 
-  // run tests
-  await page.getByRole('button', { name: 'Run Tests' }).click()
+  await tester.runAllTests()
 
-  // check results
-  await expect(page.locator(`[title*="3/7 tests passed"]`)).toBeVisible()
-  await expect(page.locator(`[title*="pass.test.ts (Passed)"]`)).toBeVisible()
-  await expect(page.locator(`[title*="fail.test.ts (Failed)"]`)).toBeVisible()
-  await expect(page.locator(`[title*="mix.test.ts (Failed)"]`)).toBeVisible()
+  await expect(page).toHaveResults('3/7')
+  await expect(tester.getByFileName('pass.test.ts')).toHaveState('passed')
+  await expect(tester.getByFileName('fail.test.ts')).toHaveState('failed')
+  await expect(tester.getByFileName('mix.test.ts')).toHaveState('failed')
 })
 
-test('imba', async ({ launch }) => {
-  const { page } = await launch({
+test('custom imba language', async ({ launch }) => {
+  const { page, tester } = await launch({
     workspacePath: './samples/imba',
   })
 
-  // open test explorer
-  await page.getByRole('tab', { name: 'Testing' }).locator('a').click()
+  await tester.openTestTab()
 
-  // open nested folders
-  await page.getByText(/^test$/).click()
-  await page.getByText(/^src$/).click()
-  await page.getByText(/^components$/).click()
+  await tester.uncollapse('test')
+  await tester.uncollapse('src/components')
 
-  // run tests
-  await page.getByRole('button', { name: 'Run Tests' }).click()
+  await tester.runAllTests()
 
-  // check results
-  await expect(page.locator(`[title*="5/7 tests passed"]`)).toBeVisible()
-  await expect(page.locator(`[title*="basic.test.imba (Passed)"]`)).toBeVisible()
-  await expect(page.locator(`[title*="utils.imba (Passed)"]`)).toBeVisible()
-  await expect(page.locator(`[title*="counter.imba (Failed)"]`)).toBeVisible()
+  await expect(page).toHaveResults('5/7')
+  await expect(tester.getByFileName('basic.test.imba')).toHaveState('passed')
+  await expect(tester.getByFileName('utils.imba')).toHaveState('passed')
+  await expect(tester.getByFileName('counter.imba')).toHaveState('failed')
 })
