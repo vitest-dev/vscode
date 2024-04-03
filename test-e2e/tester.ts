@@ -23,7 +23,7 @@ export class VSCodeTester {
     return this.page.locator(`[title*="${basename(file)} "]`)
   }
 
-  async uncollapse(path: string) {
+  async expandTree(path: string) {
     const segments = path.split('/')
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i]
