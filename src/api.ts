@@ -85,8 +85,11 @@ export class VitestAPI {
       if (!this.meta.process.killed) {
         try {
           await this.meta.rpc.close()
+          log.info('[API]', `Vitest process ${this.meta.process.pid} closed successfully`)
         }
-        catch {}
+        catch (err) {
+          log.error('[API]', 'Failed to close Vitest process', err)
+        }
         this.meta.process.kill()
       }
     }
