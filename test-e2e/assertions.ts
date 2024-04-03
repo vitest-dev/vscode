@@ -37,12 +37,12 @@ expect.extend({
     }
   },
   async toHaveState(item: TesterTestItem, state: TestState) {
-    const title = await item.locator.getAttribute('title')
+    const title = await item.locator.getAttribute('aria-label')
     const pass = !!(title && title.includes(getTitleFromState(state)))
 
     return {
       pass,
-      message: () => `${this.utils.matcherHint('toHaveState', title, getTitleFromState(state), { isNot: this.isNot })}\n\n`
+      message: () => `${this.utils.matcherHint('toHaveState', title, state, { isNot: this.isNot })}\n\n`
       + `Locator: ${item.locator}\n`
       + `Expected: ${this.isNot ? 'not ' : ''}to have state: ${this.utils.printExpected(state)}\n`
       + `Received: ${this.utils.printReceived(title)}\n`,
