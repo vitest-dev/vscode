@@ -1,10 +1,16 @@
 import { basename } from 'node:path'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 export class VSCodeTester {
+  public tree: TesterTree
+  public errors: TesterErrorOutput
+
   constructor(
     private page: Page,
-  ) {}
+  ) {
+    this.tree = new TesterTree(page)
+    this.errors = new TesterErrorOutput(page)
+  }
 
   async openTestTab() {
     const tabLocator = this.page.getByRole('tab', { name: 'Testing' })
@@ -16,12 +22,18 @@ export class VSCodeTester {
   async runAllTests() {
     await this.page.getByRole('button', { name: 'Run Tests' }).click()
   }
+}
 
-  getByFileName(file: string) {
-    return this.page.locator(`[title*="${basename(file)} "]`)
+class TesterTree {
+  constructor(
+    private page: Page,
+  ) {}
+
+  getFileItem(file: string) {
+    return new TesterTestItem(this.page.locator(`[title*="${basename(file)} "]`))
   }
 
-  async expandTree(path: string) {
+  async expand(path: string) {
     const segments = path.split('/')
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i]
@@ -31,5 +43,49 @@ export class VSCodeTester {
         continue
       await locator.click()
     }
+  }
+}
+
+class TesterErrorOutput {
+  constructor(
+    private page: Page,
+  ) {}
+
+  getInlineErrors() {
+    return this.page.locator('[class="test-message-inline-content"]')
+  }
+
+  async getInlineExpectedOutput() {
+    return await this.page.locator(
+      '[class="test-output-peek"] [class="editor original"] [class="view-lines"][role="presentation"]',
+    ).textContent()
+  }
+
+  async getInlineActualOutput() {
+    return await this.page.locator(
+      '[class="test-output-peek"] [class="editor modified"] [class="view-lines"][role="presentation"]',
+    ).textContent()
+  }
+}
+
+export class TesterTestItem {
+  constructor(
+    public locator: Locator,
+  ) {}
+
+  async run() {
+    await this.locator.getByLabel('Run Test').click()
+  }
+
+  async debug() {
+    await this.locator.getByLabel('Debug Test').click()
+  }
+
+  async toggleContinuousRun() {
+    await this.locator.getByLabel(/Turn (on|off) Continuous Run/).click()
+  }
+
+  async navigate() {
+    await this.locator.getByLabel(/Go to Test/).click()
   }
 }

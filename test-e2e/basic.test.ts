@@ -16,14 +16,14 @@ test('basic', async ({ launch }) => {
   await tester.openTestTab()
   await expect(page.getByText('No test results yet.')).toBeVisible()
 
-  await tester.expandTree('test')
+  await tester.tree.expand('test')
 
   await tester.runAllTests()
 
   await expect(page).toHaveResults('3/7')
-  await expect(tester.getByFileName('pass.test.ts')).toHaveState('passed')
-  await expect(tester.getByFileName('fail.test.ts')).toHaveState('failed')
-  await expect(tester.getByFileName('mix.test.ts')).toHaveState('failed')
+  await expect(tester.tree.getFileItem('pass.test.ts')).toHaveState('passed')
+  await expect(tester.tree.getFileItem('fail.test.ts')).toHaveState('failed')
+  await expect(tester.tree.getFileItem('mix.test.ts')).toHaveState('failed')
 })
 
 test('custom imba language', async ({ launch }) => {
@@ -33,15 +33,15 @@ test('custom imba language', async ({ launch }) => {
 
   await tester.openTestTab()
 
-  await tester.expandTree('test')
-  await tester.expandTree('src/components')
+  await tester.tree.expand('test')
+  await tester.tree.expand('src/components')
 
   await tester.runAllTests()
 
   await expect(page).toHaveResults('5/7')
-  await expect(tester.getByFileName('basic.test.imba')).toHaveState('passed')
-  await expect(tester.getByFileName('utils.imba')).toHaveState('passed')
-  await expect(tester.getByFileName('counter.imba')).toHaveState('failed')
+  await expect(tester.tree.getFileItem('basic.test.imba')).toHaveState('passed')
+  await expect(tester.tree.getFileItem('utils.imba')).toHaveState('passed')
+  await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')
 })
 
 describe('continuous testing', () => {

@@ -1,5 +1,6 @@
-import type { Locator, Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
+import type { TesterTestItem } from './tester'
 
 type TestState = 'passed' | 'failed' | 'skipped'
 
@@ -16,9 +17,7 @@ function getTitleFromState(state: TestState) {
 
 expect.extend({
   async toHaveResults(page: Page, number: string) {
-    const passedLocator = page.locator(`[title*="tests passed ("]`)
-    const handler = await passedLocator.elementHandle()
-    const title = await handler?.getAttribute('title')
+    const title = await page.locator(`[title*="tests passed ("]`).getAttribute('title')
     const expected = `${number} tests passed`
     const pass = !!(title && title.includes(expected))
 
@@ -32,15 +31,14 @@ expect.extend({
       actual: title,
     }
   },
-  async toHaveState(locator: Locator, state: TestState) {
-    const element = await locator.elementHandle()
-    const title = await element?.getAttribute('title')
+  async toHaveState(item: TesterTestItem, state: TestState) {
+    const title = await item.locator.getAttribute('title')
     const pass = !!(title && title.includes(getTitleFromState(state)))
 
     return {
       pass,
       message: () => `${this.utils.matcherHint('toHaveState', title, getTitleFromState(state), { isNot: this.isNot })}\n\n`
-      + `Locator: ${locator}\n`
+      + `Locator: ${item.locator}\n`
       + `Expected: ${this.isNot ? 'not ' : ''}to have state: ${this.utils.printExpected(state)}\n`
       + `Received: ${this.utils.printReceived(title)}\n`,
       name: 'toHaveState',
