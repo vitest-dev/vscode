@@ -12,6 +12,7 @@ export default defineConfig([
   },
   {
     entry: ['./src/worker/setupFile.ts'],
-    format: 'cjs',
+    external: ['vitest'],
+    format: 'esm',
   },
 ])

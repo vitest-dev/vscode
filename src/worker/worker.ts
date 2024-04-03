@@ -105,6 +105,8 @@ async function initVitest(meta: WorkerMeta) {
                 off: () => {},
               } as any,
             }
+            if (!config.server.fs.allow.includes(setupFilePath))
+              config.server.fs.allow.push(setupFilePath)
           },
         },
       ],
