@@ -5,6 +5,7 @@ import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
 import type { BirpcEvents, BirpcMethods } from '../api/rpc'
+import { setupFilePath } from '../constants'
 import { createWorkerRPC } from './rpc'
 import type { WorkerMeta, WorkerRunnerOptions } from './types'
 
@@ -20,6 +21,16 @@ class VSCodeReporter implements Reporter {
   initVitest(ctx: Vitest, id: string) {
     this.ctx = ctx
     this.id = id
+    ctx.config.setupFiles = [
+      ...ctx.config.setupFiles || [],
+      setupFilePath,
+    ]
+    ctx.projects.forEach((project) => {
+      project.config.setupFiles = [
+        ...project.config.setupFiles || [],
+        setupFilePath,
+      ]
+    })
   }
 
   initRpc(rpc: BirpcReturn<BirpcEvents, BirpcMethods>) {

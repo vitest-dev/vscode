@@ -10,4 +10,8 @@ export default defineConfig([
     entry: ['./src/worker/worker.ts'],
     format: 'cjs',
   },
+  {
+    entry: ['./src/worker/setupFile.ts'],
+    format: 'cjs',
+  },
 ])

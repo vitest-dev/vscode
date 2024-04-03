@@ -4,47 +4,74 @@ import type { BirpcMethods } from '../api/rpc'
 
 const _require = require
 
+interface WatchState {
+  files: string[]
+  testNamePattern: string | undefined
+  watchEveryFile: boolean
+  rerunTriggered: boolean
+}
+
 export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMethods {
   let debuggerEnabled = false
 
-  const watchStateById: Record<string, {
-    files: string[]
-    testNamePattern: string | undefined
-    watchEveryFile: boolean
-  } | null> = {}
+  const watchStateById: Record<string, WatchState | null> = {}
 
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
+    vitest.getCoreWorkspaceProject().provide('__vscode', {
+      get continuousFiles() {
+        const state = watchStateById[id]
+        return state?.files || []
+      },
+      get watchEveryFile() {
+        const state = watchStateById[id]
+        return state?.watchEveryFile ?? true
+      },
+      get rerunTriggered() {
+        const state = watchStateById[id]
+        return state?.rerunTriggered ?? false
+      },
+    })
+
     // @ts-expect-error modifying a private property
     const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
     // @ts-expect-error modifying a private property
     vitest.scheduleRerun = async function (files: string[]) {
-      const tests = this.changedTests
+      // if trigger is not a test file, remove all non-continious files from  this.changedTests
+      const triggerFile = files[0]
+      const isTestFileTrigger = this.changedTests.has(triggerFile)
+
       const state = watchStateById[id]
+
       // no continuous files for this Vitest instance, just collect tests
       if (!state) {
+        // do not run any tests if continuous run was not enabled
+        if (!isTestFileTrigger) {
+          this.changedTests.clear()
+          this.invalidates.clear()
+        }
+
         vitest.configOverride.testNamePattern = /$a/
         return await originalScheduleRerun.call(this, files)
       }
 
+      state.rerunTriggered = true
+
       vitest.configOverride.testNamePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
       if (state.watchEveryFile)
-        return originalScheduleRerun.call(this, files)
+        return await originalScheduleRerun.call(this, files)
 
-      const allowedTests = state.files
-      const testFilesToRun = new Set(tests)
-      // remove tests that are not watched
-      tests.forEach((file) => {
-        if (!allowedTests.includes(file))
-          testFilesToRun.delete(file)
-      })
-      this.changedTests = testFilesToRun
+      if (!isTestFileTrigger) {
+        // if souce code is changed and related tests are not continious, remove them from changedTests
+        const updatedTests = new Set<string>()
+        for (const file of this.changedTests) {
+          if (state.files.includes(file))
+            updatedTests.add(file)
+        }
+        this.changedTests = updatedTests
+      }
 
-      // only collect tests, but don't run them
-      if (!testFilesToRun.size)
-        vitest.configOverride.testNamePattern = /$a/
-
-      return originalScheduleRerun.call(this, files)
+      return await originalScheduleRerun.call(this, files)
     }
   })
 
@@ -55,8 +82,13 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     await vitest.report('onWatcherStart', vitest.state.getFiles(files))
   }
 
-  async function runTests(id: string, vitest: Vitest, files: string[], testNamePattern?: string) {
+  async function runTests(id: string, files: string[], testNamePattern?: string) {
     const cwd = process.cwd()
+    const vitest = vitestById[id]
+    const state = watchStateById[id]
+    if (state)
+      state.rerunTriggered = false
+
     process.chdir(dirname(id))
     try {
       vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
@@ -91,6 +123,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         files: files || [],
         watchEveryFile: !files,
         testNamePattern,
+        rerunTriggered: false,
       }
     },
     async unwatchTests(id) {
@@ -101,7 +134,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     },
     async collectTests(id: string, testFile: string) {
       const vitest = vitestById[id]
-      await runTests(id, vitest, [testFile], '$a')
+      await runTests(id, [testFile], '$a')
       vitest.configOverride.testNamePattern = undefined
     },
     async cancelRun(id: string) {
@@ -116,11 +149,11 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         throw new Error(`Vitest instance not found for id: ${id}`)
 
       if (testNamePattern) {
-        await runTests(id, vitest, files || vitest.state.getFilepaths(), testNamePattern)
+        await runTests(id, files || vitest.state.getFilepaths(), testNamePattern)
       }
       else {
         const specs = await globTestFiles(id, vitest, files)
-        await runTests(id, vitest, specs.map(([_, spec]) => spec))
+        await runTests(id, specs.map(([_, spec]) => spec))
       }
     },
     async getFiles(id: string) {
