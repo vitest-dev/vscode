@@ -37,10 +37,6 @@ You can identify if your config is loaded by the extension with `process.env.VIT
 
 See <https://vitest.dev/guide/workspace.html> for monorepo support.
 
-### How can I use this extension when tests are under a sub directory?
-
-You can use VS Code command `add folder to workspace` to add the sub directory. The extension should work fine.
-
 ### Why is the extension not activated?
 
 The extension looks for [Vitest config](https://vitest.dev/config/file.html) or [Vitest workspace config](https://vitest.dev/guide/workspace.html) to establish the connection with Vitest. If you have several config files, it's recommended to combine them in a single [Vitest workspace](https://vitest.dev/guide/workspace.html) for a better CPU performance (only have a single Vitest instance instead of several).
