@@ -6,6 +6,43 @@
 
 ![](https://i.ibb.co/bJCbCf2/202203292020.gif)
 
+## Usage
+
+You can manage tests both from the Testing view and directly within your test files.
+
+### In the Testing View
+
+![Testing view](./img/vitest-extension.png "Testing view")
+
+You can access the extension from the Testing view **(1)**. 
+
+The toolbar **(2)** provides various commands to manage test execution:
+
+- **Refresh Tests**: To reload your test suite, reflecting any new changes.
+- **Run All Tests**: To start testing all cases that are currently visible.
+- **Debug Tests**: To begin a debugging session for the tests.
+- **Continuous Run/Stop Continuous Run**: To toggle the watch mode for running tests on file changes.
+- **Show Output**: To display detailed logs from test executions.
+- **Miscellaneous Settings**: To customize the Testing view, such as sorting and grouping tests.
+
+The filter bar at the top of the Testing view allows you to narrow down the tests displayed, focusing on specific tests by name, exclusion patterns, or tags.
+
+Icons next to each test indicate their status—passed (checkmark), failed (cross), skipped (arrow), or not executed (dot).
+
+### In the Test File
+
+![Vitest test file](./img/vitest-test-file.png "Vitest test file")
+
+When viewing a test file, you'll notice test icons in the gutter next to each test case:
+
+- **Run a Single Test:** Click the test icon next to a test case to run that specific test.
+- **More Options:** Right-click the test icon to open a context menu with additional options:
+  - `Run Test`: Execute the selected test case.
+  - `Debug Test`: Start a debugging session for the selected test case.
+  - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
+  - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
+
+
 ## Features
 
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
