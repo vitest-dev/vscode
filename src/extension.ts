@@ -12,6 +12,7 @@ import { resolveVitestPackages } from './api/pkg'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
+import { TestDebugManager } from './debug/debugManager'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -29,6 +30,7 @@ class VitestExtension {
 
   private testTree: TestTree
   private tagsManager: TagsManager
+  private debugManager: TestDebugManager
   private api: VitestAPI | undefined
 
   private disposables: vscode.Disposable[] = []
@@ -43,6 +45,7 @@ class VitestExtension {
     this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
     this.tagsManager = new TagsManager(this.testTree)
+    this.debugManager = new TestDebugManager()
   }
 
   private async defineTestProfiles(showWarning: boolean) {
@@ -113,7 +116,7 @@ class VitestExtension {
     }
 
     this.api.forEach((api) => {
-      const runner = new TestRunner(this.testController, this.testTree, api)
+      const runner = new TestRunner(this.testController, this.testTree, api, this.debugManager)
 
       const prefix = api.prefix
       let runProfile = previousRunProfiles.get(`${api.id}:run`)

@@ -8,12 +8,11 @@ import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeDat
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
-import { type DebugSessionAPI, startDebugSession } from '../debug/startSession'
+import { startDebugSession } from '../debug/startSession'
+import type { TestDebugManager } from '../debug/debugManager'
 import { TestRunData } from './testRunData'
 
 export class TestRunner extends vscode.Disposable {
-  private debug?: DebugSessionAPI
-
   private continuousRequests = new Set<vscode.TestRunRequest>()
   private simpleTestRunRequest: vscode.TestRunRequest | null = null
 
@@ -25,6 +24,7 @@ export class TestRunner extends vscode.Disposable {
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
+    private readonly debug: TestDebugManager,
   ) {
     super(() => {
       api.clearListeners()
@@ -97,9 +97,10 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    await this.debug?.stop()
+    await Promise.all([this.api.stopInspect(), this.debug.stop()])
 
-    this.debug = await startDebugSession(
+    await startDebugSession(
+      this.debug,
       this.api,
       this,
       request,

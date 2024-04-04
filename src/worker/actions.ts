@@ -4,6 +4,8 @@ import type { BirpcMethods } from '../api/rpc'
 
 const _require = require
 
+const inspector = () => _require('inspector') as typeof import('inspector')
+
 interface WatchState {
   files: string[]
   testNamePattern: string | undefined
@@ -175,12 +177,12 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       return false
     },
     startInspect(port) {
-      _require('inspector').open(port)
+      inspector().open(port)
       debuggerEnabled = true
     },
     stopInspect() {
       debuggerEnabled = false
-      _require('inspector').close()
+      inspector().close()
     },
     async close() {
       for (const vitest of vitestEntries) {
