@@ -14,7 +14,7 @@ You can manage tests both from the Testing view and directly within your test fi
 
 ![Testing view](./img/vitest-extension.png "Testing view")
 
-You can access the extension from the Testing view **(1)**. 
+You can access the extension from the Testing view **(1)**.
 
 The toolbar **(2)** provides various commands to manage test execution:
 
@@ -41,7 +41,6 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
   - `Debug Test`: Start a debugging session for the selected test case.
   - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
   - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
-
 
 ## Features
 
