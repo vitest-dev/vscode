@@ -50,9 +50,9 @@ export class VitestAPI {
     private readonly api: VitestFolderAPI[],
     private readonly meta: ResolvedMeta,
   ) {
-    meta.process.on('error', () => {
+    meta.process.on('error', (error) => {
       if (!this.disposing)
-        showVitestError('Vitest process failed')
+        showVitestError('Vitest process failed', error)
     })
   }
 

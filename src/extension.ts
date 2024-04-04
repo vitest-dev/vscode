@@ -99,8 +99,12 @@ class VitestExtension {
           showVitestError('Vitest process exited unexpectedly')
           this.testTree.reset([])
           this.testController.items.delete(this.loadingTestItem.id)
+        }
+        else {
+          log.info('[API] Reloading API due to unexpected empty exit code. This usually happens when "Stop" is clicked during debugging instead of "Disconnect".')
           this.api?.dispose()
           this.api = undefined
+          this.defineTestProfiles(false).catch(() => {})
         }
       })
 
