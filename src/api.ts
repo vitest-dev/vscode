@@ -90,7 +90,11 @@ export class VitestAPI {
         catch (err) {
           log.error('[API]', 'Failed to close Vitest process', err)
         }
+        const promise = new Promise<void>((resolve) => {
+          this.meta.process.once('exit', () => resolve())
+        })
         this.meta.process.kill()
+        await promise
       }
     }
     finally {
