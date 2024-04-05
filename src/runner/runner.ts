@@ -11,7 +11,7 @@ import { log } from '../log'
 import { startDebugSession } from '../debug/startSession'
 import type { TestDebugManager } from '../debug/debugManager'
 import { showVitestError } from '../utils'
-import { coverageContext } from '../coverage'
+import { coverageContext, readCoverageReport } from '../coverage'
 import { TestRunData } from './testRunData'
 
 export class TestRunner extends vscode.Disposable {
@@ -310,11 +310,13 @@ export class TestRunner extends vscode.Disposable {
     if (!reportsDirectory)
       return
 
+    const coverage = readCoverageReport(reportsDirectory)
+
     const promises = files.map(async (file) => {
       const data = this.tree.getTestDataByTask(file) as TestFile | undefined
       const testRun = data && this.getTestRunByData(data)
       if (testRun)
-        await coverageContext.apply(testRun, reportsDirectory)
+        await coverageContext.applyJson(testRun, coverage)
     })
 
     await Promise.all(promises)
