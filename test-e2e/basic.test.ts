@@ -20,14 +20,14 @@ test('basic', async ({ launch }) => {
 
   await tester.runAllTests()
 
-  await expect(page).toHaveResults('3/7')
+  await expect(tester.tree.getResults()).toHaveText('3/7')
   await expect(tester.tree.getFileItem('pass.test.ts')).toHaveState('passed')
   await expect(tester.tree.getFileItem('fail.test.ts')).toHaveState('failed')
   await expect(tester.tree.getFileItem('mix.test.ts')).toHaveState('failed')
 })
 
 test('custom imba language', async ({ launch }) => {
-  const { page, tester } = await launch({
+  const { tester } = await launch({
     workspacePath: './samples/imba',
   })
 
@@ -36,7 +36,7 @@ test('custom imba language', async ({ launch }) => {
 
   await tester.runAllTests()
 
-  await expect(page).toHaveResults('5/7')
+  await expect(tester.tree.getResults()).toHaveText('5/7')
   await expect(tester.tree.getFileItem('basic.test.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('utils.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')

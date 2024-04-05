@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import * as vscode from 'vscode'
 import { relative } from 'pathe'
 import type { VitestPackage } from './api/pkg'
@@ -67,4 +68,19 @@ export function nanoid(size = 21) {
   while (i--)
     id += urlAlphabet[(Math.random() * 64) | 0]
   return id
+}
+
+export function waitUntilExists(file: string, timeoutMs = 5000) {
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`File ${file} did not appear in time`))
+    }, timeoutMs)
+    const interval = setInterval(() => {
+      if (fs.existsSync(file)) {
+        clearInterval(interval)
+        clearTimeout(timeout)
+        resolve()
+      }
+    }, 50)
+  })
 }

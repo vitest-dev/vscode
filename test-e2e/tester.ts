@@ -22,7 +22,7 @@ export class VSCodeTester {
   }
 
   async runAllTests() {
-    await this.page.getByRole('button', { name: 'Run Tests' }).click()
+    await this.page.getByRole('button', { name: /^Run Tests$/ }).click()
   }
 }
 
@@ -30,6 +30,10 @@ class TesterTree {
   constructor(
     private page: Page,
   ) {}
+
+  getResults() {
+    return this.page.locator(`.result-summary > [custom-hover]`)
+  }
 
   getFileItem(file: string) {
     const name = basename(file)
@@ -86,6 +90,10 @@ export class TesterTestItem {
 
   async debug() {
     await this.locator.getByLabel('Debug Test').click()
+  }
+
+  async coverage() {
+    await this.locator.getByLabel('Run Test with Coverage').click()
   }
 
   async toggleContinuousRun() {

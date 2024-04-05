@@ -45,6 +45,7 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
 ## Features
 
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
+- **Coverage** support (requires VS Code >= 1.88)
 - NX support (see the [NX sample](./samples/monorepo-nx/)).
 - An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
 

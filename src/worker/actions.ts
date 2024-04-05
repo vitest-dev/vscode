@@ -1,5 +1,8 @@
-import { dirname } from 'pathe'
-import type { Vitest } from 'vitest'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'pathe'
+import type { CoverageProvider, Vitest } from 'vitest'
 import type { BirpcMethods } from '../api/rpc'
 
 const _require = require
@@ -17,6 +20,9 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
   let debuggerEnabled = false
 
   const watchStateById: Record<string, WatchState | null> = {}
+  const providers = new WeakMap<Vitest, CoverageProvider>()
+  const coverages = new WeakMap<Vitest, unknown>()
+  const coverageStatuses = new WeakMap<Vitest, boolean>()
 
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
@@ -136,8 +142,16 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     },
     async collectTests(id: string, testFile: string) {
       const vitest = vitestById[id]
-      await runTests(id, [testFile], '$a')
-      vitest.configOverride.testNamePattern = undefined
+      vitest.config.coverage.enabled = false
+      vitest.coverageProvider = undefined
+      try {
+        await runTests(id, [testFile], '$a')
+      }
+      finally {
+        vitest.configOverride.testNamePattern = undefined
+        vitest.coverageProvider = coverageStatuses.get(vitest) ? providers.get(vitest) : undefined
+        vitest.config.coverage.enabled = coverageStatuses.get(vitest) || false
+      }
     },
     async cancelRun(id: string) {
       const vitest = vitestById[id]
@@ -149,6 +163,9 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       const vitest = vitestById[id]
       if (!vitest)
         throw new Error(`Vitest instance not found for id: ${id}`)
+
+      // @ts-expect-error private method
+      await vitest.initBrowserProviders()
 
       if (testNamePattern) {
         await runTests(id, files || vitest.state.getFilepaths(), testNamePattern)
@@ -175,6 +192,56 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         }
       }
       return false
+    },
+    async enableCoverage(id: string) {
+      const vitest = vitestById[id]
+      coverages.delete(vitest)
+      vitest.config.coverage.enabled = true
+      coverageStatuses.set(vitest, true)
+
+      const jsonReporter = vitest.config.coverage.reporter.find(([name]) => name === 'json')
+      vitest.config.coverage.reporter = jsonReporter ? [jsonReporter] : [['json', {}]]
+      vitest.config.coverage.reportOnFailure = true
+      vitest.config.coverage.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
+
+      try {
+        if (!providers.has(vitest)) {
+          // @ts-expect-error private method
+          await vitest.initCoverageProvider()
+          await vitest.coverageProvider?.clean(vitest.config.coverage.clean)
+          providers.set(vitest, vitest.coverageProvider!)
+        }
+        else {
+          vitest.coverageProvider = providers.get(vitest)
+          await vitest.coverageProvider?.clean(vitest.config.coverage.clean)
+        }
+      }
+      catch (err) {
+        coverageStatuses.set(vitest, false)
+        vitest.config.coverage.enabled = false
+        throw err
+      }
+    },
+    disableCoverage(id: string) {
+      const vitest = vitestById[id]
+      coverages.delete(vitest)
+      coverageStatuses.set(vitest, false)
+      vitest.config.coverage.enabled = false
+      vitest.coverageProvider = undefined
+    },
+    async getCoverageConfig(id: string) {
+      const vitest = vitestById[id]
+      return vitest.config.coverage
+    },
+    async waitForCoverageReport(id: string) {
+      const vitest = vitestById[id]
+      const coverage = vitest.config.coverage
+      if (!coverage.enabled || !vitest.coverageProvider)
+        return null
+      await vitest.runningPromise
+      if (existsSync(coverage.reportsDirectory))
+        return coverage.reportsDirectory
+      return null
     },
     startInspect(port) {
       inspector().open(port)
