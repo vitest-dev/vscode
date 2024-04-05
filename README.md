@@ -21,6 +21,7 @@ The toolbar at the top provides various commands to manage test execution:
 - **Refresh Tests**: To reload your test suite, reflecting any new changes.
 - **Run All Tests**: To start testing all cases that are currently visible.
 - **Debug Tests**: To begin a debugging session for the tests.
+- **Run Tests with Coverage**: To start testing all cases that are currently visible, while also collecting code coverage information.
 - **Continuous Run/Stop Continuous Run**: To toggle the watch mode for running tests on file changes.
 - **Show Output**: To display detailed logs from test executions.
 - **Miscellaneous Settings**: To customize the Testing view, such as sorting and grouping tests.
