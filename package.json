@@ -141,7 +141,7 @@
   "scripts": {
     "vscode:prepublish": "pnpm compile",
     "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
-    "compile": "tsup --minify",
+    "compile": "tsup --minify --clean",
     "package": "vsce package --no-dependencies",
     "watch": "tsup --watch --sourcemap",
     "test": "vscode-test",
