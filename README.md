@@ -14,9 +14,9 @@ You can manage tests both from the Testing view and directly within your test fi
 
 ![Testing view](./img/vitest-extension.png "Testing view")
 
-You can access the extension from the Testing view **(1)**.
+You can access the extension from the Testing view in the Visual Studio Code sidebar.
 
-The toolbar **(2)** provides various commands to manage test execution:
+The toolbar at the top provides various commands to manage test execution:
 
 - **Refresh Tests**: To reload your test suite, reflecting any new changes.
 - **Run All Tests**: To start testing all cases that are currently visible.
@@ -25,9 +25,11 @@ The toolbar **(2)** provides various commands to manage test execution:
 - **Show Output**: To display detailed logs from test executions.
 - **Miscellaneous Settings**: To customize the Testing view, such as sorting and grouping tests.
 
-The filter bar at the top of the Testing view allows you to narrow down the tests displayed, focusing on specific tests by name, exclusion patterns, or tags.
+> 💡 Hovering, or right clicking a folder, test file, test suite, or a test will reveal more actions.
 
-Icons next to each test indicate their status—passed (checkmark), failed (cross), skipped (arrow), or not executed (dot).
+The filter bar allows you to narrow down the tests displayed, focusing on specific tests by name, exclusion patterns, or tags.
+
+Icons next to each test indicate their status—passed (checkmark), failed (cross), skipped (arrow), queued (yellow icon), or not executed (dot).
 
 ### In the Test File
 
@@ -39,6 +41,7 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
 - **More Options:** Right-click the test icon to open a context menu with additional options:
   - `Run Test`: Execute the selected test case.
   - `Debug Test`: Start a debugging session for the selected test case.
+  - `Run with coverage`: Execute the selected test case while also collecting code coverage information.
   - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
   - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
 
