@@ -141,14 +141,16 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     },
     async collectTests(id: string, testFile: string) {
       const vitest = vitestById[id]
-      const coverage = vitest.coverageProvider
-      const coverageStatus = vitest.config.coverage.enabled
       vitest.config.coverage.enabled = false
       vitest.coverageProvider = undefined
-      await runTests(id, [testFile], '$a')
-      vitest.configOverride.testNamePattern = undefined
-      vitest.coverageProvider = coverage
-      vitest.config.coverage.enabled = coverageStatus
+      try {
+        await runTests(id, [testFile], '$a')
+      }
+      finally {
+        vitest.configOverride.testNamePattern = undefined
+        vitest.coverageProvider = providers.get(vitest)
+        vitest.config.coverage.enabled = providers.has(vitest)
+      }
     },
     async cancelRun(id: string) {
       const vitest = vitestById[id]
