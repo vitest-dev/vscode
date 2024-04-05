@@ -2,7 +2,7 @@ import path from 'node:path'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
-import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
+import type { ErrorWithDiff, File, ParsedStack, Task, TaskResult } from 'vitest'
 import { basename, dirname, join, normalize } from 'pathe'
 import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
@@ -71,7 +71,14 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onFinished((files = []) => {
+    api.onFinished(async (files = []) => {
+      try {
+        await this.reportCoverage(files)
+      }
+      catch (err: any) {
+        showVitestError(`Failed to report coverage. ${err.message}`, err)
+      }
+
       files.forEach((file) => {
         const data = this.tree.getTestDataByTask(file) as TestFile | undefined
         const testRun = data && this.getTestRunByData(data)
@@ -140,16 +147,10 @@ export class TestRunner extends vscode.Disposable {
     }
 
     token.onCancellationRequested(() => {
-      this.api.disableCoverage()
+      // this.api.disableCoverage()
     })
 
-    try {
-      await this.runTests(request, token)
-    }
-    catch (err) {
-      this.api.disableCoverage()
-      throw err
-    }
+    await this.runTests(request, token)
   }
 
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
@@ -290,24 +291,30 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
+  public async reportCoverage(files: File[]) {
+    if (!('FileCoverage' in vscode))
+      return
+    const config = await this.api.getCoverageConfig()
+    if (!config.enabled)
+      return
+
+    // Vitest doesn't have hooks to wait until this is ready :(
+    await waitUntilExists(join(config.reportsDirectory, 'coverage-final.json'), 5_000)
+
+    const promises = files.map(async (file) => {
+      const data = this.tree.getTestDataByTask(file) as TestFile | undefined
+      const testRun = data && this.getTestRunByData(data)
+      if (testRun)
+        await coverageContext.apply(testRun, config.reportsDirectory)
+    })
+
+    await Promise.all(promises)
+  }
+
   public async endTestRun(run: vscode.TestRun) {
     const data = TestRunData.get(run)
     this.testRunsByFile.delete(data.file)
-    try {
-      if (typeof run.addCoverage !== 'undefined') {
-        const config = await this.api.getCoverageConfig()
-        if (config.enabled) {
-          await waitUntilExists(join(config.reportsDirectory, 'coverage-final.json'), 30_000)
-          await coverageContext.apply(run, config.reportsDirectory)
-        }
-      }
-    }
-    catch (err) {
-      showVitestError('Failed to apply coverage', err)
-    }
-    finally {
-      run.end()
-    }
+    run.end()
   }
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {

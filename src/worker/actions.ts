@@ -1,4 +1,6 @@
-import { dirname } from 'pathe'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'pathe'
 import type { CoverageProvider, Vitest } from 'vitest'
 import type { BirpcMethods } from '../api/rpc'
 
@@ -191,6 +193,12 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       const vitest = vitestById[id]
       coverages.delete(vitest)
       vitest.config.coverage.enabled = true
+
+      const jsonReporter = vitest.config.coverage.reporter.find(([name]) => name === 'json')
+      vitest.config.coverage.reporter = jsonReporter ? [jsonReporter] : [['json', {}]]
+      vitest.config.coverage.reportOnFailure = true
+      vitest.config.coverage.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
+
       try {
         if (!providers.has(vitest)) {
           // @ts-expect-error private method
@@ -204,7 +212,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         }
       }
       catch (err) {
-        vitest.config.coverage.enabled = true
+        vitest.config.coverage.enabled = false
         throw err
       }
     },
