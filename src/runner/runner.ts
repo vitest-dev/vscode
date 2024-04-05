@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { rm } from 'node:fs/promises'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
@@ -320,6 +321,10 @@ export class TestRunner extends vscode.Disposable {
     })
 
     await Promise.all(promises)
+
+    rm(reportsDirectory, { recursive: true, force: true }).catch(() => {
+      // ignore
+    })
   }
 
   public async endTestRun(run: vscode.TestRun) {
