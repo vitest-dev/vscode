@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'pathe'
 import type { CoverageProvider, Vitest } from 'vitest'
 import type { BirpcMethods } from '../api/rpc'
@@ -21,19 +22,9 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
   const watchStateById: Record<string, WatchState | null> = {}
   const providers = new WeakMap<Vitest, CoverageProvider>()
   const coverages = new WeakMap<Vitest, unknown>()
-  const coverageReportPromises = new WeakMap<Vitest, Promise<void>>()
 
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
-    // @ts-expect-error modifying a private property
-    const originalReportCoverage = vitest.reportCoverage.bind(vitest)
-    // @ts-expect-error modifying a private property
-    vitest.reportCoverage = async (allTestsRun: boolean) => {
-      const promise = originalReportCoverage(allTestsRun)
-      coverageReportPromises.set(vitest, promise)
-      return promise
-    }
-
     vitest.getCoreWorkspaceProject().provide('__vscode', {
       get continuousFiles() {
         const state = watchStateById[id]
@@ -238,11 +229,13 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     },
     async waitForCoverageReport(id: string) {
       const vitest = vitestById[id]
-      const promise = coverageReportPromises.get(vitest)
-      if (!promise || !vitest.coverageProvider)
+      const coverage = vitest.config.coverage
+      if (!coverage.enabled || !vitest.coverageProvider)
         return null
-      await promise
-      return vitest.config.coverage.reportsDirectory
+      await vitest.runningPromise
+      if (existsSync(coverage.reportsDirectory))
+        return coverage.reportsDirectory
+      return null
     },
     startInspect(port) {
       inspector().open(port)
