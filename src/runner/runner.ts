@@ -22,6 +22,8 @@ export class TestRunner extends vscode.Disposable {
   // granular filters yet (coming in Vitest 1.4.1)
   private testRunsByFile = new Map<string, vscode.TestRun>()
 
+  private _onRequestsExhausted = new vscode.EventEmitter<void>()
+
   constructor(
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
@@ -34,6 +36,7 @@ export class TestRunner extends vscode.Disposable {
       this.simpleTestRunRequest = null
       this.continuousRequests.clear()
       this.api.cancelRun()
+      this._onRequestsExhausted.dispose()
     })
 
     api.onWatcherRerun((files, _trigger, collecting) => !collecting && this.startTestRun(files))
@@ -122,8 +125,10 @@ export class TestRunner extends vscode.Disposable {
 
     token.onCancellationRequested(() => {
       this.continuousRequests.delete(request)
-      if (!this.continuousRequests.size)
+      if (!this.continuousRequests.size) {
+        this._onRequestsExhausted.fire()
         this.api.unwatchTests()
+      }
     })
 
     if (!request.include?.length) {
@@ -146,8 +151,13 @@ export class TestRunner extends vscode.Disposable {
       return
     }
 
+    const { dispose } = this._onRequestsExhausted.event(() => {
+      this.api.disableCoverage()
+      dispose()
+    })
+
     token.onCancellationRequested(() => {
-      // this.api.disableCoverage()
+      this.api.disableCoverage()
     })
 
     await this.runTests(request, token)
@@ -183,6 +193,7 @@ export class TestRunner extends vscode.Disposable {
     }
 
     this.simpleTestRunRequest = null
+    this._onRequestsExhausted.fire()
   }
 
   private getTestRunByData(data: TestData): vscode.TestRun | null {
