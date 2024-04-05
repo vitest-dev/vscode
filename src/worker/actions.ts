@@ -22,6 +22,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
   const watchStateById: Record<string, WatchState | null> = {}
   const providers = new WeakMap<Vitest, CoverageProvider>()
   const coverages = new WeakMap<Vitest, unknown>()
+  const coverageStatuses = new WeakMap<Vitest, boolean>()
 
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
@@ -148,8 +149,8 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       }
       finally {
         vitest.configOverride.testNamePattern = undefined
-        vitest.coverageProvider = providers.get(vitest)
-        vitest.config.coverage.enabled = providers.has(vitest)
+        vitest.coverageProvider = coverageStatuses.get(vitest) ? providers.get(vitest) : undefined
+        vitest.config.coverage.enabled = coverageStatuses.get(vitest) || false
       }
     },
     async cancelRun(id: string) {
@@ -196,6 +197,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       const vitest = vitestById[id]
       coverages.delete(vitest)
       vitest.config.coverage.enabled = true
+      coverageStatuses.set(vitest, true)
 
       const jsonReporter = vitest.config.coverage.reporter.find(([name]) => name === 'json')
       vitest.config.coverage.reporter = jsonReporter ? [jsonReporter] : [['json', {}]]
@@ -215,6 +217,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         }
       }
       catch (err) {
+        coverageStatuses.set(vitest, false)
         vitest.config.coverage.enabled = false
         throw err
       }
@@ -222,6 +225,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     disableCoverage(id: string) {
       const vitest = vitestById[id]
       coverages.delete(vitest)
+      coverageStatuses.set(vitest, false)
       vitest.config.coverage.enabled = false
       vitest.coverageProvider = undefined
     },
