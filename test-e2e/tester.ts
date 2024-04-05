@@ -31,6 +31,10 @@ class TesterTree {
     private page: Page,
   ) {}
 
+  getResults() {
+    return this.page.locator(`.result-summary > [custom-hover]`)
+  }
+
   getFileItem(file: string) {
     const name = basename(file)
     return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} "]`), this.page)

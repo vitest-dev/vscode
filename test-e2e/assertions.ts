@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 import type { TesterTestItem } from './tester'
 
@@ -21,21 +20,6 @@ function getTitleFromState(state: TestState) {
 }
 
 expect.extend({
-  async toHaveResults(page: Page, number: string) {
-    const title = await page.locator(`[title*="tests passed ("]`).getAttribute('title')
-    const expected = `${number} tests passed`
-    const pass = !!(title && title.includes(expected))
-
-    return {
-      message: () => `${this.utils.matcherHint('toHaveResults', title, expected, { isNot: this.isNot })}\n\n`
-      + `Expected: ${this.isNot ? 'not ' : ''}to have results: ${this.utils.printExpected(number)}\n`
-      + `Received: ${this.utils.printReceived(title)}\n`,
-      pass,
-      name: 'toHaveResults',
-      expected,
-      actual: title,
-    }
-  },
   async toHaveState(item: TesterTestItem, state: TestState) {
     const title = await item.locator.getAttribute('aria-label')
     const pass = !!(title && title.includes(getTitleFromState(state)))
@@ -86,7 +70,6 @@ declare global {
     // eslint-disable-next-line unused-imports/no-unused-vars
     export interface Matchers<R, T = unknown> {
       toHaveState: (state: TestState) => Promise<R>
-      toHaveResults: (state: string) => Promise<R>
       /**
        * @example
        * expect(tester.tree.getFileItem('no-import.test.ts')).toHaveTests({
