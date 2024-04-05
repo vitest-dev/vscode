@@ -33,6 +33,7 @@ export class TestRunner extends vscode.Disposable {
   ) {
     super(() => {
       api.clearListeners()
+      this.testRunsByFile.forEach(run => run.end())
       this.testRunsByFile.clear()
       this.simpleTestRunRequest = null
       this.continuousRequests.clear()
@@ -75,9 +76,10 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onFinished(async (files = []) => {
+    api.onFinished(async (files = [], _, collecting) => {
       try {
-        await this.reportCoverage(files)
+        if (!collecting)
+          await this.reportCoverage(files)
       }
       catch (err: any) {
         showVitestError(`Failed to report coverage. ${err.message}`, err)

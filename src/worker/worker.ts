@@ -59,8 +59,9 @@ class VSCodeReporter implements Reporter {
   }
 
   onFinished(files?: File[], errors?: unknown[]) {
+    const collecting = this.isCollecting
     nextTick(() => {
-      this.rpc.onFinished(this.id, files, errors, this.isCollecting)
+      this.rpc.onFinished(this.id, files, errors, collecting)
     })
   }
 
