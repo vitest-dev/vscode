@@ -13,6 +13,7 @@ import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
 import { TestDebugManager } from './debug/debugManager'
+import { coverageContext } from './coverage'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -151,6 +152,25 @@ class VitestExtension {
       debugProfile.tag = api.tag
       debugProfile.runHandler = (request, token) => runner.debugTests(request, token)
       this.runProfiles.set(`${api.id}:debug`, debugProfile)
+
+      // coverage is supported since VS Code 1.88
+      if (vscode.TestRunProfileKind.Coverage && 'FileCoverage' in vscode) {
+        let coverageProfile = previousRunProfiles.get(`${api.id}:coverage`)
+        if (!coverageProfile) {
+          coverageProfile = this.testController.createRunProfile(
+            prefix,
+            vscode.TestRunProfileKind.Coverage,
+            () => {},
+            false,
+            undefined,
+            true,
+          )
+        }
+        coverageProfile.tag = api.tag
+        coverageProfile.runHandler = (request, token) => runner.runCoverage(request, token)
+        coverageProfile.loadDetailedCoverage = coverageContext.loadDetailedCoverage
+        this.runProfiles.set(`${api.id}:coverage`, coverageProfile)
+      }
     })
 
     for (const [id, profile] of previousRunProfiles) {

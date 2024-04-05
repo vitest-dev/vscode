@@ -3,13 +3,15 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, ParsedStack, Task, TaskResult } from 'vitest'
-import { basename, dirname, normalize } from 'pathe'
+import { basename, dirname, join, normalize } from 'pathe'
 import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
 import { startDebugSession } from '../debug/startSession'
 import type { TestDebugManager } from '../debug/debugManager'
+import { showVitestError, waitUntilExists } from '../utils'
+import { coverageContext } from '../coverage'
 import { TestRunData } from './testRunData'
 
 export class TestRunner extends vscode.Disposable {
@@ -125,6 +127,28 @@ export class TestRunner extends vscode.Disposable {
       const files = getTestFiles(include)
       const testNamePatern = formatTestPattern(include)
       await this.api.watchTests(files, testNamePatern)
+    }
+  }
+
+  public async runCoverage(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    try {
+      await this.api.enableCoverage()
+    }
+    catch (err: any) {
+      showVitestError(`Failed to enable coverage. ${err.message}`, err)
+      return
+    }
+
+    token.onCancellationRequested(() => {
+      this.api.disableCoverage()
+    })
+
+    try {
+      await this.runTests(request, token)
+    }
+    catch (err) {
+      this.api.disableCoverage()
+      throw err
     }
   }
 
@@ -266,10 +290,24 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  public endTestRun(run: vscode.TestRun) {
+  public async endTestRun(run: vscode.TestRun) {
     const data = TestRunData.get(run)
     this.testRunsByFile.delete(data.file)
-    run.end()
+    try {
+      if (typeof run.addCoverage !== 'undefined') {
+        const config = await this.api.getCoverageConfig()
+        if (config.enabled) {
+          await waitUntilExists(join(config.reportsDirectory, 'coverage-final.json'), 30_000)
+          await coverageContext.apply(run, config.reportsDirectory)
+        }
+      }
+    }
+    catch (err) {
+      showVitestError('Failed to apply coverage', err)
+    }
+    finally {
+      run.end()
+    }
   }
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {

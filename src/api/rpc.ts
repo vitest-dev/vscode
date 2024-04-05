@@ -1,7 +1,7 @@
 import v8 from 'node:v8'
 import type { ChildProcess } from 'node:child_process'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { File, ResolvedCoverageOptions, TaskResultPack, UserConsoleLog } from 'vitest'
 
 export interface BirpcMethods {
   getFiles: (id: string) => Promise<[project: string, file: string][]>
@@ -12,6 +12,10 @@ export interface BirpcMethods {
 
   watchTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
   unwatchTests: (id: string) => Promise<void>
+
+  enableCoverage: (id: string) => void
+  disableCoverage: (id: string) => void
+  getCoverageConfig: (id: string) => Promise<ResolvedCoverageOptions>
 
   startInspect: (port: number) => void
   stopInspect: () => void

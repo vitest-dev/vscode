@@ -88,6 +88,10 @@ export class TesterTestItem {
     await this.locator.getByLabel('Debug Test').click()
   }
 
+  async coverage() {
+    await this.locator.getByLabel('Run Test with Coverage').click()
+  }
+
   async toggleContinuousRun() {
     await this.locator.getByLabel(/Turn (on|off) Continuous Run/).click()
   }

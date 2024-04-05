@@ -1,5 +1,5 @@
 import { dirname } from 'pathe'
-import type { Vitest } from 'vitest'
+import type { CoverageProvider, Vitest } from 'vitest'
 import type { BirpcMethods } from '../api/rpc'
 
 const _require = require
@@ -17,6 +17,8 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
   let debuggerEnabled = false
 
   const watchStateById: Record<string, WatchState | null> = {}
+  const providers = new WeakMap<Vitest, CoverageProvider>()
+  const coverages = new WeakMap<Vitest, unknown>()
 
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
@@ -136,8 +138,14 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     },
     async collectTests(id: string, testFile: string) {
       const vitest = vitestById[id]
+      const coverage = vitest.coverageProvider
+      const coverageStatus = vitest.config.coverage.enabled
+      vitest.config.coverage.enabled = false
+      vitest.coverageProvider = undefined
       await runTests(id, [testFile], '$a')
       vitest.configOverride.testNamePattern = undefined
+      vitest.coverageProvider = coverage
+      vitest.config.coverage.enabled = coverageStatus
     },
     async cancelRun(id: string) {
       const vitest = vitestById[id]
@@ -149,6 +157,9 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       const vitest = vitestById[id]
       if (!vitest)
         throw new Error(`Vitest instance not found for id: ${id}`)
+
+      // @ts-expect-error private method
+      await vitest.initBrowserProviders()
 
       if (testNamePattern) {
         await runTests(id, files || vitest.state.getFilepaths(), testNamePattern)
@@ -175,6 +186,37 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         }
       }
       return false
+    },
+    async enableCoverage(id: string) {
+      const vitest = vitestById[id]
+      coverages.delete(vitest)
+      vitest.config.coverage.enabled = true
+      try {
+        if (!providers.has(vitest)) {
+          // @ts-expect-error private method
+          await vitest.initCoverageProvider()
+          await vitest.coverageProvider?.clean(vitest.config.coverage.clean)
+          providers.set(vitest, vitest.coverageProvider!)
+        }
+        else {
+          vitest.coverageProvider = providers.get(vitest)
+          await vitest.coverageProvider?.clean(vitest.config.coverage.clean)
+        }
+      }
+      catch (err) {
+        vitest.config.coverage.enabled = true
+        throw err
+      }
+    },
+    disableCoverage(id: string) {
+      const vitest = vitestById[id]
+      coverages.delete(vitest)
+      vitest.config.coverage.enabled = false
+      vitest.coverageProvider = undefined
+    },
+    async getCoverageConfig(id: string) {
+      const vitest = vitestById[id]
+      return vitest.config.coverage
     },
     startInspect(port) {
       inspector().open(port)
