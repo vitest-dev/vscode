@@ -3,14 +3,14 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, File, ParsedStack, Task, TaskResult } from 'vitest'
-import { basename, dirname, join, normalize } from 'pathe'
+import { basename, dirname, normalize } from 'pathe'
 import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
 import { startDebugSession } from '../debug/startSession'
 import type { TestDebugManager } from '../debug/debugManager'
-import { showVitestError, waitUntilExists } from '../utils'
+import { showVitestError } from '../utils'
 import { coverageContext } from '../coverage'
 import { TestRunData } from './testRunData'
 
@@ -294,18 +294,16 @@ export class TestRunner extends vscode.Disposable {
   public async reportCoverage(files: File[]) {
     if (!('FileCoverage' in vscode))
       return
-    const config = await this.api.getCoverageConfig()
-    if (!config.enabled)
-      return
 
-    // Vitest doesn't have hooks to wait until this is ready :(
-    await waitUntilExists(join(config.reportsDirectory, 'coverage-final.json'), 5_000)
+    const reportsDirectory = await this.api.waitForCoverageReport()
+    if (!reportsDirectory)
+      return
 
     const promises = files.map(async (file) => {
       const data = this.tree.getTestDataByTask(file) as TestFile | undefined
       const testRun = data && this.getTestRunByData(data)
       if (testRun)
-        await coverageContext.apply(testRun, config.reportsDirectory)
+        await coverageContext.apply(testRun, reportsDirectory)
     })
 
     await Promise.all(promises)

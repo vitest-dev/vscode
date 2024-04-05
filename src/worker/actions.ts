@@ -21,9 +21,19 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
   const watchStateById: Record<string, WatchState | null> = {}
   const providers = new WeakMap<Vitest, CoverageProvider>()
   const coverages = new WeakMap<Vitest, unknown>()
+  const coverageReportPromises = new WeakMap<Vitest, Promise<void>>()
 
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
+    // @ts-expect-error modifying a private property
+    const originalReportCoverage = vitest.reportCoverage.bind(vitest)
+    // @ts-expect-error modifying a private property
+    vitest.reportCoverage = async (allTestsRun: boolean) => {
+      const promise = originalReportCoverage(allTestsRun)
+      coverageReportPromises.set(vitest, promise)
+      return promise
+    }
+
     vitest.getCoreWorkspaceProject().provide('__vscode', {
       get continuousFiles() {
         const state = watchStateById[id]
@@ -225,6 +235,14 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
     async getCoverageConfig(id: string) {
       const vitest = vitestById[id]
       return vitest.config.coverage
+    },
+    async waitForCoverageReport(id: string) {
+      const vitest = vitestById[id]
+      const promise = coverageReportPromises.get(vitest)
+      if (!promise || !vitest.coverageProvider)
+        return null
+      await promise
+      return vitest.config.coverage.reportsDirectory
     },
     startInspect(port) {
       inspector().open(port)

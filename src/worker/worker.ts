@@ -1,5 +1,6 @@
 import v8 from 'node:v8'
 import { register } from 'node:module'
+import { nextTick } from 'node:process'
 import { dirname } from 'pathe'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
@@ -58,7 +59,9 @@ class VSCodeReporter implements Reporter {
   }
 
   onFinished(files?: File[], errors?: unknown[]) {
-    this.rpc.onFinished(this.id, files, errors, this.isCollecting)
+    nextTick(() => {
+      this.rpc.onFinished(this.id, files, errors, this.isCollecting)
+    })
   }
 
   onCollected(files?: File[]) {

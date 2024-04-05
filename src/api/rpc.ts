@@ -16,6 +16,7 @@ export interface BirpcMethods {
   enableCoverage: (id: string) => void
   disableCoverage: (id: string) => void
   getCoverageConfig: (id: string) => Promise<ResolvedCoverageOptions>
+  waitForCoverageReport: (id: string) => Promise<string | null>
 
   startInspect: (port: number) => void
   stopInspect: () => void
