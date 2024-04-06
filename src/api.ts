@@ -173,10 +173,6 @@ export class VitestFolderAPI extends VitestReporter {
     await this.meta.rpc.cancelRun(this.id)
   }
 
-  getCoverageConfig() {
-    return this.meta.rpc.getCoverageConfig(this.id)
-  }
-
   waitForCoverageReport() {
     return this.meta.rpc.waitForCoverageReport(this.id)
   }
