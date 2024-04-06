@@ -111,6 +111,11 @@
           "default": "**/{node_modules,.*}/**",
           "scope": "window"
         },
+        "vitest.debuggerPort": {
+          "description": "Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.",
+          "type": "string",
+          "scope": "window"
+        },
         "vitest.disableWorkspaceWarning": {
           "markdownDescription": "Disable a warning about too many config files that recommends creating a single `vitest.workspace.js` file.",
           "type": "boolean",

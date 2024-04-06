@@ -62,11 +62,19 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
 
 You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
 
+### Workspace Configurations
+
+These options are resolved relative to the [workspace file](https://code.visualstudio.com/docs/editor/workspaces#_multiroot-workspaces) if there is one. If you have a single folder open in Visual Studio Code, paths will be resolved relative to that folder. If there are multiple folders, but there is no workspace file, then paths are resolved as is (so they should be absolute) - this can happen if you change your user config to have multiple folders.
+
 - `vitest.rootConfig`: The path to your root config file. If you have several Vitest configs, consider using a [Vitest workspace](https://vitest.dev/guide/workspace).
 - `vitest.workspaceConfig`: The path to the [Vitest workspace](https://vitest.dev/guide/workspace) config file. You can only have a single workspace config per VSCode workspace.
-- `vitest.configSearchPatternExclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be ignored when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `**/{node_modules,.*}/**`
-- `vitest.packagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix. If the extension cannot find Vitest, please open an issue.
+- `vitest.configSearchPatternExclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be ignored when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `**/{node_modules,.*}/**`If the extension cannot find Vitest, please open an issue.
 - `vitest.nodeExecutable`: This extension spawns another process and will use this value as `execPath` argument.
+- `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
+
+### Other Options
+
+- `vitest.packagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to
   `process.env`
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:

@@ -46,6 +46,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
     configSearchPatternExclude,
     nodeExecutable: resolvePath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
+    debuggerPort: get<number>('debuggerPort'),
   }
 }
 

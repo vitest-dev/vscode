@@ -21,7 +21,7 @@ export async function startDebugSession(
   token: vscode.CancellationToken,
 ) {
   const config = getConfig()
-  const port = await getPort({ port: DEBUG_DEFAULT_PORT })
+  const port = config.debuggerPort || await getPort({ port: DEBUG_DEFAULT_PORT })
 
   const inspectPromise = api.startInspect(port)
 
@@ -31,7 +31,7 @@ export async function startDebugSession(
     type: 'pwa-node',
     request: 'attach',
     name: 'Debug Tests',
-    processId: `${api.processId}:${port}`,
+    port,
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
     smartStep: true,
