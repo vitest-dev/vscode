@@ -12,7 +12,6 @@ import { log } from '../log'
 import type { TestDebugManager } from '../debug/debugManager'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
-import { startDebugSession } from '../debug/startSession'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -118,7 +117,7 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    await Promise.all([this.api.stopInspect(), this.debug.stop()])
+    await this.debug.stop()
 
     this.api.startInspect(9229)
 
@@ -287,8 +286,10 @@ export class TestRunner extends vscode.Disposable {
     if (!request)
       return
 
-    if (request.profile?.kind === vscode.TestRunProfileKind.Debug)
-      await startDebugSession()
+    if (request.profile?.kind === vscode.TestRunProfileKind.Debug) {
+      await this.debug.stop()
+      await this.debug.start()
+    }
 
     const run = this.controller.createTestRun(request)
     const testRunsByRequest = this.testRunsByRequest.get(request) || []
