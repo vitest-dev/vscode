@@ -2,10 +2,12 @@ import * as vscode from 'vscode'
 import getPort from 'get-port'
 import { getConfig } from '../config'
 import { log } from '../log'
+import type { VitestFolderAPI } from '../api'
 
 export class TestDebugManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
   private sessions = new Set<vscode.DebugSession>()
+  private port: number | undefined
 
   private static DEBUG_DEFAULT_PORT = 9229
 
@@ -28,16 +30,29 @@ export class TestDebugManager extends vscode.Disposable {
     )
   }
 
-  public async start(defaultPort?: number) {
+  public async enable(api: VitestFolderAPI) {
+    await this.stop()
+
     const config = getConfig()
-    // TODO: test only DEBUG_DEFAULT_PORT for now
-    const port = defaultPort || config.debuggerPort || TestDebugManager.DEBUG_DEFAULT_PORT || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
+    // TODO: remove "|| TestDebugManager.DEBUG_DEFAULT_PORT"
+    this.port ??= config.debuggerPort || TestDebugManager.DEBUG_DEFAULT_PORT || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
+    api.startInspect(this.port)
+  }
+
+  public async disable(api: VitestFolderAPI) {
+    await this.stop()
+    this.port = undefined
+    api.stopInspect()
+  }
+
+  public start(folder: vscode.WorkspaceFolder) {
+    const config = getConfig(folder)
 
     const debugConfig = {
       type: 'pwa-node',
       request: 'attach',
       name: 'Debug Tests',
-      port,
+      port: this.port,
       autoAttachChildProcesses: true,
       skipFiles: config.debugExclude,
       smartStep: true,
@@ -48,17 +63,22 @@ export class TestDebugManager extends vscode.Disposable {
       },
     }
 
-    vscode.debug.startDebugging(undefined, debugConfig, {
-      suppressDebugView: true,
-    }).then((fulfilled) => {
-      if (fulfilled)
-        log.info('[DEBUG] Debugging started')
-      else
-        log.error('[DEBUG] Debugging failed')
-    }, (err) => {
-      log.error('[DEBUG] Start debugging failed')
-      log.error(err.toString())
-    })
+    vscode.debug.startDebugging(
+      folder,
+      debugConfig,
+      { suppressDebugView: true },
+    ).then(
+      (fulfilled) => {
+        if (fulfilled)
+          log.info('[DEBUG] Debugging started')
+        else
+          log.error('[DEBUG] Debugging failed')
+      },
+      (err) => {
+        log.error('[DEBUG] Start debugging failed')
+        log.error(err.toString())
+      },
+    )
   }
 
   public async stop() {

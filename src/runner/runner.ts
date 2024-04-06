@@ -117,13 +117,11 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    await this.debug.stop()
-
-    this.api.startInspect(9229)
+    await this.debug.enable(this.api)
 
     await this.runTests(request, token)
 
-    this.api.stopInspect()
+    await this.debug.disable(this.api)
   }
 
   private endRequestRuns(request: vscode.TestRunRequest) {
@@ -288,7 +286,7 @@ export class TestRunner extends vscode.Disposable {
 
     if (request.profile?.kind === vscode.TestRunProfileKind.Debug) {
       await this.debug.stop()
-      await this.debug.start()
+      this.debug.start(this.api.workspaceFolder)
     }
 
     const run = this.controller.createTestRun(request)
