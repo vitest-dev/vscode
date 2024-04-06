@@ -66,6 +66,8 @@ class VitestExtension {
 
     const configFiles = vitest.filter(x => x.configFile && !x.workspaceFile)
 
+    // TODO: hard limit on the number of config files
+
     if (configFiles.length > 3 && configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
       vscode.window.showWarningMessage(
         `Vitest found ${configFiles.length} config files. For better performance, consider using a workspace configuration.`,
@@ -146,7 +148,7 @@ class VitestExtension {
           () => {},
           false,
           undefined,
-          true,
+          false, // disable continues debugging
         )
       }
       debugProfile.tag = api.tag

@@ -2,12 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'pathe'
-import type { CoverageProvider, Vitest } from 'vitest'
+import type { CoverageProvider, ResolvedConfig, Vitest } from 'vitest'
 import type { BirpcMethods } from '../api/rpc'
-
-const _require = require
-
-const inspector = () => _require('inspector') as typeof import('inspector')
 
 interface WatchState {
   files: string[]
@@ -18,14 +14,21 @@ interface WatchState {
 
 export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMethods {
   let debuggerEnabled = false
+  let _debuggerPort: number | undefined
 
   const watchStateById: Record<string, WatchState | null> = {}
   const providers = new WeakMap<Vitest, CoverageProvider>()
   const coverages = new WeakMap<Vitest, unknown>()
   const coverageStatuses = new WeakMap<Vitest, boolean>()
 
+  const originalConfigs = new WeakMap<Vitest, ResolvedConfig>()
+
   const vitestEntries = Object.entries(vitestById)
   vitestEntries.forEach(([id, vitest]) => {
+    originalConfigs.set(vitest, {
+      fileParallelism: vitest.config.fileParallelism,
+    } as any)
+
     vitest.getCoreWorkspaceProject().provide('__vscode', {
       get continuousFiles() {
         const state = watchStateById[id]
@@ -93,6 +96,9 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
   async function runTests(id: string, files: string[], testNamePattern?: string) {
     const cwd = process.cwd()
     const vitest = vitestById[id]
+
+    await vitest.runningPromise
+
     const state = watchStateById[id]
     if (state)
       state.rerunTriggered = false
@@ -102,11 +108,24 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       vitest.configOverride.testNamePattern = testNamePattern ? new RegExp(testNamePattern) : undefined
 
       if (!debuggerEnabled) {
+        vitest.config.inspect = false
+        vitest.config.fileParallelism = originalConfigs.get(vitest)!.fileParallelism
+
         await rerunTests(vitest, files)
       }
       else {
+        // TODO: "collectTests" doesn't work with debugger paused :thinking:
+        vitest.config.inspect = true
+        vitest.config.fileParallelism = false
+
+        vitest.pool?.close?.()
+        vitest.pool = undefined
+
         for (const file of files)
           await rerunTests(vitest, [file])
+
+        vitest.config.inspect = false
+        vitest.config.fileParallelism = originalConfigs.get(vitest)!.fileParallelism
       }
     }
     finally {
@@ -244,12 +263,11 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
       return null
     },
     startInspect(port) {
-      inspector().open(port)
       debuggerEnabled = true
+      _debuggerPort = port
     },
     stopInspect() {
       debuggerEnabled = false
-      inspector().close()
     },
     async close() {
       for (const vitest of vitestEntries) {

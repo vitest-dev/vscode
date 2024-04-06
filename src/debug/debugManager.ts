@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import type { TestRunner } from '../runner/runner'
 import type { VitestFolderAPI } from '../api'
-import { showVitestError } from '../utils'
 
 interface VitestDebugConfig {
   request: vscode.TestRunRequest
@@ -22,6 +21,7 @@ export class TestDebugManager extends vscode.Disposable {
 
     this.disposables.push(
       vscode.debug.onDidStartDebugSession((session) => {
+        console.log('started', session)
         // the main attach session is called "Remote Process [0]"
         // https://github.com/microsoft/vscode-js-debug/blob/dfceaf103ce0cb83b53f1c3d88c06b8b63cb17da/src/targets/node/nodeAttacher.ts#L89
         // there are also other sessions that are spawned from the main session
@@ -40,22 +40,23 @@ export class TestDebugManager extends vscode.Disposable {
         if (!config)
           return
         this.sessions.add(baseSession)
-        const { request, runner, token } = config
-        runner.runTests(request, token).catch((err: any) => {
-          showVitestError('Failed to debug tests', err)
-        })
+        // const { request, runner, token } = config
+        // runner.runTests(request, token).catch((err: any) => {
+        //   showVitestError('Failed to debug tests', err)
+        // })
       }),
       vscode.debug.onDidTerminateDebugSession((session) => {
+        console.log('terminated', session)
         if (!session.configuration.__vitest)
           return
         this.sessions.delete(session)
-        const sym = session.configuration.__vitest as string
-        const config = this.configurations.get(sym)
-        if (!config)
-          return
-        const { api } = config
-        api.cancelRun()
-        api.stopInspect()
+        // const sym = session.configuration.__vitest as string
+        // const config = this.configurations.get(sym)
+        // if (!config)
+        //   return
+        // const { api } = config
+        // api.cancelRun()
+        // api.stopInspect()
       }),
     )
   }
@@ -65,7 +66,7 @@ export class TestDebugManager extends vscode.Disposable {
   }
 
   public async stop() {
-    await Promise.allSettled([...this.sessions].map(s => vscode.debug.stopDebugging(s)))
+    // await Promise.allSettled([...this.sessions].map(s => vscode.debug.stopDebugging(s)))
     this.configurations.clear()
   }
 

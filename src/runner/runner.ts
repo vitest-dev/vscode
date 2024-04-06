@@ -9,10 +9,10 @@ import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeDat
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
-import { startDebugSession } from '../debug/startSession'
 import type { TestDebugManager } from '../debug/debugManager'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
+import { startDebugSession } from '../debug/startSession'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -120,13 +120,11 @@ export class TestRunner extends vscode.Disposable {
   public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
     await Promise.all([this.api.stopInspect(), this.debug.stop()])
 
-    await startDebugSession(
-      this.debug,
-      this.api,
-      this,
-      request,
-      token,
-    )
+    this.api.startInspect(9229)
+
+    await this.runTests(request, token)
+
+    this.api.stopInspect()
   }
 
   private endRequestRuns(request: vscode.TestRunRequest) {
@@ -283,11 +281,14 @@ export class TestRunner extends vscode.Disposable {
     )
   }
 
-  private startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
+  private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
     const request = primaryRequest || this.simpleTestRunRequest || this.createContinuousRequest()
 
     if (!request)
       return
+
+    if (request.profile?.kind === vscode.TestRunProfileKind.Debug)
+      await startDebugSession()
 
     const run = this.controller.createTestRun(request)
     const testRunsByRequest = this.testRunsByRequest.get(request) || []
