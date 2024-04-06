@@ -1,4 +1,5 @@
 import type { ProvidedContext, Vitest as VitestCore } from 'vitest'
+import { Vitest } from './vitest'
 
 export class VitestWatcher {
   private files: string[] = []
@@ -8,10 +9,12 @@ export class VitestWatcher {
 
   private enabled = false
 
-  constructor(vitest: VitestCore) {
+  constructor(
+    ctx: VitestCore,
+  ) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
-    vitest.getCoreWorkspaceProject().provide('__vscode', {
+    ctx.getCoreWorkspaceProject().provide('__vscode', {
       get continuousFiles() {
         return state.files || []
       },
@@ -24,9 +27,9 @@ export class VitestWatcher {
     } satisfies ProvidedContext['__vscode'])
 
     // @ts-expect-error modifying a private property
-    const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
+    const originalScheduleRerun = ctx.scheduleRerun.bind(ctx)
     // @ts-expect-error modifying a private property
-    vitest.scheduleRerun = async function (files: string[]) {
+    ctx.scheduleRerun = async function (files: string[]) {
       // if trigger is not a test file, remove all non-continious files from  this.changedTests
       const triggerFile = files[0]
       const isTestFileTrigger = this.changedTests.has(triggerFile)
@@ -39,13 +42,13 @@ export class VitestWatcher {
           this.invalidates.clear()
         }
 
-        vitest.configOverride.testNamePattern = /$a/
+        ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
         return await originalScheduleRerun.call(this, files)
       }
 
       state.rerunTriggered = true
 
-      vitest.configOverride.testNamePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
+      ctx.configOverride.testNamePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
       if (state.watchEveryFile)
         return await originalScheduleRerun.call(this, files)
 

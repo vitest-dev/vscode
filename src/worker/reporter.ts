@@ -2,11 +2,11 @@ import { nextTick } from 'node:process'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
-import type { BirpcEvents, BirpcMethods } from '../api/rpc'
+import type { BirpcEvents, VitestPool } from '../api/rpc'
 import { setupFilePath } from '../constants'
 
 export class VSCodeReporter implements Reporter {
-  private rpc!: BirpcReturn<BirpcEvents, BirpcMethods>
+  private rpc!: BirpcReturn<BirpcEvents, VitestPool>
   private ctx!: Vitest
   private id!: string
 
@@ -29,7 +29,7 @@ export class VSCodeReporter implements Reporter {
     })
   }
 
-  initRpc(rpc: BirpcReturn<BirpcEvents, BirpcMethods>) {
+  initRpc(rpc: BirpcReturn<BirpcEvents, VitestPool>) {
     this.rpc = rpc
   }
 

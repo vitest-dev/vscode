@@ -11,7 +11,7 @@ export class Vitest {
   public readonly coverage: VitestCoverage
   public readonly debugger: VitestDebugger
 
-  private static COLLECT_NAME_PATTERN = '$a'
+  public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
     public readonly id: string,

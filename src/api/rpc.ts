@@ -3,7 +3,7 @@ import type { ChildProcess } from 'node:child_process'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 
-export interface BirpcMethods {
+export interface VitestPool {
   getFiles: (id: string) => Promise<[project: string, file: string][]>
   collectTests: (id: string, testFile: string[]) => Promise<void>
   cancelRun: (id: string) => Promise<void>
@@ -35,7 +35,7 @@ export type BirpcEvents = {
   [K in keyof VitestEvents]: (folder: string, ...args: Parameters<VitestEvents[K]>) => void
 }
 
-export type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
+export type VitestRPC = BirpcReturn<VitestPool, BirpcEvents>
 
 function createHandler<T extends (...args: any) => any>() {
   const handlers: T[] = []
@@ -94,7 +94,7 @@ function createRpcOptions() {
 export function createVitestRpc(vitest: ChildProcess) {
   const { events, handlers } = createRpcOptions()
 
-  const api = createBirpc<BirpcMethods, BirpcEvents>(
+  const api = createBirpc<VitestPool, BirpcEvents>(
     events,
     {
       timeout: -1,
