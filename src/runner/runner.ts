@@ -4,7 +4,7 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, File, ParsedStack, Task, TaskResult } from 'vitest'
-import { basename, dirname, normalize } from 'pathe'
+import { basename, normalize } from 'pathe'
 import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
@@ -13,7 +13,6 @@ import { startDebugSession } from '../debug/startSession'
 import type { TestDebugManager } from '../debug/debugManager'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
-import { TestRunData } from './testRunData'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -22,6 +21,7 @@ export class TestRunner extends vscode.Disposable {
   // TODO: doesn't support "projects" - run every project because Vitest doesn't support
   // granular filters yet (coming in Vitest 1.4.1)
   private testRunsByFile = new Map<string, vscode.TestRun>()
+  private testRunsByRequest = new WeakMap<vscode.TestRunRequest, vscode.TestRun[]>()
 
   private _onRequestsExhausted = new vscode.EventEmitter<void>()
 
@@ -85,12 +85,18 @@ export class TestRunner extends vscode.Disposable {
         showVitestError(`Failed to report coverage. ${err.message}`, err)
       }
 
+      const runs = new Set<vscode.TestRun>()
+
       files.forEach((file) => {
         const data = this.tree.getTestDataByTask(file) as TestFile | undefined
         const testRun = data && this.getTestRunByData(data)
         if (testRun && data) {
           this.markResult(testRun, data.item, file.result, file)
-          this.endTestRun(testRun)
+          this.testRunsByFile.delete(file.filepath)
+          if (!runs.has(testRun)) {
+            runs.add(testRun)
+            testRun.end()
+          }
         }
       })
     })
@@ -123,11 +129,20 @@ export class TestRunner extends vscode.Disposable {
     )
   }
 
+  private endRequestRuns(request: vscode.TestRunRequest) {
+    const runs = this.testRunsByRequest.get(request)
+    if (!runs)
+      return
+    runs.forEach(run => run.end())
+    this.testRunsByRequest.delete(request)
+  }
+
   private async watchContinuousTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
     this.continuousRequests.add(request)
 
     token.onCancellationRequested(() => {
       this.continuousRequests.delete(request)
+      this.endRequestRuns(request)
       if (!this.continuousRequests.size) {
         this._onRequestsExhausted.fire()
         this.api.unwatchTests()
@@ -175,6 +190,7 @@ export class TestRunner extends vscode.Disposable {
     this.simpleTestRunRequest = request
 
     token.onCancellationRequested(() => {
+      this.endRequestRuns(request)
       this.simpleTestRunRequest = null
       this.api.cancelRun()
     })
@@ -273,6 +289,10 @@ export class TestRunner extends vscode.Disposable {
     if (!request)
       return
 
+    const run = this.controller.createTestRun(request)
+    const testRunsByRequest = this.testRunsByRequest.get(request) || []
+    this.testRunsByRequest.set(request, [...testRunsByRequest, run])
+
     for (const file of files) {
       if (file[file.length - 1] === '/') {
         const files = this.getTestFilesInFolder(file)
@@ -288,12 +308,6 @@ export class TestRunner extends vscode.Disposable {
       if (testRun)
         continue
 
-      const base = basename(file)
-      const dir = basename(dirname(file))
-      const name = `${dir}${path.sep}${base}`
-      const run = this.controller.createTestRun(request, name)
-
-      TestRunData.register(run, file, request)
       const testItems = this.tree.getFileTestItems(file)
       function enqueue(test: vscode.TestItem) {
         run.enqueued(test)
@@ -315,11 +329,15 @@ export class TestRunner extends vscode.Disposable {
 
     const coverage = readCoverageReport(reportsDirectory)
 
+    const runs = new Set<vscode.TestRun>()
+
     const promises = files.map(async (file) => {
       const data = this.tree.getTestDataByTask(file) as TestFile | undefined
       const testRun = data && this.getTestRunByData(data)
-      if (testRun)
+      if (testRun && !runs.has(testRun)) {
+        runs.add(testRun)
         await coverageContext.applyJson(testRun, coverage)
+      }
     })
 
     await Promise.all(promises)
@@ -327,12 +345,6 @@ export class TestRunner extends vscode.Disposable {
     rm(reportsDirectory, { recursive: true, force: true }).catch(() => {
       // ignore
     })
-  }
-
-  public async endTestRun(run: vscode.TestRun) {
-    const data = TestRunData.get(run)
-    this.testRunsByFile.delete(data.file)
-    run.end()
   }
 
   private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {
