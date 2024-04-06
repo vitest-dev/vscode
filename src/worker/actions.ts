@@ -140,12 +140,12 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): BirpcMe
         throw new Error(`Vitest instance not found with id: ${id}`)
       watchStateById[id] = null
     },
-    async collectTests(id: string, testFile: string) {
+    async collectTests(id: string, testFiles: string[]) {
       const vitest = vitestById[id]
       vitest.config.coverage.enabled = false
       vitest.coverageProvider = undefined
       try {
-        await runTests(id, [testFile], '$a')
+        await runTests(id, testFiles, '$a')
       }
       finally {
         vitest.configOverride.testNamePattern = undefined

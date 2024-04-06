@@ -5,7 +5,7 @@ import type { File, ResolvedCoverageOptions, TaskResultPack, UserConsoleLog } fr
 
 export interface BirpcMethods {
   getFiles: (id: string) => Promise<[project: string, file: string][]>
-  collectTests: (id: string, testFile: string) => Promise<void>
+  collectTests: (id: string, testFile: string[]) => Promise<void>
   cancelRun: (id: string) => Promise<void>
   runTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
   isTestFile: (file: string) => Promise<boolean>

@@ -142,8 +142,26 @@ export class VitestFolderAPI extends VitestReporter {
     return this.meta.rpc.getFiles(this.id)
   }
 
+  private testsQueue = new Set<string>()
+  private collectPromise: Promise<void> | null = null
+  private collectTimer: NodeJS.Timeout | null = null
+
   async collectTests(testFile: string) {
-    await this.meta.rpc.collectTests(this.id, normalize(testFile))
+    this.testsQueue.add(testFile)
+
+    this.collectTimer && clearTimeout(this.collectTimer)
+    await this.collectPromise
+    this.collectTimer && clearTimeout(this.collectTimer)
+
+    this.collectTimer = setTimeout(() => {
+      const tests = Array.from(this.testsQueue)
+      this.testsQueue.clear()
+      log.info('[API]', `Collecting tests: ${tests.join(', ')}`)
+      this.collectPromise = this.meta.rpc.collectTests(this.id, tests).finally(() => {
+        this.collectPromise = null
+      })
+    }, 50)
+    await this.collectPromise
   }
 
   dispose() {
