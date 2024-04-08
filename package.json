@@ -85,7 +85,7 @@
     "configuration": {
       "title": "Vitest",
       "properties": {
-        "vitest.packagePath": {
+        "vitest.vitestPackagePath": {
           "markdownDescription": "The path to the `package.json` file of Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it.",
           "type": "string",
           "scope": "resource"

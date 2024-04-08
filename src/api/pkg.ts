@@ -55,6 +55,13 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   }
 
   const pkg = _require(vitest.vitestPackageJsonPath)
+  if (pkg.name !== 'vitest') {
+    vscode.window.showErrorMessage(
+      `Package was resolved to "${pkg.name}" instead of "vitest". If you are using "vitest.vitestPackagePath", make sure it points to a "vitest" package.`,
+    )
+    delete require.cache[vitest.vitestPackageJsonPath]
+    return null
+  }
   if (!gte(pkg.version, minimumVersion)) {
     const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
     if (showWarning)

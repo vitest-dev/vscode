@@ -14,7 +14,7 @@ export function getConfigValue<T>(
   return folderConfig.get(key) ?? rootConfig.get(key) ?? defaultValue
 }
 
-export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | string) {
+export function getConfig(workspaceFolder?: WorkspaceFolder) {
   let workspace: WorkspaceFolder | vscode.Uri | undefined
   if (typeof workspaceFolder === 'string')
     workspace = vscode.Uri.from({ scheme: 'file', path: workspaceFolder })
@@ -37,10 +37,16 @@ export function getConfig(workspaceFolder?: WorkspaceFolder | vscode.Uri | strin
 
   const configSearchPatternExclude = get<string>('configSearchPatternExclude', '**/{node_modules,.*}/**')!
 
+  const vitestPackagePath = get<string | undefined>('vitestPackagePath')
+  const resolvedVitestPackagePath = workspaceFolder && vitestPackagePath
+    // eslint-disable-next-line no-template-curly-in-string
+    ? resolve(workspaceFolder.uri.fsPath, vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath))
+    : vitestPackagePath
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
-    packagePath: get<string | undefined>('packagePath'),
+    vitestPackagePath: resolvedVitestPackagePath,
     workspaceConfig: resolvePath(workspaceConfig),
     rootConfig: resolvePath(rootConfigFile),
     configSearchPatternExclude,

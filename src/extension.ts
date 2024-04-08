@@ -208,7 +208,7 @@ class VitestExtension {
     this.testController.items.replace([this.loadingTestItem])
 
     const reloadConfigNames = [
-      'vitest.packagePath',
+      'vitest.vitestPackagePath',
       'vitest.nodeExecutable',
       'vitest.workspaceConfig',
       'vitest.rootConfig',

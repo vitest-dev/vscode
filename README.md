@@ -74,7 +74,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 
 ### Other Options
 
-- `vitest.packagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix.
+- `vitest.vitestPackagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to
   `process.env`
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
