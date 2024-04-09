@@ -26,7 +26,6 @@ type VitestPoolMethods = {
 
 export interface VitestPool extends VitestPoolMethods {
   close: () => void
-  isTestFile: (file: string) => boolean
 }
 
 export interface VitestEvents {

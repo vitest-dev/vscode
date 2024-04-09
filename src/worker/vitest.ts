@@ -101,14 +101,6 @@ export class Vitest implements VitestMethods {
     await this.ctx.report('onWatcherStart', this.ctx.state.getFiles(files))
   }
 
-  isTestFile(file: string) {
-    for (const project of this.ctx.projects) {
-      if (project.isTestFile(file))
-        return true
-    }
-    return false
-  }
-
   unwatchTests() {
     return this.watcher.stopTracking()
   }

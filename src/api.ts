@@ -71,10 +71,6 @@ export class VitestAPI {
     return this.api
   }
 
-  async isTestFile(file: string) {
-    return this.meta.rpc.isTestFile(file)
-  }
-
   async dispose() {
     this.disposing = true
     try {
@@ -128,10 +124,6 @@ export class VitestFolderAPI extends VitestReporter {
 
   get workspaceFolder() {
     return WEAKMAP_API_FOLDER.get(this)!
-  }
-
-  isTestFile(file: string) {
-    return this.meta.rpc.isTestFile(file)
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
