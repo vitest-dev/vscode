@@ -6,6 +6,20 @@
 
 ![](https://i.ibb.co/bJCbCf2/202203292020.gif)
 
+## Features
+
+- **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
+- **Coverage** support (requires VS Code >= 1.88)
+- NX support (see the [NX sample](./samples/monorepo-nx/)).
+- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
+
+## Requirements
+
+- Visual Studio Code version >= 1.77.0
+- Vitest version >= v1.4.0
+- Coverage requires Visual Studio Code >= 1.88.0
+- Debugger requires Vitest >= 1.5.0
+
 ## Usage
 
 You can manage tests both from the Testing view and directly within your test files.
@@ -45,18 +59,6 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
   - `Run with coverage`: Execute the selected test case while also collecting code coverage information.
   - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
   - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
-
-## Features
-
-- **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
-- **Coverage** support (requires VS Code >= 1.88)
-- NX support (see the [NX sample](./samples/monorepo-nx/)).
-- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
-
-## Requirements
-
-- Visual Studio Code version >= 1.77.0.
-- Vitest version >= v1.4.0
 
 ## Configuration
 
