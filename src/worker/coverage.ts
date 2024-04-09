@@ -9,22 +9,19 @@ export class VitestCoverage {
   private _enabled = false
   private _provider: CoverageProvider | null | undefined = undefined
 
-  private _coverageConfig: ResolvedCoverageOptions
-
-  private _reporter: [string, any] = ['json', {}]
-  private _reportsDirectory: string | null = null
+  private _config: ResolvedCoverageOptions
 
   constructor(
     private ctx: VitestCore,
     private vitest: Vitest,
   ) {
-    this._coverageConfig = ctx.config.coverage
+    this._config = ctx.config.coverage
     Object.defineProperty(ctx.config, 'coverage', {
       get: () => {
         return this.config
       },
-      set: (coverage) => {
-        this._coverageConfig = coverage
+      set: (coverage: ResolvedCoverageOptions) => {
+        this._config = coverage
       },
     })
     Object.defineProperty(ctx, 'coverageProvider', {
@@ -42,11 +39,8 @@ export class VitestCoverage {
 
   public get config(): ResolvedCoverageOptions {
     return {
-      ...this._coverageConfig,
+      ...this._config,
       enabled: this.enabled,
-      reportOnFailure: true,
-      reportsDirectory: this._reportsDirectory || this._coverageConfig.reportsDirectory,
-      reporter: [this._reporter],
     }
   }
 
@@ -58,17 +52,18 @@ export class VitestCoverage {
     const vitest = this.ctx
     this._enabled = true
 
-    const jsonReporter = this._coverageConfig.reporter.find(([name]) => name === 'json')
-    this._reporter = jsonReporter || ['json', {}]
-    this._reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
+    const jsonReporter = this._config.reporter.find(([name]) => name === 'json')
+    this._config.reporter = [jsonReporter || ['json', {}]]
+    this._config.reportOnFailure = true
+    this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
     if (!this._provider) {
       // @ts-expect-error private method
       await vitest.initCoverageProvider()
-      await vitest.coverageProvider?.clean(this._coverageConfig.clean)
+      await vitest.coverageProvider?.clean(this._config.clean)
     }
     else {
-      await this._provider.clean(this._coverageConfig.clean)
+      await this._provider.clean(this._config.clean)
     }
   }
 
