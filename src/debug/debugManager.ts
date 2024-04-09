@@ -66,6 +66,8 @@ export class TestDebugManager extends vscode.Disposable {
       },
     }
 
+    log.info(`[DEBUG] Starting debugging on ${debugConfig.address || 'localhost'}:${debugConfig.port}`)
+
     vscode.debug.startDebugging(
       folder,
       debugConfig,
