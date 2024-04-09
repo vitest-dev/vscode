@@ -84,7 +84,7 @@ export class TestRunner extends vscode.Disposable {
         showVitestError(`Failed to report coverage. ${err.message}`, err)
       }
 
-      const runs = new Set<vscode.TestRun>()
+      const finishedRuns = new Set<vscode.TestRun>()
 
       files.forEach((file) => {
         const data = this.tree.getTestDataByTask(file) as TestFile | undefined
@@ -92,8 +92,8 @@ export class TestRunner extends vscode.Disposable {
         if (testRun && data) {
           this.markResult(testRun, data.item, file.result, file)
           this.testRunsByFile.delete(file.filepath)
-          if (!runs.has(testRun)) {
-            runs.add(testRun)
+          if (!finishedRuns.has(testRun)) {
+            finishedRuns.add(testRun)
             testRun.end()
           }
         }

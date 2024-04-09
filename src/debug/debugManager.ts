@@ -34,8 +34,7 @@ export class TestDebugManager extends vscode.Disposable {
     await this.stop()
 
     const config = getConfig()
-    // TODO: remove "|| TestDebugManager.DEBUG_DEFAULT_PORT"
-    this.port ??= config.debuggerPort || TestDebugManager.DEBUG_DEFAULT_PORT || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
+    this.port ??= config.debuggerPort || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
     api.startInspect(this.port)
   }
 
