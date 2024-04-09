@@ -14,6 +14,8 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): VitestP
       }
     },
   }, {
+    // because we don't want to copy-past the same VitestPool for every vitestById
+    // we use a Proxy to dynamically call these methods on the correct Vitest instance
     get(target, prop) {
       if (prop === 'close')
         return Reflect.get(target, prop)
