@@ -123,6 +123,10 @@ export class TestRunner extends vscode.Disposable {
       ? partitionTestFileItems(request.include)
       : this.tree.getAllFileItems().map(item => [getTestData(item), []] as [TestFile, never[]])
 
+    token.onCancellationRequested(() => {
+      this.debug.disable(this.api)
+    })
+
     // we need to run tests one file at a time, so we partition them
     // it's important to keep the same test items that were in the original request
     // because they dictate how format testNamePattern
