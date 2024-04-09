@@ -53,6 +53,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     nodeExecutable: resolvePath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
     debuggerPort: get<number>('debuggerPort'),
+    debuggerAddress: get<string>('debuggerAddress'),
   }
 }
 

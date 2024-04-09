@@ -8,6 +8,7 @@ export class TestDebugManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
   private sessions = new Set<vscode.DebugSession>()
   private port: number | undefined
+  private address: string | undefined
 
   private static DEBUG_DEFAULT_PORT = 9229
 
@@ -35,12 +36,14 @@ export class TestDebugManager extends vscode.Disposable {
 
     const config = getConfig()
     this.port ??= config.debuggerPort || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
+    this.address ??= config.debuggerAddress
     api.startInspect(this.port)
   }
 
   public async disable(api: VitestFolderAPI) {
     await this.stop()
     this.port = undefined
+    this.address = undefined
     api.stopInspect()
   }
 
@@ -52,6 +55,7 @@ export class TestDebugManager extends vscode.Disposable {
       request: 'attach',
       name: 'Debug Tests',
       port: this.port,
+      address: this.address,
       autoAttachChildProcesses: true,
       skipFiles: config.debugExclude,
       smartStep: true,

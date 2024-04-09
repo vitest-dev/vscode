@@ -197,8 +197,8 @@ export class VitestFolderAPI extends VitestReporter {
     return this.meta.rpc.stopInspect(this.id)
   }
 
-  startInspect(port: number) {
-    return this.meta.rpc.startInspect(this.id, port)
+  startInspect(port: number, address?: string) {
+    return this.meta.rpc.startInspect(this.id, port, address)
   }
 }
 

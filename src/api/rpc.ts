@@ -16,7 +16,7 @@ export interface VitestMethods {
   disableCoverage: () => void
   waitForCoverageReport: () => Promise<string | null>
 
-  startInspect: (port: number) => void
+  startInspect: (port: number, address?: string) => void
   stopInspect: () => void
 }
 

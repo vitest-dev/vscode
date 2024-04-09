@@ -128,8 +128,8 @@ export class Vitest implements VitestMethods {
     return this.coverage.enable()
   }
 
-  startInspect(port: number) {
-    this.debugger.start(port)
+  startInspect(port: number, address?: string) {
+    this.debugger.start(port, address)
   }
 
   stopInspect() {
