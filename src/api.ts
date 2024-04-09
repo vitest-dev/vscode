@@ -122,6 +122,10 @@ export class VitestFolderAPI extends VitestReporter {
     return this.pkg.prefix
   }
 
+  get version() {
+    return this.pkg.version
+  }
+
   get workspaceFolder() {
     return WEAKMAP_API_FOLDER.get(this)!
   }

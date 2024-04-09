@@ -1,11 +1,12 @@
 import * as vscode from 'vscode'
+import { gte } from 'semver'
 import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
 import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
-import { configGlob, workspaceGlob } from './constants'
+import { configGlob, minimumDebugVersion, workspaceGlob } from './constants'
 import { log } from './log'
 import { createVitestWorkspaceFile, debounce, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
@@ -152,7 +153,16 @@ class VitestExtension {
         )
       }
       debugProfile.tag = api.tag
-      debugProfile.runHandler = (request, token) => runner.debugTests(request, token)
+      debugProfile.runHandler = (request, token) => {
+        if (!gte(api.version, minimumDebugVersion)) {
+          vscode.window.showWarningMessage(
+            `Debugging is not supported for Vitest v${api.version}. Please update Vitest to v${minimumDebugVersion} or higher.`,
+          )
+        }
+        else {
+          runner.debugTests(request, token)
+        }
+      }
       this.runProfiles.set(`${api.id}:debug`, debugProfile)
 
       // coverage is supported since VS Code 1.88
