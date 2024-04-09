@@ -1,12 +1,13 @@
 import { dirname } from 'node:path'
 import type { Vitest as VitestCore } from 'vitest'
+import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
 import { VitestDebugger } from './debugger'
 
 const cwd = process.cwd()
 
-export class Vitest {
+export class Vitest implements VitestMethods {
   public readonly watcher: VitestWatcher
   public readonly coverage: VitestCoverage
   public readonly debugger: VitestDebugger
@@ -40,11 +41,11 @@ export class Vitest {
     await this.ctx.initBrowserProviders()
 
     if (testNamePattern) {
-      await this.runTests(files || this.ctx.state.getFilepaths(), testNamePattern)
+      await this.runTestFiles(files || this.ctx.state.getFilepaths(), testNamePattern)
     }
     else {
       const specs = await this.globTestFiles(files)
-      await this.runTests(specs.map(([_, spec]) => spec))
+      await this.runTestFiles(specs.map(([_, spec]) => spec))
     }
   }
 
@@ -68,7 +69,7 @@ export class Vitest {
     return files
   }
 
-  private async runTestFiles(files: string[], testNamePattern: string | undefined) {
+  private async runTestFiles(files: string[], testNamePattern?: string | undefined) {
     await this.ctx.runningPromise
     this.watcher.markRerun(false)
     process.chdir(dirname(this.id))
@@ -106,6 +107,37 @@ export class Vitest {
         return true
     }
     return false
+  }
+
+  unwatchTests() {
+    return this.watcher.stopTracking()
+  }
+
+  watchTests(files?: string[], testNamePatern?: string) {
+    if (files)
+      this.watcher.trackTests(files, testNamePatern)
+    else
+      this.watcher.trackEveryFile()
+  }
+
+  disableCoverage() {
+    return this.coverage.disable()
+  }
+
+  enableCoverage() {
+    return this.coverage.enable()
+  }
+
+  startInspect(port: number) {
+    this.debugger.start(port)
+  }
+
+  stopInspect() {
+    this.debugger.stop()
+  }
+
+  waitForCoverageReport() {
+    return this.coverage.waitForCoverageReport()
   }
 
   dispose() {

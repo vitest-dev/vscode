@@ -7,7 +7,7 @@ import type { Vitest } from './vitest'
 
 export class VitestCoverage {
   private _enabled = false
-  private _provider: CoverageProvider | null = null
+  private _provider: CoverageProvider | null | undefined = undefined
 
   private _coverageConfig: ResolvedCoverageOptions
 
@@ -22,6 +22,9 @@ export class VitestCoverage {
     Object.defineProperty(ctx.config, 'coverage', {
       get: () => {
         return this.config
+      },
+      set: (coverage) => {
+        this._coverageConfig = coverage
       },
     })
     Object.defineProperty(ctx, 'coverageProvider', {
@@ -43,7 +46,7 @@ export class VitestCoverage {
       enabled: this.enabled,
       reportOnFailure: true,
       reportsDirectory: this._reportsDirectory || this._coverageConfig.reportsDirectory,
-      reporter: this._reporter,
+      reporter: [this._reporter],
     }
   }
 
@@ -62,7 +65,7 @@ export class VitestCoverage {
     if (!this._provider) {
       // @ts-expect-error private method
       await vitest.initCoverageProvider()
-      await this._provider!.clean(this._coverageConfig.clean)
+      await vitest.coverageProvider?.clean(this._coverageConfig.clean)
     }
     else {
       await this._provider.clean(this._coverageConfig.clean)

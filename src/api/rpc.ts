@@ -3,23 +3,30 @@ import type { ChildProcess } from 'node:child_process'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 
-export interface VitestPool {
-  getFiles: (id: string) => Promise<[project: string, file: string][]>
-  collectTests: (id: string, testFile: string[]) => Promise<void>
-  cancelRun: (id: string) => Promise<void>
-  runTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
-  isTestFile: (file: string) => boolean
+export interface VitestMethods {
+  getFiles: () => Promise<[project: string, file: string][]>
+  collectTests: (testFile: string[]) => Promise<void>
+  cancelRun: () => Promise<void>
+  runTests: (files?: string[], testNamePattern?: string) => Promise<void>
 
-  watchTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
-  unwatchTests: (id: string) => Promise<void>
+  watchTests: (files?: string[], testNamePattern?: string) => void
+  unwatchTests: () => void
 
-  enableCoverage: (id: string) => void
-  disableCoverage: (id: string) => void
-  waitForCoverageReport: (id: string) => Promise<string | null>
+  enableCoverage: () => void
+  disableCoverage: () => void
+  waitForCoverageReport: () => Promise<string | null>
 
-  startInspect: (id: string, port: number) => void
-  stopInspect: (id: string) => void
+  startInspect: (port: number) => void
+  stopInspect: () => void
+}
+
+type VitestPoolMethods = {
+  [K in keyof VitestMethods]: (id: string, ...args: Parameters<VitestMethods[K]>) => ReturnType<VitestMethods[K]>
+}
+
+export interface VitestPool extends VitestPoolMethods {
   close: () => void
+  isTestFile: (file: string) => boolean
 }
 
 export interface VitestEvents {
