@@ -77,13 +77,7 @@ export class Vitest implements VitestMethods {
     try {
       this.setTestNamePattern(testNamePattern)
 
-      if (this.debugger.enabled) {
-        for (const file of files)
-          await this.rerunTests([file])
-      }
-      else {
-        await this.rerunTests(files)
-      }
+      await this.rerunTests(files)
     }
     finally {
       process.chdir(cwd)

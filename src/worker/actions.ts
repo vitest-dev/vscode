@@ -23,7 +23,7 @@ export function createWorkerMethods(vitestById: Record<string, Vitest>): VitestP
       return function (id: string, ...args: any[]) {
         const vitest = vitestById[id]
         if (!vitest)
-          throw new Error(`Vitest instance not found with id: ${id}`)
+          throw new Error(`Vitest instance not found with id: ${id} (calling method: ${String(prop)})`)
         if (prop in vitest)
           return vitest[prop as 'collectTests'](...args as [any])
         else

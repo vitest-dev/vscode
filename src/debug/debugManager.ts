@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import * as vscode from 'vscode'
 import getPort from 'get-port'
 import { getConfig } from '../config'
@@ -6,11 +7,13 @@ import type { VitestFolderAPI } from '../api'
 
 export class TestDebugManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
-  private sessions = new Set<vscode.DebugSession>()
+  private sessions = new Map<string, vscode.DebugSession>()
   private port: number | undefined
   private address: string | undefined
 
   private static DEBUG_DEFAULT_PORT = 9229
+
+  private configurations = new Map<string, TestDebugConfiguration>()
 
   constructor() {
     super(() => {
@@ -19,36 +22,66 @@ export class TestDebugManager extends vscode.Disposable {
 
     this.disposables.push(
       vscode.debug.onDidStartDebugSession((session) => {
-        if (!session.configuration.__vitest)
-          return
-        this.sessions.add(session)
+        const id = session.configuration.__vitest
+        if (id)
+          this.sessions.set(id, session)
       }),
       vscode.debug.onDidTerminateDebugSession((session) => {
-        if (!session.configuration.__vitest)
+        const id = session.configuration.__vitest
+        if (id) {
+          this.sessions.delete(id)
+          this.configurations.get(id)?.resolve()
+          this.configurations.delete(id)
           return
-        this.sessions.delete(session)
+        }
+        const vitestId = session.parentSession && session.parentSession.configuration.__vitest
+        if (!vitestId || !session.configuration.name.startsWith('Remote Process'))
+          return
+        // if the main session is still there, it means the Remote Session was restarted
+        // so we need to run tests again
+        setTimeout(() => {
+          const configuration = this.configurations.get(vitestId)
+          if (configuration)
+            configuration.runTests()
+        }, 50)
       }),
     )
   }
 
   public async enable(api: VitestFolderAPI) {
-    await this.stop()
+    await this.stopDebugging()
 
     const config = getConfig()
     this.port ??= config.debuggerPort || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
     this.address ??= config.debuggerAddress
-    api.startInspect(this.port)
+    await api.startInspect(this.port)
   }
 
   public async disable(api: VitestFolderAPI) {
-    await this.stop()
+    await this.stopDebugging()
     this.port = undefined
     this.address = undefined
     api.stopInspect()
   }
 
-  public start(folder: vscode.WorkspaceFolder) {
+  public startDebugging(
+    runTests: () => Promise<void>,
+    folder: vscode.WorkspaceFolder,
+  ) {
     const config = getConfig(folder)
+
+    const uniqueId = randomUUID()
+    let _resolve: () => void
+    let _reject: (error: Error) => void
+    const promise = new Promise<void>((resolve, reject) => {
+      _resolve = resolve
+      _reject = reject
+    })
+    this.configurations.set(uniqueId, {
+      runTests,
+      resolve: _resolve!,
+      reject: _reject!,
+    })
 
     const debugConfig = {
       type: 'pwa-node',
@@ -59,7 +92,7 @@ export class TestDebugManager extends vscode.Disposable {
       autoAttachChildProcesses: true,
       skipFiles: config.debugExclude,
       smartStep: true,
-      __vitest: true,
+      __vitest: uniqueId,
       env: {
         ...process.env,
         VITEST_VSCODE: 'true',
@@ -74,19 +107,34 @@ export class TestDebugManager extends vscode.Disposable {
       { suppressDebugView: true },
     ).then(
       (fulfilled) => {
-        if (fulfilled)
+        if (fulfilled) {
           log.info('[DEBUG] Debugging started')
-        else
+        }
+        else {
+          _reject(new Error('Failed to start debugging. See output for more information.'))
           log.error('[DEBUG] Debugging failed')
+        }
       },
       (err) => {
+        _reject(new Error('Failed to start debugging', { cause: err }))
         log.error('[DEBUG] Start debugging failed')
         log.error(err.toString())
       },
     )
+
+    runTests()
+
+    return promise
   }
 
-  public async stop() {
-    await Promise.allSettled([...this.sessions].map(s => vscode.debug.stopDebugging(s)))
+  public async stopDebugging() {
+    await Promise.allSettled([...this.sessions].map(([, s]) => vscode.debug.stopDebugging(s)))
   }
+}
+
+interface TestDebugConfiguration {
+  runTests: () => Promise<void>
+
+  resolve: () => void
+  reject: (error: Error) => void
 }

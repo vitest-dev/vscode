@@ -25,7 +25,7 @@ export class VitestDebugger {
     })
   }
 
-  public get enabled() {
+  private get enabled() {
     return this._enabled && !this.vitest.collecting
   }
 

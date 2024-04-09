@@ -119,7 +119,31 @@ export class TestRunner extends vscode.Disposable {
   public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
     await this.debug.enable(this.api)
 
-    await this.runTests(request, token)
+    const testItems = request.include?.length
+      ? partitionTestFileItems(request.include)
+      : this.tree.getAllFileItems().map(item => [getTestData(item), []] as [TestFile, never[]])
+
+    // we need to run tests one file at a time, so we partition them
+    // it's important to keep the same test items that were in the original request
+    // because they dictate how format testNamePattern
+    for (const [testFileData, testFileChildren] of testItems) {
+      if (token.isCancellationRequested)
+        break
+
+      const testRunRequest = new vscode.TestRunRequest(
+        testFileChildren.length ? testFileChildren : [testFileData.item],
+        [],
+        request.profile,
+        request.continuous,
+      )
+
+      await this.debug.startDebugging(
+        () => this.runTests(testRunRequest, token).catch((err) => {
+          log.error(err)
+        }),
+        testFileData.api.workspaceFolder,
+      )
+    }
 
     await this.debug.disable(this.api)
   }
@@ -242,20 +266,11 @@ export class TestRunner extends vscode.Disposable {
   }
 
   private getTestFilesInFolder(path: string) {
-    function getFiles(folder: vscode.TestItem): string[] {
-      const files: string[] = []
-      for (const [_, item] of folder.children) {
-        const data = getTestData(item)
-        if (data instanceof TestFile)
-          files.push(data.filepath)
-        else if (data instanceof TestFolder)
-          files.push(...getFiles(item))
-      }
-      return files
-    }
-
     const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
-    return getFiles(folder)
+    const items = getFolderFiles(folder)
+    return Array.from(
+      new Set(items.map(item => (getTestData(item) as TestFile).filepath)),
+    )
   }
 
   private createContinuousRequest() {
@@ -283,11 +298,6 @@ export class TestRunner extends vscode.Disposable {
 
     if (!request)
       return
-
-    if (request.profile?.kind === vscode.TestRunProfileKind.Debug) {
-      await this.debug.stop()
-      this.debug.start(this.api.workspaceFolder)
-    }
 
     const run = this.controller.createTestRun(request)
     const testRunsByRequest = this.testRunsByRequest.get(request) || []
@@ -449,6 +459,46 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
       column,
     }
   }
+}
+
+function getFolderFiles(folder: vscode.TestItem): vscode.TestItem[] {
+  const files: vscode.TestItem[] = []
+  for (const [_, item] of folder.children) {
+    const data = getTestData(item)
+    if (data instanceof TestFile)
+      files.push(data.item)
+    else if (data instanceof TestFolder)
+      files.push(...getFolderFiles(item))
+  }
+  return files
+}
+
+function partitionTestFileItems(tests: readonly vscode.TestItem[]) {
+  const fileItems = new Map<TestFile, vscode.TestItem[]>()
+
+  for (const testItem of tests) {
+    const data = getTestData(testItem)
+    if (data instanceof TestFile) {
+      const items = fileItems.get(data) || []
+      fileItems.set(data, items)
+      continue
+    }
+    if (data instanceof TestFolder) {
+      const items = getFolderFiles(testItem)
+      items.forEach((item) => {
+        const data = getTestData(item) as TestFile
+        const fileItemsForFile = fileItems.get(data) || []
+        fileItems.set(data, fileItemsForFile)
+      })
+      continue
+    }
+    const fileData = data.file
+    const items = fileItems.get(fileData) || []
+    fileItems.set(fileData, items)
+    items.push(testItem)
+  }
+
+  return Array.from(fileItems.entries()) as [TestFile, vscode.TestItem[]][]
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]) {
