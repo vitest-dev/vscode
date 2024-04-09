@@ -37,14 +37,14 @@ export class VitestCoverage {
     })
   }
 
-  public get config(): ResolvedCoverageOptions {
+  private get config(): ResolvedCoverageOptions {
     return {
       ...this._config,
       enabled: this.enabled,
     }
   }
 
-  public get enabled() {
+  private get enabled() {
     return this._enabled && !this.vitest.collecting
   }
 
@@ -73,7 +73,7 @@ export class VitestCoverage {
     this._enabled = false
   }
 
-  async waitForCoverageReport() {
+  async waitForReport() {
     if (!this.enabled)
       return null
     const coverage = this.ctx.config.coverage

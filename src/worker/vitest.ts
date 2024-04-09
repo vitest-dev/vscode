@@ -8,14 +8,14 @@ import { VitestDebugger } from './debugger'
 const cwd = process.cwd()
 
 export class Vitest implements VitestMethods {
-  public readonly watcher: VitestWatcher
-  public readonly coverage: VitestCoverage
-  public readonly debugger: VitestDebugger
+  private readonly watcher: VitestWatcher
+  private readonly coverage: VitestCoverage
+  private readonly debugger: VitestDebugger
 
   public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
-    public readonly id: string,
+    private readonly id: string,
     private readonly ctx: VitestCore,
   ) {
     this.watcher = new VitestWatcher(ctx)
@@ -137,7 +137,7 @@ export class Vitest implements VitestMethods {
   }
 
   waitForCoverageReport() {
-    return this.coverage.waitForCoverageReport()
+    return this.coverage.waitForReport()
   }
 
   dispose() {

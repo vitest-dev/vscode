@@ -9,9 +9,7 @@ export class VitestWatcher {
 
   private enabled = false
 
-  constructor(
-    ctx: VitestCore,
-  ) {
+  constructor(ctx: VitestCore) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
     ctx.getCoreWorkspaceProject().provide('__vscode', {
