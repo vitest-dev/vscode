@@ -4,7 +4,7 @@ import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
 import type { ErrorWithDiff, File, ParsedStack, Task, TaskResult } from 'vitest'
-import { basename, normalize } from 'pathe'
+import { basename, normalize, relative } from 'pathe'
 import { type TestData, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
@@ -123,8 +123,12 @@ export class TestRunner extends vscode.Disposable {
       ? partitionTestFileItems(request.include)
       : this.tree.getAllFileItems().map(item => [getTestData(item), []] as [TestFile, never[]])
 
+    this.simpleTestRunRequest = request
     token.onCancellationRequested(() => {
       this.debug.disable(this.api)
+      this.endRequestRuns(request)
+      this.simpleTestRunRequest = null
+      this.api.cancelRun()
     })
 
     // we need to run tests one file at a time, so we partition them
@@ -134,15 +138,12 @@ export class TestRunner extends vscode.Disposable {
       if (token.isCancellationRequested)
         break
 
-      const testRunRequest = new vscode.TestRunRequest(
-        testFileChildren.length ? testFileChildren : [testFileData.item],
-        [],
-        request.profile,
-        request.continuous,
-      )
+      const includedTests = testFileChildren.length
+        ? testFileChildren
+        : [testFileData.item]
 
       await this.debug.startDebugging(
-        () => this.runTests(testRunRequest, token).catch((err) => {
+        () => this.runTestItems(includedTests).catch((err) => {
           log.error(err)
         }),
         () => this.api.cancelRun(),
@@ -151,6 +152,9 @@ export class TestRunner extends vscode.Disposable {
     }
 
     await this.debug.disable(this.api)
+
+    this.simpleTestRunRequest = null
+    this._onRequestsExhausted.fire()
   }
 
   private endRequestRuns(request: vscode.TestRunRequest) {
@@ -194,8 +198,10 @@ export class TestRunner extends vscode.Disposable {
     }
 
     const { dispose } = this._onRequestsExhausted.event(() => {
-      this.api.disableCoverage()
-      dispose()
+      if (!this.continuousRequests.size && !this.simpleTestRunRequest) {
+        this.api.disableCoverage()
+        dispose()
+      }
     })
 
     token.onCancellationRequested(() => {
@@ -219,8 +225,13 @@ export class TestRunner extends vscode.Disposable {
       this.api.cancelRun()
     })
 
-    const tests = request.include || []
+    await this.runTestItems(request.include || [])
 
+    this.simpleTestRunRequest = null
+    this._onRequestsExhausted.fire()
+  }
+
+  private async runTestItems(tests: readonly vscode.TestItem[]) {
     if (!tests.length) {
       log.info(`Running all tests in ${basename(this.api.workspaceFolder.uri.fsPath)}`)
       await this.api.runFiles()
@@ -234,9 +245,6 @@ export class TestRunner extends vscode.Disposable {
         log.info(`Running ${files.length} file(s):`, files)
       await this.api.runFiles(files, testNamePatern)
     }
-
-    this.simpleTestRunRequest = null
-    this._onRequestsExhausted.fire()
   }
 
   private getTestRunByData(data: TestData): vscode.TestRun | null {
@@ -304,7 +312,11 @@ export class TestRunner extends vscode.Disposable {
     if (!request)
       return
 
-    const run = this.controller.createTestRun(request)
+    const name = files.length > 1
+      ? undefined
+      : relative(this.api.workspaceFolder.uri.fsPath, files[0])
+
+    const run = this.controller.createTestRun(request, name)
     const testRunsByRequest = this.testRunsByRequest.get(request) || []
     this.testRunsByRequest.set(request, [...testRunsByRequest, run])
 
