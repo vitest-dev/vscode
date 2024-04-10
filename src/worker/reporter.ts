@@ -1,22 +1,24 @@
 import { nextTick } from 'node:process'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
-import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest } from 'vitest'
+import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest as VitestCore } from 'vitest'
 import type { BirpcEvents, VitestPool } from '../api/rpc'
 import { setupFilePath } from '../constants'
+import type { WorkerMeta } from './types'
+import { Vitest } from './vitest'
 
 export class VSCodeReporter implements Reporter {
   private rpc!: BirpcReturn<BirpcEvents, VitestPool>
-  private ctx!: Vitest
-  private id!: string
+  private ctx!: VitestCore
 
-  get isCollecting(): boolean {
-    return this.ctx.configOverride.testNamePattern?.toString() === '/$a/'
+  constructor(private meta: WorkerMeta) {}
+
+  private get collecting(): boolean {
+    return this.ctx.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
   }
 
-  initVitest(ctx: Vitest, id: string) {
+  init(ctx: VitestCore) {
     this.ctx = ctx
-    this.id = id
     ctx.config.setupFiles = [
       ...ctx.config.setupFiles || [],
       setupFilePath,
@@ -34,7 +36,7 @@ export class VSCodeReporter implements Reporter {
   }
 
   onUserConsoleLog(log: UserConsoleLog) {
-    this.rpc.onConsoleLog(this.id, log)
+    this.rpc.onConsoleLog(this.meta.id, log)
   }
 
   onTaskUpdate(packs: TaskResultPack[]) {
@@ -50,25 +52,25 @@ export class VSCodeReporter implements Reporter {
       })
     })
 
-    this.rpc.onTaskUpdate(this.id, packs)
+    this.rpc.onTaskUpdate(this.meta.id, packs)
   }
 
   onFinished(files?: File[], errors?: unknown[]) {
-    const collecting = this.isCollecting
+    const collecting = this.collecting
     nextTick(() => {
-      this.rpc.onFinished(this.id, files, errors, collecting)
+      this.rpc.onFinished(this.meta.id, files, errors, collecting)
     })
   }
 
   onCollected(files?: File[]) {
-    this.rpc.onCollected(this.id, files, this.isCollecting)
+    this.rpc.onCollected(this.meta.id, files, this.collecting)
   }
 
   onWatcherStart(files?: File[], errors?: unknown[]) {
-    this.rpc.onWatcherStart(this.id, files, errors, this.isCollecting)
+    this.rpc.onWatcherStart(this.meta.id, files, errors, this.collecting)
   }
 
   onWatcherRerun(files: string[], trigger?: string) {
-    this.rpc.onWatcherRerun(this.id, files, trigger, this.isCollecting)
+    this.rpc.onWatcherRerun(this.meta.id, files, trigger, this.collecting)
   }
 }

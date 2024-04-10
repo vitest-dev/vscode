@@ -7,7 +7,7 @@ export class VitestDebugger {
   private _address: string | undefined
 
   constructor(
-    private ctx: VitestCore,
+    ctx: VitestCore,
     private vitest: Vitest,
   ) {
     // @ts-expect-error not released yet
