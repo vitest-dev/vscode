@@ -306,7 +306,7 @@ export class TestRunner extends vscode.Disposable {
     )
   }
 
-  private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
+  private async startTestRun(files: string[], primaryRun?: vscode.TestRun, primaryRequest?: vscode.TestRunRequest) {
     const request = primaryRequest || this.simpleTestRunRequest || this.createContinuousRequest()
 
     if (!request)
@@ -316,14 +316,14 @@ export class TestRunner extends vscode.Disposable {
       ? undefined
       : relative(this.api.workspaceFolder.uri.fsPath, files[0])
 
-    const run = this.controller.createTestRun(request, name)
+    const run = primaryRun || this.controller.createTestRun(request, name)
     const testRunsByRequest = this.testRunsByRequest.get(request) || []
     this.testRunsByRequest.set(request, [...testRunsByRequest, run])
 
     for (const file of files) {
       if (file[file.length - 1] === '/') {
         const files = this.getTestFilesInFolder(file)
-        this.startTestRun(files, request)
+        this.startTestRun(files, run, request)
         continue
       }
 
