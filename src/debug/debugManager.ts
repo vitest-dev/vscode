@@ -44,6 +44,7 @@ export class TestDebugManager extends vscode.Disposable {
         const configuration = this.configurations.get(vitestId)
         configuration?.stopTests().then(() => {
           setTimeout(() => {
+            // if configuration is not empty, it means that the tests are still running
             const configuration = this.configurations.get(vitestId)
             if (configuration)
               configuration.runTests()
