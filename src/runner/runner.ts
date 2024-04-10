@@ -145,7 +145,8 @@ export class TestRunner extends vscode.Disposable {
         () => this.runTests(testRunRequest, token).catch((err) => {
           log.error(err)
         }),
-        testFileData.api.workspaceFolder,
+        () => this.api.cancelRun(),
+        this.api.workspaceFolder,
       )
     }
 

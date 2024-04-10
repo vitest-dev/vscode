@@ -37,13 +37,18 @@ export class TestDebugManager extends vscode.Disposable {
         const vitestId = session.parentSession && session.parentSession.configuration.__vitest
         if (!vitestId || !session.configuration.name.startsWith('Remote Process'))
           return
-        // if the main session is still there, it means the Remote Session was restarted
-        // so we need to run tests again
-        setTimeout(() => {
-          const configuration = this.configurations.get(vitestId)
-          if (configuration)
-            configuration.runTests()
-        }, 50)
+
+        // I am going insane with this debugging API
+        // For long-running tests this line just stops the debugger,
+        // For fast tests this will rerun the suite correctly
+        const configuration = this.configurations.get(vitestId)
+        configuration?.stopTests().then(() => {
+          setTimeout(() => {
+            const configuration = this.configurations.get(vitestId)
+            if (configuration)
+              configuration.runTests()
+          }, 50)
+        })
       }),
     )
   }
@@ -66,6 +71,7 @@ export class TestDebugManager extends vscode.Disposable {
 
   public startDebugging(
     runTests: () => Promise<void>,
+    stopTests: () => Promise<void>,
     folder: vscode.WorkspaceFolder,
   ) {
     const config = getConfig(folder)
@@ -79,6 +85,7 @@ export class TestDebugManager extends vscode.Disposable {
     })
     this.configurations.set(uniqueId, {
       runTests,
+      stopTests,
       resolve: _resolve!,
       reject: _reject!,
     })
@@ -134,6 +141,7 @@ export class TestDebugManager extends vscode.Disposable {
 
 interface TestDebugConfiguration {
   runTests: () => Promise<void>
+  stopTests: () => Promise<void>
 
   resolve: () => void
   reject: (error: Error) => void

@@ -1,7 +1,7 @@
 import type { VitestPool } from '../api/rpc'
 import type { Vitest } from './vitest'
 
-export function createWorkerMethods(vitestById: Record<string, Vitest>): VitestPool {
+export function createVitestPool(vitestById: Record<string, Vitest>): VitestPool {
   return new Proxy<any>({
     async close() {
       for (const vitest in vitestById) {
