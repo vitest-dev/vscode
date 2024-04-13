@@ -1,19 +1,19 @@
+import { randomUUID } from 'node:crypto'
 import * as vscode from 'vscode'
-import type { TestRunner } from '../runner/runner'
+import getPort from 'get-port'
+import { getConfig } from '../config'
+import { log } from '../log'
 import type { VitestFolderAPI } from '../api'
-import { showVitestError } from '../utils'
-
-interface VitestDebugConfig {
-  request: vscode.TestRunRequest
-  token: vscode.CancellationToken
-  runner: TestRunner
-  api: VitestFolderAPI
-}
 
 export class TestDebugManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
-  private sessions = new Set<vscode.DebugSession>()
-  private configurations = new Map<string, VitestDebugConfig>()
+  private sessions = new Map<string, vscode.DebugSession>()
+  private port: number | undefined
+  private address: string | undefined
+
+  private static DEBUG_DEFAULT_PORT = 9229
+
+  private configurations = new Map<string, TestDebugConfiguration>()
 
   constructor() {
     super(() => {
@@ -22,59 +22,128 @@ export class TestDebugManager extends vscode.Disposable {
 
     this.disposables.push(
       vscode.debug.onDidStartDebugSession((session) => {
-        // the main attach session is called "Remote Process [0]"
-        // https://github.com/microsoft/vscode-js-debug/blob/dfceaf103ce0cb83b53f1c3d88c06b8b63cb17da/src/targets/node/nodeAttacher.ts#L89
-        // there are also other sessions that are spawned from the main session
-        // but they have different names (like workers are named [worker #id])
-        // I wonder how we could make it easier to make custom debug configurations here?
-        // All this logic exists only because when "retry" is clicked, the main debug session is
-        // not recreated, - instead it reattaches itself and this session is created again,
-        // so we need to track that to correctly restart the tests
-        if (!session.configuration.name.startsWith('Remote Process'))
-          return
-        const baseSession = this.getVitestSession(session)
-        if (!baseSession)
-          return
-        const sym = baseSession.configuration.__vitest as string
-        const config = this.configurations.get(sym)
-        if (!config)
-          return
-        this.sessions.add(baseSession)
-        const { request, runner, token } = config
-        runner.runTests(request, token).catch((err: any) => {
-          showVitestError('Failed to debug tests', err)
-        })
+        const id = session.configuration.__vitest
+        if (id)
+          this.sessions.set(id, session)
       }),
       vscode.debug.onDidTerminateDebugSession((session) => {
-        if (!session.configuration.__vitest)
+        const id = session.configuration.__vitest
+        if (id) {
+          this.sessions.delete(id)
+          this.configurations.get(id)?.resolve()
+          this.configurations.delete(id)
           return
-        this.sessions.delete(session)
-        const sym = session.configuration.__vitest as string
-        const config = this.configurations.get(sym)
-        if (!config)
+        }
+        const vitestId = session.parentSession && session.parentSession.configuration.__vitest
+        if (!vitestId || !session.configuration.name.startsWith('Remote Process'))
           return
-        const { api } = config
-        api.cancelRun()
-        api.stopInspect()
+
+        // I am going insane with this debugging API
+        // For long-running tests this line just stops the debugger,
+        // For fast tests this will rerun the suite correctly
+        const configuration = this.configurations.get(vitestId)
+        configuration?.stopTests().then(() => {
+          setTimeout(() => {
+            // if configuration is not empty, it means that the tests are still running
+            const configuration = this.configurations.get(vitestId)
+            if (configuration)
+              configuration.runTests()
+          }, 50)
+        })
       }),
     )
   }
 
-  public configure(id: string, config: VitestDebugConfig) {
-    this.configurations.set(id, config)
+  public async enable(api: VitestFolderAPI) {
+    await this.stopDebugging()
+
+    const config = getConfig()
+    this.port ??= config.debuggerPort || await getPort({ port: TestDebugManager.DEBUG_DEFAULT_PORT })
+    this.address ??= config.debuggerAddress
+    await api.startInspect(this.port)
   }
 
-  public async stop() {
-    await Promise.allSettled([...this.sessions].map(s => vscode.debug.stopDebugging(s)))
-    this.configurations.clear()
+  public async disable(api: VitestFolderAPI) {
+    await this.stopDebugging()
+    this.port = undefined
+    this.address = undefined
+    api.stopInspect()
   }
 
-  private getVitestSession(session: vscode.DebugSession): vscode.DebugSession | undefined {
-    if (session.configuration.__vitest)
-      return session
-    if (session.parentSession)
-      return this.getVitestSession(session.parentSession)
+  public startDebugging(
+    runTests: () => Promise<void>,
+    stopTests: () => Promise<void>,
+    folder: vscode.WorkspaceFolder,
+  ) {
+    const config = getConfig(folder)
 
-    return undefined
+    const uniqueId = randomUUID()
+    let _resolve: () => void
+    let _reject: (error: Error) => void
+    const promise = new Promise<void>((resolve, reject) => {
+      _resolve = resolve
+      _reject = reject
+    })
+    this.configurations.set(uniqueId, {
+      runTests,
+      stopTests,
+      resolve: _resolve!,
+      reject: _reject!,
+    })
+
+    const debugConfig = {
+      type: 'pwa-node',
+      request: 'attach',
+      name: 'Debug Tests',
+      port: this.port,
+      address: this.address,
+      autoAttachChildProcesses: true,
+      skipFiles: config.debugExclude,
+      smartStep: true,
+      __vitest: uniqueId,
+      env: {
+        ...process.env,
+        VITEST_VSCODE: 'true',
+      },
+    }
+
+    log.info(`[DEBUG] Starting debugging on ${debugConfig.address || 'localhost'}:${debugConfig.port}`)
+
+    vscode.debug.startDebugging(
+      folder,
+      debugConfig,
+      { suppressDebugView: true },
+    ).then(
+      (fulfilled) => {
+        if (fulfilled) {
+          log.info('[DEBUG] Debugging started')
+        }
+        else {
+          _reject(new Error('Failed to start debugging. See output for more information.'))
+          log.error('[DEBUG] Debugging failed')
+        }
+      },
+      (err) => {
+        _reject(new Error('Failed to start debugging', { cause: err }))
+        log.error('[DEBUG] Start debugging failed')
+        log.error(err.toString())
+      },
+    )
+
+    runTests()
+
+    return promise
   }
+
+  public async stopDebugging() {
+    await Promise.allSettled([...this.sessions].map(([, s]) => vscode.debug.stopDebugging(s)))
+  }
+}
+
+interface TestDebugConfiguration {
+  runTests: () => Promise<void>
+  stopTests: () => Promise<void>
+
+  resolve: () => void
+  reject: (error: Error) => void
 }

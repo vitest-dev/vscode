@@ -5,11 +5,12 @@ import { setupFilePath } from '../constants'
 import { createWorkerRPC } from './rpc'
 import type { WorkerMeta, WorkerRunnerOptions } from './types'
 import { VSCodeReporter } from './reporter'
+import { Vitest } from './vitest'
 
 async function initVitest(meta: WorkerMeta) {
-  const vitestMode = await import(meta.vitestNodePath) as typeof import('vitest/node')
-  const reporter = new VSCodeReporter()
-  const vitest = await vitestMode.createVitest(
+  const vitestModule = await import(meta.vitestNodePath) as typeof import('vitest/node')
+  const reporter = new VSCodeReporter(meta)
+  const vitest = await vitestModule.createVitest(
     'test',
     {
       config: meta.configFile,
@@ -44,7 +45,7 @@ async function initVitest(meta: WorkerMeta) {
       ],
     },
   )
-  reporter.initVitest(vitest, meta.id)
+  reporter.init(vitest)
   return {
     vitest,
     reporter,
@@ -81,7 +82,9 @@ process.on('message', async function init(message: any) {
         return
       }
 
-      const vitestById = Object.fromEntries(vitest.map(v => [v.meta.id, v.vitest]))
+      const vitestById = Object.fromEntries(vitest.map(v =>
+        [v.meta.id, new Vitest(v.meta.id, v.vitest)],
+      ))
       const rpc = createWorkerRPC(vitestById, {
         on(listener) {
           process.on('message', listener)

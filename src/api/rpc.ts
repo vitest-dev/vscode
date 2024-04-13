@@ -1,25 +1,30 @@
 import v8 from 'node:v8'
 import type { ChildProcess } from 'node:child_process'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { File, ResolvedCoverageOptions, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 
-export interface BirpcMethods {
-  getFiles: (id: string) => Promise<[project: string, file: string][]>
-  collectTests: (id: string, testFile: string[]) => Promise<void>
-  cancelRun: (id: string) => Promise<void>
-  runTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
-  isTestFile: (file: string) => Promise<boolean>
+export interface VitestMethods {
+  getFiles: () => Promise<[project: string, file: string][]>
+  collectTests: (testFile: string[]) => Promise<void>
+  cancelRun: () => Promise<void>
+  runTests: (files?: string[], testNamePattern?: string) => Promise<void>
 
-  watchTests: (id: string, files?: string[], testNamePattern?: string) => Promise<void>
-  unwatchTests: (id: string) => Promise<void>
+  watchTests: (files?: string[], testNamePattern?: string) => void
+  unwatchTests: () => void
 
-  enableCoverage: (id: string) => void
-  disableCoverage: (id: string) => void
-  getCoverageConfig: (id: string) => Promise<ResolvedCoverageOptions>
-  waitForCoverageReport: (id: string) => Promise<string | null>
+  enableCoverage: () => void
+  disableCoverage: () => void
+  waitForCoverageReport: () => Promise<string | null>
 
-  startInspect: (port: number) => void
+  startInspect: (port: number, address?: string) => void
   stopInspect: () => void
+}
+
+type VitestPoolMethods = {
+  [K in keyof VitestMethods]: (id: string, ...args: Parameters<VitestMethods[K]>) => ReturnType<VitestMethods[K]>
+}
+
+export interface VitestPool extends VitestPoolMethods {
   close: () => void
 }
 
@@ -36,7 +41,7 @@ export type BirpcEvents = {
   [K in keyof VitestEvents]: (folder: string, ...args: Parameters<VitestEvents[K]>) => void
 }
 
-export type VitestRPC = BirpcReturn<BirpcMethods, BirpcEvents>
+export type VitestRPC = BirpcReturn<VitestPool, BirpcEvents>
 
 function createHandler<T extends (...args: any) => any>() {
   const handlers: T[] = []
@@ -95,7 +100,7 @@ function createRpcOptions() {
 export function createVitestRpc(vitest: ChildProcess) {
   const { events, handlers } = createRpcOptions()
 
-  const api = createBirpc<BirpcMethods, BirpcEvents>(
+  const api = createBirpc<VitestPool, BirpcEvents>(
     events,
     {
       timeout: -1,

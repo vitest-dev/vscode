@@ -6,6 +6,20 @@
 
 ![](https://i.ibb.co/bJCbCf2/202203292020.gif)
 
+## Features
+
+- **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
+- **Coverage** support (requires VS Code >= 1.88)
+- NX support (see the [NX sample](./samples/monorepo-nx/)).
+- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
+
+## Requirements
+
+- Visual Studio Code version >= 1.77.0
+- Vitest version >= v1.4.0
+- Coverage requires Visual Studio Code >= 1.88.0
+- Debugger requires Vitest >= 1.5.0
+
 ## Usage
 
 You can manage tests both from the Testing view and directly within your test files.
@@ -46,18 +60,6 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
   - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
   - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
 
-## Features
-
-- **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
-- **Coverage** support (requires VS Code >= 1.88)
-- NX support (see the [NX sample](./samples/monorepo-nx/)).
-- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
-
-## Requirements
-
-- Visual Studio Code version >= 1.77.0.
-- Vitest version >= v1.4.0
-
 ## Configuration
 
 You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
@@ -71,6 +73,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.configSearchPatternExclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be ignored when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `**/{node_modules,.*}/**`If the extension cannot find Vitest, please open an issue.
 - `vitest.nodeExecutable`: This extension spawns another process and will use this value as `execPath` argument.
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
+- `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 
 ### Other Options
 

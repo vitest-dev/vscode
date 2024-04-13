@@ -71,10 +71,6 @@ export class VitestAPI {
     return this.api
   }
 
-  async isTestFile(file: string) {
-    return this.meta.rpc.isTestFile(file)
-  }
-
   async dispose() {
     this.disposing = true
     try {
@@ -126,12 +122,12 @@ export class VitestFolderAPI extends VitestReporter {
     return this.pkg.prefix
   }
 
-  get workspaceFolder() {
-    return WEAKMAP_API_FOLDER.get(this)!
+  get version() {
+    return this.pkg.version
   }
 
-  isTestFile(file: string) {
-    return this.meta.rpc.isTestFile(file)
+  get workspaceFolder() {
+    return WEAKMAP_API_FOLDER.get(this)!
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
@@ -173,10 +169,6 @@ export class VitestFolderAPI extends VitestReporter {
     await this.meta.rpc.cancelRun(this.id)
   }
 
-  getCoverageConfig() {
-    return this.meta.rpc.getCoverageConfig(this.id)
-  }
-
   waitForCoverageReport() {
     return this.meta.rpc.waitForCoverageReport(this.id)
   }
@@ -198,11 +190,11 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   stopInspect() {
-    return this.meta.rpc.stopInspect()
+    return this.meta.rpc.stopInspect(this.id)
   }
 
-  startInspect(port: number) {
-    return this.meta.rpc.startInspect(port)
+  startInspect(port: number, address?: string) {
+    return this.meta.rpc.startInspect(this.id, port, address)
   }
 }
 

@@ -111,6 +111,11 @@
           "default": "**/{node_modules,.*}/**",
           "scope": "window"
         },
+        "vitest.debuggerAddress": {
+          "description": "TCP/IP address of process to be debugged. Default: localhost",
+          "type": "string",
+          "scope": "window"
+        },
         "vitest.debuggerPort": {
           "description": "Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.",
           "type": "string",
