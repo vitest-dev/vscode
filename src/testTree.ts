@@ -91,6 +91,7 @@ export class TestTree extends vscode.Disposable {
       range: undefined,
       error: undefined,
     }
+    TestFolder.register(item)
     this.folderItems.set(id, item)
     return item
   }
