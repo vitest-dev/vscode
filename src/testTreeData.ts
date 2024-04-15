@@ -6,7 +6,10 @@ export type TestData = TestFolder | TestFile | TestCase | TestSuite
 const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>()
 
 export function getTestData(item: vscode.TestItem): TestData {
-  return WEAKMAP_TEST_DATA.get(item)!
+  const data = WEAKMAP_TEST_DATA.get(item)
+  if (!data)
+    throw new Error(`Test data not found for "${item.label}". This is a bug in Vitest extension. Please report it to https://github.com/vitest-dev/vscode`)
+  return data
 }
 
 export function addTestData<T extends TestData>(item: vscode.TestItem, data: T): T {

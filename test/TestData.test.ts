@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { TestCase, TestFile, TestSuite } from '../src/testTreeData'
+import { TestCase, TestFile, TestSuite, getTestData } from '../src/testTreeData'
 
 describe('TestData', () => {
   const ctrl = vscode.tests.createTestController('mocha', 'Vitest')
@@ -63,6 +63,10 @@ describe('TestData', () => {
       expect(test1.getTestNamePattern()).to.equal('^\\s?describe test$')
       expect(test2.getTestNamePattern()).to.equal('^\\s?describe test 1$')
       expect(test3.getTestNamePattern()).to.equal('^\\s?describe test 2$')
+    })
+
+    it('throws an error if data was not set', () => {
+      expect(() => getTestData({ label: 'invalid test' } as any)).to.throw(/Test data not found for "invalid test"/)
     })
   })
 })
