@@ -254,7 +254,7 @@ function createChildVitestProcess(showWarning: boolean, meta: VitestPackage[]) {
         // https://github.com/vitest-dev/vitest/blob/5c7e9ca05491aeda225ce4616f06eefcd068c0b4/packages/vitest/src/node/cli/cli-api.ts
         TEST: 'true',
         VITEST: 'true',
-        NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'true',
+        NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
       },
       stdio: 'overlapped',
       cwd: pnp ? dirname(pnp) : undefined,
