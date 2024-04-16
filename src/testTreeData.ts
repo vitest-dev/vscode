@@ -12,7 +12,7 @@ export function getTestData(item: vscode.TestItem): TestData {
   return data
 }
 
-export function addTestData<T extends TestData>(item: vscode.TestItem, data: T): T {
+function addTestData<T extends TestData>(item: vscode.TestItem, data: T): T {
   WEAKMAP_TEST_DATA.set(item, data)
   return data
 }
