@@ -41,7 +41,7 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "${workspaceFolder}/../vscode-vitest-pnp"
+        "${workspaceFolder}/samples/yarn-pnp"
       ],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
