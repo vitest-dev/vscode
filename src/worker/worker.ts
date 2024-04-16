@@ -1,7 +1,6 @@
 import v8 from 'node:v8'
 import { register } from 'node:module'
 import { dirname } from 'pathe'
-import { distDir } from '../constants'
 import { createWorkerRPC } from './rpc'
 import type { WorkerMeta, WorkerRunnerOptions } from './types'
 import { VSCodeReporter } from './reporter'
@@ -38,8 +37,6 @@ async function initVitest(meta: WorkerMeta) {
                 off: () => {},
               } as any,
             }
-            if (!config.server.fs.allow.includes(distDir))
-              config.server.fs.allow.push(distDir)
           },
         },
       ],

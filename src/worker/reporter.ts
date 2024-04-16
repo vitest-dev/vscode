@@ -3,7 +3,7 @@ import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest as VitestCore } from 'vitest'
 import type { BirpcEvents, VitestPool } from '../api/rpc'
-import { setupFilePath } from '../constants'
+import { distDir, setupFilePath } from '../constants'
 import type { WorkerMeta } from './types'
 import { Vitest } from './vitest'
 
@@ -19,15 +19,22 @@ export class VSCodeReporter implements Reporter {
 
   init(ctx: VitestCore) {
     this.ctx = ctx
+    const server = ctx.server.config.server
+    if (!server.fs.allow.includes(distDir))
+      server.fs.allow.push(distDir)
     ctx.config.setupFiles = [
       ...ctx.config.setupFiles || [],
       setupFilePath,
     ]
+
     ctx.projects.forEach((project) => {
       project.config.setupFiles = [
         ...project.config.setupFiles || [],
         setupFilePath,
       ]
+      const server = project.server.config.server
+      if (!server.fs.allow.includes(distDir))
+        server.fs.allow.push(distDir)
     })
   }
 
