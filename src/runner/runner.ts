@@ -44,17 +44,17 @@ export class TestRunner extends vscode.Disposable {
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
-        const test = this.tree.getTestDataByTaskId(testId)
+        const test = this.tree.getTestItemByTaskId(testId)
         if (!test) {
           log.error('Cannot find task during onTaskUpdate', testId)
           return
         }
-        const testRun = this.getTestRunByData(test)
+        const testRun = this.getTestRunByTestItem(test)
         // there is no test run for collected tests
         if (!testRun)
           return
 
-        this.markResult(testRun, test.item, result)
+        this.markResult(testRun, test, result)
       })
     })
 
@@ -64,14 +64,14 @@ export class TestRunner extends vscode.Disposable {
       files.forEach(file => this.tree.collectFile(this.api, file))
       if (collecting)
         return
-      this.forEachTask(files, (task, data) => {
-        const testRun = this.getTestRunByData(data)
+      this.forEachTask(files, (task, item) => {
+        const testRun = this.getTestRunByTestItem(item)
         if (!testRun)
           return
         if (task.mode === 'skip' || task.mode === 'todo')
-          testRun.skipped(data.item)
+          testRun.skipped(item)
         else
-          this.markResult(testRun, data.item, task.result, task)
+          this.markResult(testRun, item, task.result, task)
       })
     })
 
@@ -87,10 +87,11 @@ export class TestRunner extends vscode.Disposable {
       const finishedRuns = new Set<vscode.TestRun>()
 
       files.forEach((file) => {
-        const data = this.tree.getTestDataByTask(file) as TestFile | undefined
+        const testItem = this.tree.getTestItemByTask(file)
+        const data = testItem && getTestData(testItem) as TestFile | undefined
         const testRun = data && this.getTestRunByData(data)
         if (testRun && data) {
-          this.markResult(testRun, data.item, file.result, file)
+          this.markResult(testRun, testItem, file.result, file)
           this.testRunsByFile.delete(file.filepath)
           if (!finishedRuns.has(testRun)) {
             finishedRuns.add(testRun)
@@ -101,13 +102,13 @@ export class TestRunner extends vscode.Disposable {
     })
 
     api.onConsoleLog(({ content, taskId }) => {
-      const data = taskId ? tree.getTestDataByTaskId(taskId) : undefined
-      const testRun = data && this.getTestRunByData(data)
+      const testItem = taskId ? tree.getTestItemByTaskId(taskId) : undefined
+      const testRun = testItem && this.getTestRunByTestItem(testItem)
       if (testRun) {
         testRun.appendOutput(
           content.replace(/(?<!\r)\n/g, '\r\n'),
           undefined,
-          data?.item,
+          testItem,
         )
       }
       else {
@@ -120,8 +121,8 @@ export class TestRunner extends vscode.Disposable {
     await this.debug.enable(this.api)
 
     const testItems = request.include?.length
-      ? partitionTestFileItems(request.include)
-      : this.tree.getAllFileItems().map(item => [getTestData(item), []] as [TestFile, never[]])
+      ? partitionTestFileItems(this.tree, request.include)
+      : this.tree.getAllFileItems().map(item => [item, []] as [vscode.TestItem, never[]])
 
     this.simpleTestRunRequest = request
     token.onCancellationRequested(() => {
@@ -140,7 +141,7 @@ export class TestRunner extends vscode.Disposable {
 
       const includedTests = testFileChildren.length
         ? testFileChildren
-        : [testFileData.item]
+        : [testFileData]
 
       await this.debug.startDebugging(
         () => this.runTestItems(includedTests).catch((err) => {
@@ -245,6 +246,10 @@ export class TestRunner extends vscode.Disposable {
         log.info(`Running ${files.length} file(s):`, files)
       await this.api.runFiles(files, testNamePatern)
     }
+  }
+
+  private getTestRunByTestItem(data: vscode.TestItem) {
+    return this.getTestRunByData(getTestData(data))
   }
 
   private getTestRunByData(data: TestData): vscode.TestRun | null {
@@ -359,8 +364,8 @@ export class TestRunner extends vscode.Disposable {
     const runs = new Set<vscode.TestRun>()
 
     const promises = files.map(async (file) => {
-      const data = this.tree.getTestDataByTask(file) as TestFile | undefined
-      const testRun = data && this.getTestRunByData(data)
+      const testItem = this.tree.getTestItemByTask(file)
+      const testRun = testItem && this.getTestRunByTestItem(testItem)
       if (testRun && !runs.has(testRun)) {
         runs.add(testRun)
         await coverageContext.applyJson(testRun, coverage)
@@ -374,9 +379,9 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  private forEachTask(tasks: Task[], fn: (task: Task, test: TestData) => void) {
+  private forEachTask(tasks: Task[], fn: (task: Task, test: vscode.TestItem) => void) {
     getTasks(tasks).forEach((task) => {
-      const test = this.tree.getTestDataByTask(task)
+      const test = this.tree.getTestItemByTask(task)
       if (!test) {
         log.error(`Test data not found for "${task.name}"`)
         return
@@ -483,39 +488,42 @@ function getFolderFiles(folder: vscode.TestItem): vscode.TestItem[] {
   for (const [_, item] of folder.children) {
     const data = getTestData(item)
     if (data instanceof TestFile)
-      files.push(data.item)
+      files.push(item)
     else if (data instanceof TestFolder)
       files.push(...getFolderFiles(item))
   }
   return files
 }
 
-function partitionTestFileItems(tests: readonly vscode.TestItem[]) {
-  const fileItems = new Map<TestFile, vscode.TestItem[]>()
+function partitionTestFileItems(tree: TestTree, tests: readonly vscode.TestItem[]) {
+  const fileItems = new Map<vscode.TestItem, vscode.TestItem[]>()
 
   for (const testItem of tests) {
     const data = getTestData(testItem)
     if (data instanceof TestFile) {
-      const items = fileItems.get(data) || []
-      fileItems.set(data, items)
+      const items = fileItems.get(testItem) || []
+      fileItems.set(testItem, items)
       continue
     }
     if (data instanceof TestFolder) {
       const items = getFolderFiles(testItem)
       items.forEach((item) => {
-        const data = getTestData(item) as TestFile
-        const fileItemsForFile = fileItems.get(data) || []
-        fileItems.set(data, fileItemsForFile)
+        const fileItemsForFile = fileItems.get(item) || []
+        fileItems.set(item, fileItemsForFile)
       })
       continue
     }
-    const fileData = data.file
-    const items = fileItems.get(fileData) || []
-    fileItems.set(fileData, items)
+    const fileTestItem = tree.getTestItemByTaskId(data.file.id)
+    if (!fileTestItem) {
+      log.error('Cannot find the file test item for', testItem.label)
+      continue
+    }
+    const items = fileItems.get(fileTestItem) || []
+    fileItems.set(fileTestItem, items)
     items.push(testItem)
   }
 
-  return Array.from(fileItems.entries()) as [TestFile, vscode.TestItem[]][]
+  return Array.from(fileItems.entries())
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]) {

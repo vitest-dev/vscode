@@ -26,7 +26,7 @@ describe('TestData', () => {
         'describe',
         uri,
       )
-      file.item.children.add(suiteItem)
+      testItem.children.add(suiteItem)
 
       const testItem1 = ctrl.createTestItem(
         `${filepath}_1_1`,
@@ -58,7 +58,7 @@ describe('TestData', () => {
       const test2 = TestCase.register(testItem2, file)
       const test3 = TestCase.register(testItem3, file)
 
-      expect(test1.item.parent).to.exist
+      expect(testItem1.parent).to.exist
 
       expect(test1.getTestNamePattern()).to.equal('^\\s?describe test$')
       expect(test2.getTestNamePattern()).to.equal('^\\s?describe test 1$')

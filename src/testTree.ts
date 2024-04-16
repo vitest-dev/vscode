@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import type { File, Task } from 'vitest'
-import type { TestData } from './testTreeData'
 import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
 import { log } from './log'
 import type { VitestFolderAPI } from './api'
@@ -219,20 +218,20 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  public getTestDataByTaskId(taskId: string): TestData | null {
+  public getTestItemByTaskId(taskId: string): vscode.TestItem | null {
     const testItem = this.flatTestItems.get(taskId)
     if (!testItem)
       return null
-    return getTestData(testItem) || null
+    return testItem || null
   }
 
-  public getTestDataByTask(task: Task): TestData | null {
+  public getTestItemByTask(task: Task): vscode.TestItem | null {
     const cachedItem = this.flatTestItems.get(task.id)
     if (cachedItem)
-      return getTestData(cachedItem) || null
+      return cachedItem
     if ('filepath' in task && task.filepath) {
       const testItem = this.fileItems.get(`${task.filepath}${task.projectName || ''}`)
-      return testItem ? getTestData(testItem) || null : null
+      return testItem || null
     }
     return null
   }

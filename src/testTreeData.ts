@@ -17,23 +17,41 @@ function addTestData<T extends TestData>(item: vscode.TestItem, data: T): T {
   return data
 }
 
-export class TestFolder {
+class BaseTestData {
+  public readonly label: string
+  public readonly parent: TestData | undefined
+  public readonly id: string
+
+  constructor(
+    item: vscode.TestItem,
+  ) {
+    this.label = item.label
+    this.id = item.id
+    this.parent = item.parent ? WEAKMAP_TEST_DATA.get(item.parent) : undefined
+  }
+}
+
+export class TestFolder extends BaseTestData {
   private constructor(
-    public readonly item: vscode.TestItem,
-  ) {}
+    item: vscode.TestItem,
+  ) {
+    super(item)
+  }
 
   public static register(item: vscode.TestItem) {
     return addTestData(item, new TestFolder(item))
   }
 }
 
-export class TestFile {
+export class TestFile extends BaseTestData {
   private constructor(
-    public readonly item: vscode.TestItem,
+    item: vscode.TestItem,
     public readonly filepath: string,
     public readonly api: VitestFolderAPI,
     public readonly project: string,
-  ) {}
+  ) {
+    super(item)
+  }
 
   public static register(
     item: vscode.TestItem,
@@ -51,12 +69,11 @@ class TaskName {
   ) {}
 
   getTestNamePattern() {
-    const patterns = [escapeRegex(this.data.item.label)]
-    let iter = this.data.item.parent
+    const patterns = [escapeRegex(this.data.label)]
+    let iter = this.data.parent
     while (iter) {
       // if we reached test file, then stop
-      const data = getTestData(iter)
-      if (data instanceof TestFile || data instanceof TestFolder)
+      if (iter instanceof TestFile || iter instanceof TestFolder)
         break
       patterns.push(escapeRegex(iter.label))
       iter = iter.parent
@@ -67,13 +84,14 @@ class TaskName {
   }
 }
 
-export class TestCase {
+export class TestCase extends BaseTestData {
   private nameResolver: TaskName
 
   private constructor(
-    public readonly item: vscode.TestItem,
+    item: vscode.TestItem,
     public readonly file: TestFile,
   ) {
+    super(item)
     this.nameResolver = new TaskName(this)
   }
 
@@ -86,13 +104,14 @@ export class TestCase {
   }
 }
 
-export class TestSuite {
+export class TestSuite extends BaseTestData {
   private nameResolver: TaskName
 
   private constructor(
-    public readonly item: vscode.TestItem,
+    item: vscode.TestItem,
     public readonly file: TestFile,
   ) {
+    super(item)
     this.nameResolver = new TaskName(this)
   }
 
