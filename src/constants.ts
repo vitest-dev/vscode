@@ -3,7 +3,7 @@ import { resolve } from 'pathe'
 export const minimumVersion = '1.4.0'
 export const minimumDebugVersion = '1.5.0'
 
-export const distDir = resolve(__filename)
+export const distDir = __dirname
 export const workerPath = resolve(__dirname, 'worker.js')
 export const setupFilePath = resolve(__dirname, 'setupFile.mjs')
 
