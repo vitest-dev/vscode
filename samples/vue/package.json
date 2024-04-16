@@ -6,13 +6,14 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "vue": "^3.2.31"
+    "vue": "^3.4.22"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^2.2.4",
-    "@vue/test-utils": "^2.0.0-rc.18",
-    "happy-dom": "latest",
-    "vitest": "latest"
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/test-utils": "^2.4.5",
+    "happy-dom": "14.7.1",
+    "vite": "^5.2.9",
+    "vitest": "^1.5.0"
   },
   "stackblitz": {
     "startCommand": "npm run test"
