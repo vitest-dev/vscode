@@ -309,14 +309,12 @@ export class TestRunner extends vscode.Disposable {
     const include = []
     let primaryRequest: vscode.TestRunRequest | null = null
     for (const request of this.continuousRequests) {
-      if (!request.include?.length)
-        return request
       if (!primaryRequest)
         primaryRequest = request
-      include.push(...request.include)
+      include.push(...request.include || [])
     }
     return new vscode.TestRunRequest(
-      include,
+      include.length ? include : undefined,
       undefined,
       primaryRequest?.profile,
       true,
