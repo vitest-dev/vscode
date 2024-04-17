@@ -513,7 +513,7 @@ function partitionTestFileItems(tree: TestTree, tests: readonly vscode.TestItem[
       })
       continue
     }
-    const fileTestItem = tree.getTestItemByTaskId(data.file.id)
+    const fileTestItem = getTestItemFile(testItem)
     if (!fileTestItem) {
       log.error('Cannot find the file test item for', testItem.label)
       continue
@@ -524,6 +524,17 @@ function partitionTestFileItems(tree: TestTree, tests: readonly vscode.TestItem[
   }
 
   return Array.from(fileItems.entries())
+}
+
+function getTestItemFile(testItem: vscode.TestItem): vscode.TestItem | null {
+  let parent = testItem.parent
+  while (parent) {
+    const data = getTestData(parent)
+    if (data instanceof TestFile)
+      return parent
+    parent = parent.parent
+  }
+  return null
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]) {
