@@ -235,6 +235,25 @@ class VitestExtension {
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
       }),
+      vscode.commands.registerCommand('vitest.updateSnapshot', async (testItem: vscode.TestItem | undefined) => {
+        if (!testItem)
+          return
+        const api = this.testTree.getAPIFromTestItem(testItem)
+        if (!api)
+          return
+        const profile = this.runProfiles.get(`${api.id}:run`)
+        if (!profile)
+          return
+        const request = new vscode.TestRunRequest(
+          [testItem],
+          undefined,
+          profile,
+          false,
+        )
+        Object.assign(request, { updateSnapshots: true })
+        const tokenSource = new vscode.CancellationTokenSource()
+        await profile.runHandler(request, tokenSource.token)
+      }),
     ]
 
     // if the config changes, re-define all test profiles

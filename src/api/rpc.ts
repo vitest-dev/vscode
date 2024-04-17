@@ -8,6 +8,7 @@ export interface VitestMethods {
   collectTests: (testFile: string[]) => Promise<void>
   cancelRun: () => Promise<void>
   runTests: (files?: string[], testNamePattern?: string) => Promise<void>
+  updateSnapshots: (files?: string[], testNamePattern?: string) => Promise<void>
 
   watchTests: (files?: string[], testNamePattern?: string) => void
   unwatchTests: () => void

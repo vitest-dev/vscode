@@ -80,6 +80,11 @@
         {
           "command": "vitest.updateSnapshot"
         }
+      ],
+      "testing/item/gutter": [
+        {
+          "command": "vitest.updateSnapshot"
+        }
       ]
     },
     "configuration": {
