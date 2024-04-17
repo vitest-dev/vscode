@@ -1,6 +1,5 @@
 import v8 from 'node:v8'
 import { register } from 'node:module'
-import { dirname } from 'pathe'
 import { createWorkerRPC } from './rpc'
 import type { WorkerMeta, WorkerRunnerOptions } from './types'
 import { VSCodeReporter } from './reporter'
@@ -12,11 +11,12 @@ async function initVitest(meta: WorkerMeta) {
   const vitest = await vitestModule.createVitest(
     'test',
     {
+      ...meta.arguments ? vitestModule.parseCLI(meta.arguments).options : {},
       config: meta.configFile,
       workspace: meta.workspaceFile,
       watch: true,
       api: false,
-      root: dirname(meta.id),
+      root: meta.cwd,
       // @ts-expect-error private property
       reporter: undefined,
       reporters: [reporter],
@@ -66,7 +66,7 @@ process.on('message', async function init(message: any) {
 
       const vitest = []
       for (const meta of data.meta) {
-        process.chdir(dirname(meta.id))
+        process.chdir(meta.cwd)
         try {
           vitest.push(await initVitest(meta))
         }
@@ -82,7 +82,7 @@ process.on('message', async function init(message: any) {
       }
 
       const vitestById = Object.fromEntries(vitest.map(v =>
-        [v.meta.id, new Vitest(v.meta.id, v.vitest)],
+        [v.meta.id, new Vitest(v.meta.cwd, v.vitest)],
       ))
       const rpc = createWorkerRPC(vitestById, {
         on(listener) {

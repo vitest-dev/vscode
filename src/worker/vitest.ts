@@ -1,4 +1,3 @@
-import { dirname } from 'node:path'
 import type { Vitest as VitestCore } from 'vitest'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
@@ -15,7 +14,7 @@ export class Vitest implements VitestMethods {
   public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
-    private readonly id: string,
+    private readonly cwd: string,
     private readonly ctx: VitestCore,
   ) {
     this.watcher = new VitestWatcher(ctx)
@@ -63,7 +62,7 @@ export class Vitest implements VitestMethods {
   }
 
   private async globTestFiles(filters?: string[]) {
-    process.chdir(dirname(this.id))
+    process.chdir(this.cwd)
     const files = await this.ctx.globTestFiles(filters)
     process.chdir(cwd)
     return files
@@ -72,7 +71,7 @@ export class Vitest implements VitestMethods {
   private async runTestFiles(files: string[], testNamePattern?: string | undefined) {
     await this.ctx.runningPromise
     this.watcher.markRerun(false)
-    process.chdir(dirname(this.id))
+    process.chdir(this.cwd)
 
     try {
       this.setTestNamePattern(testNamePattern)

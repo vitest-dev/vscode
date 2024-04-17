@@ -1,6 +1,8 @@
 export interface WorkerMeta {
   vitestNodePath: string
   id: string
+  cwd: string
+  arguments?: string
   configFile?: string
   workspaceFile?: string
   env: Record<string, any> | undefined

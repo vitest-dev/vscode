@@ -5,7 +5,7 @@ import { getConfig } from '../config'
 
 const _require = require
 
-interface VitestPackage {
+export interface VitestResolution {
   vitestPackageJsonPath: string
   vitestNodePath: string
   pnp?: {
@@ -14,7 +14,7 @@ interface VitestPackage {
   }
 }
 
-export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder): VitestPackage | null {
+export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder): VitestResolution | null {
   const vitestPackageJsonPath = resolveVitestPackagePath(cwd, folder)
   if (vitestPackageJsonPath) {
     return {

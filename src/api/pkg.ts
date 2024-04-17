@@ -19,15 +19,18 @@ export interface VitestPackage {
   vitestPackageJsonPath: string
   // path to a config file or a workspace config file
   id: string
+  cwd: string
+  version: string
+  arguments?: string
   configFile?: string
   workspaceFile?: string
-  version: string
   loader?: string
   pnp?: string
 }
 
 function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri): VitestPackage | null {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
+  const cwd = dirname(configOrWorkspaceFile.fsPath)
   const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
 
   if (!vitest) {
@@ -45,6 +48,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
     return {
       folder,
       id,
+      cwd,
       prefix,
       vitestNodePath: vitest.vitestNodePath,
       vitestPackageJsonPath: vitest.vitestPackageJsonPath,
@@ -55,26 +59,13 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   }
 
   const pkg = _require(vitest.vitestPackageJsonPath)
-  if (pkg.name !== 'vitest') {
-    vscode.window.showErrorMessage(
-      `Package was resolved to "${pkg.name}" instead of "vitest". If you are using "vitest.vitestPackagePath", make sure it points to a "vitest" package.`,
-    )
-    delete require.cache[vitest.vitestPackageJsonPath]
+  if (!validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg))
     return null
-  }
-  if (!gte(pkg.version, minimumVersion)) {
-    const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
-    if (showWarning)
-      vscode.window.showWarningMessage(warning)
-    else
-      log.error('[API]', `[${folder}] Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`)
-    delete require.cache[vitest.vitestPackageJsonPath]
-    return null
-  }
 
   return {
     folder,
     id,
+    cwd,
     prefix,
     vitestPackageJsonPath: vitest.vitestPackageJsonPath,
     vitestNodePath: vitest.vitestNodePath,
@@ -82,7 +73,90 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   }
 }
 
+function validateVitestPkg(showWarning: boolean, pkgJsonPath: string, pkg: any) {
+  if (pkg.name !== 'vitest') {
+    vscode.window.showErrorMessage(
+      `Package was resolved to "${pkg.name}" instead of "vitest". If you are using "vitest.vitestPackagePath", make sure it points to a "vitest" package.`,
+    )
+    delete require.cache[pkgJsonPath]
+    return false
+  }
+  if (!gte(pkg.version, minimumVersion)) {
+    const warning = `Vitest v${pkg.version} is not supported. Vitest v${minimumVersion} or newer is required.`
+    if (showWarning)
+      vscode.window.showWarningMessage(warning)
+    else
+      log.error('[API]', `Vitest v${pkg.version} from ${pkgJsonPath} is not supported. Vitest v${minimumVersion} or newer is required.`)
+    delete require.cache[pkgJsonPath]
+    return false
+  }
+  return true
+}
+
 export async function resolveVitestPackages(showWarning: boolean): Promise<VitestPackage[]> {
+  // try to resolve configs first
+  const vitest = await resolveVitestPackagesViaConfigs(showWarning)
+  // if no viable configs found, try to resolve via package.json
+  if (!vitest.meta.length && !vitest.warned) {
+    const pkg = await resolveVitestPackagesViaPackageJson(showWarning)
+    return pkg.meta
+  }
+  return vitest.meta
+}
+
+export async function resolveVitestPackagesViaPackageJson(showWarning: boolean): Promise<{ meta: VitestPackage[]; warned: boolean }> {
+  const config = getConfig()
+
+  const packages = await vscode.workspace.findFiles('**/package.json', config.configSearchPatternExclude)
+
+  let warned = false
+  const meta: VitestPackage[] = []
+  const promises = packages.map(async (pkgPath) => {
+    const scripts = Object.entries(_require(pkgPath.fsPath).scripts || {})
+    const folder = vscode.workspace.getWorkspaceFolder(pkgPath)!
+    const cwd = dirname(pkgPath.fsPath)
+    const vitest = resolveVitestPackage(cwd, folder)
+
+    // skip if Vitest is not installed
+    if (!vitest)
+      return
+
+    const pkg = _require(vitest.vitestPackageJsonPath)
+    if (!validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg)) {
+      warned = true
+      return
+    }
+
+    for (const [scriptName, script] of scripts) {
+      if (typeof script !== 'string')
+        continue
+      if (!script.startsWith('vitest '))
+        continue
+      const id = `${normalize(pkgPath.fsPath)}/${scriptName}`
+      const prefix = `package.json:${scriptName}`
+      meta.push({
+        folder,
+        id,
+        cwd,
+        prefix,
+        arguments: script,
+        vitestPackageJsonPath: vitest.vitestPackageJsonPath,
+        vitestNodePath: vitest.vitestNodePath,
+        version: pkg.version,
+      })
+    }
+
+    return null
+  })
+  await Promise.all(promises)
+
+  return {
+    meta: resolvePackagUniquePrefixes(meta),
+    warned,
+  }
+}
+
+export async function resolveVitestPackagesViaConfigs(showWarning: boolean): Promise<{ meta: VitestPackage[]; warned: boolean }> {
   const config = getConfig()
   const userWorkspace = config.workspaceConfig
   const rootConfig = config.rootConfig
@@ -94,18 +168,27 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
     ? [vscode.Uri.file(userWorkspace)]
     : await vscode.workspace.findFiles(workspaceGlob, config.configSearchPatternExclude)
 
+  let warned = false
+
   if (vitestWorkspaces.length) {
     // if there is a workspace config, use it as root
-    return resolvePackagUniquePrefixes(vitestWorkspaces.map((config) => {
+    const meta = resolvePackagUniquePrefixes(vitestWorkspaces.map((config) => {
       const vitest = resolveVitestConfig(showWarning, config)
-      if (!vitest)
+      if (!vitest) {
+        warned = true
         return null
+      }
       return {
         ...vitest,
         configFile: rootConfig,
         workspaceFile: vitest.id,
       }
     }).filter(nonNullable))
+
+    return {
+      meta,
+      warned,
+    }
   }
 
   const configs = rootConfig
@@ -135,10 +218,15 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
       const vitest = resolveVitestConfig(showWarning, config)
       if (vitest)
         resolvedMeta.push(vitest)
+      else
+        warned = true
     })
   }
 
-  return resolvePackagUniquePrefixes(resolvedMeta)
+  return {
+    meta: resolvePackagUniquePrefixes(resolvedMeta),
+    warned,
+  }
 }
 
 export function findFirstUniqueFolderNames(paths: string[]) {

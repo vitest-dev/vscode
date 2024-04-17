@@ -57,17 +57,17 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   }
 }
 
-function resolvePath(nodeExecutable: string | undefined) {
-  if (!nodeExecutable)
-    return nodeExecutable
+function resolvePath(path: string | undefined) {
+  if (!path)
+    return path
   // if there is a workspace file, then it should be relative to it because
   // this option cannot be configured on a workspace folder level
   if (vscode.workspace.workspaceFile)
-    return resolve(dirname(vscode.workspace.workspaceFile.fsPath), nodeExecutable)
+    return resolve(dirname(vscode.workspace.workspaceFile.fsPath), path)
   const workspaceFolders = vscode.workspace.workspaceFolders
   // if there is no workspace file, then it's probably a single folder workspace
   if (workspaceFolders?.length === 1)
-    return resolve(workspaceFolders[0].uri.fsPath, nodeExecutable)
+    return resolve(workspaceFolders[0].uri.fsPath, path)
   // if there are still several folders, then we can't reliably resolve the path
-  return nodeExecutable
+  return path
 }

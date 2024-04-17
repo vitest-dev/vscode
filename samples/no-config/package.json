@@ -1,0 +1,14 @@
+{
+  "name": "no-package",
+  "version": "1.0.0",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run --pool=forks"
+  },
+  "devDependencies": {
+    "vitest": "^1.4.0"
+  }
+}

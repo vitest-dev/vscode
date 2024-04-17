@@ -233,8 +233,9 @@ export class TestRunner extends vscode.Disposable {
   }
 
   private async runTestItems(tests: readonly vscode.TestItem[]) {
+    const root = this.api.workspaceFolder.uri.fsPath
     if (!tests.length) {
-      log.info(`Running all tests in ${basename(this.api.workspaceFolder.uri.fsPath)}`)
+      log.info(`Running all tests in ${basename(root)}`)
       await this.api.runFiles()
     }
     else {
@@ -243,7 +244,7 @@ export class TestRunner extends vscode.Disposable {
       if (testNamePatern)
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
-        log.info(`Running ${files.length} file(s):`, files)
+        log.info(`Running ${files.length} file(s):`, files.map(f => relative(root, f)))
       await this.api.runFiles(files, testNamePatern)
     }
   }

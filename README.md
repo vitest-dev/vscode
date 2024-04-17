@@ -88,7 +88,3 @@ These options are resolved relative to the [workspace file](https://code.visuals
 ### How can I use it in monorepo?
 
 See <https://vitest.dev/guide/workspace.html> for monorepo support.
-
-### Why is the extension not activated?
-
-The extension looks for [Vitest config](https://vitest.dev/config/file.html) or [Vitest workspace config](https://vitest.dev/guide/workspace.html) to establish the connection with Vitest. If you have several config files, it's recommended to combine them in a single [Vitest workspace](https://vitest.dev/guide/workspace.html) for a better CPU performance (only have a single Vitest instance instead of several).

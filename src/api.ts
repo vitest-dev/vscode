@@ -2,7 +2,7 @@ import type { ChildProcess } from 'node:child_process'
 import { fork } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
-import { dirname, normalize } from 'pathe'
+import { dirname, normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
 import { workerPath } from './constants'
@@ -151,8 +151,9 @@ export class VitestFolderAPI extends VitestReporter {
 
     this.collectTimer = setTimeout(() => {
       const tests = Array.from(this.testsQueue)
+      const root = this.workspaceFolder.uri.fsPath
       this.testsQueue.clear()
-      log.info('[API]', `Collecting tests: ${tests.join(', ')}`)
+      log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t)).join(', ')}`)
       this.collectPromise = this.meta.rpc.collectTests(this.id, tests).finally(() => {
         this.collectPromise = null
       })
@@ -314,6 +315,8 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
           vitestNodePath: m.vitestNodePath,
           env: getConfig(m.folder).env || undefined,
           configFile: m.configFile,
+          cwd: m.cwd,
+          arguments: m.arguments,
           workspaceFile: m.workspaceFile,
           id: m.id,
         })),
@@ -326,7 +329,7 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
 }
 
 export async function createVitestProcess(showWarning: boolean, packages: VitestPackage[]): Promise<ResolvedMeta> {
-  log.info('[API]', `Running Vitest: ${packages.map(x => `v${x.version} (${x.id})`).join(', ')}`)
+  log.info('[API]', `Running Vitest: ${packages.map(x => `v${x.version} (${relative(x.cwd, x.id)})`).join(', ')}`)
 
   const vitest = await createChildVitestProcess(showWarning, packages)
 
