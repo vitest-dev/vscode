@@ -112,8 +112,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
   let warned = false
   const meta: VitestPackage[] = []
   const promises = packages.map(async (pkgPath) => {
-    const pkgJson = await vscode.workspace.fs.readFile(pkgPath)
-    const scripts = Object.entries(JSON.parse(pkgJson.toString()).scripts || {})
+    const scripts = Object.entries(_require(pkgPath.fsPath).scripts || {})
     const folder = vscode.workspace.getWorkspaceFolder(pkgPath)!
     const cwd = dirname(pkgPath.fsPath)
     const vitest = resolveVitestPackage(cwd, folder)
