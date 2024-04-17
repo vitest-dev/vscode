@@ -17,6 +17,8 @@ async function initVitest(meta: WorkerMeta) {
       watch: true,
       api: false,
       root: dirname(meta.id),
+      // @ts-expect-error private property
+      reporter: [reporter],
       reporters: [reporter],
       ui: false,
       includeTaskLocation: true,
