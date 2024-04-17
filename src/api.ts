@@ -134,6 +134,10 @@ export class VitestFolderAPI extends VitestReporter {
     await this.meta.rpc.runTests(this.id, files?.map(normalize), testNamePatern)
   }
 
+  async updateSnapshots(files?: string[], testNamePatern?: string) {
+    await this.meta.rpc.updateSnapshots(this.id, files?.map(normalize), testNamePatern)
+  }
+
   getFiles() {
     return this.meta.rpc.getFiles(this.id)
   }

@@ -203,6 +203,10 @@ export class TestTree extends vscode.Disposable {
       this.recursiveDelete(item.parent)
   }
 
+  public getAPIFromTestItem(testItem: vscode.TestItem) {
+    return getAPIFromTestItem(testItem)
+  }
+
   async discoverFileTests(testItem: vscode.TestItem) {
     const api = getAPIFromTestItem(testItem)
     if (!api) {

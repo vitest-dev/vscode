@@ -64,14 +64,20 @@ export class TestRunner extends vscode.Disposable {
       files.forEach(file => this.tree.collectFile(this.api, file))
       if (collecting)
         return
-      this.forEachTask(files, (task, item) => {
-        const testRun = this.getTestRunByTestItem(item)
+
+      getTasks(files).forEach((task) => {
+        const test = this.tree.getTestItemByTask(task)
+        if (!test) {
+          log.error(`Test data not found for "${task.name}"`)
+          return
+        }
+        const testRun = this.getTestRunByTestItem(test)
         if (!testRun)
           return
         if (task.mode === 'skip' || task.mode === 'todo')
-          testRun.skipped(item)
+          testRun.skipped(test)
         else
-          this.markResult(testRun, item, task.result, task)
+          this.markResult(testRun, test, task.result, task)
       })
     })
 
@@ -144,7 +150,7 @@ export class TestRunner extends vscode.Disposable {
         : [testFileData]
 
       await this.debug.startDebugging(
-        () => this.runTestItems(includedTests).catch((err) => {
+        () => this.runTestItems(request, includedTests).catch((err) => {
           log.error(err)
         }),
         () => this.api.cancelRun(),
@@ -226,17 +232,22 @@ export class TestRunner extends vscode.Disposable {
       this.api.cancelRun()
     })
 
-    await this.runTestItems(request.include || [])
+    await this.runTestItems(request, request.include || [])
 
     this.simpleTestRunRequest = null
     this._onRequestsExhausted.fire()
   }
 
-  private async runTestItems(tests: readonly vscode.TestItem[]) {
+  private async runTestItems(request: vscode.TestRunRequest, tests: readonly vscode.TestItem[]) {
+    const runTests = (files?: string[], testNamePatern?: string) =>
+      'updateSnapshots' in request
+        ? this.api.updateSnapshots(files, testNamePatern)
+        : this.api.runFiles(files, testNamePatern)
+
     const root = this.api.workspaceFolder.uri.fsPath
     if (!tests.length) {
       log.info(`Running all tests in ${basename(root)}`)
-      await this.api.runFiles()
+      await runTests()
     }
     else {
       const testNamePatern = formatTestPattern(tests)
@@ -245,7 +256,7 @@ export class TestRunner extends vscode.Disposable {
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
         log.info(`Running ${files.length} file(s):`, files.map(f => relative(root, f)))
-      await this.api.runFiles(files, testNamePatern)
+      await runTests(files, testNamePatern)
     }
   }
 
@@ -377,17 +388,6 @@ export class TestRunner extends vscode.Disposable {
 
     rm(reportsDirectory, { recursive: true, force: true }).catch(() => {
       // ignore
-    })
-  }
-
-  private forEachTask(tasks: Task[], fn: (task: Task, test: vscode.TestItem) => void) {
-    getTasks(tasks).forEach((task) => {
-      const test = this.tree.getTestItemByTask(task)
-      if (!test) {
-        log.error(`Test data not found for "${task.name}"`)
-        return
-      }
-      fn(task, test)
     })
   }
 

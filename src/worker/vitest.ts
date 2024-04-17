@@ -35,6 +35,20 @@ export class Vitest implements VitestMethods {
     }
   }
 
+  public async updateSnapshots(files?: string[] | undefined, testNamePattern?: string | undefined) {
+    this.ctx.configOverride.snapshotOptions = {
+      updateSnapshot: 'all',
+      // environment is resolved inside a worker thread
+      snapshotEnvironment: null as any,
+    }
+    try {
+      return await this.runTests(files, testNamePattern)
+    }
+    finally {
+      delete this.ctx.configOverride.snapshotOptions
+    }
+  }
+
   public async runTests(files: string[] | undefined, testNamePattern?: string) {
     // @ts-expect-error private method
     await this.ctx.initBrowserProviders()
