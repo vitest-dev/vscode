@@ -2,15 +2,7 @@
   "vitest.nodeEnv": {
     "TEST_CUSTOM_ENV": "hello"
   },
-  "vitest.exclude": [
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/cypress/**",
-    "**/.{idea,git,cache,output,temp}/**",
-    "**/ignored.test.ts"
-  ],
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  },
-  "vitest.commandLine": "npx vitest"
+  }
 }

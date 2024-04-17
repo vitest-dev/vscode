@@ -193,6 +193,9 @@ export async function resolveVitestPackagesViaConfigs(showWarning: boolean): Pro
     }
   }
 
+  if (rootConfig)
+    log.info('[API] Using user root config:', rootConfig)
+
   const configs = rootConfig
     ? [vscode.Uri.file(rootConfig)]
     : await vscode.workspace.findFiles(configGlob, config.configSearchPatternExclude)
@@ -218,10 +221,15 @@ export async function resolveVitestPackagesViaConfigs(showWarning: boolean): Pro
       : configFiles
     filteredConfigFiles.forEach((config) => {
       const vitest = resolveVitestConfig(showWarning, config)
-      if (vitest)
-        resolvedMeta.push(vitest)
-      else
+      if (vitest) {
+        resolvedMeta.push({
+          ...vitest,
+          configFile: vitest.id,
+        })
+      }
+      else {
         warned = true
+      }
     })
   }
 
