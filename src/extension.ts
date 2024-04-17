@@ -241,6 +241,7 @@ class VitestExtension {
     const configWatchers = [
       vscode.workspace.createFileSystemWatcher(configGlob),
       vscode.workspace.createFileSystemWatcher(workspaceGlob),
+      vscode.workspace.createFileSystemWatcher('**/package.json'),
     ]
     this.disposables.push(...configWatchers)
 

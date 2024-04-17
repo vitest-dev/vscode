@@ -314,6 +314,8 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
           vitestNodePath: m.vitestNodePath,
           env: getConfig(m.folder).env || undefined,
           configFile: m.configFile,
+          cwd: m.cwd,
+          arguments: m.arguments,
           workspaceFile: m.workspaceFile,
           id: m.id,
         })),
