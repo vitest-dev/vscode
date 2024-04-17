@@ -111,8 +111,14 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
 
   let warned = false
   const meta: VitestPackage[] = []
-  const promises = packages.map(async (pkgPath) => {
-    const scripts = Object.entries(_require(pkgPath.fsPath).scripts || {})
+  packages.forEach((pkgPath) => {
+    const scripts = Object.entries(_require(pkgPath.fsPath).scripts || {}).filter(([, script]) => {
+      return typeof script === 'string' && script.startsWith('vitest ')
+    }) as [string, string][]
+
+    if (!scripts.length)
+      return
+
     const folder = vscode.workspace.getWorkspaceFolder(pkgPath)!
     const cwd = dirname(pkgPath.fsPath)
     const vitest = resolveVitestPackage(cwd, folder)
@@ -128,10 +134,6 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
     }
 
     for (const [scriptName, script] of scripts) {
-      if (typeof script !== 'string')
-        continue
-      if (!script.startsWith('vitest '))
-        continue
       const id = `${normalize(pkgPath.fsPath)}/${scriptName}`
       const prefix = `package.json:${scriptName}`
       meta.push({
@@ -145,10 +147,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
         version: pkg.version,
       })
     }
-
-    return null
   })
-  await Promise.all(promises)
 
   return {
     meta: resolvePackagUniquePrefixes(meta),
