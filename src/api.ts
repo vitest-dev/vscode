@@ -11,7 +11,7 @@ import type { BirpcEvents, VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
 import type { WorkerRunnerOptions } from './worker/types'
 import type { VitestPackage } from './api/pkg'
-import { pluralize, showVitestError } from './utils'
+import { findNode, pluralize, showVitestError } from './utils'
 
 export class VitestReporter {
   constructor(
@@ -222,7 +222,7 @@ interface ResolvedMeta {
   }
 }
 
-function createChildVitestProcess(showWarning: boolean, meta: VitestPackage[]) {
+async function createChildVitestProcess(showWarning: boolean, meta: VitestPackage[]) {
   const pnpLoaders = [
     ...new Set(meta.map(meta => meta.loader).filter(Boolean) as string[]),
   ]
@@ -240,11 +240,11 @@ function createChildVitestProcess(showWarning: boolean, meta: VitestPackage[]) {
       ]
     : undefined
   const env = getConfig().env || {}
+  const execPath = getConfig().nodeExecutable || await findNode(vscode.workspace.workspaceFile?.fsPath || vscode.workspace.workspaceFolders![0].uri.fsPath)
   const vitest = fork(
     workerPath,
     {
-      // TODO: use findNode API
-      execPath: getConfig().nodeExecutable,
+      execPath,
       execArgv,
       env: {
         ...process.env,
