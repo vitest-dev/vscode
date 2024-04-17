@@ -22,11 +22,6 @@ export class VSCodeReporter implements Reporter {
     const server = ctx.server.config.server
     if (!server.fs.allow.includes(distDir))
       server.fs.allow.push(distDir)
-    ctx.config.setupFiles = [
-      ...ctx.config.setupFiles || [],
-      setupFilePath,
-    ]
-
     ctx.projects.forEach((project) => {
       project.config.setupFiles = [
         ...project.config.setupFiles || [],

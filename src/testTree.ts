@@ -125,6 +125,7 @@ export class TestTree extends vscode.Disposable {
     testFileItem.canResolveChildren = true
     TestFile.register(
       testFileItem,
+      parentItem,
       normalizedFile,
       api,
       project,
@@ -148,21 +149,21 @@ export class TestTree extends vscode.Disposable {
 
     const folderUri = vscode.Uri.file(normalizedFolder)
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(normalizedFolder))
-    const folderItem = this._createFolderItem(folderUri)
+    const folderItem = this._createFolderItem(folderUri, parentItem)
     folderItem.tags = [api.tag]
     parentItem.children.add(folderItem)
     this.folderItems.set(normalizedFolder, folderItem)
     return folderItem
   }
 
-  private _createFolderItem(folderUri: vscode.Uri) {
+  private _createFolderItem(folderUri: vscode.Uri, parentItem?: vscode.TestItem) {
     const folderFsPath = normalize(folderUri.fsPath)
     const folderItem = this.controller.createTestItem(
       folderFsPath,
       basename(folderFsPath),
       folderUri,
     )
-    TestFolder.register(folderItem)
+    TestFolder.register(folderItem, parentItem)
     folderItem.canResolveChildren = false
     return folderItem
   }
@@ -254,14 +255,14 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: Task[], item: vscode.TestItem) {
+  collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: Task[], parent: vscode.TestItem) {
     for (const task of tasks) {
       const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
         task.id,
         task.name,
-        item.uri,
+        parent.uri,
       )
-      testItem.tags = Array.from(new Set([...item.tags, tag]))
+      testItem.tags = Array.from(new Set([...parent.tags, tag]))
       testItem.error = undefined
       testItem.label = task.name
       const location = task.location
@@ -270,12 +271,12 @@ export class TestTree extends vscode.Disposable {
         testItem.range = new vscode.Range(position, position)
       }
       if (task.type === 'suite')
-        TestSuite.register(testItem, fileData)
+        TestSuite.register(testItem, parent, fileData)
       else if (task.type === 'test' || task.type === 'custom')
-        TestCase.register(testItem, fileData)
+        TestCase.register(testItem, parent, fileData)
 
       this.flatTestItems.set(task.id, testItem)
-      item.children.add(testItem)
+      parent.children.add(testItem)
 
       if (task.result?.errors) {
         const error = task.result.errors.map(error => error.stack).join('\n')
@@ -288,9 +289,9 @@ export class TestTree extends vscode.Disposable {
 
     // remove tasks that are no longer present
     const ids = new Set(tasks.map(x => x.id))
-    item.children.forEach((child) => {
+    parent.children.forEach((child) => {
       if (!ids.has(child.id))
-        item.children.delete(child.id)
+        parent.children.delete(child.id)
     })
   }
 }
