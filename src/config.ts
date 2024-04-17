@@ -15,13 +15,10 @@ export function getConfigValue<T>(
 }
 
 export function getConfig(workspaceFolder?: WorkspaceFolder) {
-  let workspace: WorkspaceFolder | vscode.Uri | undefined
-  if (typeof workspaceFolder === 'string')
-    workspace = vscode.Uri.from({ scheme: 'file', path: workspaceFolder })
-  else
-    workspace = workspaceFolder
+  if (!workspaceFolder && vscode.workspace.workspaceFolders?.length === 1)
+    workspaceFolder = vscode.workspace.workspaceFolders[0]
 
-  const folderConfig = vscode.workspace.getConfiguration('vitest', workspace)
+  const folderConfig = vscode.workspace.getConfiguration('vitest', workspaceFolder)
   const rootConfig = vscode.workspace.getConfiguration('vitest')
 
   const get = <T>(key: string, defaultValue?: T) => getConfigValue<T>(

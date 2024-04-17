@@ -30,6 +30,9 @@ export interface VitestPackage {
 
 function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri): VitestPackage | null {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
+  if (!folder)
+    throw new Error(`Workspace folder not found for ${configOrWorkspaceFile}. Does the file exist?`)
+
   const cwd = dirname(configOrWorkspaceFile.fsPath)
   const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
 
