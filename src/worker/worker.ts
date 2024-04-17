@@ -11,12 +11,12 @@ async function initVitest(meta: WorkerMeta) {
   const vitest = await vitestModule.createVitest(
     'test',
     {
-      ...meta.arguments ? vitestModule.parseCLI(meta.arguments).options : {},
       config: meta.configFile,
       workspace: meta.workspaceFile,
+      root: meta.cwd,
+      ...meta.arguments ? vitestModule.parseCLI(meta.arguments).options : {},
       watch: true,
       api: false,
-      root: meta.cwd,
       // @ts-expect-error private property
       reporter: undefined,
       reporters: [reporter],
