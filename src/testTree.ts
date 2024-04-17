@@ -123,17 +123,17 @@ export class TestTree extends vscode.Disposable {
     )
     testFileItem.tags = [api.tag]
     testFileItem.canResolveChildren = true
-    parentItem.children.add(testFileItem)
-    this.fileItems.set(fileId, testFileItem)
-    const cachedItems = this.testItemsByFile.get(normalizedFile) || []
-    cachedItems.push(testFileItem)
-    this.testItemsByFile.set(normalizedFile, cachedItems)
     TestFile.register(
       testFileItem,
       normalizedFile,
       api,
       project,
     )
+    parentItem.children.add(testFileItem)
+    this.fileItems.set(fileId, testFileItem)
+    const cachedItems = this.testItemsByFile.get(normalizedFile) || []
+    cachedItems.push(testFileItem)
+    this.testItemsByFile.set(normalizedFile, cachedItems)
 
     return testFileItem
   }
@@ -269,12 +269,13 @@ export class TestTree extends vscode.Disposable {
         const position = new vscode.Position(location.line - 1, location.column)
         testItem.range = new vscode.Range(position, position)
       }
-      this.flatTestItems.set(task.id, testItem)
-      item.children.add(testItem)
       if (task.type === 'suite')
         TestSuite.register(testItem, fileData)
       else if (task.type === 'test' || task.type === 'custom')
         TestCase.register(testItem, fileData)
+
+      this.flatTestItems.set(task.id, testItem)
+      item.children.add(testItem)
 
       if (task.result?.errors) {
         const error = task.result.errors.map(error => error.stack).join('\n')
