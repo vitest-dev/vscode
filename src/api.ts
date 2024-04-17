@@ -241,6 +241,7 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
     : undefined
   const env = getConfig().env || {}
   const execPath = getConfig().nodeExecutable || await findNode(vscode.workspace.workspaceFile?.fsPath || vscode.workspace.workspaceFolders![0].uri.fsPath)
+  log.info('[API]', `Starting Vitest process with Node.js: ${execPath}`)
   const vitest = fork(
     workerPath,
     {
