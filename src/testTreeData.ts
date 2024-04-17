@@ -24,42 +24,46 @@ class BaseTestData {
 
   constructor(
     item: vscode.TestItem,
+    parent?: vscode.TestItem,
   ) {
     this.label = item.label
     this.id = item.id
-    this.parent = item.parent ? WEAKMAP_TEST_DATA.get(item.parent) : undefined
+    this.parent = parent ? WEAKMAP_TEST_DATA.get(parent) : undefined
   }
 }
 
 export class TestFolder extends BaseTestData {
   private constructor(
     item: vscode.TestItem,
+    parent?: vscode.TestItem,
   ) {
-    super(item)
+    super(item, parent)
   }
 
-  public static register(item: vscode.TestItem) {
-    return addTestData(item, new TestFolder(item))
+  public static register(item: vscode.TestItem, parent?: vscode.TestItem) {
+    return addTestData(item, new TestFolder(item, parent))
   }
 }
 
 export class TestFile extends BaseTestData {
   private constructor(
     item: vscode.TestItem,
+    parent: vscode.TestItem,
     public readonly filepath: string,
     public readonly api: VitestFolderAPI,
     public readonly project: string,
   ) {
-    super(item)
+    super(item, parent)
   }
 
   public static register(
     item: vscode.TestItem,
+    parent: vscode.TestItem,
     filepath: string,
     api: VitestFolderAPI,
     project: string,
   ) {
-    return addTestData(item, new TestFile(item, filepath, api, project))
+    return addTestData(item, new TestFile(item, parent, filepath, api, project))
   }
 }
 
@@ -89,14 +93,15 @@ export class TestCase extends BaseTestData {
 
   private constructor(
     item: vscode.TestItem,
+    parent: vscode.TestItem,
     public readonly file: TestFile,
   ) {
-    super(item)
+    super(item, parent)
     this.nameResolver = new TaskName(this)
   }
 
-  public static register(item: vscode.TestItem, file: TestFile) {
-    return addTestData(item, new TestCase(item, file))
+  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile) {
+    return addTestData(item, new TestCase(item, parent, file))
   }
 
   getTestNamePattern() {
@@ -109,14 +114,15 @@ export class TestSuite extends BaseTestData {
 
   private constructor(
     item: vscode.TestItem,
+    parent: vscode.TestItem,
     public readonly file: TestFile,
   ) {
-    super(item)
+    super(item, parent)
     this.nameResolver = new TaskName(this)
   }
 
-  public static register(item: vscode.TestItem, file: TestFile) {
-    return addTestData(item, new TestSuite(item, file))
+  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile) {
+    return addTestData(item, new TestSuite(item, parent, file))
   }
 
   getTestNamePattern() {
