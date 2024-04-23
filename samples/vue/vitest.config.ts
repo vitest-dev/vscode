@@ -10,5 +10,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json'],
+      enabled: true,
+      exclude: [],
+      include: ['components/**']
+    }
   },
 })
