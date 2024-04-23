@@ -58,7 +58,7 @@ export class Vitest implements VitestMethods {
     }
     else {
       const specs = await this.globTestFiles(files)
-      await this.runTestFiles(specs.map(([_, spec]) => spec))
+      await this.runTestFiles(specs.map(([_, spec]) => spec), undefined, !files)
     }
   }
 
@@ -82,7 +82,7 @@ export class Vitest implements VitestMethods {
     return files
   }
 
-  private async runTestFiles(files: string[], testNamePattern?: string | undefined) {
+  private async runTestFiles(files: string[], testNamePattern?: string | undefined, runAllFiles = false) {
     await this.ctx.runningPromise
     this.watcher.markRerun(false)
     process.chdir(this.cwd)
@@ -90,7 +90,7 @@ export class Vitest implements VitestMethods {
     try {
       this.setTestNamePattern(testNamePattern)
 
-      await this.rerunTests(files)
+      await this.rerunTests(files, runAllFiles)
     }
     finally {
       process.chdir(cwd)
@@ -101,9 +101,9 @@ export class Vitest implements VitestMethods {
     this.ctx.configOverride.testNamePattern = pattern ? new RegExp(pattern) : undefined
   }
 
-  private async rerunTests(files: string[]) {
+  private async rerunTests(files: string[], runAllFiles = false) {
     await this.ctx.report('onWatcherRerun', files)
-    await this.ctx.runFiles(files.flatMap(file => this.ctx.getProjectsByTestFile(file)), false)
+    await this.ctx.runFiles(files.flatMap(file => this.ctx.getProjectsByTestFile(file)), runAllFiles)
 
     await this.ctx.report('onWatcherStart', this.ctx.state.getFiles(files))
   }

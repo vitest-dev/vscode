@@ -57,7 +57,7 @@ export class VitestCoverage {
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
-    this.ctx.logger.log('Coverage reports directory is generated:', this._config.reportsDirectory)
+    this.ctx.logger.log('Running coverage with configuration:', this._config)
 
     if (!this._provider) {
       // @ts-expect-error private method
