@@ -266,6 +266,10 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
       cwd: pnp ? dirname(pnp) : undefined,
     },
   )
+
+  vitest.stdout?.on('data', d => log.worker('info', d.toString()))
+  vitest.stderr?.on('data', d => log.worker('error', d.toString()))
+
   return new Promise<ChildProcess>((resolve, reject) => {
     function ready(message: any) {
       if (message.type === 'debug')
@@ -301,6 +305,7 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
       }
       vitest.off('error', error)
       vitest.off('message', ready)
+      vitest.off('exit', exit)
     }
 
     function error(err: Error) {
@@ -308,10 +313,16 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
       reject(err)
       vitest.off('error', error)
       vitest.off('message', ready)
+      vitest.off('exit', exit)
+    }
+
+    function exit(code: number) {
+      reject(new Error(`Vitest process exited with code ${code}`))
     }
 
     vitest.on('error', error)
     vitest.on('message', ready)
+    vitest.on('exit', exit)
     vitest.once('spawn', () => {
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
@@ -338,9 +349,6 @@ export async function createVitestProcess(showWarning: boolean, packages: Vitest
   const vitest = await createChildVitestProcess(showWarning, packages)
 
   log.info('[API]', `Vitest process ${vitest.pid} created`)
-
-  vitest.stdout?.on('data', d => log.worker('info', d.toString()))
-  vitest.stderr?.on('data', d => log.worker('error', d.toString()))
 
   const { handlers, api } = createVitestRpc(vitest)
 
