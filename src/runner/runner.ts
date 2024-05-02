@@ -32,6 +32,8 @@ export class TestRunner extends vscode.Disposable {
       api.clearListeners()
       this.testRun?.end()
       this.testRun = undefined
+      this.testRunDefer?.resolve()
+      this.testRunDefer = undefined
       this.simpleTestRunRequest = undefined
       this.continuousRequests.clear()
       this.api.cancelRun()
