@@ -143,7 +143,7 @@ export class TestRunner extends vscode.Disposable {
     // it's important to keep the same test items that were in the original request
     // because they dictate how format testNamePattern
     for (const [testFileData, testFileChildren] of testItems) {
-      if (token.isCancellationRequested)
+      if (token.isCancellationRequested || !this.debug.enabled)
         break
 
       const includedTests = testFileChildren.length
@@ -192,6 +192,16 @@ export class TestRunner extends vscode.Disposable {
       const files = getTestFiles(include)
       const testNamePatern = formatTestPattern(include)
       await this.api.watchTests(files, testNamePatern)
+    }
+  }
+
+  public async stopDebugRun() {
+    // if debuggins session is active, users can still run tests
+    // there is no guarantee it will end correctly, so we nuke it
+    if (this.debug.enabled) {
+      await this.debug.disable(this.api)
+      this.simpleTestRunRequest = undefined
+      this.endTestRun()
     }
   }
 

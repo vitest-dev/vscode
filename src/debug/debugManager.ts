@@ -138,6 +138,10 @@ export class TestDebugManager extends vscode.Disposable {
   public async stopDebugging() {
     await Promise.allSettled([...this.sessions].map(([, s]) => vscode.debug.stopDebugging(s)))
   }
+
+  public get enabled() {
+    return this.port !== undefined
+  }
 }
 
 interface TestDebugConfiguration {
