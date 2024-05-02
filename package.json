@@ -41,6 +41,9 @@
     "languages": [
       {
         "id": "vitest-snapshot",
+        "aliases": [
+          "Vitest Snapshot"
+        ],
         "extensions": [
           ".js.snap",
           ".jsx.snap",
