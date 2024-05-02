@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import './polyfills'
 import { gte } from 'semver'
 import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'

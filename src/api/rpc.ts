@@ -32,7 +32,7 @@ export interface VitestPool extends VitestPoolMethods {
 export interface VitestEvents {
   onConsoleLog: (log: UserConsoleLog) => void
   onTaskUpdate: (task: TaskResultPack[]) => void
-  onFinished: (files?: File[], errors?: unknown[], collecting?: boolean) => void
+  onFinished: (files: File[], unhandledError: string, collecting?: boolean) => void
   onCollected: (files?: File[], collecting?: boolean) => void
   onWatcherStart: (files?: File[], errors?: unknown[], collecting?: boolean) => void
   onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
