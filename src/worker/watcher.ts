@@ -63,7 +63,7 @@ export class VitestWatcher {
         // if souce code is changed and related tests are not continious, remove them from changedTests
         const updatedTests = new Set<string>()
         for (const file of this.changedTests) {
-          if (state.files.includes(file))
+          if (state.isTestFileWatched(file))
             updatedTests.add(file)
         }
         this.changedTests = updatedTests
@@ -79,6 +79,19 @@ export class VitestWatcher {
 
       return await originalScheduleRerun.call(this, files)
     }
+  }
+
+  private isTestFileWatched(testFile: string) {
+    if (!this.files?.length)
+      return false
+
+    return this.files.some((file) => {
+      if (file === testFile)
+        return true
+      if (file[file.length - 1] === '/')
+        return testFile.startsWith(file)
+      return false
+    })
   }
 
   markRerun(rerun: boolean) {
