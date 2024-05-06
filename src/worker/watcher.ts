@@ -1,4 +1,5 @@
 import type { ProvidedContext, Vitest as VitestCore } from 'vitest'
+import { relative } from 'pathe'
 import { Vitest } from './vitest'
 
 export class VitestWatcher {
@@ -41,27 +42,56 @@ export class VitestWatcher {
         }
 
         ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
+        ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
         return await originalScheduleRerun.call(this, files)
       }
 
       state.rerunTriggered = true
 
-      ctx.configOverride.testNamePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
-      if (state.watchEveryFile)
+      const namePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
+      ctx.configOverride.testNamePattern = namePattern
+      if (state.watchEveryFile) {
+        ctx.logger.log(
+          'Rerunning all tests due to file changes:',
+          ...files.map(f => relative(ctx.config.root, f)),
+          namePattern ? `with pattern ${namePattern}` : '',
+        )
         return await originalScheduleRerun.call(this, files)
+      }
 
       if (!isTestFileTrigger) {
         // if souce code is changed and related tests are not continious, remove them from changedTests
         const updatedTests = new Set<string>()
         for (const file of this.changedTests) {
-          if (state.files.includes(file))
+          if (state.isTestFileWatched(file))
             updatedTests.add(file)
         }
         this.changedTests = updatedTests
       }
 
+      if (this.changedTests.size) {
+        ctx.logger.log(
+          'Rerunning tests due to file changes:',
+          ...[...this.changedTests].map(f => relative(ctx.config.root, f)),
+          namePattern ? `with pattern ${namePattern}` : '',
+        )
+      }
+
       return await originalScheduleRerun.call(this, files)
     }
+  }
+
+  private isTestFileWatched(testFile: string) {
+    if (!this.files?.length)
+      return false
+
+    return this.files.some((file) => {
+      if (file === testFile)
+        return true
+      if (file[file.length - 1] === '/')
+        return testFile.startsWith(file)
+      return false
+    })
   }
 
   markRerun(rerun: boolean) {

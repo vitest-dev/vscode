@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import './polyfills'
 import { gte } from 'semver'
 import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
@@ -139,7 +140,10 @@ class VitestExtension {
         )
       }
       runProfile.tag = api.tag
-      runProfile.runHandler = (request, token) => runner.runTests(request, token)
+      runProfile.runHandler = async (request, token) => {
+        await runner.stopDebugRun()
+        await runner.runTests(request, token)
+      }
       this.runProfiles.set(`${api.id}:run`, runProfile)
       let debugProfile = previousRunProfiles.get(`${api.id}:debug`)
       if (!debugProfile) {
@@ -179,7 +183,10 @@ class VitestExtension {
           )
         }
         coverageProfile.tag = api.tag
-        coverageProfile.runHandler = (request, token) => runner.runCoverage(request, token)
+        coverageProfile.runHandler = async (request, token) => {
+          await runner.stopDebugRun()
+          await runner.runCoverage(request, token)
+        }
         coverageProfile.loadDetailedCoverage = coverageContext.loadDetailedCoverage
         this.runProfiles.set(`${api.id}:coverage`, coverageProfile)
       }

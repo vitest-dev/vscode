@@ -223,11 +223,11 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  public getTestItemByTaskId(taskId: string): vscode.TestItem | null {
+  public getTestItemByTaskId(taskId: string): vscode.TestItem | undefined {
     const testItem = this.flatTestItems.get(taskId)
     if (!testItem)
-      return null
-    return testItem || null
+      return undefined
+    return testItem || undefined
   }
 
   public getTestItemByTask(task: Task): vscode.TestItem | null {

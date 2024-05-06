@@ -9,6 +9,16 @@ const testFile = workerState.filepath!
 
 // don't run tests that are not watched if rerun was triggered - only collect those tests
 if (rerunTriggered) {
-  if (!watchEveryFile && !continuousFiles.includes(testFile))
+  if (!watchEveryFile && !testFileWatched())
     workerState.config.testNamePattern = /$a/
+}
+
+function testFileWatched() {
+  return continuousFiles.some((file) => {
+    if (file === testFile)
+      return true
+    if (file[file.length - 1] === '/')
+      return testFile.startsWith(file)
+    return false
+  })
 }

@@ -1,4 +1,6 @@
 import { nextTick } from 'node:process'
+import { Writable } from 'node:stream'
+import { Console } from 'node:console'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest as VitestCore } from 'vitest'
@@ -57,10 +59,30 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onTaskUpdate(this.meta.id, packs)
   }
 
-  onFinished(files?: File[], errors?: unknown[]) {
+  async onFinished(files?: File[], errors: unknown[] = this.ctx.state.getUnhandledErrors()) {
     const collecting = this.collecting
+
+    let output = ''
+    if (errors.length) {
+      const writable = new Writable({
+        write(chunk, _encoding, callback) {
+          output += String(chunk)
+          callback()
+        },
+      })
+      const _console = this.ctx.logger.console
+      const errorStream = this.ctx.logger.errorStream
+      const outputStream = this.ctx.logger.outputStream
+      this.ctx.logger.errorStream = writable as any
+      this.ctx.logger.outputStream = writable as any
+      this.ctx.logger.console = new Console(writable, writable)
+      await this.ctx.logger.printUnhandledErrors(errors)
+      this.ctx.logger.console = _console
+      this.ctx.logger.errorStream = errorStream
+      this.ctx.logger.outputStream = outputStream
+    }
     nextTick(() => {
-      this.rpc.onFinished(this.meta.id, files, errors, collecting)
+      this.rpc.onFinished(this.meta.id, files || [], output, collecting)
     })
   }
 
