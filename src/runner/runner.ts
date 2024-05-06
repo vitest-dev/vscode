@@ -192,7 +192,12 @@ export class TestRunner extends vscode.Disposable {
       const include = [...this.continuousRequests].map(r => r.include || []).flat()
       const files = getTestFiles(include)
       const testNamePatern = formatTestPattern(include)
-      log.info('[RUNNER]', 'Watching test files:', files.join(', '), testNamePatern ? `with pattern ${testNamePatern}` : '')
+      log.info(
+        '[RUNNER]',
+        'Watching test files:',
+        files.map(f => relative(this.api.workspaceFolder.uri.fsPath, f)).join(', '),
+        testNamePatern ? `with pattern ${testNamePatern}` : '',
+      )
       await this.api.watchTests(files, testNamePatern)
     }
   }
