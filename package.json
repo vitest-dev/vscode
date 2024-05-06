@@ -181,7 +181,7 @@
     "@types/glob": "^7.2.0",
     "@types/micromatch": "^4.0.6",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^18.11.18",
+    "@types/node": "^20.12.8",
     "@types/prompts": "^2.4.9",
     "@types/semver": "^7.3.9",
     "@types/vscode": "^1.77.0",
@@ -216,7 +216,7 @@
     "tree-kill": "^1.2.2",
     "tsup": "^8.0.1",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3",
+    "typescript": "^5.4.5",
     "vitest": "^1.4.0",
     "which": "^4.0.0",
     "ws": "^8.16.0"
