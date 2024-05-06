@@ -245,18 +245,16 @@ export class TestTree extends vscode.Disposable {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.projectName || '', file.filepath)
     fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
-    if (!file.tasks.length && !file.result?.errors) {
-      this.recursiveDelete(fileTestItem)
+    const data = getTestData(fileTestItem) as TestFile
+    this.collectTasks(api.tag, data, file.tasks, fileTestItem)
+    if (file.result?.errors) {
+      const error = file.result.errors.map(error => error.stack || error.message).join('\n')
+      fileTestItem.error = error
     }
-    else {
-      const data = getTestData(fileTestItem) as TestFile
-      this.collectTasks(api.tag, data, file.tasks, fileTestItem)
-      if (file.result?.errors) {
-        const error = file.result.errors.map(error => error.stack || error.message).join('\n')
-        fileTestItem.error = error
-      }
-      fileTestItem.canResolveChildren = false
+    else if (!file.tasks.length) {
+      fileTestItem.error = `No tests found in ${file.filepath}`
     }
+    fileTestItem.canResolveChildren = false
   }
 
   collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: Task[], parent: vscode.TestItem) {
@@ -282,6 +280,8 @@ export class TestTree extends vscode.Disposable {
       this.flatTestItems.set(task.id, testItem)
       parent.children.add(testItem)
 
+      // errors during collection are not test failures, they need to be
+      // displayed as errors in the tree
       if (task.result?.errors) {
         const error = task.result.errors.map(error => error.stack).join('\n')
         testItem.error = error
