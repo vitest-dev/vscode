@@ -15,7 +15,7 @@ import { coverageContext, readCoverageReport } from '../coverage'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
-  private simpleTestRunRequest: vscode.TestRunRequest | undefined
+  private nonContinuousRequest: vscode.TestRunRequest | undefined
 
   private _onRequestsExhausted = new vscode.EventEmitter<void>()
 
@@ -34,7 +34,7 @@ export class TestRunner extends vscode.Disposable {
       this.testRun = undefined
       this.testRunDefer?.resolve()
       this.testRunDefer = undefined
-      this.simpleTestRunRequest = undefined
+      this.nonContinuousRequest = undefined
       this.continuousRequests.clear()
       this.api.cancelRun()
       this._onRequestsExhausted.dispose()
@@ -129,11 +129,11 @@ export class TestRunner extends vscode.Disposable {
       ? partitionTestFileItems(request.include)
       : this.tree.getAllFileItems().map(item => [item, []] as [vscode.TestItem, never[]])
 
-    this.simpleTestRunRequest = request
+    this.nonContinuousRequest = request
     token.onCancellationRequested(() => {
       this.debug.disable(this.api)
       this.endTestRun()
-      this.simpleTestRunRequest = undefined
+      this.nonContinuousRequest = undefined
       this.api.cancelRun()
       // just in case it gets stuck
       this.testRunDefer?.resolve()
@@ -161,7 +161,7 @@ export class TestRunner extends vscode.Disposable {
 
     await this.debug.disable(this.api)
 
-    this.simpleTestRunRequest = undefined
+    this.nonContinuousRequest = undefined
     this._onRequestsExhausted.fire()
   }
 
@@ -185,12 +185,14 @@ export class TestRunner extends vscode.Disposable {
     })
 
     if (!request.include?.length) {
+      log.info('[RUNNER]', 'Watching all test files')
       await this.api.watchTests()
     }
     else {
       const include = [...this.continuousRequests].map(r => r.include || []).flat()
       const files = getTestFiles(include)
       const testNamePatern = formatTestPattern(include)
+      log.info('[RUNNER]', 'Watching test files:', files.join(', '), testNamePatern ? `with pattern ${testNamePatern}` : '')
       await this.api.watchTests(files, testNamePatern)
     }
   }
@@ -200,7 +202,7 @@ export class TestRunner extends vscode.Disposable {
     // there is no guarantee it will end correctly, so we nuke it
     if (this.debug.enabled) {
       await this.debug.disable(this.api)
-      this.simpleTestRunRequest = undefined
+      this.nonContinuousRequest = undefined
       this.endTestRun()
     }
   }
@@ -215,7 +217,7 @@ export class TestRunner extends vscode.Disposable {
     }
 
     const { dispose } = this._onRequestsExhausted.event(() => {
-      if (!this.continuousRequests.size && !this.simpleTestRunRequest) {
+      if (!this.continuousRequests.size && !this.nonContinuousRequest) {
         this.api.disableCoverage()
         dispose()
       }
@@ -234,17 +236,17 @@ export class TestRunner extends vscode.Disposable {
     if (request.continuous)
       return await this.watchContinuousTests(request, token)
 
-    this.simpleTestRunRequest = request
+    this.nonContinuousRequest = request
 
     token.onCancellationRequested(() => {
       this.endTestRun()
-      this.simpleTestRunRequest = undefined
+      this.nonContinuousRequest = undefined
       this.api.cancelRun()
     })
 
     await this.runTestItems(request, request.include || [])
 
-    this.simpleTestRunRequest = undefined
+    this.nonContinuousRequest = undefined
     this._onRequestsExhausted.fire()
   }
 
@@ -321,7 +323,7 @@ export class TestRunner extends vscode.Disposable {
   }
 
   private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
-    const request = primaryRequest || this.simpleTestRunRequest || this.createContinuousRequest()
+    const request = primaryRequest || this.nonContinuousRequest || this.createContinuousRequest()
 
     if (!request)
       return
