@@ -16,13 +16,15 @@ export class VitestCoverage {
     private vitest: Vitest,
   ) {
     this._config = ctx.config.coverage
-    Object.defineProperty(ctx.config, 'coverage', {
-      get: () => {
-        return this.config
-      },
-      set: (coverage: ResolvedCoverageOptions) => {
-        this._config = coverage
-      },
+    ctx.projects.forEach((project) => {
+      Object.defineProperty(project.config, 'coverage', {
+        get: () => {
+          return this.config
+        },
+        set: (coverage: ResolvedCoverageOptions) => {
+          this._config = coverage
+        },
+      })
     })
     Object.defineProperty(ctx, 'coverageProvider', {
       get: () => {

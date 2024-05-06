@@ -13,11 +13,9 @@
     "@types/react": "^17.0.41",
     "@types/react-test-renderer": "^17.0.1",
     "@vitejs/plugin-react": "1.2.0",
-    "@vitest/ui": "^0.34.6",
     "happy-dom": "^2.49.0",
     "jsdom": "latest",
-    "react-test-renderer": "17.0.2",
-    "vitest": "^1.4.0"
+    "react-test-renderer": "17.0.2"
   },
   "stackblitz": {
     "startCommand": "npm run test:ui"
