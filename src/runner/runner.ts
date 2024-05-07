@@ -194,13 +194,13 @@ export class TestRunner extends vscode.Disposable {
       this.api.cancelRun()
     })
 
-    await this.runTestItems(request, request.include || [])
+    await this.runTestItems(request)
 
     this.nonContinuousRequest = undefined
     this._onRequestsExhausted.fire()
   }
 
-  protected async runTestItems(request: vscode.TestRunRequest, tests: readonly vscode.TestItem[]) {
+  protected async runTestItems(request: vscode.TestRunRequest) {
     await this.testRunDefer?.promise
 
     this.testRunDefer = Promise.withResolvers()
@@ -210,6 +210,7 @@ export class TestRunner extends vscode.Disposable {
         ? this.api.updateSnapshots(files, testNamePatern)
         : this.api.runFiles(files, testNamePatern)
 
+    const tests = request.include || []
     const root = this.api.workspaceFolder.uri.fsPath
     if (!tests.length) {
       log.info(`Running all tests in ${basename(root)}`)

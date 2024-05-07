@@ -31,7 +31,9 @@ export async function debugTests(
   const config = getConfig(pkg.folder)
   const promise = Promise.withResolvers<void>()
 
-  const execPath = getConfig().nodeExecutable || await findNode(vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath)
+  const execPath = getConfig().nodeExecutable || await findNode(
+    vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath,
+  )
   const env = config.env || {}
 
   const debugConfig = {
@@ -56,8 +58,6 @@ export async function debugTests(
       NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
     },
   }
-
-  log.info(`[DEBUG] Starting debugging`)
 
   vscode.debug.startDebugging(
     pkg.folder,
