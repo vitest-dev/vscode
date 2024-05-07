@@ -13,9 +13,8 @@ import { resolveVitestPackages } from './api/pkg'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
-import { TestDebugManager } from './debug/debugManager'
 import { coverageContext } from './coverage'
-import { createDebugAPI } from './debug/api'
+import { debugTests } from './debug/api'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -33,7 +32,6 @@ class VitestExtension {
 
   private testTree: TestTree
   private tagsManager: TagsManager
-  private debugManager: TestDebugManager
   private api: VitestAPI | undefined
 
   private disposables: vscode.Disposable[] = []
@@ -48,7 +46,6 @@ class VitestExtension {
     this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
     this.tagsManager = new TagsManager(this.testTree)
-    this.debugManager = new TestDebugManager()
   }
 
   private async defineTestProfiles(showWarning: boolean) {
@@ -129,7 +126,6 @@ class VitestExtension {
         this.testController,
         this.testTree,
         api,
-        this.debugManager,
       )
 
       const prefix = api.prefix
@@ -155,22 +151,14 @@ class VitestExtension {
           () => {},
           false,
           undefined,
-          false, // disable continues debugging
+          false, // continues debugging is not supported
         )
       }
       debugProfile.tag = api.tag
       debugProfile.runHandler = async (request, token) => {
-        // if (!gte(api.version, minimumDebugVersion)) {
-        //   vscode.window.showWarningMessage(
-        //     `Debugging is not supported for Vitest v${api.version}. Please update Vitest to v${minimumDebugVersion} or higher.`,
-        //   )
-        //   return
-        // }
-
-        await createDebugAPI(
+        await debugTests(
           this.testController,
           this.testTree,
-          this.debugManager,
           api.package,
 
           request,

@@ -12,12 +12,12 @@ import { log } from '../log'
 import { getConfig } from '../config'
 import type { WorkerRunnerOptions } from '../worker/types'
 import { TestRunner } from '../runner/runner'
-import type { TestDebugManager } from './debugManager'
+import { findNode } from '../utils'
+import { debuggerPath } from '../constants'
 
-export async function createDebugAPI(
+export async function debugTests(
   controller: vscode.TestController,
   tree: TestTree,
-  debugManager: TestDebugManager,
   pkg: VitestPackage,
 
   request: vscode.TestRunRequest,
@@ -26,17 +26,68 @@ export async function createDebugAPI(
   const port = await getPort()
   const server = createServer().listen(port)
   const wss = new WebSocketServer({ server })
-  const address = `ws://localhost:${port}`
+  const wsAddress = `ws://localhost:${port}`
 
-  debugManager.startDebugging(pkg, address)
+  const config = getConfig(pkg.folder)
+  const promise = Promise.withResolvers<void>()
 
-  // TODO: dispose this when debugging is stopped
-  vscode.debug.onDidStartDebugSession(async (session) => {
+  const execPath = getConfig().nodeExecutable || await findNode(vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath)
+  const env = config.env || {}
+
+  const debugConfig = {
+    type: 'pwa-node',
+    request: 'launch',
+    name: 'Debug Tests',
+    autoAttachChildProcesses: true,
+    skipFiles: config.debugExclude,
+    smartStep: true,
+    runtimeExecutable: execPath,
+    program: debuggerPath,
+    __name: 'Vitest',
+    env: {
+      ...process.env,
+      ...env,
+      VITEST_VSCODE: 'true',
+      VITEST_WS_ADDRESS: wsAddress,
+      // same env var as `startVitest`
+      // https://github.com/vitest-dev/vitest/blob/5c7e9ca05491aeda225ce4616f06eefcd068c0b4/packages/vitest/src/node/cli/cli-api.ts
+      TEST: 'true',
+      VITEST: 'true',
+      NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
+    },
+  }
+
+  log.info(`[DEBUG] Starting debugging`)
+
+  vscode.debug.startDebugging(
+    pkg.folder,
+    debugConfig,
+    { suppressDebugView: true },
+  ).then(
+    (fulfilled) => {
+      if (fulfilled) {
+        log.info('[DEBUG] Debugging started')
+        promise.resolve()
+      }
+      else {
+        promise.reject(new Error('Failed to start debugging. See output for more information.'))
+        log.error('[DEBUG] Debugging failed')
+      }
+    },
+    (err) => {
+      promise.reject(new Error('Failed to start debugging', { cause: err }))
+      log.error('[DEBUG] Start debugging failed')
+      log.error(err.toString())
+    },
+  )
+
+  const disposables: vscode.Disposable[] = []
+
+  const onDidStart = vscode.debug.onDidStartDebugSession(async (session) => {
     if (session.configuration.__name !== 'Vitest')
       return
-    // TODO
     if (token.isCancellationRequested) {
-      vscode.debug.stopDebugging()
+      vscode.debug.stopDebugging(session)
       return
     }
     const vitest = await startWebsocketServer(wss, pkg)
@@ -45,18 +96,30 @@ export async function createDebugAPI(
       controller,
       tree,
       api,
-      debugManager,
     )
+    disposables.push(api, runner)
+
+    token.onCancellationRequested(async () => {
+      await vitest.rpc.close()
+      await vscode.debug.stopDebugging(session)
+    })
+
     await runner.runTests(request, token)
-    await vitest.rpc.close()
-    await vscode.debug.stopDebugging(session)
+
+    if (!token.isCancellationRequested) {
+      await vitest.rpc.close()
+      await vscode.debug.stopDebugging(session)
+    }
   })
 
-  vscode.debug.onDidTerminateDebugSession((_session) => {
-    if (_session.configuration.__name !== 'Vitest')
+  const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
+    if (session.configuration.__name !== 'Vitest')
       return
-    debugManager.stop()
+    disposables.forEach(d => d.dispose())
+    server.close()
   })
+
+  disposables.push(onDidStart, onDidTerminate)
 }
 
 function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {

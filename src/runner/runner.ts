@@ -11,7 +11,6 @@ import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
-import type { TestDebugManager } from '../debug/debugManager'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -26,7 +25,6 @@ export class TestRunner extends vscode.Disposable {
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
-    private readonly debug: TestDebugManager,
   ) {
     super(() => {
       api.clearListeners()
