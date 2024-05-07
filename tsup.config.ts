@@ -7,7 +7,7 @@ export default defineConfig([
     format: 'cjs',
   },
   {
-    entry: ['./src/worker/worker.ts'],
+    entry: ['./src/worker/worker.ts', './src/worker/debug.ts'],
     format: 'cjs',
   },
   {

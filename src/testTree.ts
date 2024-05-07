@@ -241,6 +241,18 @@ export class TestTree extends vscode.Disposable {
     return null
   }
 
+  public getFolderFiles(folder: vscode.TestItem): vscode.TestItem[] {
+    const files: vscode.TestItem[] = []
+    for (const [_, item] of folder.children) {
+      const data = getTestData(item)
+      if (data instanceof TestFile)
+        files.push(item)
+      else if (data instanceof TestFolder)
+        files.push(...this.getFolderFiles(item))
+    }
+    return files
+  }
+
   collectFile(api: VitestFolderAPI, file: File) {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.projectName || '', file.filepath)
     fileTestItem.error = undefined

@@ -1,13 +1,12 @@
 import * as vscode from 'vscode'
 import './polyfills'
-import { gte } from 'semver'
 import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
 import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
-import { configGlob, minimumDebugVersion, workspaceGlob } from './constants'
+import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
 import { createVitestWorkspaceFile, debounce, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
@@ -16,6 +15,7 @@ import { getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
 import { TestDebugManager } from './debug/debugManager'
 import { coverageContext } from './coverage'
+import { createDebugAPI } from './debug/api'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -125,7 +125,12 @@ class VitestExtension {
     }
 
     this.api.forEach((api) => {
-      const runner = new TestRunner(this.testController, this.testTree, api, this.debugManager)
+      const runner = new TestRunner(
+        this.testController,
+        this.testTree,
+        api,
+        this.debugManager,
+      )
 
       const prefix = api.prefix
       let runProfile = previousRunProfiles.get(`${api.id}:run`)
@@ -140,10 +145,7 @@ class VitestExtension {
         )
       }
       runProfile.tag = api.tag
-      runProfile.runHandler = async (request, token) => {
-        await runner.stopDebugRun()
-        await runner.runTests(request, token)
-      }
+      runProfile.runHandler = (request, token) => runner.runTests(request, token)
       this.runProfiles.set(`${api.id}:run`, runProfile)
       let debugProfile = previousRunProfiles.get(`${api.id}:debug`)
       if (!debugProfile) {
@@ -157,15 +159,23 @@ class VitestExtension {
         )
       }
       debugProfile.tag = api.tag
-      debugProfile.runHandler = (request, token) => {
-        if (!gte(api.version, minimumDebugVersion)) {
-          vscode.window.showWarningMessage(
-            `Debugging is not supported for Vitest v${api.version}. Please update Vitest to v${minimumDebugVersion} or higher.`,
-          )
-        }
-        else {
-          runner.debugTests(request, token)
-        }
+      debugProfile.runHandler = async (request, token) => {
+        // if (!gte(api.version, minimumDebugVersion)) {
+        //   vscode.window.showWarningMessage(
+        //     `Debugging is not supported for Vitest v${api.version}. Please update Vitest to v${minimumDebugVersion} or higher.`,
+        //   )
+        //   return
+        // }
+
+        await createDebugAPI(
+          this.testController,
+          this.testTree,
+          this.debugManager,
+          api.package,
+
+          request,
+          token,
+        )
       }
       this.runProfiles.set(`${api.id}:debug`, debugProfile)
 
@@ -183,10 +193,7 @@ class VitestExtension {
           )
         }
         coverageProfile.tag = api.tag
-        coverageProfile.runHandler = async (request, token) => {
-          await runner.stopDebugRun()
-          await runner.runCoverage(request, token)
-        }
+        coverageProfile.runHandler = (request, token) => runner.runCoverage(request, token)
         coverageProfile.loadDetailedCoverage = coverageContext.loadDetailedCoverage
         this.runProfiles.set(`${api.id}:coverage`, coverageProfile)
       }

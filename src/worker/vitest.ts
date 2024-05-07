@@ -2,24 +2,22 @@ import type { Vitest as VitestCore } from 'vitest'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
-import { VitestDebugger } from './debugger'
 
 const cwd = process.cwd()
 
 export class Vitest implements VitestMethods {
   private readonly watcher: VitestWatcher
   private readonly coverage: VitestCoverage
-  private readonly debugger: VitestDebugger
 
   public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
     private readonly cwd: string,
     private readonly ctx: VitestCore,
+    private readonly debug = false,
   ) {
     this.watcher = new VitestWatcher(ctx)
     this.coverage = new VitestCoverage(ctx, this)
-    this.debugger = new VitestDebugger(ctx, this)
   }
 
   public get collecting() {
@@ -90,6 +88,10 @@ export class Vitest implements VitestMethods {
     try {
       this.setTestNamePattern(testNamePattern)
 
+      // populate cache so it can find test files
+      if (this.debug)
+        await this.globTestFiles(files)
+
       await this.rerunTests(files, runAllFiles)
     }
     finally {
@@ -127,21 +129,13 @@ export class Vitest implements VitestMethods {
     return this.coverage.enable()
   }
 
-  startInspect(port: number, address?: string) {
-    this.debugger.start(port, address)
-  }
-
-  stopInspect() {
-    this.debugger.stop()
-  }
-
   waitForCoverageReport() {
     return this.coverage.waitForReport()
   }
 
   dispose() {
     this.coverage.disable()
-    this.watcher?.stopTracking()
+    this.watcher.stopTracking()
     return this.ctx.close()
   }
 }
