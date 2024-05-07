@@ -1,5 +1,4 @@
 import v8 from 'node:v8'
-import type { ChildProcess } from 'node:child_process'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 
@@ -16,9 +15,6 @@ export interface VitestMethods {
   enableCoverage: () => void
   disableCoverage: () => void
   waitForCoverageReport: () => Promise<string | null>
-
-  startInspect: (port: number, address?: string) => void
-  stopInspect: () => void
 }
 
 type VitestPoolMethods = {
@@ -59,7 +55,7 @@ function createHandler<T extends (...args: any) => any>() {
   }
 }
 
-function createRpcOptions() {
+export function createRpcOptions() {
   const handlers = {
     onConsoleLog: createHandler<BirpcEvents['onConsoleLog']>(),
     onTaskUpdate: createHandler<BirpcEvents['onTaskUpdate']>(),
@@ -98,7 +94,10 @@ function createRpcOptions() {
   }
 }
 
-export function createVitestRpc(vitest: ChildProcess) {
+export function createVitestRpc(options: {
+  on: (listener: (message: any) => void) => void
+  send: (message: any) => void
+}) {
   const { events, handlers } = createRpcOptions()
 
   const api = createBirpc<VitestPool, BirpcEvents>(
@@ -106,10 +105,10 @@ export function createVitestRpc(vitest: ChildProcess) {
     {
       timeout: -1,
       on(listener) {
-        vitest.on('message', listener)
+        options.on(listener)
       },
       post(message) {
-        vitest.send(message)
+        options.send(message)
       },
       serialize: v8.serialize,
       deserialize: v => v8.deserialize(Buffer.from(v)),

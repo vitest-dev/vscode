@@ -9,7 +9,6 @@ import { TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
-import type { TestDebugManager } from '../debug/debugManager'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
 
@@ -26,7 +25,6 @@ export class TestRunner extends vscode.Disposable {
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
-    private readonly debug: TestDebugManager,
   ) {
     super(() => {
       api.clearListeners()
@@ -122,50 +120,7 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  public async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    await this.debug.enable(this.api)
-
-    const testItems = request.include?.length
-      ? partitionTestFileItems(request.include)
-      : this.tree.getAllFileItems().map(item => [item, []] as [vscode.TestItem, never[]])
-
-    this.nonContinuousRequest = request
-    token.onCancellationRequested(() => {
-      this.debug.disable(this.api)
-      this.endTestRun()
-      this.nonContinuousRequest = undefined
-      this.api.cancelRun()
-      // just in case it gets stuck
-      this.testRunDefer?.resolve()
-    })
-
-    // we need to run tests one file at a time, so we partition them
-    // it's important to keep the same test items that were in the original request
-    // because they dictate how format testNamePattern
-    for (const [testFileData, testFileChildren] of testItems) {
-      if (token.isCancellationRequested || !this.debug.enabled)
-        break
-
-      const includedTests = testFileChildren.length
-        ? testFileChildren
-        : [testFileData]
-
-      await this.debug.startDebugging(
-        () => this.runTestItems(request, includedTests).catch((err) => {
-          log.error(err)
-        }),
-        () => this.api.cancelRun(),
-        this.api.workspaceFolder,
-      )
-    }
-
-    await this.debug.disable(this.api)
-
-    this.nonContinuousRequest = undefined
-    this._onRequestsExhausted.fire()
-  }
-
-  private endTestRun() {
+  protected endTestRun() {
     this.testRun?.end()
     this.testRunDefer?.resolve()
     this.testRun = undefined
@@ -199,16 +154,6 @@ export class TestRunner extends vscode.Disposable {
         testNamePatern ? `with pattern ${testNamePatern}` : '',
       )
       await this.api.watchTests(files, testNamePatern)
-    }
-  }
-
-  public async stopDebugRun() {
-    // if debuggins session is active, users can still run tests
-    // there is no guarantee it will end correctly, so we nuke it
-    if (this.debug.enabled) {
-      await this.debug.disable(this.api)
-      this.nonContinuousRequest = undefined
-      this.endTestRun()
     }
   }
 
@@ -249,13 +194,13 @@ export class TestRunner extends vscode.Disposable {
       this.api.cancelRun()
     })
 
-    await this.runTestItems(request, request.include || [])
+    await this.runTestItems(request)
 
     this.nonContinuousRequest = undefined
     this._onRequestsExhausted.fire()
   }
 
-  private async runTestItems(request: vscode.TestRunRequest, tests: readonly vscode.TestItem[]) {
+  protected async runTestItems(request: vscode.TestRunRequest) {
     await this.testRunDefer?.promise
 
     this.testRunDefer = Promise.withResolvers()
@@ -265,6 +210,7 @@ export class TestRunner extends vscode.Disposable {
         ? this.api.updateSnapshots(files, testNamePatern)
         : this.api.runFiles(files, testNamePatern)
 
+    const tests = request.include || []
     const root = this.api.workspaceFolder.uri.fsPath
     if (!tests.length) {
       log.info(`Running all tests in ${basename(root)}`)
@@ -303,7 +249,7 @@ export class TestRunner extends vscode.Disposable {
 
   private getTestFilesInFolder(path: string) {
     const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
-    const items = getFolderFiles(folder)
+    const items = this.tree.getFolderFiles(folder)
     return Array.from(
       new Set(items.map(item => (getTestData(item) as TestFile).filepath)),
     )
@@ -478,60 +424,6 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
       column,
     }
   }
-}
-
-function getFolderFiles(folder: vscode.TestItem): vscode.TestItem[] {
-  const files: vscode.TestItem[] = []
-  for (const [_, item] of folder.children) {
-    const data = getTestData(item)
-    if (data instanceof TestFile)
-      files.push(item)
-    else if (data instanceof TestFolder)
-      files.push(...getFolderFiles(item))
-  }
-  return files
-}
-
-function partitionTestFileItems(tests: readonly vscode.TestItem[]) {
-  const fileItems = new Map<vscode.TestItem, vscode.TestItem[]>()
-
-  for (const testItem of tests) {
-    const data = getTestData(testItem)
-    if (data instanceof TestFile) {
-      const items = fileItems.get(testItem) || []
-      fileItems.set(testItem, items)
-      continue
-    }
-    if (data instanceof TestFolder) {
-      const items = getFolderFiles(testItem)
-      items.forEach((item) => {
-        const fileItemsForFile = fileItems.get(item) || []
-        fileItems.set(item, fileItemsForFile)
-      })
-      continue
-    }
-    const fileTestItem = getTestItemFile(testItem)
-    if (!fileTestItem) {
-      log.error('Cannot find the file test item for', testItem.label)
-      continue
-    }
-    const items = fileItems.get(fileTestItem) || []
-    fileItems.set(fileTestItem, items)
-    items.push(testItem)
-  }
-
-  return Array.from(fileItems.entries())
-}
-
-function getTestItemFile(testItem: vscode.TestItem): vscode.TestItem | null {
-  let parent = testItem.parent
-  while (parent) {
-    const data = getTestData(parent)
-    if (data instanceof TestFile)
-      return parent
-    parent = parent.parent
-  }
-  return null
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]) {

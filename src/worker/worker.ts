@@ -1,56 +1,9 @@
 import v8 from 'node:v8'
 import { register } from 'node:module'
 import { createWorkerRPC } from './rpc'
-import type { WorkerMeta, WorkerRunnerOptions } from './types'
-import { VSCodeReporter } from './reporter'
+import type { WorkerRunnerOptions } from './types'
 import { Vitest } from './vitest'
-
-async function initVitest(meta: WorkerMeta) {
-  const vitestModule = await import(meta.vitestNodePath) as typeof import('vitest/node')
-  const reporter = new VSCodeReporter(meta)
-  const vitest = await vitestModule.createVitest(
-    'test',
-    {
-      config: meta.configFile,
-      workspace: meta.workspaceFile,
-      root: meta.cwd,
-      ...meta.arguments ? vitestModule.parseCLI(meta.arguments).options : {},
-      watch: true,
-      api: false,
-      // @ts-expect-error private property
-      reporter: undefined,
-      reporters: [reporter],
-      ui: false,
-      includeTaskLocation: true,
-    },
-    {
-      server: {
-        middlewareMode: true,
-      },
-      plugins: [
-        {
-          name: 'vitest:vscode-extension',
-          configResolved(config) {
-            // stub a server so Vite doesn't start a websocket connection,
-            // because we don't need it in the extension and it messes up Vite dev command
-            config.server.hmr = {
-              server: {
-                on: () => {},
-                off: () => {},
-              } as any,
-            }
-          },
-        },
-      ],
-    },
-  )
-  reporter.init(vitest)
-  return {
-    vitest,
-    reporter,
-    meta,
-  }
-}
+import { initVitest } from './init'
 
 const cwd = process.cwd()
 

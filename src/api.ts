@@ -12,6 +12,7 @@ import { createVitestRpc } from './api/rpc'
 import type { WorkerRunnerOptions } from './worker/types'
 import type { VitestPackage } from './api/pkg'
 import { findNode, pluralize, showVitestError } from './utils'
+import type { VitestProcess } from './process'
 
 export class VitestReporter {
   constructor(
@@ -78,10 +79,10 @@ export class VitestAPI {
       this.meta.packages.forEach((pkg) => {
         delete require.cache[pkg.vitestPackageJsonPath]
       })
-      if (!this.meta.process.killed) {
+      if (!this.meta.process.closed) {
         try {
           await this.meta.rpc.close()
-          log.info('[API]', `Vitest process ${this.meta.process.pid} closed successfully`)
+          log.info('[API]', `Vitest process ${this.meta.process.id} closed successfully`)
         }
         catch (err) {
           log.error('[API]', 'Failed to close Vitest process', err)
@@ -89,7 +90,7 @@ export class VitestAPI {
         const promise = new Promise<void>((resolve) => {
           this.meta.process.once('exit', () => resolve())
         })
-        this.meta.process.kill()
+        this.meta.process.close()
         await promise
       }
     }
@@ -115,7 +116,7 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   get processId() {
-    return this.meta.process.pid
+    return this.meta.process.id
   }
 
   get prefix() {
@@ -124,6 +125,10 @@ export class VitestFolderAPI extends VitestReporter {
 
   get version() {
     return this.pkg.version
+  }
+
+  get package() {
+    return this.pkg
   }
 
   get workspaceFolder() {
@@ -193,14 +198,6 @@ export class VitestFolderAPI extends VitestReporter {
   async unwatchTests() {
     await this.meta.rpc.unwatchTests(this.id)
   }
-
-  stopInspect() {
-    return this.meta.rpc.stopInspect(this.id)
-  }
-
-  startInspect(port: number, address?: string) {
-    return this.meta.rpc.startInspect(this.id, port, address)
-  }
 }
 
 export async function resolveVitestAPI(showWarning: boolean, packages: VitestPackage[]) {
@@ -211,9 +208,9 @@ export async function resolveVitestAPI(showWarning: boolean, packages: VitestPac
   return new VitestAPI(apis, vitest)
 }
 
-interface ResolvedMeta {
+export interface ResolvedMeta {
   rpc: VitestRPC
-  process: ChildProcess
+  process: VitestProcess
   packages: VitestPackage[]
   handlers: {
     onConsoleLog: (listener: BirpcEvents['onConsoleLog']) => void
@@ -350,12 +347,39 @@ export async function createVitestProcess(showWarning: boolean, packages: Vitest
 
   log.info('[API]', `Vitest process ${vitest.pid} created`)
 
-  const { handlers, api } = createVitestRpc(vitest)
+  const { handlers, api } = createVitestRpc({
+    on: listener => vitest.on('message', listener),
+    send: message => vitest.send(message),
+  })
 
   return {
     rpc: api,
-    process: vitest,
+    process: new VitestChildProvess(vitest),
     handlers,
     packages,
+  }
+}
+
+class VitestChildProvess implements VitestProcess {
+  constructor(private child: ChildProcess) {}
+
+  get id() {
+    return this.child.pid ?? 0
+  }
+
+  get closed() {
+    return this.child.killed
+  }
+
+  on(event: string, listener: (...args: any[]) => void) {
+    this.child.on(event, listener)
+  }
+
+  once(event: string, listener: (...args: any[]) => void) {
+    this.child.once(event, listener)
+  }
+
+  close() {
+    this.child.kill()
   }
 }
