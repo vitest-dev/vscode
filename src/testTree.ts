@@ -284,6 +284,9 @@ export class TestTree extends vscode.Disposable {
         const position = new vscode.Position(location.line - 1, location.column)
         testItem.range = new vscode.Range(position, position)
       }
+      else {
+        testItem.sortText = task.id
+      }
       if (task.type === 'suite')
         TestSuite.register(testItem, parent, fileData)
       else if (task.type === 'test' || task.type === 'custom')
