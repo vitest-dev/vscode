@@ -102,15 +102,52 @@ export async function resolveVitestPackages(showWarning: boolean): Promise<Vites
   // if no viable configs found, try to resolve via package.json
   if (!vitest.meta.length && !vitest.warned) {
     const pkg = await resolveVitestPackagesViaPackageJson(showWarning)
+    if (!pkg.meta.length && !pkg.warned)
+      return resolveVitestWorkspacePackages(showWarning).meta
     return pkg.meta
   }
   return vitest.meta
 }
 
+function resolveVitestWorkspacePackages(showWarning: boolean) {
+  let warned = false
+  const meta: VitestPackage[] = []
+  vscode.workspace.workspaceFolders?.forEach((folder) => {
+    const cwd = normalize(folder.uri.fsPath)
+    const vitest = resolveVitestPackage(cwd, folder)
+    if (!vitest)
+      return
+
+    const pkg = _require(vitest.vitestPackageJsonPath)
+    if (!validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg)) {
+      warned = true
+      return
+    }
+    const id = normalize(folder.uri.fsPath)
+    const prefix = `${basename(cwd)}:${basename(id)}`
+    meta.push({
+      folder,
+      id,
+      cwd,
+      prefix,
+      vitestPackageJsonPath: vitest.vitestPackageJsonPath,
+      vitestNodePath: vitest.vitestNodePath,
+      version: pkg.version,
+    })
+  })
+  return {
+    meta,
+    warned,
+  }
+}
+
 export async function resolveVitestPackagesViaPackageJson(showWarning: boolean): Promise<{ meta: VitestPackage[]; warned: boolean }> {
   const config = getConfig()
 
-  const packages = await vscode.workspace.findFiles('**/package.json', config.configSearchPatternExclude)
+  const packages = await vscode.workspace.findFiles(
+    '**/package.json',
+    config.configSearchPatternExclude,
+  )
 
   let warned = false
   const meta: VitestPackage[] = []
@@ -136,20 +173,26 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
       return
     }
 
-    for (const [scriptName, script] of scripts) {
-      const id = `${normalize(pkgPath.fsPath)}/${scriptName}`
-      const prefix = `package.json:${scriptName}`
-      meta.push({
-        folder,
-        id,
-        cwd,
-        prefix,
-        arguments: script,
-        vitestPackageJsonPath: vitest.vitestPackageJsonPath,
-        vitestNodePath: vitest.vitestNodePath,
-        version: pkg.version,
-      })
-    }
+    // take only the fist script to not pollute the list
+    const scriptOption = scripts[0]
+
+    if (!scriptOption)
+      return
+
+    const [scriptName, script] = scriptOption
+
+    const id = `${normalize(pkgPath.fsPath)}/${scriptName}`
+    const prefix = `${basename(cwd)}/package.json:${scriptName}`
+    meta.push({
+      folder,
+      id,
+      cwd,
+      prefix,
+      arguments: script,
+      vitestPackageJsonPath: vitest.vitestPackageJsonPath,
+      vitestNodePath: vitest.vitestNodePath,
+      version: pkg.version,
+    })
   })
 
   return {
