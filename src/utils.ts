@@ -107,7 +107,7 @@ export async function findNode(cwd: string): Promise<string> {
 
   // If volta isn't installed in a Volta folder, this test will fail.
   // If anyone got a better idea for checking volta's presence, please let me know.
-  const voltaRegex = /Volta/i
+  const voltaRegex = /Volta\\node\.exe/i
 
   // Stage 4: We have found Node.js, but it might be managed by Volta.
   // This attempt to ask volta for the path to the node executable.
@@ -124,7 +124,7 @@ function findNodeUsingVoltaOnWindows(cwd: string): Promise<string | undefined> {
   if (process.platform !== 'win32')
     return Promise.resolve(undefined)
   return new Promise<string | undefined>((resolve) => {
-    const childProcess = spawn(`volta which node`, {
+    const childProcess = spawn('volta which node', {
       stdio: 'pipe',
       shell: true,
       cwd,
