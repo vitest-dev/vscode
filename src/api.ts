@@ -159,7 +159,7 @@ export class VitestFolderAPI extends VitestReporter {
     this.collectTimer && clearTimeout(this.collectTimer)
 
     this.collectTimer = setTimeout(() => {
-      const tests = Array.from(this.testsQueue)
+      const tests = Array.from(this.testsQueue).map(normalize)
       const root = this.workspaceFolder.uri.fsPath
       this.testsQueue.clear()
       log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t)).join(', ')}`)
