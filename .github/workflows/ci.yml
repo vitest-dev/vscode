@@ -32,13 +32,13 @@ jobs:
 
       - name: test
         run: |
-          xvfb-run pnpm test
+          pnpm test
 
       - name: test-e2e
         run: |
           pnpm -C samples/e2e i
           npm -C samples/imba i
-          xvfb-run pnpm test-e2e --retry 2
+          pnpm test-e2e --retry 2
 
       - uses: actions/upload-artifact@v3
         if: always()
