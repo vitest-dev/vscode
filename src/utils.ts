@@ -169,7 +169,7 @@ async function findNodeViaShell(cwd: string): Promise<string | undefined> {
       })
     }
     catch (e) {
-      log.error('[SPAWN]', e)
+      log.error('[SPAWN]', vscode.env.shell, e)
       resolve(undefined)
     }
   })
