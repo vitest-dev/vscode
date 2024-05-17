@@ -7,11 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  ci:
+    runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
+        os: [macos-14, windows-latest]
         node-version: [20.x]
 
     steps:
@@ -31,13 +32,13 @@ jobs:
 
       - name: test
         run: |
-          xvfb-run pnpm test
+          pnpm test
 
       - name: test-e2e
         run: |
           pnpm -C samples/e2e i
           npm -C samples/imba i
-          xvfb-run pnpm test-e2e --retry 2
+          pnpm test-e2e --retry 2
 
       - uses: actions/upload-artifact@v3
         if: always()
