@@ -114,8 +114,11 @@ export async function findNode(cwd: string): Promise<string> {
   if (node && voltaRegex.test(node))
     node = await findNodeUsingVoltaOnWindows(cwd) ?? node
 
-  if (!node)
-    throw new Error(`Unable to find 'node' executable.\nMake sure to have Node.js installed and available in your PATH.\nCurrent PATH: '${process.env.PATH}'.`)
+  if (!node) {
+    const msg = `Unable to find 'node' executable.\nMake sure to have Node.js installed and available in your PATH.\nCurrent PATH: '${process.env.PATH}'.`
+    log.error(msg)
+    throw new Error(msg)
+  }
   pathToNodeJS = node
   return node
 }
@@ -146,22 +149,28 @@ async function findNodeViaShell(cwd: string): Promise<string | undefined> {
   return new Promise<string | undefined>((resolve) => {
     const startToken = '___START_SHELL__'
     const endToken = '___END_SHELL__'
-    const childProcess = spawn(`${vscode.env.shell} -i -c 'echo ${startToken} && which node && echo ${endToken}'`, {
-      stdio: 'pipe',
-      shell: true,
-      cwd,
-    })
-    let output = ''
-    childProcess.stdout.on('data', data => output += data.toString())
-    childProcess.on('error', () => resolve(undefined))
-    childProcess.on('exit', (exitCode) => {
-      if (exitCode !== 0)
-        return resolve(undefined)
-      const start = output.indexOf(startToken)
-      const end = output.indexOf(endToken)
-      if (start === -1 || end === -1)
-        return resolve(undefined)
-      return resolve(output.substring(start + startToken.length, end).trim())
-    })
+    try {
+      const childProcess = spawn(`${vscode.env.shell} -i -c 'echo ${startToken} && which node && echo ${endToken}'`, {
+        stdio: 'pipe',
+        shell: true,
+        cwd,
+      })
+      let output = ''
+      childProcess.stdout.on('data', data => output += data.toString())
+      childProcess.on('error', () => resolve(undefined))
+      childProcess.on('exit', (exitCode) => {
+        if (exitCode !== 0)
+          return resolve(undefined)
+        const start = output.indexOf(startToken)
+        const end = output.indexOf(endToken)
+        if (start === -1 || end === -1)
+          return resolve(undefined)
+        return resolve(output.substring(start + startToken.length, end).trim())
+      })
+    }
+    catch (e) {
+      log.error('[SPAWN]', e)
+      resolve(undefined)
+    }
   })
 }
