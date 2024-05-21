@@ -88,3 +88,14 @@ These options are resolved relative to the [workspace file](https://code.visuals
 ### How can I use it in monorepo?
 
 See <https://vitest.dev/guide/workspace.html> for monorepo support.
+
+### How to hide Test Results view when running tests
+
+You can change the behaviour of testing view by modifying `testing.openTesting` option:
+
+- `neverOpen` will never open the testing view
+- `openOnTestStart` (default) opens the test results view when test starts running
+- `openOnTestFailure` opens the test results view if at least one of test fails
+- `openExplorerOnTestStart`  will open the test tree view when tests starts
+
+This is a vscode's built-in option and will control every plugin.
