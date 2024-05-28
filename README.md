@@ -15,10 +15,12 @@
 
 ## Requirements
 
+- **Node.js version >= 18**
 - Visual Studio Code version >= 1.77.0
 - Vitest version >= v1.4.0
 - Coverage requires Visual Studio Code >= 1.88.0
 - Debugger requires Vitest >= 1.5.0
+
 
 ## Usage
 
