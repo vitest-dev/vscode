@@ -227,14 +227,14 @@
     "which": "^4.0.0",
     "ws": "^8.16.0"
   },
-  "lint-staged": {
-    "*.{js,ts,tsx,vue,md}": [
-      "eslint --fix"
-    ]
-  },
   "pnpm": {
     "patchedDependencies": {
       "birpc@0.2.17": "patches/birpc@0.2.17.patch"
     }
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,vue,md}": [
+      "eslint --fix"
+    ]
   }
 }
