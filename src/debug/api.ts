@@ -215,4 +215,8 @@ class VitestWebSocketProcess implements VitestProcess {
   once(event: string, listener: (...args: any[]) => void) {
     this.ws.once(event, listener)
   }
+
+  off(event: string, listener: (...args: any[]) => void) {
+    this.ws.off(event, listener)
+  }
 }

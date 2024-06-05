@@ -135,6 +135,12 @@
           "default": false,
           "scope": "resource"
         },
+        "vitest.maximumConfigs": {
+          "description": "The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file.",
+          "type": "number",
+          "default": 3,
+          "scope": "window"
+        },
         "vitest.debugExclude": {
           "markdownDescription": "Automatically skip files covered by these glob patterns.",
           "type": "array",

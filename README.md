@@ -82,6 +82,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
   `process.env`
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
   `[\"<node_internals>/**\", \"**/node_modules/**\"]`
+- `vitest.maximumConfigs`: The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file. Default: `3`
 
 ## FAQs (Frequently Asked Questions)
 
