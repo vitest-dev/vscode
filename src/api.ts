@@ -46,23 +46,32 @@ export class VitestReporter {
 
 export class VitestAPI {
   private disposing = false
+  private _disposes: (() => void)[] = []
 
   constructor(
     private readonly api: VitestFolderAPI[],
   ) {
     this.processes.forEach((process) => {
-      process.on('error', (error) => {
+      const warn = (error: any) => {
         if (!this.disposing)
           showVitestError('Vitest process failed', error)
+      }
+      process.on('error', warn)
+      this._disposes.push(() => {
+        process.off('error', warn)
       })
     })
   }
 
   onUnexpectedExit(callback: (code: number | null) => void) {
     this.processes.forEach((process) => {
-      process.on('exit', (code) => {
+      const onExit = (code: number | null) => {
         if (!this.disposing)
           callback(code)
+      }
+      process.on('exit', onExit)
+      this._disposes.push(() => {
+        process.off('exit', onExit)
       })
     })
   }
@@ -78,6 +87,7 @@ export class VitestAPI {
   async dispose() {
     this.disposing = true
     try {
+      this._disposes.forEach(dispose => dispose())
       await Promise.all(this.api.map(api => api.dispose()))
     }
     finally {
@@ -388,6 +398,10 @@ class VitestChildProvess implements VitestProcess {
 
   once(event: string, listener: (...args: any[]) => void) {
     this.child.once(event, listener)
+  }
+
+  off(event: string, listener: (...args: any[]) => void) {
+    this.child.off(event, listener)
   }
 
   close() {
