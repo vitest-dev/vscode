@@ -5,6 +5,7 @@ import which from 'which'
 import { relative } from 'pathe'
 import type { VitestPackage } from './api/pkg'
 import { log } from './log'
+import { getConfig } from './config'
 
 export function noop() {}
 
@@ -91,6 +92,10 @@ let pathToNodeJS: string | undefined
 
 // based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
 export async function findNode(cwd: string): Promise<string> {
+  if (getConfig().nodeExecutable)
+    // if empty string, keep as undefined
+    pathToNodeJS = getConfig().nodeExecutable || undefined
+
   if (pathToNodeJS)
     return pathToNodeJS
 
@@ -172,5 +177,21 @@ async function findNodeViaShell(cwd: string): Promise<string | undefined> {
       log.error('[SPAWN]', vscode.env.shell, e)
       resolve(undefined)
     }
+  })
+}
+
+export function getNodeJsVersion(nodeJsPath: string) {
+  return new Promise<string>((resolve) => {
+    const childProcess = spawn(nodeJsPath, ['--version'], {
+      stdio: 'pipe',
+    })
+    let output = ''
+    childProcess.stdout.on('data', data => output += data.toString())
+    childProcess.on('error', () => resolve(''))
+    childProcess.on('exit', (exitCode) => {
+      if (exitCode !== 0)
+        return resolve('')
+      return resolve(output.trim())
+    })
   })
 }

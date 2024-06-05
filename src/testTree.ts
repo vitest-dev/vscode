@@ -58,12 +58,21 @@ export class TestTree extends vscode.Disposable {
       rootItem.children.replace([this.loaderItem])
     }
     else {
-      const folderItems = workspaceFolders.map(x => this.getOrCreateWorkspaceFolderItem(x.uri))
-      this.controller.items.replace([this.loaderItem, ...folderItems])
+      const folderItems = workspaceFolders.map((x) => {
+        const item = this.getOrCreateWorkspaceFolderItem(x.uri)
+        item.children.replace([])
+        item.busy = true
+        return item
+      })
+      this.controller.items.replace(folderItems)
     }
   }
 
   async discoverAllTestFiles(api: VitestFolderAPI, files: [project: string, file: string][]) {
+    const folderItem = this.folderItems.get(normalize(api.workspaceFolder.uri.fsPath))
+    if (folderItem)
+      folderItem.busy = false
+
     for (const [project, file] of files)
       this.getOrCreateFileTestItem(api, project, file)
 
