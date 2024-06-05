@@ -65,24 +65,34 @@ class VitestExtension {
 
     const configFiles = vitest.filter(x => x.configFile && !x.workspaceFile)
 
-    // TODO: hard limit on the number of config files
+    const maximumConfigs = getConfig().maximumConfigs ?? 3
 
-    if (configFiles.length > 3 && configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
-      vscode.window.showWarningMessage(
-        `Vitest found ${configFiles.length} config files. For better performance, consider using a workspace configuration.`,
-        'Create vitest.workspace.js',
-        'Disable notification',
-      ).then((result) => {
-        if (result === 'Create vitest.workspace.js')
-          createVitestWorkspaceFile(configFiles).catch(noop)
+    if (configFiles.length > maximumConfigs) {
+      const warningMessage = `Vitest found multiple config files. The extension will use only the first ${maximumConfigs} due to performance concerns. Consider using a workspace configuration to group your configs.`
+      // remove all but the first 3
+      const discardedConfigs = configFiles.splice(maximumConfigs)
 
-        if (result === 'Disable notification') {
-          configFiles.forEach((c) => {
-            const rootConfig = vscode.workspace.getConfiguration('vitest', c.folder)
-            rootConfig.update('disableWorkspaceWarning', true)
-          })
-        }
-      })
+      if (configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
+        vscode.window.showWarningMessage(
+          warningMessage,
+          'Create vitest.workspace.js',
+          'Disable notification',
+        ).then((result) => {
+          if (result === 'Create vitest.workspace.js')
+            createVitestWorkspaceFile(configFiles).catch(noop)
+
+          if (result === 'Disable notification') {
+            configFiles.forEach((c) => {
+              const rootConfig = vscode.workspace.getConfiguration('vitest', c.folder)
+              rootConfig.update('disableWorkspaceWarning', true)
+            })
+          }
+        })
+      }
+      else {
+        log.info(warningMessage)
+        log.info(`Discarded config files: ${discardedConfigs.map(x => x.workspaceFile || x.configFile).join(', ')}`)
+      }
     }
 
     const folders = new Set(vitest.map(x => x.folder))

@@ -49,18 +49,21 @@ export class VitestAPI {
 
   constructor(
     private readonly api: VitestFolderAPI[],
-    private readonly meta: ResolvedMeta,
   ) {
-    meta.process.on('error', (error) => {
-      if (!this.disposing)
-        showVitestError('Vitest process failed', error)
+    this.processes.forEach((process) => {
+      process.on('error', (error) => {
+        if (!this.disposing)
+          showVitestError('Vitest process failed', error)
+      })
     })
   }
 
   onUnexpectedExit(callback: (code: number | null) => void) {
-    this.meta.process.on('exit', (code) => {
-      if (!this.disposing)
-        callback(code)
+    this.processes.forEach((process) => {
+      process.on('exit', (code) => {
+        if (!this.disposing)
+          callback(code)
+      })
     })
   }
 
@@ -75,28 +78,15 @@ export class VitestAPI {
   async dispose() {
     this.disposing = true
     try {
-      this.forEach(api => api.dispose())
-      this.meta.packages.forEach((pkg) => {
-        delete require.cache[pkg.vitestPackageJsonPath]
-      })
-      if (!this.meta.process.closed) {
-        try {
-          await this.meta.rpc.close()
-          log.info('[API]', `Vitest process ${this.meta.process.id} closed successfully`)
-        }
-        catch (err) {
-          log.error('[API]', 'Failed to close Vitest process', err)
-        }
-        const promise = new Promise<void>((resolve) => {
-          this.meta.process.once('exit', () => resolve())
-        })
-        this.meta.process.close()
-        await promise
-      }
+      await Promise.all(this.api.map(api => api.dispose()))
     }
     finally {
       this.disposing = false
     }
+  }
+
+  private get processes() {
+    return this.api.map(api => api.process)
   }
 }
 
@@ -116,11 +106,15 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   get processId() {
-    return this.meta.process.id
+    return this.process.id
   }
 
   get prefix() {
     return this.pkg.prefix
+  }
+
+  get process() {
+    return this.meta.process
   }
 
   get version() {
@@ -170,9 +164,26 @@ export class VitestFolderAPI extends VitestReporter {
     await this.collectPromise
   }
 
-  dispose() {
+  async dispose() {
     WEAKMAP_API_FOLDER.delete(this)
     this.handlers.clearListeners()
+    this.meta.packages.forEach((pkg) => {
+      delete require.cache[pkg.vitestPackageJsonPath]
+    })
+    if (!this.meta.process.closed) {
+      try {
+        await this.meta.rpc.close()
+        log.info('[API]', `Vitest process ${this.meta.process.id} closed successfully`)
+      }
+      catch (err) {
+        log.error('[API]', 'Failed to close Vitest process', err)
+      }
+      const promise = new Promise<void>((resolve) => {
+        this.meta.process.once('exit', () => resolve())
+      })
+      this.meta.process.close()
+      await promise
+    }
   }
 
   async cancelRun() {
@@ -201,11 +212,12 @@ export class VitestFolderAPI extends VitestReporter {
 }
 
 export async function resolveVitestAPI(showWarning: boolean, packages: VitestPackage[]) {
-  const vitest = await createVitestProcess(showWarning, packages)
-  const apis = packages.map(pkg =>
-    new VitestFolderAPI(pkg, vitest),
-  )
-  return new VitestAPI(apis, vitest)
+  const promises = packages.map(async (pkg) => {
+    const vitest = await createVitestProcess(showWarning, [pkg])
+    return new VitestFolderAPI(pkg, vitest)
+  })
+  const apis = await Promise.all(promises)
+  return new VitestAPI(apis)
 }
 
 export interface ResolvedMeta {
@@ -243,7 +255,7 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
     : undefined
   const env = getConfig().env || {}
   const execPath = getConfig().nodeExecutable || await findNode(vscode.workspace.workspaceFile?.fsPath || vscode.workspace.workspaceFolders![0].uri.fsPath)
-  log.info('[API]', `Starting Vitest process with Node.js: ${execPath}`)
+  log.info('[API]', `Running Vitest: ${meta.map(x => `v${x.version} (${relative(dirname(x.cwd), x.id)})`).join(', ')} with Node.js: ${execPath}`)
   const vitest = fork(
     workerPath,
     {
@@ -260,7 +272,7 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
         NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
       },
       stdio: 'overlapped',
-      cwd: pnp ? dirname(pnp) : undefined,
+      cwd: pnp ? dirname(pnp) : meta[0].cwd,
     },
   )
 
@@ -340,12 +352,11 @@ async function createChildVitestProcess(showWarning: boolean, meta: VitestPackag
   })
 }
 
+// TODO: packages should be a single package
 export async function createVitestProcess(showWarning: boolean, packages: VitestPackage[]): Promise<ResolvedMeta> {
-  log.info('[API]', `Running Vitest: ${packages.map(x => `v${x.version} (${relative(x.cwd, x.id)})`).join(', ')}`)
-
   const vitest = await createChildVitestProcess(showWarning, packages)
 
-  log.info('[API]', `Vitest process ${vitest.pid} created`)
+  log.info('[API]', `Vitest ${packages.map(x => `v${x.version} (${relative(dirname(x.cwd), x.id)})`).join(', ')} process ${vitest.pid} created`)
 
   const { handlers, api } = createVitestRpc({
     on: listener => vitest.on('message', listener),
