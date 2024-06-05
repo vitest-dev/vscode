@@ -1,5 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
 import * as vscode from 'vscode'
-import { basename, dirname, normalize } from 'pathe'
+import { basename, dirname, normalize, resolve } from 'pathe'
 import { gte } from 'semver'
 import { log } from '../log'
 import { configGlob, minimumVersion, workspaceGlob } from '../constants'
@@ -28,6 +29,15 @@ export interface VitestPackage {
   pnp?: string
 }
 
+function isVitestInPackageJson(folder: vscode.WorkspaceFolder) {
+  const pkgJson = resolve(dirname(folder.uri.fsPath), 'package.json')
+  if (existsSync(pkgJson)) {
+    const pkg = JSON.parse(readFileSync(pkgJson, 'utf-8'))
+    return pkg.dependencies?.vitest || pkg.devDependencies?.vitest
+  }
+  return false
+}
+
 function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode.Uri): VitestPackage | null {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
   if (!folder)
@@ -37,8 +47,11 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   const vitest = resolveVitestPackage(dirname(configOrWorkspaceFile.fsPath), folder)
 
   if (!vitest) {
-    if (showWarning)
-      vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.'`)
+    if (showWarning) {
+      const isVitestConfig = configOrWorkspaceFile.fsPath.includes('vitest.')
+      if (isVitestConfig || isVitestInPackageJson(folder))
+        vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.'`)
+    }
     log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
     return null
   }
