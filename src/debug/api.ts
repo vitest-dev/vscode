@@ -141,7 +141,7 @@ function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
             rpc: api,
             handlers,
             process: new VitestWebSocketProcess(Math.random(), wss, ws),
-            packages: [pkg],
+            pkg,
           })
         }
         if (message.type === 'error') {
@@ -172,17 +172,15 @@ function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
 
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
-        meta: [
-          {
-            vitestNodePath: pkg.vitestNodePath,
-            env: getConfig(pkg.folder).env || undefined,
-            configFile: pkg.configFile,
-            cwd: pkg.cwd,
-            arguments: pkg.arguments,
-            workspaceFile: pkg.workspaceFile,
-            id: pkg.id,
-          },
-        ],
+        meta: {
+          vitestNodePath: pkg.vitestNodePath,
+          env: getConfig(pkg.folder).env || undefined,
+          configFile: pkg.configFile,
+          cwd: pkg.cwd,
+          arguments: pkg.arguments,
+          workspaceFile: pkg.workspaceFile,
+          id: pkg.id,
+        },
       }
 
       ws.send(JSON.stringify(runnerOptions))
