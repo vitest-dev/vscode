@@ -68,7 +68,7 @@ class VitestExtension {
     const maximumConfigs = getConfig().maximumConfigs ?? 3
 
     if (configFiles.length > maximumConfigs) {
-      const warningMessage = `Vitest found multiple config files. The extension will use only the first ${maximumConfigs} due to performance concerns. Consider using a workspace configuration to group your configs.`
+      const warningMessage = `Vitest found multiple config files. The extension will use only the first ${maximumConfigs} due to performance concerns. Consider using a workspace configuration to group your configs or increase the limit via "vitest.maximumConfigs" option.`
       // remove all but the first 3
       const discardedConfigs = configFiles.splice(maximumConfigs)
 
@@ -104,7 +104,7 @@ class VitestExtension {
     try {
       await this.api?.dispose()
 
-      this.api = await resolveVitestAPI(showWarning, vitest)
+      this.api = await resolveVitestAPI(vitest)
 
       this.api.onUnexpectedExit((code) => {
         if (code) {

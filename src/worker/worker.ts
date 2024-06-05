@@ -5,8 +5,6 @@ import type { WorkerRunnerOptions } from './types'
 import { Vitest } from './vitest'
 import { initVitest } from './init'
 
-const cwd = process.cwd()
-
 process.on('message', async function init(message: any) {
   if (message.type === 'init') {
     process.off('message', init)
@@ -15,29 +13,10 @@ process.on('message', async function init(message: any) {
     try {
       if (data.loader)
         register(data.loader)
-      const errors = []
 
-      const vitest = []
-      for (const meta of data.meta) {
-        process.chdir(meta.cwd)
-        try {
-          vitest.push(await initVitest(meta))
-        }
-        catch (err: any) {
-          errors.push([meta.id, err.stack])
-        }
-      }
-      process.chdir(cwd)
+      const { reporter, vitest } = await initVitest(data.meta)
 
-      if (!vitest.length) {
-        process.send!({ type: 'error', errors })
-        return
-      }
-
-      const vitestById = Object.fromEntries(vitest.map(v =>
-        [v.meta.id, new Vitest(v.meta.cwd, v.vitest)],
-      ))
-      const rpc = createWorkerRPC(vitestById, {
+      const rpc = createWorkerRPC(new Vitest(vitest), {
         on(listener) {
           process.on('message', listener)
         },
@@ -47,8 +26,8 @@ process.on('message', async function init(message: any) {
         serialize: v8.serialize,
         deserialize: v => v8.deserialize(Buffer.from(v)),
       })
-      vitest.forEach(v => v.reporter.initRpc(rpc))
-      process.send!({ type: 'ready', errors })
+      reporter.initRpc(rpc)
+      process.send!({ type: 'ready' })
     }
     catch (err: any) {
       error(err)

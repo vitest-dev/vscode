@@ -3,8 +3,6 @@ import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
 
-const cwd = process.cwd()
-
 export class Vitest implements VitestMethods {
   private readonly watcher: VitestWatcher
   private readonly coverage: VitestCoverage
@@ -12,7 +10,6 @@ export class Vitest implements VitestMethods {
   public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
-    private readonly cwd: string,
     private readonly ctx: VitestCore,
     private readonly debug = false,
   ) {
@@ -74,29 +71,20 @@ export class Vitest implements VitestMethods {
   }
 
   private async globTestFiles(filters?: string[]) {
-    process.chdir(this.cwd)
-    const files = await this.ctx.globTestFiles(filters)
-    process.chdir(cwd)
-    return files
+    return await this.ctx.globTestFiles(filters)
   }
 
   private async runTestFiles(files: string[], testNamePattern?: string | undefined, runAllFiles = false) {
     await this.ctx.runningPromise
     this.watcher.markRerun(false)
-    process.chdir(this.cwd)
 
-    try {
-      this.setTestNamePattern(testNamePattern)
+    this.setTestNamePattern(testNamePattern)
 
-      // populate cache so it can find test files
-      if (this.debug)
-        await this.globTestFiles(files)
+    // populate cache so it can find test files
+    if (this.debug)
+      await this.globTestFiles(files)
 
-      await this.rerunTests(files, runAllFiles)
-    }
-    finally {
-      process.chdir(cwd)
-    }
+    await this.rerunTests(files, runAllFiles)
   }
 
   private setTestNamePattern(pattern: string | undefined) {
@@ -137,5 +125,9 @@ export class Vitest implements VitestMethods {
     this.coverage.disable()
     this.watcher.stopTracking()
     return this.ctx.close()
+  }
+
+  close() {
+    return this.dispose()
   }
 }

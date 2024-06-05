@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  birpc@0.2.17:
+    hash: 76ascauag252sgpxpwh3k26eya
+    path: patches/birpc@0.2.17.patch
+
 devDependencies:
   '@antfu/eslint-config':
     specifier: ^2.6.4
@@ -67,7 +72,7 @@ devDependencies:
     version: 3.4.19
   birpc:
     specifier: ^0.2.17
-    version: 0.2.17
+    version: 0.2.17(patch_hash=76ascauag252sgpxpwh3k26eya)
   bumpp:
     specifier: ^9.3.0
     version: 9.3.0
@@ -1377,9 +1382,10 @@ packages:
     resolution: {integrity: sha512-LuZgWLW6DB1zenkfJuF4/kfSZdazOR2xaMSzeqgvfbNIwECwV1AJso9wpNje79uaRU86Obbujv4qtDnwoOLQww==}
     dev: true
 
-  /birpc@0.2.17:
+  /birpc@0.2.17(patch_hash=76ascauag252sgpxpwh3k26eya):
     resolution: {integrity: sha512-+hkTxhot+dWsLpp3gia5AkVHIsKlZybNT5gIYiDlNzJrmYPcTM9k5/w2uaj3IPpd7LlEYpmCj4Jj1nC41VhDFg==}
     dev: true
+    patched: true
 
   /boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
