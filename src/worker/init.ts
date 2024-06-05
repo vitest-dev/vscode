@@ -4,7 +4,7 @@ import type { WorkerMeta } from './types'
 
 export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
   const vitestModule = await import(meta.vitestNodePath) as typeof import('vitest/node')
-  const reporter = new VSCodeReporter(meta)
+  const reporter = new VSCodeReporter()
   const vitest = await vitestModule.createVitest(
     'test',
     {

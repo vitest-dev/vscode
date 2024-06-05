@@ -15,13 +15,6 @@ export interface VitestMethods {
   enableCoverage: () => void
   disableCoverage: () => void
   waitForCoverageReport: () => Promise<string | null>
-}
-
-type VitestPoolMethods = {
-  [K in keyof VitestMethods]: (id: string, ...args: Parameters<VitestMethods[K]>) => ReturnType<VitestMethods[K]>
-}
-
-export interface VitestPool extends VitestPoolMethods {
   close: () => void
 }
 
@@ -34,11 +27,7 @@ export interface VitestEvents {
   onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
 }
 
-export type BirpcEvents = {
-  [K in keyof VitestEvents]: (folder: string, ...args: Parameters<VitestEvents[K]>) => void
-}
-
-export type VitestRPC = BirpcReturn<VitestPool, BirpcEvents>
+export type VitestRPC = BirpcReturn<VitestMethods, VitestEvents>
 
 function createHandler<T extends (...args: any) => any>() {
   const handlers: T[] = []
@@ -57,15 +46,15 @@ function createHandler<T extends (...args: any) => any>() {
 
 export function createRpcOptions() {
   const handlers = {
-    onConsoleLog: createHandler<BirpcEvents['onConsoleLog']>(),
-    onTaskUpdate: createHandler<BirpcEvents['onTaskUpdate']>(),
-    onFinished: createHandler<BirpcEvents['onFinished']>(),
-    onCollected: createHandler<BirpcEvents['onCollected']>(),
-    onWatcherRerun: createHandler<BirpcEvents['onWatcherRerun']>(),
-    onWatcherStart: createHandler<BirpcEvents['onWatcherStart']>(),
+    onConsoleLog: createHandler<VitestEvents['onConsoleLog']>(),
+    onTaskUpdate: createHandler<VitestEvents['onTaskUpdate']>(),
+    onFinished: createHandler<VitestEvents['onFinished']>(),
+    onCollected: createHandler<VitestEvents['onCollected']>(),
+    onWatcherRerun: createHandler<VitestEvents['onWatcherRerun']>(),
+    onWatcherStart: createHandler<VitestEvents['onWatcherStart']>(),
   }
 
-  const events: Omit<BirpcEvents, 'onReady' | 'onError'> = {
+  const events: Omit<VitestEvents, 'onReady' | 'onError'> = {
     onConsoleLog: handlers.onConsoleLog.trigger,
     onFinished: handlers.onFinished.trigger,
     onTaskUpdate: handlers.onTaskUpdate.trigger,
@@ -100,7 +89,7 @@ export function createVitestRpc(options: {
 }) {
   const { events, handlers } = createRpcOptions()
 
-  const api = createBirpc<VitestPool, BirpcEvents>(
+  const api = createBirpc<VitestMethods, VitestEvents>(
     events,
     {
       timeout: -1,

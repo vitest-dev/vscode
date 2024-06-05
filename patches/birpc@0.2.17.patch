@@ -1,0 +1,13 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 8396fdbfbd7e1df8935c0806af9e7b31f8ccc261..7fcc87a89d7ca21cbf3a3e97ddedec0c51a7ef2a 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -66,7 +66,7 @@ function createBirpc(functions, options) {
+         error = new Error(`[birpc] function "${method}" not found`);
+       } else {
+         try {
+-          result = await fn.apply(rpc, args);
++          result = await fn.apply(functions, args);
+         } catch (e) {
+           error = e;
+         }

@@ -10,7 +10,7 @@ export interface WorkerMeta {
 
 export interface WorkerRunnerOptions {
   type: 'init'
-  meta: WorkerMeta[]
+  meta: WorkerMeta
   loader?: string
 }
 

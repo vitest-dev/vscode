@@ -6,7 +6,6 @@ import { Vitest } from './vitest'
 import { createWorkerRPC } from './rpc'
 
 const ws = new WebSocket(process.env.VITEST_WS_ADDRESS!)
-const cwd = process.cwd()
 
 ws.on('message', async function init(_data) {
   const message = JSON.parse(_data.toString())
@@ -17,23 +16,19 @@ ws.on('message', async function init(_data) {
 
   try {
     let vitest
-    const pkg = data.meta[0]
+    const pkg = data.meta
 
-    process.chdir(pkg.cwd)
     try {
       vitest = await initVitest(pkg, {
         fileParallelism: false,
       })
-      process.chdir(cwd)
     }
     catch (err: any) {
       ws.send(JSON.stringify({ type: 'error', errors: [pkg.id, err.stack] }))
       return
     }
 
-    const rpc = createWorkerRPC({
-      [pkg.id]: new Vitest(pkg.cwd, vitest.vitest, true),
-    }, {
+    const rpc = createWorkerRPC(new Vitest(vitest.vitest, true), {
       on(listener) {
         ws.on('message', listener)
       },

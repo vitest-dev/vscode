@@ -47,6 +47,6 @@ describe('testing', () => {
   })
 
   it("mul fail", () => {
-    expect(5 * 5).toBe(26)
+    expect(5 * 5).toBe(25)
   })
 })
