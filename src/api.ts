@@ -5,13 +5,13 @@ import { gte } from 'semver'
 import { dirname, normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import { workerPath } from './constants'
+import { minimumNodeVersion, workerPath } from './constants'
 import { getConfig } from './config'
 import type { VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
 import type { WorkerRunnerOptions } from './worker/types'
 import type { VitestPackage } from './api/pkg'
-import { findNode, showVitestError } from './utils'
+import { findNode, getNodeJsVersion, showVitestError } from './utils'
 import type { VitestProcess } from './process'
 
 export class VitestReporter {
@@ -259,7 +259,17 @@ async function createChildVitestProcess(pkg: VitestPackage) {
       ]
     : undefined
   const env = getConfig().env || {}
-  const execPath = getConfig().nodeExecutable || await findNode(vscode.workspace.workspaceFile?.fsPath || vscode.workspace.workspaceFolders![0].uri.fsPath)
+  const execPath = await findNode(vscode.workspace.workspaceFile?.fsPath || pkg.cwd)
+  const execVersion = await getNodeJsVersion(execPath)
+  if (!execVersion) {
+    log.error('[API]', `Failed to get Node.js version from ${execPath}`)
+    throw new Error('Failed to get Node.js version')
+  }
+  if (!gte(execVersion, minimumNodeVersion)) {
+    const errorMsg = `Node.js version ${execVersion} is not supported. Minimum required version is ${minimumNodeVersion}`
+    log.error('[API]', errorMsg)
+    throw new Error(errorMsg)
+  }
   log.info('[API]', `Running ${formapPkg(pkg)} with Node.js: ${execPath}`)
   const vitest = fork(
     workerPath,
