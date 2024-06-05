@@ -10,7 +10,6 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     {
       config: meta.configFile,
       workspace: meta.workspaceFile,
-      root: meta.cwd,
       ...meta.arguments ? vitestModule.parseCLI(meta.arguments).options : {},
       ...options,
       watch: true,
