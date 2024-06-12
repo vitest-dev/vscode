@@ -187,10 +187,16 @@ export function getNodeJsVersion(nodeJsPath: string) {
     })
     let output = ''
     childProcess.stdout.on('data', data => output += data.toString())
-    childProcess.on('error', () => resolve(''))
+    childProcess.on('error', (error) => {
+      log.error(`Failed to run ${nodeJsPath} --version`)
+      log.error(error)
+      return resolve('')
+    })
     childProcess.on('exit', (exitCode) => {
-      if (exitCode !== 0)
+      if (exitCode !== 0) {
+        log.error(`${nodeJsPath} --version exited with code ${exitCode}`)
         return resolve('')
+      }
       return resolve(output.trim())
     })
   })
