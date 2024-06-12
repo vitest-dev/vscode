@@ -261,11 +261,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
   const env = getConfig().env || {}
   const execPath = await findNode(vscode.workspace.workspaceFile?.fsPath || pkg.cwd)
   const execVersion = await getNodeJsVersion(execPath)
-  if (!execVersion) {
-    log.error('[API]', `Failed to get Node.js version from ${execPath}`)
-    throw new Error('Failed to get Node.js version')
-  }
-  if (!gte(execVersion, minimumNodeVersion)) {
+  if (execVersion && !gte(execVersion, minimumNodeVersion)) {
     const errorMsg = `Node.js version ${execVersion} is not supported. Minimum required version is ${minimumNodeVersion}`
     log.error('[API]', errorMsg)
     throw new Error(errorMsg)
