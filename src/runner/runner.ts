@@ -3,9 +3,9 @@ import { rm } from 'node:fs/promises'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
-import type { ErrorWithDiff, File, ParsedStack, Task, TaskResult } from 'vitest'
+import type { ErrorWithDiff, File, ParsedStack, TaskResult } from 'vitest'
 import { basename, normalize, relative } from 'pathe'
-import { TestFile, TestFolder, getTestData } from '../testTreeData'
+import { TestCase, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
 import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
@@ -75,7 +75,7 @@ export class TestRunner extends vscode.Disposable {
         if (task.mode === 'skip' || task.mode === 'todo')
           testRun.skipped(test)
         else
-          this.markResult(testRun, test, task.result, task)
+          this.markResult(testRun, test, task.result)
       })
     })
 
@@ -95,7 +95,7 @@ export class TestRunner extends vscode.Disposable {
       files.forEach((file) => {
         const testItem = this.tree.getTestItemByTask(file)
         if (testItem)
-          this.markResult(testRun, testItem, file.result, file)
+          this.markResult(testRun, testItem, file.result)
       })
 
       if (unhandledError)
@@ -333,24 +333,33 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult, task?: Task) {
+  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
+    const isTestCase = getTestData(test) instanceof TestCase
+
+    // generally, we shouldn't mark non test cases because
+    // parents are calculated based on children
+    if (!isTestCase) {
+      if (!result)
+        return
+      if (result.state === 'fail') {
+        // errors in a suite are stored only if it happens during discovery
+        const errors = result.errors?.map(err =>
+          new vscode.TestMessage(err.stack || err.message),
+        )
+        if (!errors?.length)
+          return
+        test.error = errors.map(e => e.message.toString()).join('\n')
+      }
+      return
+    }
+
     if (!result) {
       testRun.started(test)
       return
     }
+
     switch (result.state) {
       case 'fail': {
-        // error in a suite doesn't mean test fail
-        if (task?.type === 'suite') {
-          const errors = result.errors?.map(err =>
-            new vscode.TestMessage(err.stack || err.message),
-          )
-          if (!errors)
-            return
-          test.error = errors.map(e => e.message.toString()).join('\n')
-          testRun.errored(test, errors, result.duration)
-          return
-        }
         const errors = result.errors?.map(err =>
           testMessageForTestError(test, err),
         ) || []
