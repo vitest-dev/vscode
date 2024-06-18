@@ -339,16 +339,14 @@ export class TestRunner extends vscode.Disposable {
     // generally, we shouldn't mark non test cases because
     // parents are calculated based on children
     if (!isTestCase) {
-      if (!result)
-        return
-      if (result.state === 'fail') {
+      if (result?.state === 'fail') {
         // errors in a suite are stored only if it happens during discovery
         const errors = result.errors?.map(err =>
-          new vscode.TestMessage(err.stack || err.message),
+          err.stack || err.message,
         )
         if (!errors?.length)
           return
-        test.error = errors.map(e => e.message.toString()).join('\n')
+        test.error = errors.join('\n')
       }
       return
     }
