@@ -1,11 +1,10 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { download } from '@vscode/test-electron'
 import { _electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import type { Awaitable } from 'vitest'
-import { test as baseTest } from 'vitest'
+import { test as baseTest, inject } from 'vitest'
 import { VSCodeTester } from './tester'
 
 // based on
@@ -26,7 +25,6 @@ type LaunchFixture = (options: {
 }>
 
 const defaultConfig = process.env as {
-  VSCODE_E2E_DOWNLOAD_PATH?: string
   VSCODE_E2E_EXTENSION_PATH?: string
   VSCODE_E2E_WORKSPACE_PATH?: string
   VSCODE_E2E_TRACE?: 'on' | 'off'
@@ -37,7 +35,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture }>({
     const teardowns: (() => Promise<void>)[] = []
 
     await use(async (options) => {
-      const executablePath = defaultConfig.VSCODE_E2E_DOWNLOAD_PATH ?? await download()
+      const executablePath = inject('executablePath')
       const extensionPath = options.extensionPath ?? defaultConfig.VSCODE_E2E_EXTENSION_PATH
       const workspacePath = options.workspacePath ?? defaultConfig.VSCODE_E2E_WORKSPACE_PATH
       const trace = (options.trace ?? defaultConfig.VSCODE_E2E_TRACE) === 'on'

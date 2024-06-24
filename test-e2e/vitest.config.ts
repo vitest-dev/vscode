@@ -12,5 +12,8 @@ export default defineConfig({
     setupFiles: [
       './assertions.ts',
     ],
+    globalSetup: [
+      './downloadSetup.ts',
+    ],
   },
 })
