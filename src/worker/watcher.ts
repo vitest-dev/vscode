@@ -13,7 +13,7 @@ export class VitestWatcher {
   constructor(ctx: VitestCore) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
-    ctx.getCoreWorkspaceProject().provide('__vscode', {
+    ;(ctx.getCoreWorkspaceProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => {})('__vscode', {
       get continuousFiles() {
         return state.files || []
       },
@@ -23,7 +23,7 @@ export class VitestWatcher {
       get rerunTriggered() {
         return state.rerunTriggered ?? false
       },
-    } satisfies ProvidedContext['__vscode'])
+    })
 
     // @ts-expect-error modifying a private property
     const originalScheduleRerun = ctx.scheduleRerun.bind(ctx)

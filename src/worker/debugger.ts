@@ -10,7 +10,6 @@ export class VitestDebugger {
     ctx: VitestCore,
     private vitest: Vitest,
   ) {
-    // @ts-expect-error not released yet
     const inspector = ctx.config.inspector
     Object.defineProperty(ctx.config, 'inspector', {
       get: () => {
