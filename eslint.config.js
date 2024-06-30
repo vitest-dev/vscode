@@ -22,6 +22,7 @@ module.exports = antfu(
       'no-empty-pattern': 'off',
       'antfu/indent-binary-ops': 'off',
       'unused-imports/no-unused-imports': 'error',
+      'curly': 'off',
       'style/member-delimiter-style': [
         'error',
         {

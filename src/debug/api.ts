@@ -67,7 +67,6 @@ export async function debugTests(
     (fulfilled) => {
       if (fulfilled) {
         log.info('[DEBUG] Debugging started')
-        promise.resolve()
       }
       else {
         promise.reject(new Error('Failed to start debugging. See output for more information.'))
@@ -90,24 +89,33 @@ export async function debugTests(
       vscode.debug.stopDebugging(session)
       return
     }
-    const vitest = await startWebsocketServer(wss, pkg)
-    const api = new VitestFolderAPI(pkg, vitest)
-    const runner = new TestRunner(
-      controller,
-      tree,
-      api,
-    )
-    disposables.push(api, runner)
+    let vitest!: ResolvedMeta
 
-    token.onCancellationRequested(async () => {
-      await vitest.rpc.close()
-      await vscode.debug.stopDebugging(session)
-    })
+    try {
+      vitest = await startWebsocketServer(wss, pkg)
+      const api = new VitestFolderAPI(pkg, vitest)
+      const runner = new TestRunner(
+        controller,
+        tree,
+        api,
+      )
+      disposables.push(api, runner)
 
-    await runner.runTests(request, token)
+      token.onCancellationRequested(async () => {
+        await vitest.rpc.close()
+        await vscode.debug.stopDebugging(session)
+      })
+
+      await runner.runTests(request, token)
+
+      promise.resolve()
+    }
+    catch (err) {
+      promise.reject(err)
+    }
 
     if (!token.isCancellationRequested) {
-      await vitest.rpc.close()
+      await vitest?.rpc.close()
       await vscode.debug.stopDebugging(session)
     }
   })
@@ -120,6 +128,8 @@ export async function debugTests(
   })
 
   disposables.push(onDidStart, onDidTerminate)
+
+  await promise.promise
 }
 
 function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
