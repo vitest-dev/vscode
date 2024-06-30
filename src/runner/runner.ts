@@ -27,6 +27,7 @@ export class TestRunner extends vscode.Disposable {
     private readonly api: VitestFolderAPI,
   ) {
     super(() => {
+      log.verbose?.('Disposing test runner')
       api.clearListeners()
       this.testRun?.end()
       this.testRun = undefined
@@ -38,7 +39,15 @@ export class TestRunner extends vscode.Disposable {
       this._onRequestsExhausted.dispose()
     })
 
-    api.onWatcherRerun((files, _trigger, collecting) => !collecting && this.startTestRun(files))
+    api.onWatcherRerun((files, _trigger, collecting) => {
+      if (collecting) {
+        log.verbose?.('Not starting the runner because tests are being collected')
+      }
+      else {
+        log.verbose?.('The runner is starting because tests', ...files, 'were started due to a file change')
+        this.startTestRun(files)
+      }
+    })
 
     api.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
@@ -49,16 +58,20 @@ export class TestRunner extends vscode.Disposable {
         }
         const testRun = this.testRun
         // there is no test run for collected tests
-        if (!testRun)
+        if (!testRun) {
+          log.verbose?.(`There is no test run for "${test.label}"`)
           return
+        }
 
         this.markResult(testRun, test, result)
       })
     })
 
     api.onCollected((files, collecting) => {
-      if (!files)
+      if (!files) {
+        log.verbose?.('No files to collect')
         return
+      }
       files.forEach(file => this.tree.collectFile(this.api, file))
       if (collecting)
         return
@@ -70,19 +83,26 @@ export class TestRunner extends vscode.Disposable {
           return
         }
         const testRun = this.testRun
-        if (!testRun)
+        if (!testRun) {
           return
-        if (task.mode === 'skip' || task.mode === 'todo')
+        }
+
+        if (task.mode === 'skip' || task.mode === 'todo') {
+          log.verbose?.(`Marking "${test.label}" as skipped during collection`)
           testRun.skipped(test)
-        else
+        }
+        else {
           this.markResult(testRun, test, task.result)
+        }
       })
     })
 
     api.onFinished(async (files = [], unhandledError, collecting) => {
       const testRun = this.testRun
-      if (!testRun)
+      if (!testRun) {
+        log.verbose?.('No test run to finish for', files.map(f => f.filepath).join(', '))
         return
+      }
 
       try {
         if (!collecting)
@@ -94,8 +114,12 @@ export class TestRunner extends vscode.Disposable {
 
       files.forEach((file) => {
         const testItem = this.tree.getTestItemByTask(file)
-        if (testItem)
+        if (testItem) {
           this.markResult(testRun, testItem, file.result)
+        }
+        else {
+          log.verbose?.('Could not find test item for', file.filepath)
+        }
       })
 
       if (unhandledError)
@@ -121,6 +145,7 @@ export class TestRunner extends vscode.Disposable {
   }
 
   protected endTestRun() {
+    log.verbose?.('Ending test run', this.testRun?.name || '<none>')
     this.testRun?.end()
     this.testRunDefer?.resolve()
     this.testRun = undefined
@@ -131,8 +156,11 @@ export class TestRunner extends vscode.Disposable {
     this.continuousRequests.add(request)
 
     token.onCancellationRequested(() => {
+      log.verbose?.('Continuous test run for', join(request.include), 'was cancelled')
+
       this.continuousRequests.delete(request)
       if (!this.continuousRequests.size) {
+        log.verbose?.('Stopped watching test files')
         this._onRequestsExhausted.fire()
         this.api.unwatchTests()
         this.endTestRun()
@@ -168,12 +196,14 @@ export class TestRunner extends vscode.Disposable {
 
     const { dispose } = this._onRequestsExhausted.event(() => {
       if (!this.continuousRequests.size && !this.nonContinuousRequest) {
+        log.verbose?.('Coverage was disabled due to all requests being exhausted')
         this.api.disableCoverage()
         dispose()
       }
     })
 
     token.onCancellationRequested(() => {
+      log.verbose?.('Coverage for', join(request.include), 'was manually stopped')
       this.api.disableCoverage()
     })
 
@@ -192,6 +222,7 @@ export class TestRunner extends vscode.Disposable {
       this.endTestRun()
       this.nonContinuousRequest = undefined
       this.api.cancelRun()
+      log.verbose?.('Test run was cancelled manually for', join(request.include))
     })
 
     await this.runTestItems(request)
@@ -201,7 +232,10 @@ export class TestRunner extends vscode.Disposable {
   }
 
   protected async runTestItems(request: vscode.TestRunRequest) {
-    await this.testRunDefer?.promise
+    if (this.testRunDefer) {
+      log.verbose?.('Waiting for the previous test run to finish')
+      await this.testRunDefer.promise
+    }
 
     this.testRunDefer = Promise.withResolvers()
 
@@ -276,10 +310,13 @@ export class TestRunner extends vscode.Disposable {
   private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
     const request = primaryRequest || this.nonContinuousRequest || this.createContinuousRequest()
 
-    if (!request)
+    if (!request) {
+      log.verbose?.('No test run request found for', ...files)
       return
+    }
 
     if (this.testRun) {
+      log.verbose?.('Waiting for the previous test run to finish')
       await this.testRunDefer?.promise
       this.endTestRun()
     }
@@ -301,8 +338,9 @@ export class TestRunner extends vscode.Disposable {
       if (request.include && !this.isFileIncluded(file, request.include))
         continue
 
-      const testItems = this.tree.getFileTestItems(file)
+      const testItems = request.include || this.tree.getFileTestItems(file)
       function enqueue(test: vscode.TestItem) {
+        log.verbose?.(`Enqueuing "${test.label}`)
         run.enqueued(test)
         test.children.forEach(enqueue)
       }
@@ -344,14 +382,18 @@ export class TestRunner extends vscode.Disposable {
         const errors = result.errors?.map(err =>
           err.stack || err.message,
         )
-        if (!errors?.length)
+        if (!errors?.length) {
+          log.verbose?.(`No errors found for "${test.label}"`)
           return
+        }
+        log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         test.error = errors.join('\n')
       }
       return
     }
 
     if (!result) {
+      log.verbose?.(`No task result for "${test.label}", assuming the test just started running`)
       testRun.started(test)
       return
     }
@@ -361,18 +403,22 @@ export class TestRunner extends vscode.Disposable {
         const errors = result.errors?.map(err =>
           testMessageForTestError(test, err),
         ) || []
+        log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         testRun.failed(test, errors, result.duration)
         break
       }
       case 'pass':
+        log.verbose?.(`Marking "${test.label}" as passed`)
         testRun.passed(test, result.duration)
         break
       case 'todo':
       case 'skip':
+        log.verbose?.(`Marking "${test.label}" as skipped`)
         testRun.skipped(test)
         break
       case 'only':
       case 'run':
+        log.verbose?.(`Marking "${test.label}" as running`)
         testRun.started(test)
         break
       default: {
@@ -431,6 +477,8 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
       column,
     }
   }
+
+  log.verbose?.('Could not find a valid stack for', testItem.label, JSON.stringify(stacks, null, 2))
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]) {
@@ -460,4 +508,10 @@ function formatTestPattern(tests: readonly vscode.TestItem[]) {
 
 function formatTestOutput(output: string) {
   return output.replace(/(?<!\r)\n/g, '\r\n')
+}
+
+function join(items: readonly vscode.TestItem[] | undefined) {
+  if (!items)
+    return '<all tests>'
+  return items.map(p => p.label).join(', ')
 }

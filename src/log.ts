@@ -27,6 +27,13 @@ export const log = {
     }
     _log.appendLine(`[Error ${time}] ${args.join(' ')}`)
   },
+  verbose: process.env.VITEST_VSCODE_DEBUG !== 'true'
+    ? undefined
+    : (...args: string[]) => {
+        const time = new Date().toLocaleTimeString()
+        console.log(`[${time}]`, ...args)
+        _log.appendLine(`[${time}] ${args.join(' ')}`)
+      },
   workspaceInfo: (folder: string, ...args: any[]) => {
     log.info(`[Workspace ${folder}]`, ...args)
   },
