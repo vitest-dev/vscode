@@ -152,18 +152,21 @@ export class VitestFolderAPI extends VitestReporter {
   private collectPromise: Promise<void> | null = null
   private collectTimer: NodeJS.Timeout | null = null
 
-  async collectTests(testFile: string) {
-    this.testsQueue.add(testFile)
+  async collectTests(projectName: string, testFile: string) {
+    this.testsQueue.add(`${projectName}\0${testFile}`)
 
     this.collectTimer && clearTimeout(this.collectTimer)
     await this.collectPromise
     this.collectTimer && clearTimeout(this.collectTimer)
 
     this.collectTimer = setTimeout(() => {
-      const tests = Array.from(this.testsQueue).map(normalize)
+      const tests = Array.from(this.testsQueue).map((spec) => {
+        const [projectName, filepath] = spec.split('\0')
+        return [projectName, filepath] as [string, string]
+      })
       const root = this.workspaceFolder.uri.fsPath
       this.testsQueue.clear()
-      log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t)).join(', ')}`)
+      log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t[1])).join(', ')}`)
       this.collectPromise = this.meta.rpc.collectTests(tests).finally(() => {
         this.collectPromise = null
       })
@@ -288,7 +291,14 @@ async function createChildVitestProcess(pkg: VitestPackage) {
   )
 
   vitest.stdout?.on('data', d => log.worker('info', d.toString()))
-  vitest.stderr?.on('data', d => log.worker('error', d.toString()))
+  vitest.stderr?.on('data', (chunk) => {
+    const string = chunk.toString()
+    log.worker('error', string)
+    if (string.startsWith(' MISSING DEPENDENCY')) {
+      const error = string.split(/\r?\n/, 1)[0].slice(' MISSING DEPENDENCY'.length)
+      showVitestError(error)
+    }
+  })
 
   return new Promise<ChildProcess>((resolve, reject) => {
     function ready(message: any) {
@@ -296,30 +306,9 @@ async function createChildVitestProcess(pkg: VitestPackage) {
         log.worker('info', ...message.args)
 
       if (message.type === 'ready') {
-        vitest.off('message', ready)
-        // started _some_ projects, but some failed - log them, this can only happen if there are multiple projects
-        // if (message.errors.length) {
-        //   message.errors.forEach(([id, error]: [string, string]) => {
-        //     const metaIndex = pkg.findIndex(m => m.id === id)
-        //     pkg.splice(metaIndex, 1)
-        //     log.error('[API]', `Vitest failed to start for ${id}: \n${error}`)
-        //   })
-        //   if (showWarning) {
-        //     const errorsNumber = message.errors.length
-        //     const resultButton = errorsNumber > 1 ? 'See errors' : 'See error'
-        //     vscode.window.showWarningMessage(
-        //       `There ${errorsNumber > 1 ? 'were' : 'was'} ${pluralize(message.errors.length, 'error')} during Vitest startup. Check the output for more details.`,
-        //       resultButton,
-        //     ).then((result) => {
-        //       if (result === resultButton)
-        //         vscode.commands.executeCommand('vitest.openOutput')
-        //     })
-        //   }
-        // }
         resolve(vitest)
       }
       if (message.type === 'error') {
-        vitest.off('message', ready)
         const error = new Error(`Vitest failed to start: \n${message.errors.map((r: any) => r[1]).join('\n')}`)
         reject(error)
       }

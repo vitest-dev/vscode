@@ -1,7 +1,10 @@
 import type { Vitest as VitestCore } from 'vitest'
+import type { WorkspaceProject } from 'vitest/node'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
+import { limitConcurrency } from './utils'
+import { astCollectTests } from './collect'
 
 export class Vitest implements VitestMethods {
   private readonly watcher: VitestWatcher
@@ -21,12 +24,47 @@ export class Vitest implements VitestMethods {
     return this.ctx.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
   }
 
-  public async collectTests(files: string[]) {
-    try {
-      await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
+  public async collectTests(files: [projectName: string, filepath: string][]) {
+    const browserTests: [project: WorkspaceProject, filepath: string][] = []
+    const otherTests: [project: WorkspaceProject, filepath: string][] = []
+
+    const runConcurrently = limitConcurrency(5)
+
+    for (const [projectName, filepath] of files) {
+      const project = this.ctx.projects.find(project => project.getName() === projectName)
+      if (!project) {
+        // TODO: throw error
+        console.error(`Project ${projectName} not found`)
+        continue
+      }
+      if (project.config.browser.enabled) {
+        browserTests.push([project, filepath])
+      }
+      else {
+        otherTests.push([project, filepath])
+      }
     }
-    finally {
+
+    if (browserTests.length) {
+      const promises = browserTests.map(([project, filename]) => runConcurrently(
+        () => astCollectTests(project, filename),
+      ))
+      const result = await Promise.all(promises)
+      const files = result.filter(r => r != null).map((r => r!.file))
+      // console.dir(files, { depth: 10 })
+      this.ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
+      await this.ctx.report('onCollected', files)
       this.setTestNamePattern(undefined)
+    }
+    else if (otherTests.length) {
+      const files = otherTests.map(([_, filepath]) => filepath)
+
+      try {
+        await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
+      }
+      finally {
+        this.setTestNamePattern(undefined)
+      }
     }
   }
 
