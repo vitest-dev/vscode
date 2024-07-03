@@ -29,6 +29,9 @@ export class VSCodeReporter implements Reporter {
       const server = project.server.config.server
       if (!server.fs.allow.includes(setupFilePath))
         server.fs.allow.push(setupFilePath)
+      const browser = project.browser?.config.server
+      if (browser && !browser.fs.allow.includes(setupFilePath))
+        browser.fs.allow.push(setupFilePath)
     })
   }
 
