@@ -56,7 +56,8 @@ export class Vitest implements VitestMethods {
       await this.ctx.report('onCollected', files)
       this.setTestNamePattern(undefined)
     }
-    else if (otherTests.length) {
+
+    if (otherTests.length) {
       const files = otherTests.map(([_, filepath]) => filepath)
 
       try {
