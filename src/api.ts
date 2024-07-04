@@ -309,7 +309,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
         resolve(vitest)
       }
       if (message.type === 'error') {
-        const error = new Error(`Vitest failed to start: \n${message.errors.map((r: any) => r[1]).join('\n')}`)
+        const error = new Error(`Vitest failed to start: \n${message.errors[1]}`)
         reject(error)
       }
       vitest.off('error', error)
