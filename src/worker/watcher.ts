@@ -59,7 +59,7 @@ export class VitestWatcher {
 
         if (browserSpecs.length) {
           await vitest.astCollect(browserSpecs)
-          return
+          return await originalScheduleRerun.call(this, [])
         }
 
         return await originalScheduleRerun.call(this, files)

@@ -108,11 +108,11 @@ export class Vitest implements VitestMethods {
   }
 
   public async getFiles(): Promise<[project: string, file: string][]> {
-    const files = await this.globTestFiles()
     // reset cached test files list
     this.ctx.projects.forEach((project) => {
       project.testFilesList = null
     })
+    const files = await this.globTestFiles()
     return files.map(([project, spec]) => [project.config.name || '', spec])
   }
 
