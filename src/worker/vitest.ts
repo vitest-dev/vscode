@@ -13,10 +13,10 @@ export class Vitest implements VitestMethods {
   public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
-    private readonly ctx: VitestCore,
+    public readonly ctx: VitestCore,
     private readonly debug = false,
   ) {
-    this.watcher = new VitestWatcher(ctx)
+    this.watcher = new VitestWatcher(this)
     this.coverage = new VitestCoverage(ctx, this)
   }
 
@@ -27,8 +27,6 @@ export class Vitest implements VitestMethods {
   public async collectTests(files: [projectName: string, filepath: string][]) {
     const browserTests: [project: WorkspaceProject, filepath: string][] = []
     const otherTests: [project: WorkspaceProject, filepath: string][] = []
-
-    const runConcurrently = limitConcurrency(5)
 
     for (const [projectName, filepath] of files) {
       const project = this.ctx.projects.find(project => project.getName() === projectName)
@@ -46,15 +44,7 @@ export class Vitest implements VitestMethods {
     }
 
     if (browserTests.length) {
-      const promises = browserTests.map(([project, filename]) => runConcurrently(
-        () => astCollectTests(project, filename),
-      ))
-      const result = await Promise.all(promises)
-      const files = result.filter(r => r != null).map((r => r!.file))
-      // console.dir(files, { depth: 10 })
-      this.ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
-      await this.ctx.report('onCollected', files)
-      this.setTestNamePattern(undefined)
+      await this.astCollect(browserTests)
     }
 
     if (otherTests.length) {
@@ -67,6 +57,23 @@ export class Vitest implements VitestMethods {
         this.setTestNamePattern(undefined)
       }
     }
+  }
+
+  public async astCollect(specs: [project: WorkspaceProject, file: string][]) {
+    if (!specs.length) {
+      return
+    }
+
+    const runConcurrently = limitConcurrency(5)
+
+    const promises = specs.map(([project, filename]) => runConcurrently(
+      () => astCollectTests(project, filename),
+    ))
+    const result = await Promise.all(promises)
+    const files = result.filter(r => r != null).map((r => r!.file))
+    this.ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
+    await this.ctx.report('onCollected', files)
+    this.setTestNamePattern(undefined)
   }
 
   public async updateSnapshots(files?: string[] | undefined, testNamePattern?: string | undefined) {

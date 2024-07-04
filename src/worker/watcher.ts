@@ -1,5 +1,6 @@
-import type { ProvidedContext, Vitest as VitestCore } from 'vitest'
+import type { ProvidedContext } from 'vitest'
 import { relative } from 'pathe'
+import type { WorkspaceSpec } from 'vitest/node'
 import { Vitest } from './vitest'
 
 export class VitestWatcher {
@@ -10,9 +11,10 @@ export class VitestWatcher {
 
   private enabled = false
 
-  constructor(ctx: VitestCore) {
+  constructor(vitest: Vitest) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
+    const ctx = vitest.ctx
     ;(ctx.getCoreWorkspaceProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => {})('__vscode', {
       get continuousFiles() {
         return state.files || []
@@ -29,7 +31,7 @@ export class VitestWatcher {
     const originalScheduleRerun = ctx.scheduleRerun.bind(ctx)
     // @ts-expect-error modifying a private property
     ctx.scheduleRerun = async function (files: string[]) {
-      // if trigger is not a test file, remove all non-continious files from  this.changedTests
+      // if trigger is not a test file, remove all non-continious files from this.changedTests
       const triggerFile = files[0]
       const isTestFileTrigger = this.changedTests.has(triggerFile)
 
@@ -39,10 +41,27 @@ export class VitestWatcher {
         if (!isTestFileTrigger) {
           this.changedTests.clear()
           this.invalidates.clear()
+          return await originalScheduleRerun.call(this, files)
+        }
+
+        const tests = Array.from(this.changedTests)
+        const specs = tests.flatMap(file => this.getProjectsByTestFile(file))
+        const browserSpecs: WorkspaceSpec[] = []
+
+        for (const [project, file] of specs) {
+          if (project.config.browser.enabled) {
+            browserSpecs.push([project, file])
+          }
         }
 
         ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
         ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
+
+        if (browserSpecs.length) {
+          await vitest.astCollect(browserSpecs)
+          return
+        }
+
         return await originalScheduleRerun.call(this, files)
       }
 
