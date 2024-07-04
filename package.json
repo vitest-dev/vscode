@@ -116,7 +116,7 @@
         "vitest.configSearchPatternExclude": {
           "markdownDescription": "A VSCode [glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) to exclude files from the search for Vitest config files. This pattern affects both workspace and regular config files.",
           "type": "string",
-          "default": "{**/node_modules/**,**/.*/**,*.d.ts}",
+          "default": "{**/node_modules/**,**/.*/**,**/*.d.ts}",
           "scope": "window"
         },
         "vitest.debuggerAddress": {
