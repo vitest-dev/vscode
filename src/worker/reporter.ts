@@ -29,9 +29,13 @@ export class VSCodeReporter implements Reporter {
       const server = project.server.config.server
       if (!server.fs.allow.includes(setupFilePath))
         server.fs.allow.push(setupFilePath)
-      const browser = project.browser?.config.server
-      if (browser && !browser.fs.allow.includes(setupFilePath))
-        browser.fs.allow.push(setupFilePath)
+      const browser = project.browser as any
+      if (!browser) {
+        return
+      }
+      const config = 'vite' in browser ? browser.vite.config.server : browser.config.server
+      if (!config.fs.allow.includes(setupFilePath))
+        config.fs.allow.push(setupFilePath)
     })
   }
 
@@ -96,5 +100,9 @@ export class VSCodeReporter implements Reporter {
 
   onWatcherRerun(files: string[], trigger?: string) {
     this.rpc.onWatcherRerun(files, trigger, this.collecting)
+  }
+
+  toJSON() {
+    return {}
   }
 }
