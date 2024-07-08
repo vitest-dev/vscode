@@ -217,14 +217,17 @@ export class TestTree extends vscode.Disposable {
   }
 
   async discoverFileTests(testItem: vscode.TestItem) {
-    const api = getAPIFromTestItem(testItem)
+    const data = getTestData(testItem)
+    if (!(data instanceof TestFile))
+      return
+    const api = data.api
     if (!api) {
       log.error(`Cannot find collector for ${testItem.uri?.fsPath}`)
       return null
     }
     testItem.busy = true
     try {
-      await api.collectTests(testItem.uri!.fsPath)
+      await api.collectTests(data.project, testItem.uri!.fsPath)
       return testItem
     }
     finally {

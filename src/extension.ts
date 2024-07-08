@@ -178,6 +178,7 @@ class VitestExtension {
       this.runProfiles.set(`${api.id}:debug`, debugProfile)
 
       // coverage is supported since VS Code 1.88
+      // @ts-expect-error check for 1.88
       if (vscode.TestRunProfileKind.Coverage && 'FileCoverage' in vscode) {
         let coverageProfile = previousRunProfiles.get(`${api.id}:coverage`)
         if (!coverageProfile) {

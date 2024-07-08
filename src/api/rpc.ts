@@ -4,7 +4,7 @@ import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
 
 export interface VitestMethods {
   getFiles: () => Promise<[project: string, file: string][]>
-  collectTests: (testFile: string[]) => Promise<void>
+  collectTests: (testFile: [project: string, filepath: string][]) => Promise<void>
   cancelRun: () => Promise<void>
   runTests: (files?: string[], testNamePattern?: string) => Promise<void>
   updateSnapshots: (files?: string[], testNamePattern?: string) => Promise<void>

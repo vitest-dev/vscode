@@ -1,7 +1,10 @@
 import type { Vitest as VitestCore } from 'vitest'
+import type { WorkspaceProject } from 'vitest/node'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
+import { limitConcurrency } from './utils'
+import { astCollectTests } from './collect'
 
 export class Vitest implements VitestMethods {
   private readonly watcher: VitestWatcher
@@ -10,10 +13,10 @@ export class Vitest implements VitestMethods {
   public static COLLECT_NAME_PATTERN = '$a'
 
   constructor(
-    private readonly ctx: VitestCore,
+    public readonly ctx: VitestCore,
     private readonly debug = false,
   ) {
-    this.watcher = new VitestWatcher(ctx)
+    this.watcher = new VitestWatcher(this)
     this.coverage = new VitestCoverage(ctx, this)
   }
 
@@ -21,13 +24,56 @@ export class Vitest implements VitestMethods {
     return this.ctx.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
   }
 
-  public async collectTests(files: string[]) {
-    try {
-      await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
+  public async collectTests(files: [projectName: string, filepath: string][]) {
+    const browserTests: [project: WorkspaceProject, filepath: string][] = []
+    const otherTests: [project: WorkspaceProject, filepath: string][] = []
+
+    for (const [projectName, filepath] of files) {
+      const project = this.ctx.projects.find(project => project.getName() === projectName)
+      if (!project) {
+        // TODO: throw error
+        console.error(`Project ${projectName} not found`)
+        continue
+      }
+      if (project.config.browser.enabled) {
+        browserTests.push([project, filepath])
+      }
+      else {
+        otherTests.push([project, filepath])
+      }
     }
-    finally {
-      this.setTestNamePattern(undefined)
+
+    if (browserTests.length) {
+      await this.astCollect(browserTests)
     }
+
+    if (otherTests.length) {
+      const files = otherTests.map(([_, filepath]) => filepath)
+
+      try {
+        await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
+      }
+      finally {
+        this.setTestNamePattern(undefined)
+      }
+    }
+  }
+
+  public async astCollect(specs: [project: WorkspaceProject, file: string][]) {
+    if (!specs.length) {
+      return
+    }
+
+    const runConcurrently = limitConcurrency(5)
+
+    const promises = specs.map(([project, filename]) => runConcurrently(
+      () => astCollectTests(project, filename),
+    ))
+    const result = await Promise.all(promises)
+    const files = result.filter(r => r != null).map((r => r!.file))
+    this.ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
+    await this.ctx.report('onCollected', files)
+    this.setTestNamePattern(undefined)
   }
 
   public async updateSnapshots(files?: string[] | undefined, testNamePattern?: string | undefined) {
@@ -62,11 +108,11 @@ export class Vitest implements VitestMethods {
   }
 
   public async getFiles(): Promise<[project: string, file: string][]> {
-    const files = await this.globTestFiles()
     // reset cached test files list
     this.ctx.projects.forEach((project) => {
       project.testFilesList = null
     })
+    const files = await this.globTestFiles()
     return files.map(([project, spec]) => [project.config.name || '', spec])
   }
 
