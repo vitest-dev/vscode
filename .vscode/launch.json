@@ -106,6 +106,16 @@
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
+      "name": "Run Extension Readme Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/readme"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
       "name": "Run Extension Vue Sample",
       "type": "extensionHost",
       "request": "launch",
