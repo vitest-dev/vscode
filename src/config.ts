@@ -32,12 +32,18 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const workspaceConfig = get<string | undefined>('workspaceConfig')
   const rootConfigFile = get<string | undefined>('rootConfig')
 
-  const configSearchPatternExclude = get<string>('configSearchPatternExclude', '{**/node_modules/**,**/.*/**,**/*.d.ts}')!
+  const configSearchPatternExclude = get<string>(
+    'configSearchPatternExclude',
+    '{**/node_modules/**,**/.*/**,**/*.d.ts}',
+  )!
 
   const vitestPackagePath = get<string | undefined>('vitestPackagePath')
   const resolvedVitestPackagePath = workspaceFolder && vitestPackagePath
-    // eslint-disable-next-line no-template-curly-in-string
-    ? resolve(workspaceFolder.uri.fsPath, vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath))
+    ? resolve(
+      workspaceFolder.uri.fsPath,
+      // eslint-disable-next-line no-template-curly-in-string
+      vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
+    )
     : vitestPackagePath
 
   return {

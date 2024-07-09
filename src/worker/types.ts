@@ -14,6 +14,22 @@ export interface WorkerRunnerOptions {
   loader?: string
 }
 
+export interface EventReady {
+  type: 'ready'
+}
+
+export interface EventDebug {
+  type: 'debug'
+  args: string[]
+}
+
+export interface EventError {
+  type: 'error'
+  error: string
+}
+
+export type WorkerEvent = EventReady | EventDebug | EventError
+
 declare module 'vitest' {
   export interface ProvidedContext {
     __vscode: {

@@ -3,7 +3,7 @@ import type { WorkspaceProject } from 'vitest/node'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
-import { limitConcurrency } from './utils'
+import { assert, limitConcurrency } from './utils'
 import { astCollectTests } from './collect'
 
 export class Vitest implements VitestMethods {
@@ -30,11 +30,7 @@ export class Vitest implements VitestMethods {
 
     for (const [projectName, filepath] of files) {
       const project = this.ctx.projects.find(project => project.getName() === projectName)
-      if (!project) {
-        // TODO: throw error
-        console.error(`Project ${projectName} not found`)
-        continue
-      }
+      assert(project, `Project ${projectName} not found for file ${filepath}`)
       if (project.config.browser.enabled) {
         browserTests.push([project, filepath])
       }

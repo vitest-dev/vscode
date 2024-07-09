@@ -9,7 +9,7 @@ import { minimumNodeVersion, workerPath } from './constants'
 import { getConfig } from './config'
 import type { VitestEvents, VitestRPC } from './api/rpc'
 import { createVitestRpc } from './api/rpc'
-import type { WorkerRunnerOptions } from './worker/types'
+import type { WorkerEvent, WorkerRunnerOptions } from './worker/types'
 import type { VitestPackage } from './api/pkg'
 import { findNode, getNodeJsVersion, showVitestError } from './utils'
 import type { VitestProcess } from './process'
@@ -97,10 +97,9 @@ export class VitestAPI {
   }
 }
 
-const WEAKMAP_API_FOLDER = new WeakMap<VitestFolderAPI, vscode.WorkspaceFolder>()
-
 export class VitestFolderAPI extends VitestReporter {
   readonly tag: vscode.TestTag
+  readonly workspaceFolder: vscode.WorkspaceFolder
 
   constructor(
     private pkg: VitestPackage,
@@ -108,7 +107,7 @@ export class VitestFolderAPI extends VitestReporter {
   ) {
     const normalizedId = normalize(pkg.id)
     super(normalizedId, meta.handlers)
-    WEAKMAP_API_FOLDER.set(this, pkg.folder)
+    this.workspaceFolder = pkg.folder
     this.tag = new vscode.TestTag(pkg.prefix)
   }
 
@@ -130,10 +129,6 @@ export class VitestFolderAPI extends VitestReporter {
 
   get package() {
     return this.pkg
-  }
-
-  get workspaceFolder() {
-    return WEAKMAP_API_FOLDER.get(this)!
   }
 
   async runFiles(files?: string[], testNamePatern?: string) {
@@ -161,7 +156,7 @@ export class VitestFolderAPI extends VitestReporter {
 
     this.collectTimer = setTimeout(() => {
       const tests = Array.from(this.testsQueue).map((spec) => {
-        const [projectName, filepath] = spec.split('\0')
+        const [projectName, filepath] = spec.split('\0', 2)
         return [projectName, filepath] as [string, string]
       })
       const root = this.workspaceFolder.uri.fsPath
@@ -175,22 +170,26 @@ export class VitestFolderAPI extends VitestReporter {
   }
 
   async dispose() {
-    WEAKMAP_API_FOLDER.delete(this)
     this.handlers.clearListeners()
     delete require.cache[this.meta.pkg.vitestPackageJsonPath]
     if (!this.meta.process.closed) {
       try {
         await this.meta.rpc.close()
-        log.info('[API]', `Vitest process ${this.meta.process.id} closed successfully`)
+        log.info('[API]', `Vitest process ${this.processId} closed successfully`)
       }
       catch (err) {
-        log.error('[API]', 'Failed to close Vitest process', err)
+        log.error('[API]', 'Failed to close Vitest RPC', err)
       }
       const promise = new Promise<void>((resolve) => {
         this.meta.process.once('exit', () => resolve())
       })
       this.meta.process.close()
-      await promise
+      await Promise.all([
+        promise,
+        AbortSignal.timeout(5000),
+      ]).catch((err) => {
+        log.error('[API]', 'Failed to close Vitest process', err)
+      })
     }
   }
 
@@ -271,6 +270,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
   }
   log.info('[API]', `Running ${formapPkg(pkg)} with Node.js: ${execPath}`)
   const vitest = fork(
+    // to support pnp, we need to spawn `yarn node` instead of `node`
     workerPath,
     {
       execPath,
@@ -301,7 +301,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
   })
 
   return new Promise<ChildProcess>((resolve, reject) => {
-    function ready(message: any) {
+    function onMessage(message: WorkerEvent) {
       if (message.type === 'debug')
         log.worker('info', ...message.args)
 
@@ -309,29 +309,29 @@ async function createChildVitestProcess(pkg: VitestPackage) {
         resolve(vitest)
       }
       if (message.type === 'error') {
-        const error = new Error(`Vitest failed to start: \n${message.errors[1]}`)
+        const error = new Error(`Vitest failed to start: \n${message.error}`)
         reject(error)
       }
-      vitest.off('error', error)
-      vitest.off('message', ready)
-      vitest.off('exit', exit)
+      vitest.off('error', onError)
+      vitest.off('message', onMessage)
+      vitest.off('exit', onExit)
     }
 
-    function error(err: Error) {
+    function onError(err: Error) {
       log.error('[API]', err)
       reject(err)
-      vitest.off('error', error)
-      vitest.off('message', ready)
-      vitest.off('exit', exit)
+      vitest.off('error', onError)
+      vitest.off('message', onMessage)
+      vitest.off('exit', onExit)
     }
 
-    function exit(code: number) {
+    function onExit(code: number) {
       reject(new Error(`Vitest process exited with code ${code}`))
     }
 
-    vitest.on('error', error)
-    vitest.on('message', ready)
-    vitest.on('exit', exit)
+    vitest.on('error', onError)
+    vitest.on('message', onMessage)
+    vitest.on('exit', onExit)
     vitest.once('spawn', () => {
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
@@ -364,13 +364,13 @@ export async function createVitestProcess(pkg: VitestPackage): Promise<ResolvedM
 
   return {
     rpc: api,
-    process: new VitestChildProvess(vitest),
+    process: new VitestChildProcess(vitest),
     handlers,
     pkg,
   }
 }
 
-class VitestChildProvess implements VitestProcess {
+class VitestChildProcess implements VitestProcess {
   constructor(private child: ChildProcess) {}
 
   get id() {

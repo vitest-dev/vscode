@@ -367,42 +367,42 @@ export class TestRunner extends vscode.Disposable {
     await Promise.all(promises)
 
     rm(reportsDirectory, { recursive: true, force: true }).catch(() => {
-      // ignore
+      log.error('Failed to remove coverage reports', reportsDirectory)
     })
   }
 
-  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
-    const isTestCase = getTestData(test) instanceof TestCase
+  private markSuite(_testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
+    if (!result)
+      return
 
-    // generally, we shouldn't mark non test cases because
-    // parents are calculated based on children
-    if (!isTestCase) {
-      if (result?.state === 'fail') {
-        // errors in a suite are stored only if it happens during discovery
-        const errors = result.errors?.map(err =>
-          err.stack || err.message,
-        )
-        if (!errors?.length) {
-          log.verbose?.(`No errors found for "${test.label}"`)
-          return
-        }
-        log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
-        test.error = errors.join('\n')
+    if (result.state === 'fail') {
+      // errors in a suite are stored only if it happens during discovery
+      const errors = result.errors?.map(err =>
+        err.stack || err.message,
+      )
+      if (!errors?.length) {
+        log.verbose?.(`No errors found for "${test.label}"`)
+        return
       }
-      return
+      log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
+      test.error = errors.join('\n')
     }
+  }
 
-    if (!result) {
-      log.verbose?.(`No task result for "${test.label}", assuming the test just started running`)
-      testRun.started(test)
-      return
-    }
-
+  private markTestCase(
+    testRun: vscode.TestRun,
+    test: vscode.TestItem,
+    result: TaskResult,
+  ) {
     switch (result.state) {
       case 'fail': {
         const errors = result.errors?.map(err =>
           testMessageForTestError(test, err),
         ) || []
+        if (!errors.length) {
+          log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
+          return
+        }
         log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         testRun.failed(test, errors, result.duration)
         break
@@ -426,6 +426,24 @@ export class TestRunner extends vscode.Disposable {
         log.error('Unknown test result for', `${test.label}: ${result.state}`)
       }
     }
+  }
+
+  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
+    const isTestCase = getTestData(test) instanceof TestCase
+
+    // generally, we shouldn't mark non test cases because
+    // parents are calculated based on children
+    if (!isTestCase) {
+      return this.markSuite(testRun, test, result)
+    }
+
+    if (!result) {
+      log.verbose?.(`No task result for "${test.label}", assuming the test just started running`)
+      testRun.started(test)
+      return
+    }
+
+    this.markTestCase(testRun, test, result)
   }
 }
 

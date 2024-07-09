@@ -58,6 +58,7 @@ export class VitestWatcher {
         ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
 
         if (browserSpecs.length) {
+          ctx.logger.log('Collecting using AST explorer...')
           await vitest.astCollect(browserSpecs)
           return await originalScheduleRerun.call(this, [])
         }
