@@ -10,7 +10,7 @@ import type { VitestProcess } from '../process'
 import type { TestTree } from '../testTree'
 import { log } from '../log'
 import { getConfig } from '../config'
-import type { WorkerRunnerOptions } from '../worker/types'
+import type { WorkerEvent, WorkerRunnerOptions } from '../worker/types'
 import { TestRunner } from '../runner/runner'
 import { findNode } from '../utils'
 import { debuggerPath } from '../constants'
@@ -31,7 +31,7 @@ export async function debugTests(
   const config = getConfig(pkg.folder)
   const promise = Promise.withResolvers<void>()
 
-  const execPath = getConfig().nodeExecutable || await findNode(
+  const execPath = await findNode(
     vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath,
   )
   const env = config.env || {}
@@ -135,14 +135,13 @@ export async function debugTests(
 function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
   return new Promise<ResolvedMeta>((resolve, reject) => {
     wss.once('connection', (ws) => {
-      function ready(_message: any) {
-        const message = JSON.parse(_message.toString())
+      function onMessage(_message: any) {
+        const message = JSON.parse(_message.toString()) as WorkerEvent
 
         if (message.type === 'debug')
           log.worker('info', ...message.args)
 
         if (message.type === 'ready') {
-          ws.off('message', ready)
           const { api, handlers } = createVitestRpc({
             on: listener => ws.on('message', listener),
             send: message => ws.send(message),
@@ -154,31 +153,34 @@ function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
             pkg,
           })
         }
+
         if (message.type === 'error') {
-          ws.off('message', ready)
-          const error = new Error(`Vitest failed to start: \n${message.errors.map((r: any) => r[1]).join('\n')}`)
+          const error = new Error(`Vitest failed to start: \n${message.error}`)
           reject(error)
         }
-        ws.off('error', error)
-        ws.off('message', ready)
-        ws.off('close', exit)
+        ws.off('error', onError)
+        ws.off('message', onMessage)
+        ws.off('close', onExit)
       }
 
-      function error(err: Error) {
+      function onError(err: Error) {
         log.error('[API]', err)
         reject(err)
-        ws.off('error', error)
-        ws.off('message', ready)
-        ws.off('close', exit)
+        ws.off('error', onError)
+        ws.off('message', onMessage)
+        ws.off('close', onExit)
       }
 
-      function exit(code: number) {
+      function onExit(code: number) {
         reject(new Error(`Vitest process exited with code ${code}`))
       }
 
-      ws.on('error', error)
-      ws.on('message', ready)
-      ws.on('close', exit)
+      wss.off('error', onUnexpectedError)
+      wss.off('exit', onUnexpectedExit)
+
+      ws.on('error', onError)
+      ws.on('message', onMessage)
+      ws.on('close', onExit)
 
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
@@ -195,9 +197,17 @@ function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
 
       ws.send(JSON.stringify(runnerOptions))
     })
-    wss.on('error', err => reject(err))
-    // TODO close if unexpected
-    // wss.once('close', () => reject(err))
+
+    function onUnexpectedExit() {
+      reject(new Error('Cannot establish connection with Vitest process.'))
+    }
+
+    function onUnexpectedError(err: Error) {
+      reject(err)
+    }
+
+    wss.on('error', onUnexpectedError)
+    wss.once('close', onUnexpectedExit)
   })
 }
 

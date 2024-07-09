@@ -4,10 +4,13 @@ import { createWorkerRPC } from './rpc'
 import type { WorkerRunnerOptions } from './types'
 import { Vitest } from './vitest'
 import { initVitest } from './init'
+import { WorkerProcessEmitter } from './emitter'
 
-process.on('message', async function init(message: any) {
+const emitter = new WorkerProcessEmitter()
+
+process.on('message', async function onMessage(message: any) {
   if (message.type === 'init') {
-    process.off('message', init)
+    process.off('message', onMessage)
     const data = message as WorkerRunnerOptions
 
     try {
@@ -27,24 +30,10 @@ process.on('message', async function init(message: any) {
         deserialize: v => v8.deserialize(Buffer.from(v)),
       })
       reporter.initRpc(rpc)
-      process.send!({ type: 'ready' })
+      emitter.ready()
     }
     catch (err: any) {
-      error(err)
+      emitter.error(err)
     }
   }
 })
-
-function error(err: any) {
-  process.send!({
-    type: 'error',
-    errors: ['', String(err.stack)],
-  })
-}
-
-function _debug(...args: any[]) {
-  process.send!({
-    type: 'debug',
-    args,
-  })
-}

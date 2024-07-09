@@ -4,29 +4,26 @@ import type { WorkerRunnerOptions } from './types'
 import { initVitest } from './init'
 import { Vitest } from './vitest'
 import { createWorkerRPC } from './rpc'
+import { WorkerWSEventEmitter } from './emitter'
 
 const ws = new WebSocket(process.env.VITEST_WS_ADDRESS!)
+const emitter = new WorkerWSEventEmitter(ws)
 
-ws.on('message', async function init(_data) {
+ws.on('message', async function onMessage(_data) {
   const message = JSON.parse(_data.toString())
+
   if (message.type !== 'init')
     return
-  ws.off('message', init)
+
+  ws.off('message', onMessage)
   const data = message as WorkerRunnerOptions
 
   try {
-    let vitest
     const pkg = data.meta
 
-    try {
-      vitest = await initVitest(pkg, {
-        fileParallelism: false,
-      })
-    }
-    catch (err: any) {
-      ws.send(JSON.stringify({ type: 'error', errors: [pkg.id, err.stack] }))
-      return
-    }
+    const vitest = await initVitest(pkg, {
+      fileParallelism: false,
+    })
 
     const rpc = createWorkerRPC(new Vitest(vitest.vitest, true), {
       on(listener) {
@@ -39,16 +36,9 @@ ws.on('message', async function init(_data) {
       deserialize: v => v8.deserialize(Buffer.from(v)),
     })
     vitest.reporter.initRpc(rpc)
-    ws.send(JSON.stringify({ type: 'ready' }))
+    emitter.ready()
   }
   catch (err: any) {
-    error(err)
+    emitter.error(err)
   }
 })
-
-function error(err: any) {
-  ws.send(JSON.stringify({
-    type: 'error',
-    errors: ['', String(err.stack)],
-  }))
-}

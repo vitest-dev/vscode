@@ -40,7 +40,9 @@ class VitestExtension {
     log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
-    this.testController.refreshHandler = () => this.defineTestProfiles(true).catch(() => {})
+    this.testController.refreshHandler = () => this.defineTestProfiles(true).catch((err) => {
+      log.error('[API]', 'Failed to refresh Vitest', err)
+    })
     this.testController.resolveHandler = item => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
@@ -68,7 +70,13 @@ class VitestExtension {
     const maximumConfigs = getConfig().maximumConfigs ?? 3
 
     if (configFiles.length > maximumConfigs) {
-      const warningMessage = `Vitest found multiple config files. The extension will use only the first ${maximumConfigs} due to performance concerns. Consider using a workspace configuration to group your configs or increase the limit via "vitest.maximumConfigs" option.`
+      const warningMessage = [
+        'Vitest found multiple config files.',
+        `The extension will use only the first ${maximumConfigs} due to performance concerns.`,
+        'Consider using a workspace configuration to group your configs or increase',
+        'the limit via "vitest.maximumConfigs" option.',
+      ].join(' ')
+
       // remove all but the first 3
       const discardedConfigs = configFiles.splice(maximumConfigs)
 
@@ -111,12 +119,16 @@ class VitestExtension {
           showVitestError('Vitest process exited unexpectedly')
           this.testTree.reset([])
           this.testController.items.delete(this.loadingTestItem.id)
-        }
-        else {
-          log.info('[API] Reloading API due to unexpected empty exit code. This usually happens when "Stop" is clicked during debugging instead of "Disconnect".')
           this.api?.dispose()
           this.api = undefined
-          this.defineTestProfiles(false).catch(() => {})
+        }
+        else {
+          log.info('[API] Reloading API due to unexpected empty exit code.')
+          this.api?.dispose()
+          this.api = undefined
+          this.defineTestProfiles(false).catch((err) => {
+            log.error('[API]', 'Failed to refresh Vitest', err)
+          })
         }
       })
 
