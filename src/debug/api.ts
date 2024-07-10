@@ -37,6 +37,7 @@ export async function debugTests(
   const env = config.env || {}
 
   const debugConfig = {
+    __name: 'Vitest',
     type: 'pwa-node',
     request: 'launch',
     name: 'Debug Tests',
@@ -45,7 +46,7 @@ export async function debugTests(
     smartStep: true,
     runtimeExecutable: execPath,
     program: debuggerPath,
-    __name: 'Vitest',
+    cwd: pkg.cwd,
     env: {
       ...process.env,
       ...env,
