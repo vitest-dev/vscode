@@ -23,6 +23,8 @@ ws.on('message', async function onMessage(_data) {
 
     const vitest = await initVitest(pkg, {
       fileParallelism: false,
+      testTimeout: Number.POSITIVE_INFINITY,
+      hookTimeout: Number.POSITIVE_INFINITY,
     })
 
     const rpc = createWorkerRPC(new Vitest(vitest.vitest, true), {
