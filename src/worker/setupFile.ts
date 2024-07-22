@@ -8,7 +8,7 @@ const workerState = globalThis.__vitest_worker__ as WorkerGlobalState
 
 const testFile = workerState.filepath!
 
-assert(testFile, () => 'Expected workerState.filepath to be set')
+assert(testFile, 'Expected workerState.filepath to be set')
 
 // don't run tests that are not watched if rerun was triggered - only collect those tests
 if (rerunTriggered) {
