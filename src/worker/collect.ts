@@ -92,7 +92,12 @@ export async function astCollectTests(
     file: null!,
   }
   file.file = file
-  log?.('Collecting', testFilepath)
+  if (verbose) {
+    verbose('Collecing', testFilepath, request.code)
+  }
+  else {
+    log?.('Collecting', testFilepath)
+  }
   const definitions: LocalCallDefinition[] = []
   const getName = (callee: any): string | null => {
     if (!callee) {
