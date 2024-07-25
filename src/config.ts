@@ -1,4 +1,5 @@
-import { dirname, resolve } from 'node:path'
+import { homedir } from 'node:os'
+import { dirname, isAbsolute, resolve } from 'node:path'
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import * as vscode from 'vscode'
 
@@ -50,20 +51,23 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
     vitestPackagePath: resolvedVitestPackagePath,
-    workspaceConfig: resolvePath(workspaceConfig),
-    rootConfig: resolvePath(rootConfigFile),
+    workspaceConfig: resolveConfigPath(workspaceConfig),
+    rootConfig: resolveConfigPath(rootConfigFile),
     configSearchPatternExclude,
     maximumConfigs: get<number>('maximumConfigs', 3),
-    nodeExecutable: resolvePath(nodeExecutable),
+    nodeExecutable: resolveConfigPath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
     debuggerPort: get<number>('debuggerPort') || undefined,
     debuggerAddress: get<string>('debuggerAddress', undefined) || undefined,
   }
 }
 
-function resolvePath(path: string | undefined) {
-  if (!path)
+export function resolveConfigPath(path: string | undefined) {
+  if (!path || isAbsolute(path))
     return path
+  if (path.startsWith('~/')) {
+    return resolve(homedir(), path.slice(2))
+  }
   // if there is a workspace file, then it should be relative to it because
   // this option cannot be configured on a workspace folder level
   if (vscode.workspace.workspaceFile)
