@@ -13,6 +13,7 @@ assert(testFile, 'Expected workerState.filepath to be set')
 // don't run tests that are not watched if rerun was triggered - only collect those tests
 if (rerunTriggered) {
   if (!watchEveryFile && !testFileWatched())
+    // eslint-disable-next-line regexp/no-useless-assertions
     workerState.config.testNamePattern = /$a/
 }
 

@@ -45,7 +45,7 @@ export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFo
       paths: [cwd],
     })
   }
-  catch (_) {
+  catch {
     return null
   }
 }
@@ -68,7 +68,7 @@ export function resolveVitestPnpPackagePath(folder: vscode.WorkspaceFolder) {
       pnpPath,
     }
   }
-  catch (_) {
+  catch {
     return null
   }
 }

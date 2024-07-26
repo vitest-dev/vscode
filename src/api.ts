@@ -150,9 +150,15 @@ export class VitestFolderAPI extends VitestReporter {
   async collectTests(projectName: string, testFile: string) {
     this.testsQueue.add(`${projectName}\0${testFile}`)
 
-    this.collectTimer && clearTimeout(this.collectTimer)
+    if (this.collectTimer) {
+      clearTimeout(this.collectTimer)
+    }
+
     await this.collectPromise
-    this.collectTimer && clearTimeout(this.collectTimer)
+
+    if (this.collectTimer) {
+      clearTimeout(this.collectTimer)
+    }
 
     this.collectTimer = setTimeout(() => {
       const tests = Array.from(this.testsQueue).map((spec) => {

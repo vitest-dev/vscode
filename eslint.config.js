@@ -1,6 +1,6 @@
-const { default: antfu, GLOB_SRC } = require('@antfu/eslint-config')
+import antfu, { GLOB_SRC } from '@antfu/eslint-config'
 
-module.exports = antfu(
+export default antfu(
   {
     // Disable tests rules because we need to test with various setup
     test: false,
@@ -12,6 +12,7 @@ module.exports = antfu(
       '**/testdata',
       '**/fixtures',
       '**/samples',
+      'test',
     ],
   },
   {
