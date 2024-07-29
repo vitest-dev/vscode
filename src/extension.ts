@@ -40,7 +40,7 @@ class VitestExtension {
     log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
-    this.testController.refreshHandler = () => this.defineTestProfiles(true).catch((err) => {
+    this.testController.refreshHandler = cancelToken => this.defineTestProfiles(true, cancelToken).catch((err) => {
       log.error('[API]', 'Failed to refresh Vitest', err)
     })
     this.testController.resolveHandler = item => this.resolveTestFile(item)
@@ -50,9 +50,18 @@ class VitestExtension {
     this.tagsManager = new TagsManager(this.testTree)
   }
 
-  private async defineTestProfiles(showWarning: boolean) {
-    // TODO: this function can be called multiple times in quick succession
-    // we need to make sure that the previous call is cancelled/finished before starting a new one
+  private _defineTestProfilePromise: Promise<void> | undefined
+
+  private async defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
+    if (!this._defineTestProfilePromise) {
+      this._defineTestProfilePromise = (() => this._defineTestProfiles(showWarning, cancelToken))().finally(() => {
+        this._defineTestProfilePromise = undefined
+      })
+    }
+    return await this._defineTestProfilePromise
+  }
+
+  private async _defineTestProfiles(showWarning: boolean, _cancelToken?: vscode.CancellationToken) {
     this.testTree.reset([])
 
     const vitest = await resolveVitestPackages(showWarning)
@@ -156,7 +165,9 @@ class VitestExtension {
         runProfile = this.testController.createRunProfile(
           prefix,
           vscode.TestRunProfileKind.Run,
-          () => {},
+          () => {
+            log.error('Run handler is not defined')
+          },
           false,
           undefined,
           true,
@@ -170,7 +181,9 @@ class VitestExtension {
         debugProfile = this.testController.createRunProfile(
           prefix,
           vscode.TestRunProfileKind.Debug,
-          () => {},
+          () => {
+            log.error('Run handler is not defined')
+          },
           false,
           undefined,
           false, // continues debugging is not supported
@@ -197,7 +210,9 @@ class VitestExtension {
           coverageProfile = this.testController.createRunProfile(
             prefix,
             vscode.TestRunProfileKind.Coverage,
-            () => {},
+            () => {
+              log.error('Run handler is not defined')
+            },
             false,
             undefined,
             true,
@@ -314,6 +329,8 @@ class VitestExtension {
     this.tagsManager.dispose()
     this.testController.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
+    this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())
+    this.disposables = []
   }
 }
