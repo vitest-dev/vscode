@@ -148,7 +148,7 @@ export class VitestFolderAPI extends VitestReporter {
   private collectTimer: NodeJS.Timeout | null = null
 
   async collectTests(projectName: string, testFile: string) {
-    this.testsQueue.add(`${projectName}\0${testFile}`)
+    this.testsQueue.add(`${projectName}\0${normalize(testFile)}`)
 
     this.collectTimer && clearTimeout(this.collectTimer)
     await this.collectPromise
