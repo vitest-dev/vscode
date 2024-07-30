@@ -12,8 +12,12 @@ node_modeuls/**
 samples/**
 dist/extension.js.map
 test/**
+test-e2e/**
+patches/**
+pnpm-lock.yaml
 *.vsix
 CHANGELOG.md
 vite.config.ts
 tsconfig.json
+tsconfig.base.json
 .github/**

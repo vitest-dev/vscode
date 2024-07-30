@@ -13,8 +13,9 @@ export async function createVitestWorkspaceFile(vitest: VitestPackage[]) {
   const folders = new Set(vitest.map(x => x.folder))
   const encoder = new TextEncoder()
   const promises = [...folders].map(async (folder) => {
-    const workspaceFileUri = vscode.Uri.joinPath(folder.uri, 'vitest.workspace.js')
     const configFiles = vitest.filter(x => x.folder === folder).map(x => relative(folder.uri.fsPath, x.configFile!))
+    const ext = configFiles.every(x => /\.m?ts$/.test(x)) ? 'ts' : 'js'
+    const workspaceFileUri = vscode.Uri.joinPath(folder.uri, `vitest.workspace.${ext}`)
 
     const workspaceContent = `
 import { defineWorkspace } from 'vitest/config'
