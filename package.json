@@ -178,7 +178,7 @@
     "lint:fix": "eslint --cache --fix ."
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.6.4",
+    "@antfu/eslint-config": "^2.23.2",
     "@babel/parser": "^7.20.15",
     "@babel/types": "^7.20.7",
     "@playwright/test": "^1.42.1",
@@ -205,7 +205,7 @@
     "bumpp": "^9.3.0",
     "chai": "^5.1.0",
     "changelogithub": "^0.13.3",
-    "eslint": "^8.56.0",
+    "eslint": "^9.7.0",
     "execa": "^8.0.1",
     "fast-glob": "^3.3.2",
     "flatted": "^3.2.9",

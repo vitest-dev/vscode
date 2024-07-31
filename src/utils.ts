@@ -55,7 +55,7 @@ export function pluralize(count: number, singular: string) {
   return `${count} ${singular}${count === 1 ? '' : 's'}`
 }
 
-export function debounce<T extends Function>(cb: T, wait = 20) {
+export function debounce<T extends (...args: any[]) => void>(cb: T, wait = 20) {
   let h: NodeJS.Timeout | undefined
   const callable = (...args: any) => {
     if (h)
