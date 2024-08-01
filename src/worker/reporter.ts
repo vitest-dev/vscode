@@ -51,12 +51,30 @@ export class VSCodeReporter implements Reporter {
     packs.forEach(([taskId, result]) => {
       const project = this.ctx.getProjectByTaskId(taskId)
 
+      // the new version uses browser.parseErrorStacktrace
+      if ('getBrowserSourceMapModuleById' in project) {
+        result?.errors?.forEach((error) => {
+          if (typeof error === 'object' && error) {
+            error.stacks = parseErrorStacktrace(error, {
+              getSourceMap: file => (project as any).getBrowserSourceMapModuleById(file),
+            })
+          }
+        })
+        return
+      }
+
+      const task = this.ctx.state.idMap.get(taskId)
+      const isBrowser = task && task.file?.pool === 'browser'
+
       result?.errors?.forEach((error) => {
-        if (typeof error === 'object' && error) {
-          error.stacks = parseErrorStacktrace(error, {
-            getSourceMap: file => project.getBrowserSourceMapModuleById(file),
-          })
+        if (isPrimitive(error)) {
+          return
         }
+
+        const stacks = isBrowser
+          ? project.browser?.parseErrorStacktrace(error)
+          : parseErrorStacktrace(error)
+        error.stacks = stacks
       })
     })
 
@@ -105,4 +123,10 @@ export class VSCodeReporter implements Reporter {
   toJSON() {
     return {}
   }
+}
+
+function isPrimitive(value: unknown) {
+  return (
+    value === null || (typeof value !== 'function' && typeof value !== 'object')
+  )
 }

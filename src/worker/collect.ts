@@ -244,7 +244,6 @@ export async function astCollectTests(
           name: definition.name,
           end: definition.end,
           start: definition.start,
-          projectName: ctx.getName(),
           location,
           meta: {
             typecheck: true,
