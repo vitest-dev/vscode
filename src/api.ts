@@ -350,7 +350,9 @@ async function createChildVitestProcess(pkg: VitestPackage) {
           workspaceFile: pkg.workspaceFile,
           id: pkg.id,
         },
-        loader: pnpLoader && gte(process.version, '18.19.0') ? pnpLoader : undefined,
+        loader: pnpLoader && gte(process.version, '18.19.0')
+          ? pathToFileURL(pnpLoader).toString()
+          : undefined,
       }
 
       vitest.send(runnerOptions)
