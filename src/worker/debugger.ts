@@ -1,4 +1,4 @@
-import type { Vitest as VitestCore } from 'vitest'
+import type { Vitest as VitestCore } from 'vitest/node'
 import type { Vitest } from './vitest'
 
 export class VitestDebugger {

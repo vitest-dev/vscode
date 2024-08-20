@@ -1,5 +1,4 @@
-import type { Vitest as VitestCore } from 'vitest'
-import type { WorkspaceProject } from 'vitest/node'
+import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'

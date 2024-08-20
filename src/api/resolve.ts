@@ -3,8 +3,6 @@ import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
 
-const _require = require
-
 export interface VitestResolution {
   vitestPackageJsonPath: string
   vitestNodePath: string

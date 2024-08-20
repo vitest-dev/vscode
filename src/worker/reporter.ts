@@ -3,7 +3,9 @@ import { Writable } from 'node:stream'
 import { Console } from 'node:console'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
-import type { File, Reporter, TaskResultPack, UserConsoleLog, Vitest as VitestCore } from 'vitest'
+import type { Reporter } from 'vitest/reporters'
+import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { Vitest as VitestCore } from 'vitest/node'
 import type { VitestEvents, VitestMethods } from '../api/rpc'
 import { setupFilePath } from '../constants'
 import { Vitest } from './vitest'
@@ -81,7 +83,7 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onTaskUpdate(packs)
   }
 
-  async onFinished(files?: File[], errors: unknown[] = this.ctx.state.getUnhandledErrors()) {
+  async onFinished(files?: RunnerTestFile[], errors: unknown[] = this.ctx.state.getUnhandledErrors()) {
     const collecting = this.collecting
 
     let output = ''
@@ -108,11 +110,11 @@ export class VSCodeReporter implements Reporter {
     })
   }
 
-  onCollected(files?: File[]) {
+  onCollected(files?: RunnerTestFile[]) {
     this.rpc.onCollected(files, this.collecting)
   }
 
-  onWatcherStart(files?: File[], errors?: unknown[]) {
+  onWatcherStart(files?: RunnerTestFile[], errors?: unknown[]) {
     this.rpc.onWatcherStart(files, errors, this.collecting)
   }
 
