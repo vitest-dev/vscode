@@ -275,6 +275,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
     throw new Error(errorMsg)
   }
   log.info('[API]', `Running ${formapPkg(pkg)} with Node.js: ${execPath}`)
+  const logLevel = getConfig(pkg.folder).logLevel
   const vitest = fork(
     // to support pnp, we need to spawn `yarn node` instead of `node`
     workerPath,
@@ -284,6 +285,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
       env: {
         ...process.env,
         ...env,
+        VITEST_VSCODE_LOG: env.VITEST_VSCODE_LOG ?? process.env.VITEST_VSCODE_LOG ?? logLevel,
         VITEST_VSCODE: 'true',
         // same env var as `startVitest`
         // https://github.com/vitest-dev/vitest/blob/5c7e9ca05491aeda225ce4616f06eefcd068c0b4/packages/vitest/src/node/cli/cli-api.ts

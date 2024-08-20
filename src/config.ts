@@ -47,6 +47,8 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     )
     : vitestPackagePath
 
+  const logLevel = get<string>('logLevel', 'info')
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
@@ -59,6 +61,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
     debuggerPort: get<number>('debuggerPort') || undefined,
     debuggerAddress: get<string>('debuggerAddress', undefined) || undefined,
+    logLevel,
   }
 }
 

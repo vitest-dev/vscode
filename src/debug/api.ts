@@ -35,6 +35,7 @@ export async function debugTests(
     vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath,
   )
   const env = config.env || {}
+  const logLevel = config.logLevel
 
   const debugConfig = {
     __name: 'Vitest',
@@ -50,6 +51,7 @@ export async function debugTests(
     env: {
       ...process.env,
       ...env,
+      VITEST_VSCODE_LOG: env.VITEST_VSCODE_LOG ?? process.env.VITEST_VSCODE_LOG ?? logLevel,
       VITEST_VSCODE: 'true',
       VITEST_WS_ADDRESS: wsAddress,
       // same env var as `startVitest`

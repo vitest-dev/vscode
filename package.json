@@ -158,6 +158,17 @@
           ],
           "default": null,
           "scope": "window"
+        },
+        "vitest.logLevel": {
+          "description": "The log level of the Vitest extension.",
+          "type": "string",
+          "enum": [
+            "info",
+            "debug",
+            "verbose"
+          ],
+          "default": "info",
+          "scope": "resource"
         }
       }
     }

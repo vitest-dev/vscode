@@ -47,14 +47,14 @@ export interface FileInformation {
   definitions: LocalCallDefinition[]
 }
 
-const log = process.env.VITEST_VSCODE_DEBUG
+const debug = process.env.VITEST_VSCODE_LOG !== 'info'
   ? (...args: any[]) => {
     // eslint-disable-next-line no-console
       console.info(...args)
     }
   : undefined
 
-const verbose = process.env.VITEST_VSCODE_DEBUG === 'verbose'
+const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
   ? (...args: any[]) => {
       // eslint-disable-next-line no-console
       console.info(...args)
@@ -69,7 +69,7 @@ export async function astCollectTests(
   // TODO: error cannot parse
   const testFilepath = relative(ctx.config.root, filepath)
   if (!request) {
-    log?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
+    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
     return null
   }
   const ast = parse(request.code, {
@@ -96,7 +96,7 @@ export async function astCollectTests(
     verbose('Collecing', testFilepath, request.code)
   }
   else {
-    log?.('Collecting', testFilepath)
+    debug?.('Collecting', testFilepath)
   }
   const definitions: LocalCallDefinition[] = []
   const getName = (callee: any): string | null => {
@@ -139,7 +139,7 @@ export async function astCollectTests(
       const property = callee?.property?.name
       let mode = !property || property === name ? 'run' : property
       if (mode === 'each') {
-        log?.('Skipping `.each` (support not implemented yet)', name)
+        debug?.('Skipping `.each` (support not implemented yet)', name)
         return
       }
 
@@ -180,7 +180,7 @@ export async function astCollectTests(
       if (mode === 'skipIf' || mode === 'runIf') {
         mode = 'skip'
       }
-      log?.('Found', name, message, `(${mode})`)
+      debug?.('Found', name, message, `(${mode})`)
       definitions.push({
         start,
         end,
@@ -227,11 +227,11 @@ export async function astCollectTests(
           location = originalLocation
         }
         else {
-          log?.('Cannot find original location', `${processedLocation.column}:${processedLocation.line}`)
+          debug?.('Cannot find original location', `${processedLocation.column}:${processedLocation.line}`)
         }
       }
       else {
-        log?.('Cannot find original location', `${definition.start}`)
+        debug?.('Cannot find original location', `${definition.start}`)
       }
       if (definition.type === 'suite') {
         const task: ParsedSuite = {

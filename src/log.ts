@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 import { window } from 'vscode'
+import { getConfig } from './config'
 
 const _log = window.createOutputChannel('Vitest')
 export const log = {
@@ -27,7 +28,7 @@ export const log = {
     }
     _log.appendLine(`[Error ${time}] ${args.join(' ')}`)
   },
-  verbose: process.env.VITEST_VSCODE_DEBUG !== 'true'
+  verbose: getConfig().logLevel === 'verbose' || process.env.VITEST_VSCODE_LOG === 'verbose'
     ? undefined
     : (...args: string[]) => {
         const time = new Date().toLocaleTimeString()
