@@ -29,8 +29,8 @@ export interface VitestPackage {
   pnp?: string
 }
 
-function isVitestInPackageJson(folder: vscode.WorkspaceFolder) {
-  const pkgJson = resolve(dirname(folder.uri.fsPath), 'package.json')
+function isVitestInPackageJson(root: string) {
+  const pkgJson = resolve(dirname(root), 'package.json')
   if (existsSync(pkgJson)) {
     const pkg = JSON.parse(readFileSync(pkgJson, 'utf-8'))
     return pkg.dependencies?.vitest || pkg.devDependencies?.vitest
@@ -49,7 +49,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   if (!vitest) {
     if (showWarning) {
       const isVitestConfig = configOrWorkspaceFile.fsPath.includes('vitest.')
-      if (isVitestConfig || isVitestInPackageJson(folder))
+      if (isVitestConfig || isVitestInPackageJson(folder.uri.fsPath))
         vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.'`)
     }
     log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
