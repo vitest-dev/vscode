@@ -81,7 +81,7 @@ export async function astCollectTests(
   const file: ParsedFile = {
     filepath,
     type: 'suite',
-    id: generateHash(`${testFilepath}${ctx.config.name || ''}`),
+    id: /* @__PURE__ */ generateHash(`${testFilepath}${ctx.config.name || ''}`),
     name: testFilepath,
     mode: 'run',
     tasks: [],
@@ -193,7 +193,7 @@ export async function astCollectTests(
     },
   })
   const indexMap = createIndexMap(request.code)
-  const map = request.map && new TraceMap(request.map as any)
+  const map = /* @__PURE__ */ request.map && new TraceMap(request.map as any)
   let lastSuite: ParsedSuite = file
   const updateLatestSuite = (index: number) => {
     while (lastSuite.suite && lastSuite.end < index) {
@@ -213,7 +213,7 @@ export async function astCollectTests(
       const processedLocation = indexMap.get(definition.start)
       let location: { line: number; column: number } | undefined
       if (map && processedLocation) {
-        const originalLocation = originalPositionFor(map, {
+        const originalLocation = /* @__PURE__ */ originalPositionFor(map, {
           line: processedLocation.line,
           column: processedLocation.column,
         })
@@ -272,9 +272,9 @@ export async function astCollectTests(
       definition.task = task
       latestSuite.tasks.push(task)
     })
-  calculateSuiteHash(file)
-  const hasOnly = someTasksAreOnly(file)
-  interpretTaskModes(
+  /* @__PURE__ */ calculateSuiteHash(file)
+  const hasOnly = /* @__PURE__ */ someTasksAreOnly(file)
+  /* @__PURE__ */ interpretTaskModes(
     file,
     ctx.config.testNamePattern,
     hasOnly,

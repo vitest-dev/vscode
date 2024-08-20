@@ -27,8 +27,8 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
   if (!pnp)
     return null
   return {
-    vitestNodePath: resolveVitestNodePath(pnp.vitestPath),
-    vitestPackageJsonPath: pnp.vitestPath,
+    vitestNodePath: 'vitest/node',
+    vitestPackageJsonPath: 'vitest/package.json',
     pnp: {
       loaderPath: pnp.pnpLoader,
       pnpPath: pnp.pnpPath,
@@ -55,16 +55,10 @@ export function resolveVitestPnpPackagePath(cwd: string) {
     const pnpPath = require.resolve('./.pnp.cjs', {
       paths: [cwd],
     })
-    const pnp = _require(pnpPath)
-    const vitestPath = pnp.resolveToUnqualified(
-      'vitest/package.json',
-      cwd,
-    ) as string
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
         paths: [cwd],
       }),
-      vitestPath,
       pnpPath,
     }
   }
