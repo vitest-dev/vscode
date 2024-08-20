@@ -60,7 +60,6 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   const prefix = `${basename(dirname(id))}:${basename(id)}`
 
   if (vitest.pnp) {
-    // TODO: try to load vitest package version from pnp
     return {
       folder,
       id,

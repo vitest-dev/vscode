@@ -1,6 +1,6 @@
 import v8 from 'node:v8'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { File, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 
 export interface VitestMethods {
   getFiles: () => Promise<[project: string, file: string][]>
@@ -21,9 +21,9 @@ export interface VitestMethods {
 export interface VitestEvents {
   onConsoleLog: (log: UserConsoleLog) => void
   onTaskUpdate: (task: TaskResultPack[]) => void
-  onFinished: (files: File[], unhandledError: string, collecting?: boolean) => void
-  onCollected: (files?: File[], collecting?: boolean) => void
-  onWatcherStart: (files?: File[], errors?: unknown[], collecting?: boolean) => void
+  onFinished: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
+  onCollected: (files?: RunnerTestFile[], collecting?: boolean) => void
+  onWatcherStart: (files?: RunnerTestFile[], errors?: unknown[], collecting?: boolean) => void
   onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
 }
 

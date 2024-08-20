@@ -232,7 +232,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "birpc@0.2.17": "patches/birpc@0.2.17.patch"
+      "birpc@0.2.17": "patches/birpc@0.2.17.patch",
+      "@vitest/runner@2.0.5": "patches/@vitest__runner@2.0.5.patch"
     }
   },
   "lint-staged": {
