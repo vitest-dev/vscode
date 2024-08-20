@@ -14,7 +14,7 @@ export interface VitestResolution {
   }
 }
 
-export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder): VitestResolution | null {
+export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder | undefined): VitestResolution | null {
   const vitestPackageJsonPath = resolveVitestPackagePath(cwd, folder)
   if (vitestPackageJsonPath) {
     return {
@@ -23,7 +23,7 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
     }
   }
 
-  const pnp = resolveVitestPnpPackagePath(folder)
+  const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
   if (!pnp)
     return null
   return {
@@ -36,7 +36,7 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
   }
 }
 
-export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFolder) {
+export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFolder | undefined) {
   const customPackagePath = getConfig(folder).vitestPackagePath
   if (customPackagePath && !customPackagePath.endsWith('package.json'))
     throw new Error(`"vitest.vitestPackagePath" must point to a package.json file, instead got: ${customPackagePath}`)
@@ -50,19 +50,19 @@ export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFo
   }
 }
 
-export function resolveVitestPnpPackagePath(folder: vscode.WorkspaceFolder) {
+export function resolveVitestPnpPackagePath(cwd: string) {
   try {
     const pnpPath = require.resolve('./.pnp.cjs', {
-      paths: [folder.uri.fsPath],
+      paths: [cwd],
     })
     const pnp = _require(pnpPath)
     const vitestPath = pnp.resolveToUnqualified(
       'vitest/package.json',
-      folder.uri.fsPath,
+      cwd,
     ) as string
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
-        paths: [folder.uri.fsPath],
+        paths: [cwd],
       }),
       vitestPath,
       pnpPath,
