@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'pathe'
-import type { CoverageProvider, ResolvedCoverageOptions, Vitest as VitestCore } from 'vitest'
+import type { CoverageProvider, ResolvedCoverageOptions, Vitest as VitestCore } from 'vitest/node'
 import type { Vitest } from './vitest'
 
 export class VitestCoverage {

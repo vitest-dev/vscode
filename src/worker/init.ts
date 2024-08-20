@@ -1,4 +1,4 @@
-import type { UserConfig } from 'vitest'
+import type { UserConfig } from 'vitest/node'
 import { VSCodeReporter } from './reporter'
 import type { WorkerMeta } from './types'
 

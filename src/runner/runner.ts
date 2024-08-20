@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
-import type { ErrorWithDiff, File, ParsedStack, TaskResult } from 'vitest'
+import type { ParsedStack, RunnerTestFile, TaskResult, TestError } from 'vitest'
 import { basename, normalize, relative } from 'pathe'
 import { TestCase, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
@@ -348,7 +348,7 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  public async reportCoverage(files: File[]) {
+  public async reportCoverage(files: RunnerTestFile[]) {
     if (!('FileCoverage' in vscode))
       return
 
@@ -397,7 +397,7 @@ export class TestRunner extends vscode.Disposable {
     switch (result.state) {
       case 'fail': {
         const errors = result.errors?.map(err =>
-          testMessageForTestError(test, err),
+          testMessageForTestError(test, err as TestError),
         ) || []
         if (!errors.length) {
           log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
@@ -447,7 +447,7 @@ export class TestRunner extends vscode.Disposable {
   }
 }
 
-function testMessageForTestError(testItem: vscode.TestItem, error: ErrorWithDiff | undefined): vscode.TestMessage {
+function testMessageForTestError(testItem: vscode.TestItem, error: TestError | undefined): vscode.TestMessage {
   if (!error)
     return new vscode.TestMessage('Unknown error')
 

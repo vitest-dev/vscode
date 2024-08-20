@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
-import type { File, Task } from 'vitest'
+import type { RunnerTask, RunnerTestFile } from 'vitest'
 import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
 import { log } from './log'
 import type { VitestFolderAPI } from './api'
@@ -242,7 +242,7 @@ export class TestTree extends vscode.Disposable {
     return testItem || undefined
   }
 
-  public getTestItemByTask(task: Task): vscode.TestItem | null {
+  public getTestItemByTask(task: RunnerTask): vscode.TestItem | null {
     const cachedItem = this.flatTestItems.get(task.id)
     if (cachedItem)
       return cachedItem
@@ -265,7 +265,7 @@ export class TestTree extends vscode.Disposable {
     return files
   }
 
-  collectFile(api: VitestFolderAPI, file: File) {
+  collectFile(api: VitestFolderAPI, file: RunnerTestFile) {
     const fileTestItem = this.getOrCreateFileTestItem(api, file.projectName || '', file.filepath)
     fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
@@ -281,7 +281,7 @@ export class TestTree extends vscode.Disposable {
     fileTestItem.canResolveChildren = false
   }
 
-  collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: Task[], parent: vscode.TestItem) {
+  collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: RunnerTask[], parent: vscode.TestItem) {
     for (const task of tasks) {
       const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
         task.id,
