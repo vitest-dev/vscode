@@ -24,6 +24,8 @@
 
 You can manage tests both from the Testing view and directly within your test files.
 
+Vitest uses vscode's `TestController` API to provide a unified testing experience. You can read the official guide on how to run tests in the [VSCode Documentation](https://code.visualstudio.com/docs/editor/testing).
+
 ### In the Testing View
 
 ![Testing view](./img/vitest-extension.png "Testing view")
