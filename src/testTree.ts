@@ -4,6 +4,7 @@ import type { RunnerTask, RunnerTestFile } from 'vitest'
 import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
 import { log } from './log'
 import type { VitestFolderAPI } from './api'
+import { getConfig } from './config'
 
 // testItem -> vscode.TestItem
 // testData -> our wrapper
@@ -184,13 +185,23 @@ export class TestTree extends vscode.Disposable {
       return
 
     const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(api.workspaceFolder, '**/*'),
+      new vscode.RelativePattern(api.workspaceFolder, getConfig(api.workspaceFolder).filesWatcherInclude),
     )
     this.watcherByFolder.set(api.workspaceFolder, watcher)
 
     watcher.onDidDelete((file) => {
       const items = this.testItemsByFile.get(normalize(file.fsPath))
       items?.forEach(item => this.recursiveDelete(item))
+    })
+
+    watcher.onDidChange((file) => {
+      const filepath = normalize(file.fsPath)
+      api.onFileChanged(filepath)
+    })
+
+    watcher.onDidCreate((file) => {
+      const filepath = normalize(file.fsPath)
+      api.onFileCreated(filepath)
     })
   }
 

@@ -49,9 +49,12 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const logLevel = get<string>('logLevel', 'info')
 
+  const filesWatcherInclude = get<string>('filesWatcherInclude', '**/*')!
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
+    filesWatcherInclude,
     vitestPackagePath: resolvedVitestPackagePath,
     workspaceConfig: resolveConfigPath(workspaceConfig),
     rootConfig: resolveConfigPath(rootConfigFile),

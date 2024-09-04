@@ -23,6 +23,7 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     {
       server: {
         middlewareMode: true,
+        watch: null,
       },
       plugins: [
         {

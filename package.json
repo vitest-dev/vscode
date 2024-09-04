@@ -93,6 +93,12 @@
     "configuration": {
       "title": "Vitest",
       "properties": {
+        "vitest.filesWatcherInclude": {
+          "markdownDescription": "The glob pattern to watch for file changes.",
+          "type": "string",
+          "default": "**/*",
+          "scope": "resource"
+        },
         "vitest.vitestPackagePath": {
           "markdownDescription": "The path to the `package.json` file of Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it.",
           "type": "string",

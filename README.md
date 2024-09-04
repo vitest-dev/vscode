@@ -79,6 +79,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 
 ### Other Options
 
+- `vitest.filesWatcherInclude`: Glob pattern for the watcher that triggers a test rerun or collects changes. Default: `**/*`
 - `vitest.vitestPackagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to
   `process.env`
