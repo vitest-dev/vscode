@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
@@ -137,6 +138,62 @@ export class Vitest implements VitestMethods {
     await this.ctx.runFiles(files.flatMap(file => this.ctx.getProjectsByTestFile(file)), runAllFiles)
 
     await this.ctx.report('onWatcherStart', this.ctx.state.getFiles(files))
+  }
+
+  private handleFileChanged(file: string): string[] {
+    return (this.ctx as any).handleFileChanged(file)
+  }
+
+  private scheduleRerun(files: string[]): Promise<void> {
+    return (this.ctx as any).scheduleRerun(files)
+  }
+
+  private updateLastChanged(filepath: string) {
+    const projects = this.ctx.getModuleProjects(filepath)
+    projects.forEach(({ server, browser }) => {
+      const serverMods = server.moduleGraph.getModulesByFile(filepath)
+      serverMods?.forEach(mod => server.moduleGraph.invalidateModule(mod))
+      if (browser) {
+        const browserMods = browser.vite.moduleGraph.getModulesByFile(filepath)
+        browserMods?.forEach(mod => browser.vite.moduleGraph.invalidateModule(mod))
+      }
+    })
+  }
+
+  onFilesChanged(files: string[]) {
+    try {
+      for (const file of files) {
+        const needRerun = this.handleFileChanged(file)
+        if (needRerun.length) {
+          this.updateLastChanged(file)
+          this.scheduleRerun(needRerun)
+        }
+      }
+    }
+    catch (err) {
+      console.error('Error during analyzing changed files', err)
+    }
+  }
+
+  async onFilesCreated(files: string[]) {
+    try {
+      const testFiles: string[] = []
+
+      for (const file of files) {
+        const content = readFileSync(file, 'utf-8')
+        for (const project of this.ctx.projects) {
+          if (await project.isTargetFile(file, content)) {
+            this.updateLastChanged(file)
+            testFiles.push(file)
+          }
+        }
+      }
+
+      testFiles.forEach(file => this.scheduleRerun([file]))
+    }
+    catch (err) {
+      console.error('Error during analyzing created files', err)
+    }
   }
 
   unwatchTests() {

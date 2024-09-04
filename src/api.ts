@@ -143,37 +143,27 @@ export class VitestFolderAPI extends VitestReporter {
     return this.meta.rpc.getFiles()
   }
 
-  private testsQueue = new Set<string>()
-  private collectPromise: Promise<void> | null = null
-  private collectTimer: NodeJS.Timeout | null = null
+  onFileCreated = createQueuedHandler((files: string[]) => {
+    return this.meta.rpc.onFilesCreated(files)
+  })
+
+  onFileChanged = createQueuedHandler((files: string[]) => {
+    return this.meta.rpc.onFilesChanged(files)
+  })
 
   async collectTests(projectName: string, testFile: string) {
-    this.testsQueue.add(`${projectName}\0${normalize(testFile)}`)
-
-    if (this.collectTimer) {
-      clearTimeout(this.collectTimer)
-    }
-
-    await this.collectPromise
-
-    if (this.collectTimer) {
-      clearTimeout(this.collectTimer)
-    }
-
-    this.collectTimer = setTimeout(() => {
-      const tests = Array.from(this.testsQueue).map((spec) => {
-        const [projectName, filepath] = spec.split('\0', 2)
-        return [projectName, filepath] as [string, string]
-      })
-      const root = this.workspaceFolder.uri.fsPath
-      this.testsQueue.clear()
-      log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t[1])).join(', ')}`)
-      this.collectPromise = this.meta.rpc.collectTests(tests).finally(() => {
-        this.collectPromise = null
-      })
-    }, 50)
-    await this.collectPromise
+    return this._collectTests(`${projectName}\0${normalize(testFile)}`)
   }
+
+  private _collectTests = createQueuedHandler((testsQueue: string[]) => {
+    const tests = Array.from(testsQueue).map((spec) => {
+      const [projectName, filepath] = spec.split('\0', 2)
+      return [projectName, filepath] as [string, string]
+    })
+    const root = this.workspaceFolder.uri.fsPath
+    log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t[1])).join(', ')}`)
+    return this.meta.rpc.collectTests(tests)
+  })
 
   async dispose() {
     this.handlers.clearListeners()
@@ -221,6 +211,28 @@ export class VitestFolderAPI extends VitestReporter {
 
   async unwatchTests() {
     await this.meta.rpc.unwatchTests()
+  }
+}
+
+function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
+  const cached = new Set<T>()
+  let promise: Promise<void> | null = null
+  let timer: NodeJS.Timeout | null = null
+  return (value: T) => {
+    cached.add(value)
+    if (timer) {
+      clearTimeout(timer)
+    }
+    timer = setTimeout(() => {
+      if (promise) {
+        return
+      }
+      const values = Array.from(cached)
+      cached.clear()
+      promise = resolver(values).finally(() => {
+        promise = null
+      })
+    }, 50)
   }
 }
 

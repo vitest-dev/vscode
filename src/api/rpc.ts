@@ -16,6 +16,9 @@ export interface VitestMethods {
   disableCoverage: () => void
   waitForCoverageReport: () => Promise<string | null>
   close: () => void
+
+  onFilesCreated: (files: string[]) => void
+  onFilesChanged: (files: string[]) => void
 }
 
 export interface VitestEvents {
