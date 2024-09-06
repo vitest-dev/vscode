@@ -33,6 +33,8 @@ class BaseTestData {
 }
 
 export class TestFolder extends BaseTestData {
+  public readonly type = 'folder'
+
   private constructor(
     item: vscode.TestItem,
     parent?: vscode.TestItem,
@@ -46,6 +48,8 @@ export class TestFolder extends BaseTestData {
 }
 
 export class TestFile extends BaseTestData {
+  public readonly type = 'file'
+
   private constructor(
     item: vscode.TestItem,
     parent: vscode.TestItem,
@@ -90,6 +94,7 @@ class TaskName {
 
 export class TestCase extends BaseTestData {
   private nameResolver: TaskName
+  public readonly type = 'test'
 
   private constructor(
     item: vscode.TestItem,
@@ -111,6 +116,7 @@ export class TestCase extends BaseTestData {
 
 export class TestSuite extends BaseTestData {
   private nameResolver: TaskName
+  public readonly type = 'suite'
 
   private constructor(
     item: vscode.TestItem,
