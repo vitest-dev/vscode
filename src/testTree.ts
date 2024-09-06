@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import type { RunnerTask, RunnerTestFile } from 'vitest'
+import mm from 'micromatch'
 import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
 import { log } from './log'
 import type { VitestFolderAPI } from './api'
@@ -194,13 +195,24 @@ export class TestTree extends vscode.Disposable {
       items?.forEach(item => this.recursiveDelete(item))
     })
 
+    const ignorePattern = [
+      '**/.git/**',
+      '**/*.git',
+    ]
+
     watcher.onDidChange((file) => {
       const filepath = normalize(file.fsPath)
+      if (mm.isMatch(filepath, ignorePattern)) {
+        return
+      }
       api.onFileChanged(filepath)
     })
 
     watcher.onDidCreate((file) => {
       const filepath = normalize(file.fsPath)
+      if (mm.isMatch(filepath, ignorePattern)) {
+        return
+      }
       api.onFileCreated(filepath)
     })
   }

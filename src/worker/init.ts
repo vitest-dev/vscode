@@ -23,7 +23,13 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     {
       server: {
         middlewareMode: true,
-        watch: null,
+        // when support for Vite 4 is dropped, set to `null`
+        watch: {
+          usePolling: true,
+          ignored: ['**/*'],
+          depth: 0,
+          followSymlinks: false,
+        },
       },
       plugins: [
         {
