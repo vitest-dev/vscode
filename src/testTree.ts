@@ -294,6 +294,17 @@ export class TestTree extends vscode.Disposable {
 
   collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: RunnerTask[], parent: vscode.TestItem) {
     for (const task of tasks) {
+      const cachedItem = this.flatTestItems.get(task.id)
+      // suite became a test or vice versa
+      if (cachedItem) {
+        const data = getTestData(cachedItem)
+        const taskType = task.type === 'custom' ? 'test' : task.type
+        if (data.type !== taskType) {
+          parent.children.delete(cachedItem.id)
+          this.flatTestItems.delete(task.id)
+        }
+      }
+
       const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
         task.id,
         task.name,
