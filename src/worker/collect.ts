@@ -61,42 +61,19 @@ const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
     }
   : undefined
 
-export async function astCollectTests(
-  ctx: WorkspaceProject,
-  filepath: string,
-): Promise<null | FileInformation> {
-  const request = await ctx.vitenode.transformRequest(filepath, filepath, 'web')
-  // TODO: error cannot parse
-  const testFilepath = relative(ctx.config.root, filepath)
-  if (!request) {
-    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
-    return null
-  }
-  const ast = parse(request.code, {
+export function astParseFile(filepath: string, code: string) {
+  const ast = parse(code, {
     ecmaVersion: 'latest',
     allowAwaitOutsideFunction: true,
     allowHashBang: true,
     allowImportExportEverywhere: true,
   })
-  const file: ParsedFile = {
-    filepath,
-    type: 'suite',
-    id: /* @__PURE__ */ generateHash(`${testFilepath}${ctx.config.name || ''}`),
-    name: testFilepath,
-    mode: 'run',
-    tasks: [],
-    start: ast.start,
-    end: ast.end,
-    projectName: ctx.getName(),
-    meta: { typecheck: true },
-    file: null!,
-  }
-  file.file = file
+
   if (verbose) {
-    verbose('Collecing', testFilepath, request.code)
+    verbose('Collecting', filepath, code)
   }
   else {
-    debug?.('Collecting', testFilepath)
+    debug?.('Collecting', filepath)
   }
   const definitions: LocalCallDefinition[] = []
   const getName = (callee: any): string | null => {
@@ -192,8 +169,46 @@ export async function astCollectTests(
       } satisfies LocalCallDefinition)
     },
   })
+  return {
+    ast,
+    definitions,
+  }
+}
+
+export async function astCollectTests(
+  ctx: WorkspaceProject,
+  filepath: string,
+): Promise<null | FileInformation> {
+  const request = await ctx.vitenode.transformRequest(filepath, filepath, 'web')
+  // TODO: error cannot parse
+  const testFilepath = relative(ctx.config.root, filepath)
+  if (!request) {
+    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
+    return null
+  }
+  const { definitions, ast } = astParseFile(filepath, request.code)
+  const file: ParsedFile = {
+    filepath,
+    type: 'suite',
+    id: /* @__PURE__ */ generateHash(`${testFilepath}${ctx.config.name || ''}`),
+    name: testFilepath,
+    mode: 'run',
+    tasks: [],
+    start: ast.start,
+    end: ast.end,
+    projectName: ctx.getName(),
+    meta: { typecheck: true },
+    file: null!,
+  }
+  file.file = file
+  if (verbose) {
+    verbose('Collecing', testFilepath, request.code)
+  }
+  else {
+    debug?.('Collecting', testFilepath)
+  }
   const indexMap = createIndexMap(request.code)
-  const map = /* @__PURE__ */ request.map && new TraceMap(request.map as any)
+  const map = request.map && new TraceMap(request.map as any)
   let lastSuite: ParsedSuite = file
   const updateLatestSuite = (index: number) => {
     while (lastSuite.suite && lastSuite.end < index) {
@@ -213,25 +228,37 @@ export async function astCollectTests(
       const processedLocation = indexMap.get(definition.start)
       let location: { line: number; column: number } | undefined
       if (map && processedLocation) {
-        const originalLocation = /* @__PURE__ */ originalPositionFor(map, {
+        const originalLocation = originalPositionFor(map, {
           line: processedLocation.line,
           column: processedLocation.column,
         })
         if (originalLocation.column != null) {
           verbose?.(
-            `Found location`,
-            `${processedLocation.column}:${processedLocation.line}`,
+            `Found location for`,
+            definition.type,
+            definition.name,
+            `${processedLocation.line}:${processedLocation.column}`,
             '->',
-            `${originalLocation.column}:${originalLocation.line}`,
+            `${originalLocation.line}:${originalLocation.column}`,
           )
           location = originalLocation
         }
         else {
-          debug?.('Cannot find original location', `${processedLocation.column}:${processedLocation.line}`)
+          debug?.(
+            'Cannot find original location for',
+            definition.type,
+            definition.name,
+            `${processedLocation.column}:${processedLocation.line}`,
+          )
         }
       }
       else {
-        debug?.('Cannot find original location', `${definition.start}`)
+        debug?.(
+          'Cannot find original location for',
+          definition.type,
+          definition.name,
+          `${definition.start}`,
+        )
       }
       if (definition.type === 'suite') {
         const task: ParsedSuite = {
@@ -272,9 +299,9 @@ export async function astCollectTests(
       definition.task = task
       latestSuite.tasks.push(task)
     })
-  /* @__PURE__ */ calculateSuiteHash(file)
-  const hasOnly = /* @__PURE__ */ someTasksAreOnly(file)
-  /* @__PURE__ */ interpretTaskModes(
+  calculateSuiteHash(file)
+  const hasOnly = someTasksAreOnly(file)
+  interpretTaskModes(
     file,
     ctx.config.testNamePattern,
     hasOnly,
