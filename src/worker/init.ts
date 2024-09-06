@@ -34,6 +34,9 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
       plugins: [
         {
           name: 'vitest:vscode-extension',
+          configureServer(server) {
+            server.watcher.close()
+          },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
             // because we don't need it in the extension and it messes up Vite dev command
@@ -48,7 +51,6 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
       ],
     },
   )
-  vitest.server.watcher.close()
   reporter.init(vitest)
   return {
     vitest,
