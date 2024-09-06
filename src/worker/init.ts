@@ -48,6 +48,7 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
       ],
     },
   )
+  vitest.server.watcher.close()
   reporter.init(vitest)
   return {
     vitest,
