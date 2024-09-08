@@ -81,12 +81,14 @@
       ],
       "testing/item/context": [
         {
-          "command": "vitest.updateSnapshot"
+          "command": "vitest.updateSnapshot",
+          "when": "controllerId == 'vitest'"
         }
       ],
       "testing/item/gutter": [
         {
-          "command": "vitest.updateSnapshot"
+          "command": "vitest.updateSnapshot",
+          "when": "controllerId == 'vitest'"
         }
       ]
     },
