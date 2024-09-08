@@ -87,7 +87,7 @@ class VitestExtension {
       ].join(' ')
 
       // remove all but the first 3
-      const discardedConfigs = configFiles.splice(maximumConfigs)
+      const discardedConfigs = vitest.splice(maximumConfigs)
 
       if (configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
         vscode.window.showWarningMessage(
