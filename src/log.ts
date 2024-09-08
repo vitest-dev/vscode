@@ -9,16 +9,22 @@ export const log = {
     if (typeof args.at(-1) === 'string' && args.at(-1).endsWith('\n'))
       args[args.length - 1] = args.at(-1).slice(0, process.platform === 'win32' ? -2 : -1)
 
-    console[type]('[Worker]', ...args)
+    if (process.env.NODE_ENV === 'dev') {
+      console[type]('[Worker]', ...args)
+    }
     _log.appendLine(`[Worker] ${args.join(' ')}`)
   },
   info: (...args: any[]) => {
-    console.log(...args)
+    if (process.env.NODE_ENV === 'dev') {
+      console.log(...args)
+    }
     const time = new Date().toLocaleTimeString()
     _log.appendLine(`[INFO ${time}] ${args.join(' ')}`)
   },
   error: (...args: any[]) => {
-    console.error(...args)
+    if (process.env.NODE_ENV === 'dev') {
+      console.error(...args)
+    }
     const time = new Date().toLocaleTimeString()
     for (let i = 0; i < args.length; i++) {
       if (args[i] instanceof Error) {
@@ -32,7 +38,9 @@ export const log = {
     ? undefined
     : (...args: string[]) => {
         const time = new Date().toLocaleTimeString()
-        console.log(`[${time}]`, ...args)
+        if (process.env.NODE_ENV === 'dev') {
+          console.log(`[${time}]`, ...args)
+        }
         _log.appendLine(`[${time}] ${args.join(' ')}`)
       },
   workspaceInfo: (folder: string, ...args: any[]) => {
