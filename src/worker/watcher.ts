@@ -60,6 +60,7 @@ export class VitestWatcher {
         if (browserSpecs.length) {
           ctx.logger.log('Collecting using AST explorer...')
           await vitest.astCollect(browserSpecs)
+          this.changedTests.clear()
           return await originalScheduleRerun.call(this, [])
         }
 
