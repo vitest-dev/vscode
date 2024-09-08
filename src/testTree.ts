@@ -1,11 +1,10 @@
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import type { RunnerTask, RunnerTestFile } from 'vitest'
-import mm from 'micromatch'
 import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
 import { log } from './log'
 import type { VitestFolderAPI } from './api'
-import { getConfig } from './config'
+import { ExtensionWatcher } from './watcher'
 
 // testItem -> vscode.TestItem
 // testData -> our wrapper
@@ -21,7 +20,7 @@ export class TestTree extends vscode.Disposable {
   // to store all of them
   private testItemsByFile = new Map<string, vscode.TestItem[]>()
 
-  private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
+  private watcher: ExtensionWatcher
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -32,9 +31,8 @@ export class TestTree extends vscode.Disposable {
       this.fileItems.clear()
       this.flatTestItems.clear()
       this.testItemsByFile.clear()
-      this.watcherByFolder.forEach(x => x.dispose())
-      this.watcherByFolder.clear()
     })
+    this.watcher = new ExtensionWatcher(this)
   }
 
   public getFileTestItems(fsPath: string) {
@@ -50,8 +48,7 @@ export class TestTree extends vscode.Disposable {
     this.testItemsByFile.clear()
     this.fileItems.clear()
     this.flatTestItems.clear()
-    this.watcherByFolder.forEach(x => x.dispose())
-    this.watcherByFolder.clear()
+    this.watcher.dispose()
 
     this.loaderItem.busy = true
 
@@ -181,40 +178,12 @@ export class TestTree extends vscode.Disposable {
 
   async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: [prject: string, file: string][]) {
     await this.discoverAllTestFiles(api, testFiles)
+    this.watcher.watchTestFilesInWorkspace(api)
+  }
 
-    if (this.watcherByFolder.has(api.workspaceFolder))
-      return
-
-    const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(api.workspaceFolder, getConfig(api.workspaceFolder).filesWatcherInclude),
-    )
-    this.watcherByFolder.set(api.workspaceFolder, watcher)
-
-    watcher.onDidDelete((file) => {
-      const items = this.testItemsByFile.get(normalize(file.fsPath))
-      items?.forEach(item => this.recursiveDelete(item))
-    })
-
-    const ignorePattern = [
-      '**/.git/**',
-      '**/*.git',
-    ]
-
-    watcher.onDidChange((file) => {
-      const filepath = normalize(file.fsPath)
-      if (mm.isMatch(filepath, ignorePattern)) {
-        return
-      }
-      api.onFileChanged(filepath)
-    })
-
-    watcher.onDidCreate((file) => {
-      const filepath = normalize(file.fsPath)
-      if (mm.isMatch(filepath, ignorePattern)) {
-        return
-      }
-      api.onFileCreated(filepath)
-    })
+  public removeFile(filepath: string) {
+    const items = this.testItemsByFile.get(normalize(filepath))
+    items?.forEach(item => this.recursiveDelete(item))
   }
 
   private recursiveDelete(item: vscode.TestItem) {
