@@ -340,7 +340,7 @@ export class TestRunner extends vscode.Disposable {
 
       const testItems = request.include || this.tree.getFileTestItems(file)
       function enqueue(test: vscode.TestItem) {
-        log.verbose?.(`Enqueuing "${test.label}`)
+        log.verbose?.(`Enqueuing "${test.label}"`)
         run.enqueued(test)
         test.children.forEach(enqueue)
       }
@@ -367,9 +367,11 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  private markSuite(_testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
-    if (!result)
+  private markSuite(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
+    if (!result) {
+      testRun.started(test)
       return
+    }
 
     if (result.state === 'fail') {
       // errors in a suite are stored only if it happens during discovery

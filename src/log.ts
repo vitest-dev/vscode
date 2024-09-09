@@ -10,20 +10,20 @@ export const log = {
       args[args.length - 1] = args.at(-1).slice(0, process.platform === 'win32' ? -2 : -1)
 
     const time = new Date().toLocaleTimeString()
-    if (process.env.NODE_ENV === 'dev') {
+    if (process.env.EXTENSION_NODE_ENV === 'dev') {
       console[type](`[INFO ${time}]`, '[Worker]', ...args)
     }
     _log.appendLine(`[INFO ${time}] [Worker] ${args.join(' ')}`)
   },
   info: (...args: any[]) => {
-    if (process.env.NODE_ENV === 'dev') {
+    if (process.env.EXTENSION_NODE_ENV === 'dev') {
       console.log(...args)
     }
     const time = new Date().toLocaleTimeString()
     _log.appendLine(`[INFO ${time}] ${args.join(' ')}`)
   },
   error: (...args: any[]) => {
-    if (process.env.NODE_ENV === 'dev') {
+    if (process.env.EXTENSION_NODE_ENV === 'dev') {
       console.error(...args)
     }
     const time = new Date().toLocaleTimeString()
@@ -39,7 +39,7 @@ export const log = {
     ? undefined
     : (...args: string[]) => {
         const time = new Date().toLocaleTimeString()
-        if (process.env.NODE_ENV === 'dev') {
+        if (process.env.EXTENSION_NODE_ENV === 'dev') {
           console.log(`[${time}]`, ...args)
         }
         _log.appendLine(`[${time}] ${args.join(' ')}`)

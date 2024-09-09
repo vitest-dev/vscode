@@ -39,15 +39,19 @@ export class VitestCoverage {
     })
   }
 
-  private get config(): ResolvedCoverageOptions {
+  public get config(): ResolvedCoverageOptions {
     return {
       ...this._config,
       enabled: this.enabled,
     }
   }
 
-  private get enabled() {
+  public get enabled() {
     return this._enabled && !this.vitest.collecting
+  }
+
+  public get resolved() {
+    return !!this._provider
   }
 
   public async enable() {
@@ -59,7 +63,7 @@ export class VitestCoverage {
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
-    this.ctx.logger.log('Running coverage with configuration:', this._config)
+    this.ctx.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
       // @ts-expect-error private method

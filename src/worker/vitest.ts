@@ -116,6 +116,26 @@ export class Vitest implements VitestMethods {
     return await this.ctx.globTestFiles(filters)
   }
 
+  private coverageProcessedFiles = new Set<string>()
+
+  private invalidateTree(mod: any, seen = new Set()) {
+    if (seen.has(mod)) {
+      return
+    }
+    if (this.coverageProcessedFiles.has(mod.file)) {
+      return
+    }
+    this.coverageProcessedFiles.add(mod.file)
+    seen.add(mod)
+    this.ctx.server.moduleGraph.invalidateModule(mod)
+    mod.clientImportedModules.forEach((mod: any) => {
+      this.invalidateTree(mod)
+    })
+    mod.ssrImportedModules.forEach((mod: any) => {
+      this.invalidateTree(mod)
+    })
+  }
+
   private async runTestFiles(files: string[], testNamePattern?: string | undefined, runAllFiles = false) {
     await this.ctx.runningPromise
     this.watcher.markRerun(false)
@@ -125,6 +145,18 @@ export class Vitest implements VitestMethods {
     // populate cache so it can find test files
     if (this.debug)
       await this.globTestFiles(files)
+
+    if (this.coverage.resolved) {
+      files.forEach((file) => {
+        if (!this.coverageProcessedFiles.has(file)) {
+          const mod = this.ctx.server.moduleGraph.getModuleById(file)
+          if (mod) {
+            this.invalidateTree(mod)
+          }
+          this.coverageProcessedFiles.add(file)
+        }
+      })
+    }
 
     await this.rerunTests(files, runAllFiles)
   }
