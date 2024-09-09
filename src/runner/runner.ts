@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises'
 import stripAnsi from 'strip-ansi'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/ws-client'
-import type { ParsedStack, RunnerTestFile, TaskResult, TestError } from 'vitest'
+import type { ParsedStack, TaskResult, TestError } from 'vitest'
 import { basename, normalize, relative } from 'pathe'
 import { TestCase, TestFile, TestFolder, getTestData } from '../testTreeData'
 import type { TestTree } from '../testTree'
@@ -106,7 +106,7 @@ export class TestRunner extends vscode.Disposable {
 
       try {
         if (!collecting)
-          await this.reportCoverage(files)
+          await this.reportCoverage()
       }
       catch (err: any) {
         showVitestError(`Failed to report coverage. ${err.message}`, err)
@@ -348,25 +348,21 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  public async reportCoverage(files: RunnerTestFile[]) {
+  public async reportCoverage() {
     if (!('FileCoverage' in vscode))
       return
 
     const reportsDirectory = await this.api.waitForCoverageReport()
-    if (!reportsDirectory)
+    const testRun = this.testRun
+    if (!reportsDirectory || !testRun)
       return
 
     const coverage = readCoverageReport(reportsDirectory)
+    await coverageContext.applyJson(testRun, coverage)
 
-    const promises = files.map(async () => {
-      const testRun = this.testRun
-      if (testRun)
-        await coverageContext.applyJson(testRun, coverage)
-    })
-
-    await Promise.all(promises)
-
-    rm(reportsDirectory, { recursive: true, force: true }).catch(() => {
+    rm(reportsDirectory, { recursive: true, force: true }).then(() => {
+      log.info('Removed coverage reports', reportsDirectory)
+    }).catch(() => {
       log.error('Failed to remove coverage reports', reportsDirectory)
     })
   }

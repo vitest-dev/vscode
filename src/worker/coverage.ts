@@ -81,9 +81,13 @@ export class VitestCoverage {
     const coverage = this.ctx.config.coverage
     if (!coverage.enabled || !this.ctx.coverageProvider)
       return null
+    this.ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
     await this.ctx.runningPromise
-    if (existsSync(coverage.reportsDirectory))
+    if (existsSync(coverage.reportsDirectory)) {
+      this.ctx.logger.error(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
       return coverage.reportsDirectory
+    }
+    this.ctx.logger.error(`Coverage reports directory not found: ${coverage.reportsDirectory}`)
     return null
   }
 }

@@ -9,10 +9,11 @@ export const log = {
     if (typeof args.at(-1) === 'string' && args.at(-1).endsWith('\n'))
       args[args.length - 1] = args.at(-1).slice(0, process.platform === 'win32' ? -2 : -1)
 
+    const time = new Date().toLocaleTimeString()
     if (process.env.NODE_ENV === 'dev') {
-      console[type]('[Worker]', ...args)
+      console[type](`[INFO ${time}]`, '[Worker]', ...args)
     }
-    _log.appendLine(`[Worker] ${args.join(' ')}`)
+    _log.appendLine(`[INFO ${time}] [Worker] ${args.join(' ')}`)
   },
   info: (...args: any[]) => {
     if (process.env.NODE_ENV === 'dev') {
