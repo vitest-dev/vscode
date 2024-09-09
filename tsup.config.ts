@@ -6,7 +6,7 @@ export default defineConfig([
     external: ['vscode'],
     format: 'cjs',
     define: {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+      'process.env.EXTENSION_NODE_ENV': JSON.stringify(process.env.EXTENSION_NODE_ENV || 'production'),
     },
   },
   {

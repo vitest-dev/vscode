@@ -186,7 +186,7 @@
     "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
     "build": "tsup --minify --clean",
     "package": "vsce package --no-dependencies",
-    "dev": "NODE_ENV=dev tsup --watch --sourcemap",
+    "dev": "EXTENSION_NODE_ENV=dev tsup --watch --sourcemap",
     "test": "vscode-test",
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
     "test-e2e": "vitest --root test-e2e",
