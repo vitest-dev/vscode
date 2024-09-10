@@ -26,7 +26,7 @@ body:
     id: output
     attributes:
       label: Output
-      description: The content of "Output" tab. You can open this tab by typing "> Show Vitest Output Channel" in a search bar or pressing "See error" on an error message if there is one.
+      description: The content of "Output" tab. You can open this tab by typing "> Show Vitest Output Channel" in a search bar or pressing "See error" on an error message if there is one. Your issue **will be closed** if you do not provide the full output (starting with Vitest version) - do not remove any "irrelevant" information - the maintainer will decide if it is valuable or not.
       render: shell
     validations:
       required: true
