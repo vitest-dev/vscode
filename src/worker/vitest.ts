@@ -116,16 +116,10 @@ export class Vitest implements VitestMethods {
     return await this.ctx.globTestFiles(filters)
   }
 
-  private coverageProcessedFiles = new Set<string>()
-
   private invalidateTree(mod: any, seen = new Set()) {
     if (seen.has(mod)) {
       return
     }
-    if (this.coverageProcessedFiles.has(mod.file)) {
-      return
-    }
-    this.coverageProcessedFiles.add(mod.file)
     seen.add(mod)
     this.ctx.server.moduleGraph.invalidateModule(mod)
     mod.clientImportedModules.forEach((mod: any) => {
@@ -145,18 +139,6 @@ export class Vitest implements VitestMethods {
     // populate cache so it can find test files
     if (this.debug)
       await this.globTestFiles(files)
-
-    if (this.coverage.resolved) {
-      files.forEach((file) => {
-        if (!this.coverageProcessedFiles.has(file)) {
-          const mod = this.ctx.server.moduleGraph.getModuleById(file)
-          if (mod) {
-            this.invalidateTree(mod)
-          }
-          this.coverageProcessedFiles.add(file)
-        }
-      })
-    }
 
     await this.rerunTests(files, runAllFiles)
   }
@@ -195,9 +177,9 @@ export class Vitest implements VitestMethods {
   onFilesChanged(files: string[]) {
     try {
       for (const file of files) {
+        this.updateLastChanged(file)
         const needRerun = this.handleFileChanged(file)
         if (needRerun.length) {
-          this.updateLastChanged(file)
           this.scheduleRerun(needRerun)
         }
       }
@@ -212,10 +194,10 @@ export class Vitest implements VitestMethods {
       const testFiles: string[] = []
 
       for (const file of files) {
+        this.updateLastChanged(file)
         const content = readFileSync(file, 'utf-8')
         for (const project of this.ctx.projects) {
           if (await project.isTargetFile(file, content)) {
-            this.updateLastChanged(file)
             testFiles.push(file)
           }
         }
