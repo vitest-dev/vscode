@@ -6,12 +6,13 @@ export interface WorkerMeta {
   configFile?: string
   workspaceFile?: string
   env: Record<string, any> | undefined
+  pnpApi?: string
+  pnpLoader?: string
 }
 
 export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerMeta
-  loader?: string
 }
 
 export interface EventReady {

@@ -3,6 +3,8 @@ import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
 
+const _require = require
+
 export interface VitestResolution {
   vitestPackageJsonPath: string
   vitestNodePath: string
@@ -24,8 +26,13 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
   const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
   if (!pnp)
     return null
+  const pnpApi = _require(pnp.pnpPath)
+  const vitestNodePath = pnpApi.resolveRequest('vitest/node', cwd)
+  if (!vitestNodePath) {
+    return null
+  }
   return {
-    vitestNodePath: 'vitest/node',
+    vitestNodePath,
     vitestPackageJsonPath: 'vitest/package.json',
     pnp: {
       loaderPath: pnp.pnpLoader,

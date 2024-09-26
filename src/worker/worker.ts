@@ -6,6 +6,7 @@ import { Vitest } from './vitest'
 import { initVitest } from './init'
 import { WorkerProcessEmitter } from './emitter'
 
+const _require = require
 const emitter = new WorkerProcessEmitter()
 
 process.on('message', async function onMessage(message: any) {
@@ -14,8 +15,13 @@ process.on('message', async function onMessage(message: any) {
     const data = message as WorkerRunnerOptions
 
     try {
-      if (data.loader)
-        register(data.loader)
+      if (data.meta.pnpApi) {
+        _require(data.meta.pnpApi).setup()
+      }
+
+      if (data.meta.pnpLoader) {
+        register(data.meta.pnpLoader)
+      }
 
       const { reporter, vitest } = await initVitest(data.meta)
 
