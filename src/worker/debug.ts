@@ -1,10 +1,13 @@
 import v8 from 'node:v8'
+import { register } from 'node:module'
 import { WebSocket } from 'ws'
 import type { WorkerRunnerOptions } from './types'
 import { initVitest } from './init'
 import { Vitest } from './vitest'
 import { createWorkerRPC } from './rpc'
 import { WorkerWSEventEmitter } from './emitter'
+
+const _require = require
 
 const ws = new WebSocket(process.env.VITEST_WS_ADDRESS!)
 const emitter = new WorkerWSEventEmitter(ws)
@@ -19,6 +22,14 @@ ws.on('message', async function onMessage(_data) {
   const data = message as WorkerRunnerOptions
 
   try {
+    if (data.meta.pnpApi) {
+      _require(data.meta.pnpApi).setup()
+    }
+
+    if (data.meta.pnpLoader) {
+      register(data.meta.pnpLoader)
+    }
+
     const pkg = data.meta
 
     const vitest = await initVitest(pkg, {

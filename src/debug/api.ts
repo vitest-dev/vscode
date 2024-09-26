@@ -1,7 +1,9 @@
 import { createServer } from 'node:http'
+import { pathToFileURL } from 'node:url'
 import * as vscode from 'vscode'
 import WebSocket, { WebSocketServer } from 'ws'
 import getPort from 'get-port'
+import { gte } from 'semver'
 import type { ResolvedMeta } from '../api'
 import { VitestFolderAPI } from '../api'
 import type { VitestPackage } from '../api/pkg'
@@ -185,6 +187,9 @@ function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
       ws.on('message', onMessage)
       ws.on('close', onExit)
 
+      const pnpLoader = pkg.loader
+      const pnp = pkg.pnp
+
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
         meta: {
@@ -195,6 +200,10 @@ function startWebsocketServer(wss: WebSocketServer, pkg: VitestPackage) {
           arguments: pkg.arguments,
           workspaceFile: pkg.workspaceFile,
           id: pkg.id,
+          pnpApi: pnp,
+          pnpLoader: pnpLoader && gte(process.version, '18.19.0')
+            ? pathToFileURL(pnpLoader).toString()
+            : undefined,
         },
       }
 

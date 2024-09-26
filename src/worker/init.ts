@@ -5,6 +5,14 @@ import type { WorkerMeta } from './types'
 export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
   const vitestModule = await import(meta.vitestNodePath) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
+  const pnpExecArgv = meta.pnpApi && meta.pnpLoader
+    ? [
+        '--require',
+        meta.pnpApi,
+        '--experimental-loader',
+        meta.pnpLoader,
+      ]
+    : undefined
   const vitest = await vitestModule.createVitest(
     'test',
     {
@@ -19,6 +27,22 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
       reporters: [reporter],
       ui: false,
       includeTaskLocation: true,
+      poolOptions: meta.pnpApi && meta.pnpLoader
+        ? {
+            threads: {
+              execArgv: pnpExecArgv,
+            },
+            forks: {
+              execArgv: pnpExecArgv,
+            },
+            vmForks: {
+              execArgv: pnpExecArgv,
+            },
+            vmThreads: {
+              execArgv: pnpExecArgv,
+            },
+          }
+        : undefined,
     },
     {
       server: {

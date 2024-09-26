@@ -21,3 +21,8 @@ vite.config.ts
 tsconfig.json
 tsconfig.base.json
 .github/**
+.eslintcache
+.vscode-test.mjs
+eslint.config.mjs
+scripts/**
+test-results/**

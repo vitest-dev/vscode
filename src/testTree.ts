@@ -300,7 +300,7 @@ export class TestTree extends vscode.Disposable {
         testItem.range = new vscode.Range(position, position)
       }
       else {
-        log.error(`Cannot find location for ${testItem.label}. Using "id" to sort instead.`)
+        log.error(`Cannot find location for "${testItem.label}". Using "id" to sort instead.`)
         testItem.sortText = task.id
       }
       if (task.type === 'suite')
