@@ -61,3 +61,19 @@ export function assert(condition: unknown, message: string | (() => string)): as
     throw new Error(typeof message === 'string' ? message : message())
   }
 }
+
+export function normalizeDriveLetter(path: string) {
+  if (process.platform !== 'win32')
+    return path
+  const currentDriveLetter = __dirname[0]
+  const letterCase = currentDriveLetter === currentDriveLetter.toUpperCase()
+    ? 'uppercase'
+    : 'lowercase'
+  const targetDriveLetter = path[0]
+  if (letterCase === 'lowercase') {
+    const driveLetter = targetDriveLetter.toLowerCase()
+    return driveLetter + path.slice(1)
+  }
+  const driveLetter = targetDriveLetter.toUpperCase()
+  return driveLetter + path.slice(1)
+}

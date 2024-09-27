@@ -1,6 +1,7 @@
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
+import { normalizeDriveLetter } from '../worker/utils'
 
 const _require = require
 
@@ -67,25 +68,6 @@ export function resolveVitestPnpPackagePath(cwd: string) {
   catch {
     return null
   }
-}
-
-function normalizeDriveLetter(path: string) {
-  if (process.platform !== 'win32')
-    return path
-  // "path" always has the uppercase drive letter
-  // but the drive letter in the path might be lowercase
-  // so we need to normalize it, otherwise yarn pnp resolution will fail
-  const currentDriveLetter = __dirname[0]
-  const letterCase = currentDriveLetter === currentDriveLetter.toUpperCase()
-    ? 'uppercase'
-    : 'lowercase'
-  const targetDriveLetter = path[0]
-  if (letterCase === 'lowercase') {
-    const driveLetter = targetDriveLetter.toLowerCase()
-    return driveLetter + path.slice(1)
-  }
-  const driveLetter = targetDriveLetter.toUpperCase()
-  return driveLetter + path.slice(1)
 }
 
 export function resolveVitestNodePath(vitestPkgPath: string) {
