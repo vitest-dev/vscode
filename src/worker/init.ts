@@ -1,9 +1,12 @@
+import { pathToFileURL } from 'node:url'
 import type { UserConfig } from 'vitest/node'
 import { VSCodeReporter } from './reporter'
 import type { WorkerMeta } from './types'
 
 export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
-  const vitestModule = await import(meta.vitestNodePath) as typeof import('vitest/node')
+  const vitestModule = await import(
+    pathToFileURL(normalizeDriveLetter(meta.vitestNodePath)).toString()
+  ) as typeof import('vitest/node')
   const reporter = new VSCodeReporter()
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
@@ -81,4 +84,23 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     reporter,
     meta,
   }
+}
+
+function normalizeDriveLetter(path: string) {
+  if (process.platform !== 'win32')
+    return path
+  // "path" always has the uppercase drive letter
+  // but the drive letter in the path might be lowercase
+  // so we need to normalize it, otherwise yarn pnp resolution will fail
+  const currentDriveLetter = __dirname[0]
+  const letterCase = currentDriveLetter === currentDriveLetter.toUpperCase()
+    ? 'uppercase'
+    : 'lowercase'
+  const targetDriveLetter = path[0]
+  if (letterCase === 'lowercase') {
+    const driveLetter = targetDriveLetter.toLowerCase()
+    return driveLetter + path.slice(1)
+  }
+  const driveLetter = targetDriveLetter.toUpperCase()
+  return driveLetter + path.slice(1)
 }

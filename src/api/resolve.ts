@@ -90,5 +90,5 @@ function normalizeDriveLetter(path: string) {
 }
 
 export function resolveVitestNodePath(vitestPkgPath: string) {
-  return pathToFileURL(resolve(dirname(vitestPkgPath), './dist/node.js')).toString()
+  return resolve(dirname(vitestPkgPath), './dist/node.js')
 }
