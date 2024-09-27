@@ -278,7 +278,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
     log.error('[API]', errorMsg)
     throw new Error(errorMsg)
   }
-  const execArgv = pnpLoader && pnp && !gte(execVersion, '18.19.0')
+  const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
     ? [
         '--require',
         pnp,
@@ -364,7 +364,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
           workspaceFile: pkg.workspaceFile,
           id: pkg.id,
           pnpApi: pnp,
-          pnpLoader: pnpLoader && gte(execVersion, '18.19.0')
+          pnpLoader: pnpLoader // && gte(execVersion, '18.19.0')
             ? pathToFileURL(pnpLoader).toString()
             : undefined,
         },

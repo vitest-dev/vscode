@@ -1,4 +1,3 @@
-import { pathToFileURL } from 'node:url'
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
@@ -62,7 +61,7 @@ export function resolveVitestPnpPackagePath(cwd: string) {
         paths: [cwd],
       }),
       pnpPath,
-      vitestNodePath: pathToFileURL(vitestNodePath).toString(),
+      vitestNodePath,
     }
   }
   catch {
