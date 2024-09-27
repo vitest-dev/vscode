@@ -270,14 +270,6 @@ async function createChildVitestProcess(pkg: VitestPackage) {
   const pnp = pkg.pnp
   if (pnpLoader && !pnp)
     throw new Error('pnp file is required if loader option is used')
-  const execArgv = pnpLoader && pnp && !gte(process.version, '18.19.0')
-    ? [
-        '--require',
-        pnp,
-        '--experimental-loader',
-        pathToFileURL(pnpLoader).toString(),
-      ]
-    : undefined
   const env = getConfig().env || {}
   const execPath = await findNode(vscode.workspace.workspaceFile?.fsPath || pkg.cwd)
   const execVersion = await getNodeJsVersion(execPath)
@@ -286,7 +278,15 @@ async function createChildVitestProcess(pkg: VitestPackage) {
     log.error('[API]', errorMsg)
     throw new Error(errorMsg)
   }
-  log.info('[API]', `Running ${formapPkg(pkg)} with Node.js: ${execPath} ${execArgv ? execArgv.join(' ') : ''}`)
+  const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
+    ? [
+        '--require',
+        pnp,
+        '--experimental-loader',
+        pathToFileURL(pnpLoader).toString(),
+      ]
+    : undefined
+  log.info('[API]', `Running ${formapPkg(pkg)} with Node.js@${execVersion}: ${execPath} ${execArgv ? execArgv.join(' ') : ''}`)
   const logLevel = getConfig(pkg.folder).logLevel
   const vitest = fork(
     // to support pnp, we need to spawn `yarn node` instead of `node`
@@ -364,7 +364,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
           workspaceFile: pkg.workspaceFile,
           id: pkg.id,
           pnpApi: pnp,
-          pnpLoader: pnpLoader && gte(process.version, '18.19.0')
+          pnpLoader: pnpLoader // && gte(execVersion, '18.19.0')
             ? pathToFileURL(pnpLoader).toString()
             : undefined,
         },

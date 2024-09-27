@@ -1,7 +1,7 @@
-import { pathToFileURL } from 'node:url'
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
+import { normalizeDriveLetter } from '../worker/utils'
 
 const _require = require
 
@@ -26,13 +26,8 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
   const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
   if (!pnp)
     return null
-  const pnpApi = _require(pnp.pnpPath)
-  const vitestNodePath = pnpApi.resolveRequest('vitest/node', cwd)
-  if (!vitestNodePath) {
-    return null
-  }
   return {
-    vitestNodePath,
+    vitestNodePath: pnp.vitestNodePath,
     vitestPackageJsonPath: 'vitest/package.json',
     pnp: {
       loaderPath: pnp.pnpLoader,
@@ -60,11 +55,14 @@ export function resolveVitestPnpPackagePath(cwd: string) {
     const pnpPath = require.resolve('./.pnp.cjs', {
       paths: [cwd],
     })
+    const pnpApi = _require(pnpPath)
+    const vitestNodePath = pnpApi.resolveRequest('vitest/node', normalizeDriveLetter(cwd))
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
         paths: [cwd],
       }),
       pnpPath,
+      vitestNodePath,
     }
   }
   catch {
@@ -73,5 +71,5 @@ export function resolveVitestPnpPackagePath(cwd: string) {
 }
 
 export function resolveVitestNodePath(vitestPkgPath: string) {
-  return pathToFileURL(resolve(dirname(vitestPkgPath), './dist/node.js')).toString()
+  return resolve(dirname(vitestPkgPath), './dist/node.js')
 }
