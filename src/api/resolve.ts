@@ -26,13 +26,8 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
   const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
   if (!pnp)
     return null
-  const pnpApi = _require(pnp.pnpPath)
-  const vitestNodePath = pnpApi.resolveRequest('vitest/node', cwd)
-  if (!vitestNodePath) {
-    return null
-  }
   return {
-    vitestNodePath,
+    vitestNodePath: pnp.vitestNodePath,
     vitestPackageJsonPath: 'vitest/package.json',
     pnp: {
       loaderPath: pnp.pnpLoader,
@@ -60,16 +55,38 @@ export function resolveVitestPnpPackagePath(cwd: string) {
     const pnpPath = require.resolve('./.pnp.cjs', {
       paths: [cwd],
     })
+    const pnpApi = _require(pnpPath)
+    const vitestNodePath = pnpApi.resolveRequest('vitest/node', normalizeDriveLetter(cwd))
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
         paths: [cwd],
       }),
       pnpPath,
+      vitestNodePath: pathToFileURL(vitestNodePath).toString(),
     }
   }
   catch {
     return null
   }
+}
+
+function normalizeDriveLetter(path: string) {
+  if (process.platform !== 'win32')
+    return path
+  // "path" always has the uppercase drive letter
+  // but the drive letter in the path might be lowercase
+  // so we need to normalize it, otherwise yarn pnp resolution will fail
+  const currentDriveLetter = __dirname[0]
+  const letterCase = currentDriveLetter === currentDriveLetter.toUpperCase()
+    ? 'uppercase'
+    : 'lowercase'
+  const targetDriveLetter = path[0]
+  if (letterCase === 'lowercase') {
+    const driveLetter = targetDriveLetter.toLowerCase()
+    return driveLetter + path.slice(1)
+  }
+  const driveLetter = targetDriveLetter.toUpperCase()
+  return driveLetter + path.slice(1)
 }
 
 export function resolveVitestNodePath(vitestPkgPath: string) {
