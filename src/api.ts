@@ -286,7 +286,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
         pathToFileURL(pnpLoader).toString(),
       ]
     : undefined
-  log.info('[API]', `Running ${formapPkg(pkg)} with Node.js: ${execPath} ${execArgv ? execArgv.join(' ') : ''}`)
+  log.info('[API]', `Running ${formapPkg(pkg)} with Node.js@${execVersion}: ${execPath} ${execArgv ? execArgv.join(' ') : ''}`)
   const logLevel = getConfig(pkg.folder).logLevel
   const vitest = fork(
     // to support pnp, we need to spawn `yarn node` instead of `node`
