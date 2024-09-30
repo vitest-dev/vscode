@@ -16,7 +16,8 @@ export class VitestCoverage {
     private vitest: Vitest,
   ) {
     this._config = ctx.config.coverage
-    ctx.projects.forEach((project) => {
+    const projects = new Set([...ctx.projects, ctx.getCoreWorkspaceProject()])
+    projects.forEach((project) => {
       Object.defineProperty(project.config, 'coverage', {
         get: () => {
           return this.config
