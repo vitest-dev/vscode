@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'pathe'
 import type { CoverageProvider, ResolvedCoverageOptions, Vitest as VitestCore } from 'vitest/node'
+import { finalCoverageFileName } from '../constants'
 import type { Vitest } from './vitest'
 
 export class VitestCoverage {
@@ -60,7 +61,12 @@ export class VitestCoverage {
     this._enabled = true
 
     const jsonReporter = this._config.reporter.find(([name]) => name === 'json')
-    this._config.reporter = [jsonReporter || ['json', {}]]
+    this._config.reporter = [
+      ['json', {
+        ...jsonReporter?.[1],
+        file: finalCoverageFileName,
+      }],
+    ]
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 

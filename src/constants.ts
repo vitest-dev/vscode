@@ -11,3 +11,5 @@ export const setupFilePath = resolve(__dirname, 'setupFile.mjs')
 
 export const configGlob = '**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}'
 export const workspaceGlob = '**/*vitest.{workspace,projects}*.{ts,js,mjs,cjs,cts,mts,json}'
+
+export const finalCoverageFileName = 'coverage-final.json'
