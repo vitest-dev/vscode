@@ -66,6 +66,7 @@ export class VitestCoverage {
     this.ctx.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
+      vitest.config.coverage.enabled = true
       // @ts-expect-error private method
       await vitest.initCoverageProvider()
       await vitest.coverageProvider?.clean(this._config.clean)
@@ -82,7 +83,7 @@ export class VitestCoverage {
   async waitForReport() {
     if (!this.enabled)
       return null
-    const coverage = this.ctx.config.coverage
+    const coverage = this.config
     if (!coverage.enabled || !this.ctx.coverageProvider)
       return null
     this.ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
