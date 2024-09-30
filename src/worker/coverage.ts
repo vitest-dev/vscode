@@ -16,7 +16,8 @@ export class VitestCoverage {
     private vitest: Vitest,
   ) {
     this._config = ctx.config.coverage
-    ctx.projects.forEach((project) => {
+    const projects = new Set([...ctx.projects, ctx.getCoreWorkspaceProject()])
+    projects.forEach((project) => {
       Object.defineProperty(project.config, 'coverage', {
         get: () => {
           return this.config
@@ -66,7 +67,6 @@ export class VitestCoverage {
     this.ctx.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
-      vitest.config.coverage.enabled = true
       // @ts-expect-error private method
       await vitest.initCoverageProvider()
       await vitest.coverageProvider?.clean(this._config.clean)
@@ -83,7 +83,7 @@ export class VitestCoverage {
   async waitForReport() {
     if (!this.enabled)
       return null
-    const coverage = this.config
+    const coverage = this.ctx.config.coverage
     if (!coverage.enabled || !this.ctx.coverageProvider)
       return null
     this.ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
