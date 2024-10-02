@@ -5,6 +5,7 @@ import mm from 'micromatch'
 import type { TestTree } from './testTree'
 import { getConfig } from './config'
 import type { VitestFolderAPI } from './api'
+import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
@@ -31,10 +32,12 @@ export class ExtensionWatcher extends vscode.Disposable {
     this.watcherByFolder.set(api.workspaceFolder, watcher)
 
     watcher.onDidDelete((file) => {
+      log.verbose?.('[VSCODE] File deleted:', file.fsPath)
       this.testTree.removeFile(normalize(file.fsPath))
     })
 
     watcher.onDidChange(async (file) => {
+      log.verbose?.('[VSCODE] File changed:', file.fsPath)
       const filepath = normalize(file.fsPath)
       if (await this.shouldIgnoreFile(filepath)) {
         return
@@ -43,6 +46,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     })
 
     watcher.onDidCreate(async (file) => {
+      log.verbose?.('[VSCODE] File created:', file.fsPath)
       const filepath = normalize(file.fsPath)
       if (await this.shouldIgnoreFile(filepath)) {
         return
