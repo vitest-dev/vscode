@@ -12,7 +12,10 @@ export function getConfigValue<T>(
   key: string,
   defaultValue?: T,
 ): T | undefined {
-  return folderConfig.get(key) ?? rootConfig.get(key) ?? defaultValue
+  if (typeof defaultValue === 'boolean') {
+    return folderConfig.get(key) ?? rootConfig.get(key) ?? defaultValue
+  }
+  return folderConfig.get(key) || rootConfig.get(key) || defaultValue
 }
 
 export function getConfig(workspaceFolder?: WorkspaceFolder) {
