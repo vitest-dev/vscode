@@ -11,6 +11,7 @@ import type { VitestFolderAPI } from '../api'
 import { log } from '../log'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
+import { normalizeDriveLetter } from '../worker/utils'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -484,11 +485,12 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
   const targetFilepath = testItem.uri!.fsPath
   for (const stack of stacks) {
     const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
-    if (sourceFilepath !== targetFilepath || Number.isNaN(column) || Number.isNaN(line))
+    const sourceNormalizedPath = sourceFilepath && normalizeDriveLetter(sourceFilepath)
+    if (sourceNormalizedPath !== targetFilepath || Number.isNaN(column) || Number.isNaN(line))
       continue
 
     return {
-      path: sourceFilepath,
+      path: sourceNormalizedPath,
       line,
       column,
     }
