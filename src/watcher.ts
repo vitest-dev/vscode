@@ -1,4 +1,5 @@
 import { stat } from 'node:fs/promises'
+import { relative } from 'node:path'
 import * as vscode from 'vscode'
 import { normalize } from 'pathe'
 import mm from 'micromatch'
@@ -32,12 +33,12 @@ export class ExtensionWatcher extends vscode.Disposable {
     this.watcherByFolder.set(api.workspaceFolder, watcher)
 
     watcher.onDidDelete((file) => {
-      log.verbose?.('[VSCODE] File deleted:', file.fsPath)
+      log.verbose?.('[VSCODE] File deleted:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       this.testTree.removeFile(normalize(file.fsPath))
     })
 
     watcher.onDidChange(async (file) => {
-      log.verbose?.('[VSCODE] File changed:', file.fsPath)
+      log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       const filepath = normalize(file.fsPath)
       if (await this.shouldIgnoreFile(filepath)) {
         return
@@ -46,7 +47,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     })
 
     watcher.onDidCreate(async (file) => {
-      log.verbose?.('[VSCODE] File created:', file.fsPath)
+      log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       const filepath = normalize(file.fsPath)
       if (await this.shouldIgnoreFile(filepath)) {
         return
