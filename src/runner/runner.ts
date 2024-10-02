@@ -45,7 +45,7 @@ export class TestRunner extends vscode.Disposable {
         log.verbose?.('Not starting the runner because tests are being collected')
       }
       else {
-        log.verbose?.('The runner is starting because tests', ...files, 'were started due to a file change')
+        log.verbose?.('The runner is starting because tests', ...files.map(f => this.relative(f)), 'were started due to a file change')
         this.startTestRun(files)
       }
     })
@@ -101,7 +101,7 @@ export class TestRunner extends vscode.Disposable {
     api.onFinished(async (files = [], unhandledError, collecting) => {
       const testRun = this.testRun
       if (!testRun) {
-        log.verbose?.('No test run to finish for', files.map(f => f.filepath).join(', '))
+        log.verbose?.('No test run to finish for', files.map(f => this.relative(f.filepath)).join(', '))
         return
       }
 
@@ -179,7 +179,7 @@ export class TestRunner extends vscode.Disposable {
       log.info(
         '[RUNNER]',
         'Watching test files:',
-        files.map(f => relative(this.api.workspaceFolder.uri.fsPath, f)).join(', '),
+        files.map(f => this.relative(f)).join(', '),
         testNamePatern ? `with pattern ${testNamePatern}` : '',
       )
       await this.api.watchTests(files, testNamePatern)
@@ -257,7 +257,7 @@ export class TestRunner extends vscode.Disposable {
       if (testNamePatern)
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
-        log.info(`Running ${files.length} file(s):`, files.map(f => relative(root, f)))
+        log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
       await runTests(files, testNamePatern)
     }
   }
@@ -312,7 +312,7 @@ export class TestRunner extends vscode.Disposable {
     const request = primaryRequest || this.nonContinuousRequest || this.createContinuousRequest()
 
     if (!request) {
-      log.verbose?.('No test run request found for', ...files)
+      log.verbose?.('No test run request found for', ...files.map(f => this.relative(f)))
       return
     }
 
@@ -324,7 +324,7 @@ export class TestRunner extends vscode.Disposable {
 
     const name = files.length > 1
       ? undefined
-      : relative(this.api.workspaceFolder.uri.fsPath, files[0])
+      : this.relative(files[0])
 
     const run = this.testRun = this.controller.createTestRun(request, name)
 
@@ -443,6 +443,10 @@ export class TestRunner extends vscode.Disposable {
     }
 
     this.markTestCase(testRun, test, result)
+  }
+
+  private relative(file: string) {
+    return relative(this.api.workspaceFolder.uri.fsPath, file)
   }
 }
 
