@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs'
 import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
+import { relative } from 'pathe'
+import mm from 'micromatch'
 import type { VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
@@ -195,9 +197,13 @@ export class Vitest implements VitestMethods {
 
       for (const file of files) {
         this.updateLastChanged(file)
-        const content = readFileSync(file, 'utf-8')
+        let content: string | null = null
         for (const project of this.ctx.projects) {
-          if (await project.isTargetFile(file, content)) {
+          if (this.isTestFile(
+            project,
+            file,
+            () => content ?? (content = readFileSync(file, 'utf-8')),
+          )) {
             testFiles.push(file)
             project.testFilesList?.push(file)
             this.ctx.changedTests.add(file)
@@ -210,6 +216,24 @@ export class Vitest implements VitestMethods {
     catch (err) {
       console.error('Error during analyzing created files', err)
     }
+  }
+
+  isTestFile(project: WorkspaceProject, file: string, getContent: () => string) {
+    const relativeId = relative(project.config.dir || project.config.root, file)
+    if (mm.isMatch(relativeId, project.config.exclude)) {
+      return false
+    }
+    if (mm.isMatch(relativeId, project.config.include)) {
+      return true
+    }
+    if (
+      project.config.includeSource?.length
+      && mm.isMatch(relativeId, project.config.includeSource)
+    ) {
+      const source = getContent()
+      return source.includes('import.meta.vitest')
+    }
+    return false
   }
 
   unwatchTests() {

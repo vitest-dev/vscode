@@ -1,4 +1,3 @@
-import { stat } from 'node:fs/promises'
 import { relative } from 'node:path'
 import * as vscode from 'vscode'
 import { normalize } from 'pathe'
@@ -39,7 +38,7 @@ export class ExtensionWatcher extends vscode.Disposable {
 
     watcher.onDidChange(async (file) => {
       const filepath = normalize(file.fsPath)
-      if (await this.shouldIgnoreFile(filepath)) {
+      if (await this.shouldIgnoreFile(file)) {
         return
       }
       log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
@@ -48,7 +47,7 @@ export class ExtensionWatcher extends vscode.Disposable {
 
     watcher.onDidCreate(async (file) => {
       const filepath = normalize(file.fsPath)
-      if (await this.shouldIgnoreFile(filepath)) {
+      if (await this.shouldIgnoreFile(file)) {
         return
       }
       log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
@@ -56,8 +55,21 @@ export class ExtensionWatcher extends vscode.Disposable {
     })
   }
 
-  private async shouldIgnoreFile(filepath: string) {
-    const stats = await stat(filepath).catch(() => null)
-    return !stats || stats.isDirectory() || mm.isMatch(filepath, this.ignorePattern)
+  private async shouldIgnoreFile(file: vscode.Uri) {
+    try {
+      const stats = await vscode.workspace.fs.stat(file)
+      if (
+      // if not a file
+        stats.type !== vscode.FileType.File
+        // if not a symlinked file
+        && stats.type !== (vscode.FileType.File | vscode.FileType.SymbolicLink)
+      ) {
+        return false
+      }
+      return mm.isMatch(file.fsPath, this.ignorePattern)
+    }
+    catch {
+      return false
+    }
   }
 }
