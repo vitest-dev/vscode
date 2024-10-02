@@ -199,6 +199,8 @@ export class Vitest implements VitestMethods {
         for (const project of this.ctx.projects) {
           if (await project.isTargetFile(file, content)) {
             testFiles.push(file)
+            project.testFilesList?.push(file)
+            this.ctx.changedTests.add(file)
           }
         }
       }
