@@ -68,7 +68,8 @@ export class ExtensionWatcher extends vscode.Disposable {
       }
       return mm.isMatch(file.fsPath, this.ignorePattern)
     }
-    catch {
+    catch (err: unknown) {
+      log.verbose?.('[VSCODE] Error checking file stats:', file.fsPath, err as string)
       return false
     }
   }
