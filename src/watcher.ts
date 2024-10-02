@@ -22,7 +22,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     })
   }
 
-  async watchTestFilesInWorkspace(api: VitestFolderAPI) {
+  watchTestFilesInWorkspace(api: VitestFolderAPI) {
     if (this.watcherByFolder.has(api.workspaceFolder))
       return
 
@@ -56,21 +56,25 @@ export class ExtensionWatcher extends vscode.Disposable {
   }
 
   private async shouldIgnoreFile(file: vscode.Uri) {
+    if (mm.isMatch(file.fsPath, this.ignorePattern)) {
+      return true
+    }
     try {
       const stats = await vscode.workspace.fs.stat(file)
       if (
-      // if not a file
+        // if not a file
         stats.type !== vscode.FileType.File
         // if not a symlinked file
         && stats.type !== (vscode.FileType.File | vscode.FileType.SymbolicLink)
       ) {
-        return false
+        log.verbose?.('[VSCODE]', file.fsPath, 'is not a file. Ignoring.')
+        return true
       }
-      return mm.isMatch(file.fsPath, this.ignorePattern)
+      return false
     }
     catch (err: unknown) {
       log.verbose?.('[VSCODE] Error checking file stats:', file.fsPath, err as string)
-      return false
+      return true
     }
   }
 }
