@@ -38,20 +38,20 @@ export class ExtensionWatcher extends vscode.Disposable {
     })
 
     watcher.onDidChange(async (file) => {
-      log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       const filepath = normalize(file.fsPath)
       if (await this.shouldIgnoreFile(filepath)) {
         return
       }
+      log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       api.onFileChanged(filepath)
     })
 
     watcher.onDidCreate(async (file) => {
-      log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       const filepath = normalize(file.fsPath)
       if (await this.shouldIgnoreFile(filepath)) {
         return
       }
+      log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
       api.onFileCreated(filepath)
     })
   }
