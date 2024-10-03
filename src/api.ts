@@ -168,6 +168,7 @@ export class VitestFolderAPI extends VitestReporter {
   async dispose() {
     this.handlers.clearListeners()
     delete require.cache[this.meta.pkg.vitestPackageJsonPath]
+    delete require.cache[this.meta.pkg.vitestNodePath]
     if (!this.meta.process.closed) {
       try {
         await this.meta.rpc.close()

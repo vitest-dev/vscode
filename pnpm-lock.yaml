@@ -5,9 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@vitest/runner@2.0.5':
-    hash: 3p7vko36hcqzkg3jwrwmmj7lvy
-    path: patches/@vitest__runner@2.0.5.patch
   birpc@0.2.17:
     hash: 76ascauag252sgpxpwh3k26eya
     path: patches/birpc@0.2.17.patch
@@ -60,7 +57,7 @@ devDependencies:
     version: 8.5.10
   '@vitest/runner':
     specifier: ^2.0.5
-    version: 2.0.5(patch_hash=3p7vko36hcqzkg3jwrwmmj7lvy)
+    version: 2.0.5
   '@vitest/utils':
     specifier: ^2.0.5
     version: 2.0.5
@@ -1359,13 +1356,12 @@ packages:
       tinyrainbow: 1.2.0
     dev: true
 
-  /@vitest/runner@2.0.5(patch_hash=3p7vko36hcqzkg3jwrwmmj7lvy):
+  /@vitest/runner@2.0.5:
     resolution: {integrity: sha512-TfRfZa6Bkk9ky4tW0z20WKXFEwwvWhRY+84CnSEtq4+3ZvDlJyY32oNTJtM7AW9ihW90tX/1Q78cb6FjoAs+ig==}
     dependencies:
       '@vitest/utils': 2.0.5
       pathe: 1.1.2
     dev: true
-    patched: true
 
   /@vitest/snapshot@2.0.5:
     resolution: {integrity: sha512-SgCPUeDFLaM0mIUHfaArq8fD2WbaXG/zVXjRupthYfYGzc8ztbFbu6dUNOblBG7XLMR1kEhS/DNnfCZ2IhdDew==}
@@ -5691,7 +5687,7 @@ packages:
       '@types/node': 20.12.8
       '@vitest/expect': 2.0.5
       '@vitest/pretty-format': 2.0.5
-      '@vitest/runner': 2.0.5(patch_hash=3p7vko36hcqzkg3jwrwmmj7lvy)
+      '@vitest/runner': 2.0.5
       '@vitest/snapshot': 2.0.5
       '@vitest/spy': 2.0.5
       '@vitest/utils': 2.0.5

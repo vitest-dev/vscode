@@ -8,10 +8,9 @@ import { ancestor as walkAst } from 'acorn-walk'
 import {
   calculateSuiteHash,
   generateHash,
-  interpretTaskModes,
   someTasksAreOnly,
 } from '@vitest/runner/utils'
-import type { File, Suite, Test } from 'vitest'
+import type { File, Suite, TaskBase, Test } from 'vitest'
 import type { WorkspaceProject } from 'vitest/node'
 
 interface ParsedFile extends File {
@@ -358,4 +357,92 @@ function createIndexMap(source: string) {
     }
   }
   return map
+}
+
+/**
+ * If any tasks been marked as `only`, mark all other tasks as `skip`.
+ */
+function interpretTaskModes(
+  suite: Suite,
+  namePattern?: string | RegExp,
+  onlyMode?: boolean,
+  parentIsOnly?: boolean,
+  allowOnly?: boolean,
+): void {
+  const suiteIsOnly = parentIsOnly || suite.mode === 'only'
+
+  suite.tasks.forEach((t) => {
+    // Check if either the parent suite or the task itself are marked as included
+    const includeTask = suiteIsOnly || t.mode === 'only'
+    if (onlyMode) {
+      if (t.type === 'suite' && (includeTask || someTasksAreOnly(t))) {
+        // Don't skip this suite
+        if (t.mode === 'only') {
+          checkAllowOnly(t, allowOnly)
+          t.mode = 'run'
+        }
+      }
+      else if (t.mode === 'run' && !includeTask) {
+        t.mode = 'skip'
+      }
+      else if (t.mode === 'only') {
+        checkAllowOnly(t, allowOnly)
+        t.mode = 'run'
+      }
+    }
+    if (t.type === 'test') {
+      if (namePattern && !getTaskFullName(t).match(namePattern)) {
+        t.mode = 'skip'
+      }
+    }
+    else if (t.type === 'suite') {
+      if (t.mode === 'skip') {
+        skipAllTasks(t)
+      }
+      else {
+        interpretTaskModes(t, namePattern, onlyMode, includeTask, allowOnly)
+      }
+    }
+  })
+
+  // if all subtasks are skipped, mark as skip
+  if (suite.mode === 'run') {
+    if (suite.tasks.length && suite.tasks.every(i => i.mode !== 'run')) {
+      suite.mode = 'skip'
+    }
+  }
+}
+
+function checkAllowOnly(task: TaskBase, allowOnly?: boolean) {
+  if (allowOnly) {
+    return
+  }
+  const error = new Error(
+    '[Vitest] Unexpected .only modifier. Remove it or pass --allowOnly argument to bypass this error',
+  )
+  task.result = {
+    state: 'fail',
+    errors: [
+      {
+        name: error.name,
+        stack: error.stack,
+        message: error.message,
+      },
+    ],
+  }
+}
+
+function getTaskFullName(task: TaskBase): string {
+  return `${task.suite ? `${getTaskFullName(task.suite)} ` : ''}${task.name}`
+}
+
+function skipAllTasks(suite: Suite) {
+  suite.tasks.forEach((t) => {
+    if (t.mode === 'run') {
+      t.mode = 'skip'
+      if (t.type === 'suite') {
+        skipAllTasks(t)
+      }
+    }
+  })
 }
