@@ -113,16 +113,6 @@ export class TestRunner extends vscode.Disposable {
         showVitestError(`Failed to report coverage. ${err.message}`, err)
       }
 
-      files.forEach((file) => {
-        const testItem = this.tree.getTestItemByTask(file)
-        if (testItem) {
-          this.markResult(testRun, testItem, file.result)
-        }
-        else {
-          log.verbose?.('Could not find test item for', file.filepath)
-        }
-      })
-
       if (unhandledError)
         testRun.appendOutput(formatTestOutput(unhandledError))
 
@@ -368,24 +358,36 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  private markSuite(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
-    if (!result) {
-      testRun.started(test)
+  private failTestCase(
+    testRun: vscode.TestRun,
+    test: vscode.TestItem,
+    result: TaskResult,
+  ) {
+    const errors = result.errors?.map(err =>
+      testMessageForTestError(test, err as TestError),
+    ) || []
+    if (!errors.length) {
+      log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
       return
     }
+    log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
+    testRun.failed(test, errors, result.duration)
+  }
 
-    if (result.state === 'fail') {
-      // errors in a suite are stored only if it happens during discovery
-      const errors = result.errors?.map(err =>
-        err.stack || err.message,
-      )
-      if (!errors?.length) {
-        log.verbose?.(`No errors found for "${test.label}"`)
-        return
-      }
-      log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
-      test.error = errors.join('\n')
+  private failTestSuite(
+    test: vscode.TestItem,
+    result: TaskResult,
+  ) {
+    // errors in a suite are stored only if it happens during discovery
+    const errors = result.errors?.map(err =>
+      err.stack || err.message,
+    )
+    if (!errors?.length) {
+      log.verbose?.(`No errors found for "${test.label}"`)
+      return
     }
+    log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
+    test.error = errors.join('\n')
   }
 
   private markTestCase(
@@ -395,15 +397,12 @@ export class TestRunner extends vscode.Disposable {
   ) {
     switch (result.state) {
       case 'fail': {
-        const errors = result.errors?.map(err =>
-          testMessageForTestError(test, err as TestError),
-        ) || []
-        if (!errors.length) {
-          log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
-          return
+        if (getTestData(test) instanceof TestCase) {
+          this.failTestCase(testRun, test, result)
         }
-        log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
-        testRun.failed(test, errors, result.duration)
+        else {
+          this.failTestSuite(test, result)
+        }
         break
       }
       case 'pass':
@@ -428,14 +427,6 @@ export class TestRunner extends vscode.Disposable {
   }
 
   private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
-    const isTestCase = getTestData(test) instanceof TestCase
-
-    // generally, we shouldn't mark non test cases because
-    // parents are calculated based on children
-    if (!isTestCase) {
-      return this.markSuite(testRun, test, result)
-    }
-
     if (!result) {
       log.verbose?.(`No task result for "${test.label}", assuming the test just started running`)
       testRun.started(test)
