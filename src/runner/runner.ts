@@ -92,6 +92,10 @@ export class TestRunner extends vscode.Disposable {
           log.verbose?.(`Marking "${test.label}" as skipped during collection`)
           testRun.skipped(test)
         }
+        else if (!task.result && task.type !== 'suite') {
+          log.verbose?.(`Enqueuing "${test.label}" because it was just collected`)
+          testRun.enqueued(test)
+        }
         else {
           this.markResult(testRun, test, task.result)
         }
