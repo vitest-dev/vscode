@@ -42,7 +42,7 @@ export class TestRunner extends vscode.Disposable {
 
     api.onWatcherRerun((files, _trigger, collecting) => {
       if (collecting) {
-        log.verbose?.('Not starting the runner because tests are being collected')
+        log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
       }
       else {
         log.verbose?.('The runner is starting because tests', ...files.map(f => this.relative(f)), 'were started due to a file change')
@@ -69,7 +69,7 @@ export class TestRunner extends vscode.Disposable {
     })
 
     api.onCollected((files, collecting) => {
-      if (!files) {
+      if (!files || !files.length) {
         log.verbose?.('No files to collect')
         return
       }
@@ -102,6 +102,12 @@ export class TestRunner extends vscode.Disposable {
       const testRun = this.testRun
       if (!testRun) {
         log.verbose?.('No test run to finish for', files.map(f => this.relative(f.filepath)).join(', '))
+        if (!files.length) {
+          log.verbose?.('No files to finish')
+        }
+        if (unhandledError) {
+          log.error(unhandledError)
+        }
         return
       }
 

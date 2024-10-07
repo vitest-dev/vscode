@@ -13,6 +13,7 @@ export class ExtensionWatcher extends vscode.Disposable {
   private readonly ignorePattern = [
     '**/.git/**',
     '**/*.git',
+    '**/node_modules/**',
   ]
 
   constructor(private readonly testTree: TestTree) {

@@ -8,6 +8,13 @@ import { VitestCoverage } from './coverage'
 import { assert, limitConcurrency } from './utils'
 import { astCollectTests } from './collect'
 
+const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
+  ? (...args: any[]) => {
+      // eslint-disable-next-line no-console
+      console.info(...args)
+    }
+  : undefined
+
 export class Vitest implements VitestMethods {
   private readonly watcher: VitestWatcher
   private readonly coverage: VitestCoverage
@@ -187,7 +194,7 @@ export class Vitest implements VitestMethods {
       }
     }
     catch (err) {
-      console.error('Error during analyzing changed files', err)
+      this.ctx.logger.error('Error during analyzing changed files', err)
     }
   }
 
@@ -198,6 +205,7 @@ export class Vitest implements VitestMethods {
       for (const file of files) {
         this.updateLastChanged(file)
         let content: string | null = null
+        const projects = []
         for (const project of this.ctx.projects) {
           if (this.isTestFile(
             project,
@@ -207,14 +215,22 @@ export class Vitest implements VitestMethods {
             testFiles.push(file)
             project.testFilesList?.push(file)
             this.ctx.changedTests.add(file)
+            projects.push(project)
           }
+          else {
+            verbose?.('file', file, 'is not part of workspace', project.getName() || 'core')
+          }
+        }
+        // to support Vitest 1.4.0
+        if (projects.length && (this.ctx as any).projectsTestFiles) {
+          (this.ctx as any).projectsTestFiles.set(file, new Set(projects))
         }
       }
 
       testFiles.forEach(file => this.scheduleRerun([file]))
     }
     catch (err) {
-      console.error('Error during analyzing created files', err)
+      this.ctx.logger.error('Error during analyzing created files', err)
     }
   }
 
