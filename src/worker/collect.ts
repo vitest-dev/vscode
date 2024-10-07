@@ -10,20 +10,20 @@ import {
   generateHash,
   someTasksAreOnly,
 } from '@vitest/runner/utils'
-import type { File, Suite, TaskBase, Test } from 'vitest'
+import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase } from 'vitest'
 import type { WorkspaceProject } from 'vitest/node'
 
-interface ParsedFile extends File {
+interface ParsedFile extends RunnerTestFile {
   start: number
   end: number
 }
 
-interface ParsedTest extends Test {
+interface ParsedTest extends RunnerTestCase {
   start: number
   end: number
 }
 
-interface ParsedSuite extends Suite {
+interface ParsedSuite extends RunnerTestSuite {
   start: number
   end: number
 }
@@ -39,7 +39,7 @@ interface LocalCallDefinition {
 }
 
 export interface FileInformation {
-  file: File
+  file: RunnerTestFile
   filepath: string
   parsed: string
   map: SourceMap | { mappings: string } | null
@@ -363,7 +363,7 @@ function createIndexMap(source: string) {
  * If any tasks been marked as `only`, mark all other tasks as `skip`.
  */
 function interpretTaskModes(
-  suite: Suite,
+  suite: RunnerTestSuite,
   namePattern?: string | RegExp,
   onlyMode?: boolean,
   parentIsOnly?: boolean,
@@ -436,7 +436,7 @@ function getTaskFullName(task: TaskBase): string {
   return `${task.suite ? `${getTaskFullName(task.suite)} ` : ''}${task.name}`
 }
 
-function skipAllTasks(suite: Suite) {
+function skipAllTasks(suite: RunnerTestSuite) {
   suite.tasks.forEach((t) => {
     if (t.mode === 'run') {
       t.mode = 'skip'

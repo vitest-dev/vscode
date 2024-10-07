@@ -1,8 +1,8 @@
 import path from 'node:path'
 import { rm } from 'node:fs/promises'
-import stripAnsi from 'strip-ansi'
+import { stripVTControlCharacters } from 'node:util'
 import * as vscode from 'vscode'
-import { getTasks } from '@vitest/ws-client'
+import { getTasks } from '@vitest/runner/utils'
 import type { ParsedStack, TaskResult, TestError } from 'vitest'
 import { basename, normalize, relative } from 'pathe'
 import { TestCase, TestFile, TestFolder, getTestData } from '../testTreeData'
@@ -447,9 +447,9 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
 
   let testMessage
   if (error.actual != null && error.expected != null && error.actual !== 'undefined' && error.expected !== 'undefined')
-    testMessage = vscode.TestMessage.diff(stripAnsi(error.message) ?? '', error.expected, error.actual)
+    testMessage = vscode.TestMessage.diff(stripVTControlCharacters(error.message) ?? '', error.expected, error.actual)
   else
-    testMessage = new vscode.TestMessage(stripAnsi(error.message) ?? '')
+    testMessage = new vscode.TestMessage(stripVTControlCharacters(error.message) ?? '')
 
   const location = parseLocationFromStacks(testItem, error.stacks ?? [])
   if (location) {
