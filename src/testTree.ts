@@ -1,3 +1,5 @@
+import { lstatSync, readlinkSync } from 'node:fs'
+import { resolve } from 'node:path'
 import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
 import type { RunnerTask, RunnerTestFile } from 'vitest'
@@ -82,10 +84,20 @@ export class TestTree extends vscode.Disposable {
   // this inline folder is required for "createFolderItem" to properly resolve the parent,
   // otherwise it will go into an infinite loop
   getOrCreateInlineFolderItem(folderUri: vscode.Uri) {
-    const id = normalize(folderUri.fsPath)
+    let id = normalize(folderUri.fsPath)
     const cached = this.folderItems.get(id)
     if (cached)
       return cached
+    const stats = lstatSync(folderUri.fsPath)
+    if (stats.isSymbolicLink()) {
+      const actualPath = readlinkSync(folderUri.fsPath)
+      const dir = dirname(folderUri.fsPath)
+      id = resolve(dir, actualPath)
+      folderUri = vscode.Uri.file(id)
+    }
+    const cachedSymlink = this.folderItems.get(id)
+    if (cachedSymlink)
+      return cachedSymlink
     const item: vscode.TestItem = {
       id: folderUri.toString(),
       children: this.controller.items,
