@@ -1,8 +1,8 @@
 import path from 'node:path'
 import { rm } from 'node:fs/promises'
-import stripAnsi from 'strip-ansi'
+import { stripVTControlCharacters } from 'node:util'
 import * as vscode from 'vscode'
-import { getTasks } from '@vitest/ws-client'
+import { getTasks } from '@vitest/runner/utils'
 import type { ParsedStack, TaskResult, TestError } from 'vitest'
 import { basename, normalize, relative } from 'pathe'
 import { TestCase, TestFile, TestFolder, getTestData } from '../testTreeData'
@@ -331,8 +331,12 @@ export class TestRunner extends vscode.Disposable {
 
       const testItems = request.include || this.tree.getFileTestItems(file)
       function enqueue(test: vscode.TestItem) {
-        log.verbose?.(`Enqueuing "${test.label}"`)
-        run.enqueued(test)
+        const testData = getTestData(test)
+        // we only change the state of test cases to keep the correct test count
+        if (testData instanceof TestCase) {
+          log.verbose?.(`Enqueuing "${test.label}"`)
+          run.enqueued(test)
+        }
         test.children.forEach(enqueue)
       }
       testItems.forEach(test => enqueue(test))
@@ -358,38 +362,6 @@ export class TestRunner extends vscode.Disposable {
     })
   }
 
-  private failTestCase(
-    testRun: vscode.TestRun,
-    test: vscode.TestItem,
-    result: TaskResult,
-  ) {
-    const errors = result.errors?.map(err =>
-      testMessageForTestError(test, err as TestError),
-    ) || []
-    if (!errors.length) {
-      log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
-      return
-    }
-    log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
-    testRun.failed(test, errors, result.duration)
-  }
-
-  private failTestSuite(
-    test: vscode.TestItem,
-    result: TaskResult,
-  ) {
-    // errors in a suite are stored only if it happens during discovery
-    const errors = result.errors?.map(err =>
-      err.stack || err.message,
-    )
-    if (!errors?.length) {
-      log.verbose?.(`No errors found for "${test.label}"`)
-      return
-    }
-    log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
-    test.error = errors.join('\n')
-  }
-
   private markTestCase(
     testRun: vscode.TestRun,
     test: vscode.TestItem,
@@ -397,12 +369,15 @@ export class TestRunner extends vscode.Disposable {
   ) {
     switch (result.state) {
       case 'fail': {
-        if (getTestData(test) instanceof TestCase) {
-          this.failTestCase(testRun, test, result)
+        const errors = result.errors?.map(err =>
+          testMessageForTestError(test, err as TestError),
+        ) || []
+        if (!errors.length) {
+          log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
+          return
         }
-        else {
-          this.failTestSuite(test, result)
-        }
+        log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
+        testRun.failed(test, errors, result.duration)
         break
       }
       case 'pass':
@@ -426,7 +401,34 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
+  // we only change the state of test cases to keep the correct test count
+  // ignoring test files, test folders and suites - these only report syntax errors
+  private markNonTestCase(test: vscode.TestItem, result?: TaskResult) {
+    if (!result) {
+      log.verbose?.(`No task result for "${test.label}", ignoring`)
+      return
+    }
+
+    // errors in a suite are stored only if it happens during discovery
+    const errors = result.errors?.map(err =>
+      err.stack || err.message,
+    )
+    if (!errors?.length) {
+      log.verbose?.(`No errors found for "${test.label}"`)
+      return
+    }
+    log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
+    test.error = errors.join('\n')
+  }
+
   private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
+    const isTestCase = getTestData(test) instanceof TestCase
+
+    if (!isTestCase) {
+      this.markNonTestCase(test, result)
+      return
+    }
+
     if (!result) {
       log.verbose?.(`No task result for "${test.label}", assuming the test just started running`)
       testRun.started(test)
@@ -447,9 +449,9 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
 
   let testMessage
   if (error.actual != null && error.expected != null && error.actual !== 'undefined' && error.expected !== 'undefined')
-    testMessage = vscode.TestMessage.diff(stripAnsi(error.message) ?? '', error.expected, error.actual)
+    testMessage = vscode.TestMessage.diff(stripVTControlCharacters(error.message) ?? '', error.expected, error.actual)
   else
-    testMessage = new vscode.TestMessage(stripAnsi(error.message) ?? '')
+    testMessage = new vscode.TestMessage(stripVTControlCharacters(error.message) ?? '')
 
   const location = parseLocationFromStacks(testItem, error.stacks ?? [])
   if (location) {

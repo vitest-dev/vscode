@@ -1,6 +1,6 @@
 import type { ProvidedContext } from 'vitest'
 import { relative } from 'pathe'
-import type { WorkspaceSpec } from 'vitest/node'
+import type { WorkspaceProject } from 'vitest/node'
 import { Vitest } from './vitest'
 
 export class VitestWatcher {
@@ -46,7 +46,7 @@ export class VitestWatcher {
 
         const tests = Array.from(this.changedTests)
         const specs = tests.flatMap(file => this.getProjectsByTestFile(file))
-        const browserSpecs: WorkspaceSpec[] = []
+        const browserSpecs: [project: WorkspaceProject, file: string][] = []
 
         for (const [project, file] of specs) {
           if (project.config.browser.enabled) {
