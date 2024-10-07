@@ -35,7 +35,7 @@ ws.on('message', async function onMessage(_data) {
         ws.send(message)
       },
       serialize: v8.serialize,
-      deserialize: v => v8.deserialize(Buffer.from(v)),
+      deserialize: v => v8.deserialize(Buffer.from(v) as any),
     })
     vitest.reporter.initRpc(rpc)
     emitter.ready()

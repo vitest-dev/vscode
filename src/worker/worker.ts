@@ -23,7 +23,7 @@ process.on('message', async function onMessage(message: any) {
           process.send!(message)
         },
         serialize: v8.serialize,
-        deserialize: v => v8.deserialize(Buffer.from(v)),
+        deserialize: v => v8.deserialize(Buffer.from(v) as any),
       })
       reporter.initRpc(rpc)
       emitter.ready()
