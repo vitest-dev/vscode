@@ -30,10 +30,7 @@ export class TestRunner extends vscode.Disposable {
     super(() => {
       log.verbose?.('Disposing test runner')
       api.clearListeners()
-      this.testRun?.end()
-      this.testRun = undefined
-      this.testRunDefer?.resolve()
-      this.testRunDefer = undefined
+      this.endTestRun()
       this.nonContinuousRequest = undefined
       this.continuousRequests.clear()
       this.api.cancelRun()
@@ -146,7 +143,7 @@ export class TestRunner extends vscode.Disposable {
   }
 
   protected endTestRun() {
-    log.verbose?.('Ending test run', this.testRun?.name || '<none>')
+    log.verbose?.('Ending test run', this.testRun ? this.testRun.name || '' : '<none>')
     this.testRun?.end()
     this.testRunDefer?.resolve()
     this.testRun = undefined
@@ -238,6 +235,7 @@ export class TestRunner extends vscode.Disposable {
       await this.testRunDefer.promise
     }
 
+    log.verbose?.('Initiating deferred test run')
     this.testRunDefer = Promise.withResolvers()
 
     const runTests = (files?: string[], testNamePatern?: string) =>
@@ -538,5 +536,5 @@ function formatTestOutput(output: string) {
 function join(items: readonly vscode.TestItem[] | undefined) {
   if (!items)
     return '<all tests>'
-  return items.map(p => p.label).join(', ')
+  return items.map(p => `"${p.label}"`).join(', ')
 }

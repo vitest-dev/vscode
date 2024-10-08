@@ -27,7 +27,7 @@ export async function debugTests(
   const wsAddress = `ws://localhost:${port}`
 
   const config = getConfig(pkg.folder)
-  const promise = Promise.withResolvers<void>()
+  const deferredPromise = Promise.withResolvers<void>()
 
   const { runtimeArgs, runtimeExecutable } = await getRuntimeOptions(
     pkg.folder,
@@ -73,12 +73,12 @@ export async function debugTests(
         log.info('[DEBUG] Debugging started')
       }
       else {
-        promise.reject(new Error('Failed to start debugging. See output for more information.'))
+        deferredPromise.reject(new Error('Failed to start debugging. See output for more information.'))
         log.error('[DEBUG] Debugging failed')
       }
     },
     (err) => {
-      promise.reject(new Error('Failed to start debugging', { cause: err }))
+      deferredPromise.reject(new Error('Failed to start debugging', { cause: err }))
       log.error('[DEBUG] Start debugging failed')
       log.error(err.toString())
     },
@@ -112,10 +112,15 @@ export async function debugTests(
 
       await runner.runTests(request, token)
 
-      promise.resolve()
+      deferredPromise.resolve()
     }
-    catch (err) {
-      promise.reject(err)
+    catch (err: any) {
+      if (err.message === '[birpc] rpc is closed') {
+        deferredPromise.resolve()
+        return
+      }
+
+      deferredPromise.reject(err)
     }
 
     if (!token.isCancellationRequested) {
@@ -127,13 +132,13 @@ export async function debugTests(
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
     if (session.configuration.__name !== 'Vitest')
       return
-    disposables.forEach(d => d.dispose())
+    disposables.reverse().forEach(d => d.dispose())
     server.close()
   })
 
   disposables.push(onDidStart, onDidTerminate)
 
-  await promise.promise
+  await deferredPromise.promise
 }
 
 async function getRuntimeOptions(folder: vscode.WorkspaceFolder) {

@@ -6,6 +6,7 @@ import type { Vitest } from './vitest'
 export function createWorkerRPC(vitest: Vitest, channel: ChannelOptions) {
   const rpc = createBirpc<VitestEvents, VitestMethods>(vitest, {
     timeout: -1,
+    bind: 'functions',
     eventNames: [
       'onConsoleLog',
       'onTaskUpdate',

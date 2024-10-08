@@ -96,6 +96,7 @@ export function createVitestRpc(options: {
     events,
     {
       timeout: -1,
+      bind: 'functions',
       on(listener) {
         options.on(listener)
       },

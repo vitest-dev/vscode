@@ -162,6 +162,7 @@ export class VitestFolderAPI {
       await promise.catch((err) => {
         log.error('[API]', 'Failed to close Vitest process', err)
       })
+      this.meta.rpc.$close()
     }
   }
 

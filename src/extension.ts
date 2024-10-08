@@ -62,10 +62,14 @@ class VitestExtension {
     return await this._defineTestProfilePromise
   }
 
-  private async _defineTestProfiles(showWarning: boolean, _cancelToken?: vscode.CancellationToken) {
+  private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     this.testTree.reset([])
 
     const vitest = await resolveVitestPackages(showWarning)
+
+    if (cancelToken?.isCancellationRequested) {
+      return
+    }
 
     if (!vitest.length) {
       log.error('[API]', 'Failed to start Vitest: No vitest config files found')
@@ -121,6 +125,10 @@ class VitestExtension {
 
     try {
       await this.api?.dispose()
+
+      if (cancelToken?.isCancellationRequested) {
+        return
+      }
 
       this.api = await resolveVitestAPI(vitest)
 
@@ -263,6 +271,7 @@ class VitestExtension {
     const reloadConfigNames = [
       'vitest.vitestPackagePath',
       'vitest.nodeExecutable',
+      'vitest.nodeExecArgs',
       'vitest.workspaceConfig',
       'vitest.rootConfig',
       'vitest.shellType',
