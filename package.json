@@ -112,9 +112,14 @@
           "scope": "resource"
         },
         "vitest.nodeExecutable": {
-          "description": "The path to the Node.js executable. If not assigned, uses VSCode's Node.js instance. This is applied only when `vitest.shellType` is `child_process` (which is the default).",
+          "markdownDescription": "The path to the Node.js executable. If not assigned, tries to find Node.js path via a PATH variable or a `which` command. This is applied only when `vitest.shellType` is `child_process` (the default).",
           "type": "string",
           "scope": "window"
+        },
+        "vitest.nodeExecArgs": {
+          "description": "The arguments to pass to the Node.js executable. This is applied only when `vitest.shellType` is `child_process` (the default).",
+          "type": "array",
+          "scope": "resource"
         },
         "vitest.workspaceConfig": {
           "markdownDescription": "The path to the Vitest [workspace configuration file](https://vitest.dev/guide/workspace). The extension supports only a single file per VSCode workspace.",

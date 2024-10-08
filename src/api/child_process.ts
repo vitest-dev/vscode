@@ -26,14 +26,16 @@ async function createChildVitestProcess(pkg: VitestPackage) {
     log.error('[API]', errorMsg)
     throw new Error(errorMsg)
   }
+  const runtimeArgs = getConfig(pkg.folder).nodeExecArgs || []
   const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
     ? [
         '--require',
         pnp,
         '--experimental-loader',
         pathToFileURL(pnpLoader).toString(),
+        ...runtimeArgs,
       ]
-    : undefined
+    : runtimeArgs
   log.info('[API]', `Running ${formatPkg(pkg)} with Node.js@${execVersion}: ${execPath} ${execArgv ? execArgv.join(' ') : ''}`)
   const logLevel = getConfig(pkg.folder).logLevel
   const vitest = fork(

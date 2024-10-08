@@ -29,11 +29,13 @@ export async function debugTests(
   const config = getConfig(pkg.folder)
   const promise = Promise.withResolvers<void>()
 
-  const execPath = await findNode(
-    vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath,
+  const { runtimeArgs, runtimeExecutable } = await getRuntimeOptions(
+    pkg.folder,
   )
   const env = config.env || {}
   const logLevel = config.logLevel
+
+  log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
 
   const debugConfig = {
     __name: 'Vitest',
@@ -43,7 +45,8 @@ export async function debugTests(
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
     smartStep: true,
-    runtimeExecutable: execPath,
+    runtimeArgs,
+    runtimeExecutable,
     program: workerPath,
     cwd: pkg.cwd,
     env: {
@@ -131,4 +134,26 @@ export async function debugTests(
   disposables.push(onDidStart, onDidTerminate)
 
   await promise.promise
+}
+
+async function getRuntimeOptions(folder: vscode.WorkspaceFolder) {
+  const config = getConfig(folder)
+
+  // if (config.shellType === 'child_process') {
+  const node = await findNode(
+    vscode.workspace.workspaceFile?.fsPath || folder.uri.fsPath,
+  )
+  const execArgs = config.nodeExecArgs
+  return {
+    runtimeExecutable: node,
+    runtimeArgs: execArgs,
+  }
+  // }
+
+  // const shellPath = config.terminalShellPath || vscode.env.shell
+  // const runtimeArgs = config.terminalShellArgs
+  // return {
+  //   runtimeExecutable: `${shellPath} node`,
+  //   runtimeArgs,
+  // }
 }
