@@ -196,7 +196,8 @@ export async function astCollectTests(
     start: ast.start,
     end: ast.end,
     projectName: ctx.getName(),
-    meta: { typecheck: true },
+    meta: {},
+    pool: 'browser',
     file: null!,
   }
   file.file = file
