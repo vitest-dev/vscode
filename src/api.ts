@@ -1,45 +1,13 @@
-import type { ChildProcess } from 'node:child_process'
-import { fork } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
-import { gte } from 'semver'
-import { dirname, normalize, relative } from 'pathe'
+import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import { minimumNodeVersion, workerPath } from './constants'
-import { getConfig } from './config'
 import type { VitestEvents, VitestRPC } from './api/rpc'
-import { createVitestRpc } from './api/rpc'
-import type { WorkerEvent, WorkerRunnerOptions } from './worker/types'
 import type { VitestPackage } from './api/pkg'
-import { findNode, getNodeJsVersion, showVitestError } from './utils'
-import type { VitestProcess } from './process'
-
-export class VitestReporter {
-  constructor(
-    public readonly id: string,
-    protected handlers: ResolvedMeta['handlers'],
-  ) {}
-
-  onConsoleLog = this.createHandler('onConsoleLog')
-  onTaskUpdate = this.createHandler('onTaskUpdate')
-  onFinished = this.createHandler('onFinished')
-  onCollected = this.createHandler('onCollected')
-  onWatcherStart = this.createHandler('onWatcherStart')
-  onWatcherRerun = this.createHandler('onWatcherRerun')
-
-  clearListeners(name?: Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>) {
-    if (name)
-      this.handlers.removeListener(name, this.handlers[name])
-
-    this.handlers.clearListeners()
-  }
-
-  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>>(name: K) {
-    return (callback: VitestEvents[K]) => {
-      this.handlers[name](callback as any)
-    }
-  }
-}
+import { showVitestError } from './utils'
+import type { VitestProcess } from './api/types'
+import { createVitestTerminalProcess } from './api/terminal'
+import { getConfig } from './config'
+import { createVitestProcess } from './api/child_process'
 
 export class VitestAPI {
   private disposing = false
@@ -97,17 +65,21 @@ export class VitestAPI {
   }
 }
 
-export class VitestFolderAPI extends VitestReporter {
+export class VitestFolderAPI {
+  readonly id: string
   readonly tag: vscode.TestTag
   readonly workspaceFolder: vscode.WorkspaceFolder
+
+  private handlers: ResolvedMeta['handlers']
 
   constructor(
     private pkg: VitestPackage,
     private meta: ResolvedMeta,
   ) {
     const normalizedId = normalize(pkg.id)
-    super(normalizedId, meta.handlers)
+    this.id = normalizedId
     this.workspaceFolder = pkg.folder
+    this.handlers = meta.handlers
     this.tag = new vscode.TestTag(pkg.prefix)
   }
 
@@ -177,14 +149,17 @@ export class VitestFolderAPI extends VitestReporter {
       catch (err) {
         log.error('[API]', 'Failed to close Vitest RPC', err)
       }
-      const promise = new Promise<void>((resolve) => {
-        this.meta.process.once('exit', () => resolve())
+      const promise = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('Vitest process did not exit in time'))
+        }, 5_000)
+        this.meta.process.once('exit', () => {
+          resolve()
+          clearTimeout(timer)
+        })
       })
       this.meta.process.close()
-      await Promise.all([
-        promise,
-        AbortSignal.timeout(5000),
-      ]).catch((err) => {
+      await promise.catch((err) => {
         log.error('[API]', 'Failed to close Vitest process', err)
       })
     }
@@ -213,6 +188,26 @@ export class VitestFolderAPI extends VitestReporter {
   async unwatchTests() {
     await this.meta.rpc.unwatchTests()
   }
+
+  onConsoleLog = this.createHandler('onConsoleLog')
+  onTaskUpdate = this.createHandler('onTaskUpdate')
+  onFinished = this.createHandler('onFinished')
+  onCollected = this.createHandler('onCollected')
+  onWatcherStart = this.createHandler('onWatcherStart')
+  onWatcherRerun = this.createHandler('onWatcherRerun')
+
+  clearListeners(name?: Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>) {
+    if (name)
+      this.handlers.removeListener(name, this.handlers[name])
+
+    this.handlers.clearListeners()
+  }
+
+  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>>(name: K) {
+    return (callback: VitestEvents[K]) => {
+      this.handlers[name](callback as any)
+    }
+  }
 }
 
 function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
@@ -239,7 +234,10 @@ function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
 
 export async function resolveVitestAPI(packages: VitestPackage[]) {
   const promises = packages.map(async (pkg) => {
-    const vitest = await createVitestProcess(pkg)
+    const config = getConfig(pkg.folder)
+    const vitest = config.shellType === 'terminal'
+      ? await createVitestTerminalProcess(pkg)
+      : await createVitestProcess(pkg)
     return new VitestFolderAPI(pkg, vitest)
   })
   const apis = await Promise.all(promises)
@@ -259,165 +257,5 @@ export interface ResolvedMeta {
     onWatcherRerun: (listener: VitestEvents['onWatcherRerun']) => void
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
-  }
-}
-
-function formapPkg(pkg: VitestPackage) {
-  return `Vitest v${pkg.version} (${relative(dirname(pkg.cwd), pkg.id)})`
-}
-
-async function createChildVitestProcess(pkg: VitestPackage) {
-  const pnpLoader = pkg.loader
-  const pnp = pkg.pnp
-  if (pnpLoader && !pnp)
-    throw new Error('pnp file is required if loader option is used')
-  const env = getConfig().env || {}
-  const execPath = await findNode(vscode.workspace.workspaceFile?.fsPath || pkg.cwd)
-  const execVersion = await getNodeJsVersion(execPath)
-  if (execVersion && !gte(execVersion, minimumNodeVersion)) {
-    const errorMsg = `Node.js version ${execVersion} is not supported. Minimum required version is ${minimumNodeVersion}`
-    log.error('[API]', errorMsg)
-    throw new Error(errorMsg)
-  }
-  const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
-    ? [
-        '--require',
-        pnp,
-        '--experimental-loader',
-        pathToFileURL(pnpLoader).toString(),
-      ]
-    : undefined
-  log.info('[API]', `Running ${formapPkg(pkg)} with Node.js@${execVersion}: ${execPath} ${execArgv ? execArgv.join(' ') : ''}`)
-  const logLevel = getConfig(pkg.folder).logLevel
-  const vitest = fork(
-    // to support pnp, we need to spawn `yarn node` instead of `node`
-    workerPath,
-    {
-      execPath,
-      execArgv,
-      env: {
-        ...process.env,
-        ...env,
-        VITEST_VSCODE_LOG: env.VITEST_VSCODE_LOG ?? process.env.VITEST_VSCODE_LOG ?? logLevel,
-        VITEST_VSCODE: 'true',
-        // same env var as `startVitest`
-        // https://github.com/vitest-dev/vitest/blob/5c7e9ca05491aeda225ce4616f06eefcd068c0b4/packages/vitest/src/node/cli/cli-api.ts
-        TEST: 'true',
-        VITEST: 'true',
-        NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
-      },
-      stdio: 'overlapped',
-      cwd: pnp ? dirname(pnp) : pkg.cwd,
-    },
-  )
-
-  vitest.stdout?.on('data', d => log.worker('info', d.toString()))
-  vitest.stderr?.on('data', (chunk) => {
-    const string = chunk.toString()
-    log.worker('error', string)
-    if (string.startsWith(' MISSING DEPENDENCY')) {
-      const error = string.split(/\r?\n/, 1)[0].slice(' MISSING DEPENDENCY'.length)
-      showVitestError(error)
-    }
-  })
-
-  return new Promise<ChildProcess>((resolve, reject) => {
-    function onMessage(message: WorkerEvent) {
-      if (message.type === 'debug')
-        log.worker('info', ...message.args)
-
-      if (message.type === 'ready') {
-        resolve(vitest)
-      }
-      if (message.type === 'error') {
-        const error = new Error(`Vitest failed to start: \n${message.error}`)
-        reject(error)
-      }
-      vitest.off('error', onError)
-      vitest.off('message', onMessage)
-      vitest.off('exit', onExit)
-    }
-
-    function onError(err: Error) {
-      log.error('[API]', err)
-      reject(err)
-      vitest.off('error', onError)
-      vitest.off('message', onMessage)
-      vitest.off('exit', onExit)
-    }
-
-    function onExit(code: number) {
-      reject(new Error(`Vitest process exited with code ${code}`))
-    }
-
-    vitest.on('error', onError)
-    vitest.on('message', onMessage)
-    vitest.on('exit', onExit)
-    vitest.once('spawn', () => {
-      const runnerOptions: WorkerRunnerOptions = {
-        type: 'init',
-        meta: {
-          vitestNodePath: pkg.vitestNodePath,
-          env: getConfig(pkg.folder).env || undefined,
-          configFile: pkg.configFile,
-          cwd: pkg.cwd,
-          arguments: pkg.arguments,
-          workspaceFile: pkg.workspaceFile,
-          id: pkg.id,
-          pnpApi: pnp,
-          pnpLoader: pnpLoader // && gte(execVersion, '18.19.0')
-            ? pathToFileURL(pnpLoader).toString()
-            : undefined,
-        },
-      }
-
-      vitest.send(runnerOptions)
-    })
-  })
-}
-
-export async function createVitestProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
-  const vitest = await createChildVitestProcess(pkg)
-
-  log.info('[API]', `${formapPkg(pkg)} process ${vitest.pid} created`)
-
-  const { handlers, api } = createVitestRpc({
-    on: listener => vitest.on('message', listener),
-    send: message => vitest.send(message),
-  })
-
-  return {
-    rpc: api,
-    process: new VitestChildProcess(vitest),
-    handlers,
-    pkg,
-  }
-}
-
-class VitestChildProcess implements VitestProcess {
-  constructor(private child: ChildProcess) {}
-
-  get id() {
-    return this.child.pid ?? 0
-  }
-
-  get closed() {
-    return this.child.killed
-  }
-
-  on(event: string, listener: (...args: any[]) => void) {
-    this.child.on(event, listener)
-  }
-
-  once(event: string, listener: (...args: any[]) => void) {
-    this.child.once(event, listener)
-  }
-
-  off(event: string, listener: (...args: any[]) => void) {
-    this.child.off(event, listener)
-  }
-
-  close() {
-    this.child.kill()
   }
 }

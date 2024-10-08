@@ -2,12 +2,16 @@ import fs from 'node:fs'
 import { spawn } from 'node:child_process'
 import * as vscode from 'vscode'
 import which from 'which'
-import { relative } from 'pathe'
+import { dirname, relative } from 'pathe'
 import type { VitestPackage } from './api/pkg'
 import { log } from './log'
 import { getConfig } from './config'
 
 export function noop() {}
+
+export function formatPkg(pkg: VitestPackage) {
+  return `Vitest v${pkg.version} (${relative(dirname(pkg.cwd), pkg.id)})`
+}
 
 export async function createVitestWorkspaceFile(vitest: VitestPackage[]) {
   const folders = new Set(vitest.map(x => x.folder))
