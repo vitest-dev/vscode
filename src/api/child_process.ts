@@ -1,6 +1,5 @@
 import { type ChildProcess, fork } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
-import { dirname } from 'node:path'
 import * as vscode from 'vscode'
 import { gte } from 'semver'
 import { findNode, formatPkg, getNodeJsVersion, showVitestError } from '../utils'
@@ -55,7 +54,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
         NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
       },
       stdio: 'overlapped',
-      cwd: pnp ? dirname(pnp) : pkg.cwd,
+      cwd: pkg.cwd,
     },
   )
 
