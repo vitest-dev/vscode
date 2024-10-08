@@ -1,7 +1,6 @@
 import { relative } from 'node:path'
 import * as vscode from 'vscode'
 import { normalize } from 'pathe'
-import mm from 'micromatch'
 import type { TestTree } from './testTree'
 import { getConfig } from './config'
 import type { VitestFolderAPI } from './api'
@@ -9,12 +8,6 @@ import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
-
-  private readonly ignorePattern = [
-    '**/.git/**',
-    '**/*.git',
-    '**/node_modules/**',
-  ]
 
   constructor(private readonly testTree: TestTree) {
     super(() => {
@@ -39,7 +32,7 @@ export class ExtensionWatcher extends vscode.Disposable {
 
     watcher.onDidChange(async (file) => {
       const filepath = normalize(file.fsPath)
-      if (await this.shouldIgnoreFile(file)) {
+      if (await this.shouldIgnoreFile(filepath, file)) {
         return
       }
       log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
@@ -48,7 +41,7 @@ export class ExtensionWatcher extends vscode.Disposable {
 
     watcher.onDidCreate(async (file) => {
       const filepath = normalize(file.fsPath)
-      if (await this.shouldIgnoreFile(file)) {
+      if (await this.shouldIgnoreFile(filepath, file)) {
         return
       }
       log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
@@ -56,8 +49,12 @@ export class ExtensionWatcher extends vscode.Disposable {
     })
   }
 
-  private async shouldIgnoreFile(file: vscode.Uri) {
-    if (mm.isMatch(file.fsPath, this.ignorePattern)) {
+  private async shouldIgnoreFile(filepath: string, file: vscode.Uri) {
+    if (
+      filepath.includes('/node_modules/')
+      || filepath.includes('/.git/')
+      || filepath.endsWith('.git')
+    ) {
       return true
     }
     try {

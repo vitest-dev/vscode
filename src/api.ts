@@ -72,6 +72,8 @@ export class VitestFolderAPI {
 
   private handlers: ResolvedMeta['handlers']
 
+  public createDate = Date.now()
+
   constructor(
     private pkg: VitestPackage,
     private meta: ResolvedMeta,
@@ -115,11 +117,17 @@ export class VitestFolderAPI {
     return this.meta.rpc.getFiles()
   }
 
-  onFileCreated = createQueuedHandler((files: string[]) => {
+  onFileCreated = createQueuedHandler(async (files: string[]) => {
+    if (this.process.closed) {
+      return
+    }
     return this.meta.rpc.onFilesCreated(files)
   })
 
-  onFileChanged = createQueuedHandler((files: string[]) => {
+  onFileChanged = createQueuedHandler(async (files: string[]) => {
+    if (this.process.closed) {
+      return
+    }
     return this.meta.rpc.onFilesChanged(files)
   })
 
@@ -127,7 +135,10 @@ export class VitestFolderAPI {
     return this._collectTests(`${projectName}\0${normalize(testFile)}`)
   }
 
-  private _collectTests = createQueuedHandler((testsQueue: string[]) => {
+  private _collectTests = createQueuedHandler(async (testsQueue: string[]) => {
+    if (this.process.closed) {
+      return
+    }
     const tests = Array.from(testsQueue).map((spec) => {
       const [projectName, filepath] = spec.split('\0', 2)
       return [projectName, filepath] as [string, string]
@@ -163,6 +174,7 @@ export class VitestFolderAPI {
         log.error('[API]', 'Failed to close Vitest process', err)
       })
     }
+    this.meta.rpc.$close()
   }
 
   async cancelRun() {
