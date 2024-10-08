@@ -107,7 +107,7 @@
           "scope": "resource"
         },
         "vitest.nodeExecutable": {
-          "description": "The path to the Node.js executable. If not assigned, uses VSCode's Node.js instance.",
+          "description": "The path to the Node.js executable. If not assigned, uses VSCode's Node.js instance. This is applied only when `vitest.shellType` is `child_process` (which is the default).",
           "type": "string",
           "scope": "window"
         },
@@ -176,6 +176,26 @@
             "verbose"
           ],
           "default": "info",
+          "scope": "resource"
+        },
+        "vitest.shellType": {
+          "markdownDescription": "The method the extension uses to spawn a long-running Vitest process. This is particularly useful if you are using a custom shell script to set up the environment. When using the `terminal` shell type, the websocket connection will be established.",
+          "type": "string",
+          "enum": [
+            "terminal",
+            "child_process"
+          ],
+          "default": "child_process",
+          "scope": "resource"
+        },
+        "vitest.terminalShellPath": {
+          "markdownDescription": "The path to the shell executable. This is applied only when `vitest.shellType` is `terminal`.",
+          "type": "string",
+          "scope": "resource"
+        },
+        "vitest.terminalShellArgs": {
+          "markdownDescription": "The arguments to pass to the shell executable. This is applied only when `vitest.shellType` is `terminal`.",
+          "type": "array",
           "scope": "resource"
         }
       }

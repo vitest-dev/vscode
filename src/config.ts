@@ -54,10 +54,17 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const filesWatcherInclude = get<string>('filesWatcherInclude', '**/*')!
 
+  const terminalShellArgs = get<string[] | undefined>('terminalShellArgs')
+  const terminalShellPath = get<string | undefined>('terminalShellPath')
+  const shellType = get<'child_process' | 'terminal'>('shellType', 'child_process')
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
     filesWatcherInclude,
+    terminalShellArgs,
+    terminalShellPath,
+    shellType,
     vitestPackagePath: resolvedVitestPackagePath,
     workspaceConfig: resolveConfigPath(workspaceConfig),
     rootConfig: resolveConfigPath(rootConfigFile),

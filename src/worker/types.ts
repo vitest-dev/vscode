@@ -13,6 +13,7 @@ export interface WorkerMeta {
 export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerMeta
+  debug: boolean
 }
 
 export interface EventReady {

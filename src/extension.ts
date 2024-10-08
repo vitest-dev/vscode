@@ -264,6 +264,9 @@ class VitestExtension {
       'vitest.nodeExecutable',
       'vitest.workspaceConfig',
       'vitest.rootConfig',
+      'vitest.shellType',
+      'vitest.terminalShellArgs',
+      'vitest.terminalShellPath',
     ]
 
     this.disposables = [
