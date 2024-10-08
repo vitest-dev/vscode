@@ -27,6 +27,10 @@ export function waitForWsResolvedMeta(
             on: listener => ws.on('message', listener),
             send: message => ws.send(message),
           })
+          ws.once('close', () => {
+            log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
+            api.$close()
+          })
           resolve({
             rpc: api,
             handlers,
