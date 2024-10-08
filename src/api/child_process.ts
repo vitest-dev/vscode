@@ -134,6 +134,11 @@ export async function createVitestProcess(pkg: VitestPackage): Promise<ResolvedM
     send: message => vitest.send(message),
   })
 
+  vitest.once('exit', () => {
+    log.verbose?.('[API]', 'Vitest child_process connection closed, cannot call RPC anymore.')
+    api.$close()
+  })
+
   return {
     rpc: api,
     process: new VitestChildProcess(vitest),
