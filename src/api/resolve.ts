@@ -1,5 +1,6 @@
 import type * as vscode from 'vscode'
 import { dirname, resolve } from 'pathe'
+import { findUpSync } from 'find-up'
 import { getConfig } from '../config'
 import { normalizeDriveLetter } from '../worker/utils'
 
@@ -52,14 +53,15 @@ export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFo
 
 export function resolveVitestPnpPackagePath(cwd: string) {
   try {
-    const pnpPath = require.resolve('./.pnp.cjs', {
-      paths: [cwd],
-    })
+    const pnpPath = findUpSync(['.pnp.js', '.pnp.cjs'], { cwd })
+    if (pnpPath == null) {
+      return null
+    }
     const pnpApi = _require(pnpPath)
     const vitestNodePath = pnpApi.resolveRequest('vitest/node', normalizeDriveLetter(cwd))
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
-        paths: [cwd],
+        paths: [dirname(pnpPath)],
       }),
       pnpPath,
       vitestNodePath,

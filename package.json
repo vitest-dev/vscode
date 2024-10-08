@@ -251,6 +251,7 @@
     "changelogithub": "^0.13.3",
     "eslint": "^9.7.0",
     "execa": "^8.0.1",
+    "find-up": "^7.0.0",
     "get-port": "^6.1.2",
     "istanbul-to-vscode": "^2.1.0",
     "micromatch": "^4.0.5",
