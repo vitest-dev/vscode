@@ -54,7 +54,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   }
 }
 
-class VitestTerminalProcess implements VitestProcess {
+export class VitestTerminalProcess implements VitestProcess {
   constructor(
     public readonly id: number,
     private wsProcess: VitestWebSocketProcess,
@@ -69,6 +69,10 @@ class VitestTerminalProcess implements VitestProcess {
         disposer.dispose()
       }
     })
+  }
+
+  show() {
+    this.terminal.show(false)
   }
 
   get closed() {

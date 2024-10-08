@@ -70,6 +70,11 @@
         "title": "Show Output Channel",
         "command": "vitest.openOutput",
         "category": "Vitest"
+      },
+      {
+        "title": "Show Shell Terminal",
+        "command": "vitest.showShellTerminal",
+        "category": "Vitest"
       }
     ],
     "menus": {

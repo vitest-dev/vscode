@@ -15,6 +15,7 @@ import { getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
 import { coverageContext } from './coverage'
 import { debugTests } from './debug/api'
+import { VitestTerminalProcess } from './api/terminal'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -277,6 +278,29 @@ class VitestExtension {
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
+      }),
+      vscode.commands.registerCommand('vitest.showShellTerminal', async () => {
+        const apis = this.api?.folderAPIs
+          .filter(api => api.process instanceof VitestTerminalProcess)
+        if (!apis?.length) {
+          vscode.window.showInformationMessage('No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration?')
+          return
+        }
+        if (apis.length === 1) {
+          (apis[0].process as VitestTerminalProcess).show()
+          return
+        }
+        const pick = await vscode.window.showQuickPick(
+          apis.map((api) => {
+            return {
+              label: api.prefix,
+              process: api.process as VitestTerminalProcess,
+            }
+          }),
+        )
+        if (pick) {
+          pick.process.show()
+        }
       }),
       vscode.commands.registerCommand('vitest.updateSnapshot', async (testItem: vscode.TestItem | undefined) => {
         if (!testItem)
