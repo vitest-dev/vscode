@@ -15,6 +15,9 @@
     "source.organizeImports": "never"
   },
 
+  "vitest.workspaceConfig": "./vitest.workspace.vscode.ts",
+  "testing.openTesting": "neverOpen",
+
   // Enable eslint for all supported languages
   "eslint.validate": [
     "javascript",
