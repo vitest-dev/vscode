@@ -33,7 +33,9 @@ export class TestRunner extends vscode.Disposable {
       this.endTestRun()
       this.nonContinuousRequest = undefined
       this.continuousRequests.clear()
-      this.api.cancelRun()
+      if (!this.api.process.closed) {
+        this.api.cancelRun()
+      }
       this._onRequestsExhausted.dispose()
     })
 

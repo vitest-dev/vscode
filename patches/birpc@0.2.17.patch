@@ -183,7 +183,7 @@ index 010f33e6343281a894b6835d89b7fcf1157250a7..f7618f7f8118d24723693415dc321adf
  type BirpcGroupReturn<RemoteFunctions> = {
      [K in keyof RemoteFunctions]: BirpcGroupFn<RemoteFunctions[K]>;
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 8396fdbfbd7e1df8935c0806af9e7b31f8ccc261..18bb343cdc13e0ddfc921ed6cc23b9fd9ea919e4 100644
+index 8396fdbfbd7e1df8935c0806af9e7b31f8ccc261..4544cebb4378902b8e08686ed882689d7102f0f5 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -9,18 +9,24 @@ function createBirpc(functions, options) {
@@ -228,6 +228,15 @@ index 8396fdbfbd7e1df8935c0806af9e7b31f8ccc261..18bb343cdc13e0ddfc921ed6cc23b9fd
          return new Promise((resolve, reject) => {
            const id = nanoid();
            let timeoutId;
+@@ -48,7 +62,7 @@ function createBirpc(functions, options) {
+             if (typeof timeoutId === "object")
+               timeoutId = timeoutId.unref?.();
+           }
+-          rpcPromiseMap.set(id, { resolve, reject, timeoutId });
++          rpcPromiseMap.set(id, { resolve, reject, timeoutId, method });
+           post(serialize({ m: method, a: args, i: id, t: "q" }));
+         });
+       };
 @@ -56,7 +70,15 @@ function createBirpc(functions, options) {
        return sendCall;
      }
@@ -235,8 +244,8 @@ index 8396fdbfbd7e1df8935c0806af9e7b31f8ccc261..18bb343cdc13e0ddfc921ed6cc23b9fd
 -  _promise = on(async (data, ...extra) => {
 +  function close() {
 +    closed = true;
-+    rpcPromiseMap.forEach(({ reject }) => {
-+      reject(new Error("[birpc] rpc is closed"));
++    rpcPromiseMap.forEach(({ reject, method }) => {
++      reject(new Error(`[birpc] rpc is closed, cannot call "${method}"`));
 +    });
 +    rpcPromiseMap.clear();
 +    off(onMessage);

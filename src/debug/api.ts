@@ -115,7 +115,7 @@ export async function debugTests(
       deferredPromise.resolve()
     }
     catch (err: any) {
-      if (err.message === '[birpc] rpc is closed') {
+      if (err.message.startsWith('[birpc] rpc is closed')) {
         deferredPromise.resolve()
         return
       }
