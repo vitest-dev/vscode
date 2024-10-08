@@ -1,14 +1,13 @@
 import v8 from 'node:v8'
+import { WebSocket } from 'ws'
 import { createWorkerRPC } from './rpc'
 import type { WorkerRunnerOptions } from './types'
 import { Vitest } from './vitest'
 import { initVitest } from './init'
 import { WorkerProcessEmitter, WorkerWSEventEmitter } from './emitter'
 
-const _require = require
-
 const emitter = process.env.VITEST_WS_ADDRESS
-  ? new WorkerWSEventEmitter(new (_require('ws').WebSocket)(process.env.VITEST_WS_ADDRESS))
+  ? new WorkerWSEventEmitter(new WebSocket(process.env.VITEST_WS_ADDRESS))
   : new WorkerProcessEmitter()
 
 emitter.on('message', async function onMessage(message: any) {
