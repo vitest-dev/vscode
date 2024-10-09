@@ -22,6 +22,8 @@ export class TestRunner extends vscode.Disposable {
   private testRun: vscode.TestRun | undefined
   private testRunDefer: PromiseWithResolvers<void> | undefined
 
+  private disposables: vscode.Disposable[] = []
+
   constructor(
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
@@ -33,10 +35,10 @@ export class TestRunner extends vscode.Disposable {
       this.endTestRun()
       this.nonContinuousRequest = undefined
       this.continuousRequests.clear()
-      if (!this.api.process.closed) {
-        this.api.cancelRun()
-      }
+      this.api.cancelRun()
       this._onRequestsExhausted.dispose()
+      this.disposables.forEach(d => d.dispose())
+      this.disposables = []
     })
 
     api.onWatcherRerun((files, _trigger, collecting) => {
@@ -155,17 +157,19 @@ export class TestRunner extends vscode.Disposable {
   private async watchContinuousTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
     this.continuousRequests.add(request)
 
-    token.onCancellationRequested(() => {
-      log.verbose?.('Continuous test run for', join(request.include), 'was cancelled')
+    this.disposables.push(
+      token.onCancellationRequested(() => {
+        log.verbose?.('Continuous test run for', join(request.include), 'was cancelled')
 
-      this.continuousRequests.delete(request)
-      if (!this.continuousRequests.size) {
-        log.verbose?.('Stopped watching test files')
-        this._onRequestsExhausted.fire()
-        this.api.unwatchTests()
-        this.endTestRun()
-      }
-    })
+        this.continuousRequests.delete(request)
+        if (!this.continuousRequests.size) {
+          log.verbose?.('Stopped watching test files')
+          this._onRequestsExhausted.fire()
+          this.api.unwatchTests()
+          this.endTestRun()
+        }
+      }),
+    )
 
     if (!request.include?.length) {
       log.info('[RUNNER]', 'Watching all test files')
@@ -202,10 +206,12 @@ export class TestRunner extends vscode.Disposable {
       }
     })
 
-    token.onCancellationRequested(() => {
-      log.verbose?.('Coverage for', join(request.include), 'was manually stopped')
-      this.api.disableCoverage()
-    })
+    this.disposables.push(
+      token.onCancellationRequested(() => {
+        log.verbose?.('Coverage for', join(request.include), 'was manually stopped')
+        this.api.disableCoverage()
+      }),
+    )
 
     await this.runTests(request, token)
   }
@@ -218,14 +224,25 @@ export class TestRunner extends vscode.Disposable {
 
     this.nonContinuousRequest = request
 
-    token.onCancellationRequested(() => {
-      this.endTestRun()
-      this.nonContinuousRequest = undefined
-      this.api.cancelRun()
-      log.verbose?.('Test run was cancelled manually for', join(request.include))
-    })
+    this.disposables.push(
+      token.onCancellationRequested(() => {
+        this.endTestRun()
+        this.nonContinuousRequest = undefined
+        this.api.cancelRun()
+        log.verbose?.('Test run was cancelled manually for', join(request.include))
+      }),
+    )
 
-    await this.runTestItems(request)
+    try {
+      await this.runTestItems(request)
+    }
+    catch (err: any) {
+      // the rpc can be closed during the test run by clicking on reload
+      if (!err.message.startsWith('[birpc] rpc is closed')) {
+        log.error('Failed to run tests', err)
+      }
+      this.endTestRun()
+    }
 
     this.nonContinuousRequest = undefined
     this._onRequestsExhausted.fire()

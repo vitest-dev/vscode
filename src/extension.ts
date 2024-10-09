@@ -35,6 +35,8 @@ class VitestExtension {
   private tagsManager: TagsManager
   private api: VitestAPI | undefined
 
+  private runners: TestRunner[] = []
+
   private disposables: vscode.Disposable[] = []
 
   constructor() {
@@ -64,6 +66,8 @@ class VitestExtension {
 
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     this.testTree.reset([])
+    this.runners.forEach(runner => runner.dispose())
+    this.runners = []
 
     const vitest = await resolveVitestPackages(showWarning)
 
@@ -167,6 +171,7 @@ class VitestExtension {
         this.testTree,
         api,
       )
+      this.runners.push(runner)
 
       const prefix = api.prefix
       let runProfile = previousRunProfiles.get(`${api.id}:run`)
@@ -368,5 +373,7 @@ class VitestExtension {
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())
     this.disposables = []
+    this.runners.forEach(runner => runner.dispose())
+    this.runners = []
   }
 }
