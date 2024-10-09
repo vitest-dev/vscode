@@ -364,6 +364,12 @@ export class TestRunner extends vscode.Disposable {
           log.verbose?.(`Enqueuing "${test.label}"`)
           run.enqueued(test)
         }
+        if (testData instanceof TestFile) {
+          // ignore tests in another files, this is relevant for continuous runs
+          if (!files.includes(testData.filepath)) {
+            return
+          }
+        }
         test.children.forEach(enqueue)
       }
       testItems.forEach(test => enqueue(test))
