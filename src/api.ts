@@ -177,6 +177,8 @@ export class VitestFolderAPI {
   }
 
   async cancelRun() {
+    if (this.process.closed)
+      return
     await this.meta.rpc.cancelRun()
   }
 
