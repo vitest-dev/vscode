@@ -57,13 +57,13 @@ describe('TestData', () => {
       suiteItem.children.add(testItem2)
       suiteItem.children.add(testItem3)
 
-      const suite = TestSuite.register(suiteItem, testItem, file)
+      const suite = TestSuite.register(suiteItem, testItem, file, false)
 
       expect(suite.getTestNamePattern()).to.equal('^\\s?describe')
 
-      const test1 = TestCase.register(testItem1, suiteItem, file)
-      const test2 = TestCase.register(testItem2, suiteItem, file)
-      const test3 = TestCase.register(testItem3, suiteItem, file)
+      const test1 = TestCase.register(testItem1, suiteItem, file, false)
+      const test2 = TestCase.register(testItem2, suiteItem, file, false)
+      const test3 = TestCase.register(testItem3, suiteItem, file, false)
 
       expect(testItem1.parent).to.exist
 
