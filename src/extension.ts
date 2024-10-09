@@ -16,9 +16,10 @@ import { TagsManager } from './tagsManager'
 import { coverageContext } from './coverage'
 import { debugTests } from './debug/api'
 import { VitestTerminalProcess } from './api/terminal'
+import { SettingsWebview } from './settingsWebview'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const extension = new VitestExtension()
+  const extension = new VitestExtension(context)
   context.subscriptions.push(extension)
   await extension.activate()
 }
@@ -39,7 +40,7 @@ class VitestExtension {
 
   private disposables: vscode.Disposable[] = []
 
-  constructor() {
+  constructor(private context: vscode.ExtensionContext) {
     log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
@@ -284,6 +285,7 @@ class VitestExtension {
       'vitest.terminalShellPath',
     ]
 
+    const settingsWebview = new SettingsWebview(this.context.extensionUri)
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (reloadConfigNames.some(x => event.affectsConfiguration(x)))
@@ -335,6 +337,7 @@ class VitestExtension {
         const tokenSource = new vscode.CancellationTokenSource()
         await profile.runHandler(request, tokenSource.token)
       }),
+      settingsWebview,
     ]
 
     // if the config changes, re-define all test profiles
