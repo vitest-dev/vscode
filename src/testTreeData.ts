@@ -71,19 +71,35 @@ export class TestFile extends BaseTestData {
   }
 }
 
+const kReplacers = new Map<string, string>([
+  ['%i', '\\d+?'],
+  ['%#', '\\d+?'],
+  ['%d', '[\\d.eE+-]+?'],
+  ['%f', '[\\d.eE+-]+?'],
+  ['%s', '.+?'],
+  ['%j', '.+?'],
+  ['%o', '.+?'],
+  ['%%', '%'],
+])
+
 class TaskName {
   constructor(
     private readonly data: TestData,
+    public readonly dynamic: boolean,
   ) {}
 
+  public get label() {
+    return this.data.label
+  }
+
   getTestNamePattern() {
-    const patterns = [escapeRegex(this.data.label)]
+    const patterns = [escapeTestName(this.data.label, this.dynamic)]
     let iter = this.data.parent
     while (iter) {
       // if we reached test file, then stop
       if (iter instanceof TestFile || iter instanceof TestFolder)
         break
-      patterns.push(escapeRegex(iter.label))
+      patterns.push(escapeTestName(iter.label, iter.name.dynamic))
       iter = iter.parent
     }
     // vitest's test task name starts with ' ' of root suite
@@ -93,49 +109,64 @@ class TaskName {
 }
 
 export class TestCase extends BaseTestData {
-  private nameResolver: TaskName
+  public name: TaskName
   public readonly type = 'test'
 
   private constructor(
     item: vscode.TestItem,
     parent: vscode.TestItem,
     public readonly file: TestFile,
+    dynamic: boolean,
   ) {
     super(item, parent)
-    this.nameResolver = new TaskName(this)
+    this.name = new TaskName(this, dynamic)
   }
 
-  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile) {
-    return addTestData(item, new TestCase(item, parent, file))
+  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile, dynamic: boolean) {
+    return addTestData(item, new TestCase(item, parent, file, dynamic))
   }
 
   getTestNamePattern() {
-    return `^${this.nameResolver.getTestNamePattern()}$`
+    return `^${this.name.getTestNamePattern()}$`
   }
 }
 
 export class TestSuite extends BaseTestData {
-  private nameResolver: TaskName
+  public name: TaskName
   public readonly type = 'suite'
 
   private constructor(
     item: vscode.TestItem,
     parent: vscode.TestItem,
     public readonly file: TestFile,
+    dynamic: boolean,
   ) {
     super(item, parent)
-    this.nameResolver = new TaskName(this)
+    this.name = new TaskName(this, dynamic)
   }
 
-  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile) {
-    return addTestData(item, new TestSuite(item, parent, file))
+  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile, dynamic: boolean) {
+    return addTestData(item, new TestSuite(item, parent, file, dynamic))
   }
 
   getTestNamePattern() {
-    return `^${this.nameResolver.getTestNamePattern()}`
+    return `^${this.name.getTestNamePattern()}`
   }
 }
 
 function escapeRegex(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function escapeTestName(label: string, dynamic: boolean) {
+  if (!dynamic) {
+    return escapeRegex(label)
+  }
+
+  // Replace object access patterns ($value, $obj.a) with %s first
+  let pattern = label.replace(/\$[a-z_.]+/gi, '%s')
+  pattern = escapeRegex(pattern)
+  // Replace percent placeholders with their respective regex
+  pattern = pattern.replace(/%[i#dfsjo%]/g, m => kReplacers.get(m) || m)
+  return pattern
 }
