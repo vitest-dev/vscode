@@ -71,17 +71,6 @@ export class TestFile extends BaseTestData {
   }
 }
 
-const kReplacers = new Map<string, string>([
-  ['%i', '\\d+?'],
-  ['%#', '\\d+?'],
-  ['%d', '[\\d.eE+-]+?'],
-  ['%f', '[\\d.eE+-]+?'],
-  ['%s', '.+?'],
-  ['%j', '.+?'],
-  ['%o', '.+?'],
-  ['%%', '%'],
-])
-
 class TaskName {
   constructor(
     private readonly data: TestData,
@@ -157,6 +146,17 @@ export class TestSuite extends BaseTestData {
 function escapeRegex(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
+
+const kReplacers = new Map<string, string>([
+  ['%i', '\\d+?'],
+  ['%#', '\\d+?'],
+  ['%d', '[\\d.eE+-]+?'],
+  ['%f', '[\\d.eE+-]+?'],
+  ['%s', '.+?'],
+  ['%j', '.+?'],
+  ['%o', '.+?'],
+  ['%%', '%'],
+])
 
 function escapeTestName(label: string, dynamic: boolean) {
   if (!dynamic) {
