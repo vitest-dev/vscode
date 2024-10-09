@@ -305,6 +305,7 @@ export async function astCollectTests(
     false,
     ctx.config.allowOnly,
   )
+  markDynamicTests(file.tasks)
   if (!file.tasks.length) {
     file.result = {
       state: 'fail',
@@ -407,6 +408,17 @@ function interpretTaskModes(
   if (suite.mode === 'run') {
     if (suite.tasks.length && suite.tasks.every(i => i.mode !== 'run')) {
       suite.mode = 'skip'
+    }
+  }
+}
+
+function markDynamicTests(tasks: TaskBase[]) {
+  for (const task of tasks) {
+    if ((task as any).dynamic) {
+      task.id += '-dynamic'
+    }
+    if ('children' in task) {
+      markDynamicTests(task.children as TaskBase[])
     }
   }
 }
