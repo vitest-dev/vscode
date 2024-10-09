@@ -21,11 +21,13 @@ interface ParsedFile extends RunnerTestFile {
 interface ParsedTest extends RunnerTestCase {
   start: number
   end: number
+  dynamic: boolean
 }
 
 interface ParsedSuite extends RunnerTestSuite {
   start: number
   end: number
+  dynamic: boolean
 }
 
 interface LocalCallDefinition {
@@ -36,6 +38,7 @@ interface LocalCallDefinition {
   type: 'suite' | 'test'
   mode: 'run' | 'skip' | 'only' | 'todo'
   task: ParsedSuite | ParsedFile | ParsedTest
+  dynamic: boolean
 }
 
 export interface FileInformation {
@@ -105,7 +108,6 @@ export function astParseFile(filepath: string, code: string) {
       const name = getName(callee)
       let unknown = false
       if (!name) {
-        verbose?.('Unknown call', callee)
         return
       }
       if (!['it', 'test', 'describe', 'suite'].includes(name)) {
@@ -114,12 +116,8 @@ export function astParseFile(filepath: string, code: string) {
       }
       const property = callee?.property?.name
       let mode = !property || property === name ? 'run' : property
-      if (property === 'skipIf' || property === 'runIf') {
-        // skip, it will pick up the correct one by name later
-        return
-      }
-      if (mode === 'each') {
-        debug?.('Skipping `.each` (support not implemented yet)', name)
+      // they will be picked up in the next iteration
+      if (['each', 'for', 'skipIf', 'runIf'].includes(mode)) {
         return
       }
 
@@ -160,6 +158,8 @@ export function astParseFile(filepath: string, code: string) {
       if (mode === 'skipIf' || mode === 'runIf') {
         mode = 'skip'
       }
+      const parentCalleeName = typeof callee?.callee === 'object' && callee?.callee.type === 'MemberExpression' && callee?.callee.property?.name
+      const isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
       debug?.('Found', name, message, `(${mode})`)
       definitions.push({
         start,
@@ -169,6 +169,7 @@ export function astParseFile(filepath: string, code: string) {
         type: name === 'it' || name === 'test' ? 'test' : 'suite',
         mode,
         task: null as any,
+        dynamic: isDynamicEach,
       } satisfies LocalCallDefinition)
     },
   })
@@ -205,15 +206,9 @@ export async function astCollectTests(
     file: null!,
   }
   file.file = file
-  if (verbose) {
-    verbose('Collecing', testFilepath, request.code)
-  }
-  else {
-    debug?.('Collecting', testFilepath)
-  }
   const indexMap = createIndexMap(request.code)
   const map = request.map && new TraceMap(request.map as any)
-  let lastSuite: ParsedSuite = file
+  let lastSuite: ParsedSuite = file as any
   const updateLatestSuite = (index: number) => {
     while (lastSuite.suite && lastSuite.end < index) {
       lastSuite = lastSuite.suite as ParsedSuite
@@ -276,9 +271,8 @@ export async function astCollectTests(
           end: definition.end,
           start: definition.start,
           location,
-          meta: {
-            typecheck: true,
-          },
+          dynamic: definition.dynamic,
+          meta: {},
         }
         definition.task = task
         latestSuite.tasks.push(task)
@@ -296,9 +290,8 @@ export async function astCollectTests(
         end: definition.end,
         start: definition.start,
         location,
-        meta: {
-          typecheck: true,
-        },
+        dynamic: definition.dynamic,
+        meta: {},
       }
       definition.task = task
       latestSuite.tasks.push(task)
@@ -312,6 +305,7 @@ export async function astCollectTests(
     false,
     ctx.config.allowOnly,
   )
+  markDynamicTests(file.tasks)
   if (!file.tasks.length) {
     file.result = {
       state: 'fail',
@@ -414,6 +408,17 @@ function interpretTaskModes(
   if (suite.mode === 'run') {
     if (suite.tasks.length && suite.tasks.every(i => i.mode !== 'run')) {
       suite.mode = 'skip'
+    }
+  }
+}
+
+function markDynamicTests(tasks: TaskBase[]) {
+  for (const task of tasks) {
+    if ((task as any).dynamic) {
+      task.id += '-dynamic'
+    }
+    if ('children' in task) {
+      markDynamicTests(task.children as TaskBase[])
     }
   }
 }

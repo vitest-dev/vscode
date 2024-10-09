@@ -316,10 +316,13 @@ export class TestTree extends vscode.Disposable {
         log.error(`Cannot find location for "${testItem.label}". Using "id" to sort instead.`)
         testItem.sortText = task.id
       }
+      // dynamic exists only during browser collection
+      // see src/worker/collect.ts:172
+      const isDynamic = (task as any).dynamic
       if (task.type === 'suite')
-        TestSuite.register(testItem, parent, fileData)
+        TestSuite.register(testItem, parent, fileData, isDynamic)
       else if (task.type === 'test' || task.type === 'custom')
-        TestCase.register(testItem, parent, fileData)
+        TestCase.register(testItem, parent, fileData, isDynamic)
 
       this.flatTestItems.set(task.id, testItem)
       parent.children.add(testItem)
