@@ -34,7 +34,7 @@ export class SettingsWebview implements vscode.WebviewViewProvider, vscode.Dispo
       }),
       // when the user changes the configuration manually, update the view
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('vitest')) {
+        if (e.affectsConfiguration('vitest.previewBrowser')) {
           this.updateSettings()
         }
       }),
