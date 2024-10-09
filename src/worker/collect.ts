@@ -114,6 +114,10 @@ export function astParseFile(filepath: string, code: string) {
       }
       const property = callee?.property?.name
       let mode = !property || property === name ? 'run' : property
+      if (property === 'skipIf' || property === 'runIf') {
+        // skip, it will pick up the correct one by name later
+        return
+      }
       if (mode === 'each') {
         debug?.('Skipping `.each` (support not implemented yet)', name)
         return
