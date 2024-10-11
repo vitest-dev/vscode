@@ -55,6 +55,7 @@ export class ExtensionWatcher extends vscode.Disposable {
       || filepath.includes('/.git/')
       || filepath.endsWith('.git')
     ) {
+      log.verbose?.('[VSCODE] Ignoring file:', file.fsPath)
       return true
     }
     try {

@@ -36,14 +36,14 @@ export const log = {
     _log.appendLine(`[Error ${time}] ${args.join(' ')}`)
   },
   verbose: getConfig().logLevel === 'verbose' || process.env.VITEST_VSCODE_LOG === 'verbose'
-    ? undefined
-    : (...args: string[]) => {
+    ? (...args: string[]) => {
         const time = new Date().toLocaleTimeString()
         if (process.env.EXTENSION_NODE_ENV === 'dev') {
           console.log(`[${time}]`, ...args)
         }
         _log.appendLine(`[${time}] ${args.join(' ')}`)
-      },
+      }
+    : undefined,
   workspaceInfo: (folder: string, ...args: any[]) => {
     log.info(`[Workspace ${folder}]`, ...args)
   },
