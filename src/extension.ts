@@ -282,6 +282,7 @@ class VitestExtension {
       'vitest.shellType',
       'vitest.terminalShellArgs',
       'vitest.terminalShellPath',
+      'vitest.filesWatcherInclude',
     ]
 
     this.disposables = [
