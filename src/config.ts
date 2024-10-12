@@ -59,6 +59,8 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const shellType = get<'child_process' | 'terminal'>('shellType', 'child_process')
   const nodeExecArgs = get<string[] | undefined>('nodeExecArgs')
 
+  const experimentalStaticAstCollect = get<boolean>('experimentalStaticAstCollect', false)!
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude', []),
@@ -67,6 +69,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     terminalShellPath,
     shellType,
     nodeExecArgs,
+    experimentalStaticAstCollect,
     vitestPackagePath: resolvedVitestPackagePath,
     workspaceConfig: resolveConfigPath(workspaceConfig),
     rootConfig: resolveConfigPath(rootConfigFile),

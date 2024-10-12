@@ -280,6 +280,7 @@ export class TestTree extends vscode.Disposable {
     if (file.result?.errors) {
       const error = file.result.errors.map(error => error.stack || error.message).join('\n')
       fileTestItem.error = error
+      log.error(`Error in ${file.filepath}`, error)
     }
     else if (!file.tasks.length) {
       fileTestItem.error = `No tests found in ${file.filepath}`

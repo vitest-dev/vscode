@@ -24,6 +24,7 @@ export class Vitest implements VitestMethods {
   constructor(
     public readonly ctx: VitestCore,
     private readonly debug = false,
+    public readonly alwaysAstCollect = false,
   ) {
     this.watcher = new VitestWatcher(this)
     this.coverage = new VitestCoverage(ctx, this)
@@ -34,37 +35,42 @@ export class Vitest implements VitestMethods {
   }
 
   public async collectTests(files: [projectName: string, filepath: string][]) {
-    const browserTests: [project: WorkspaceProject, filepath: string][] = []
+    const astCollect: [project: WorkspaceProject, filepath: string][] = []
     const otherTests: [project: WorkspaceProject, filepath: string][] = []
 
     for (const [projectName, filepath] of files) {
       const project = this.ctx.projects.find(project => project.getName() === projectName)
       assert(project, `Project ${projectName} not found for file ${filepath}`)
-      if (project.config.browser.enabled) {
-        browserTests.push([project, filepath])
+      if (this.alwaysAstCollect || project.config.browser.enabled) {
+        astCollect.push([project, filepath])
       }
       else {
         otherTests.push([project, filepath])
       }
     }
 
-    if (browserTests.length) {
-      await this.astCollect(browserTests)
-    }
+    await Promise.all([
+      (async () => {
+        if (astCollect.length) {
+          await this.astCollect(astCollect, 'web')
+        }
+      })(),
+      (async () => {
+        if (otherTests.length) {
+          const files = otherTests.map(([_, filepath]) => filepath)
 
-    if (otherTests.length) {
-      const files = otherTests.map(([_, filepath]) => filepath)
-
-      try {
-        await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
-      }
-      finally {
-        this.setTestNamePattern(undefined)
-      }
-    }
+          try {
+            await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
+          }
+          finally {
+            this.setTestNamePattern(undefined)
+          }
+        }
+      })(),
+    ])
   }
 
-  public async astCollect(specs: [project: WorkspaceProject, file: string][]) {
+  public async astCollect(specs: [project: WorkspaceProject, file: string][], transformMode: 'web' | 'ssr') {
     if (!specs.length) {
       return
     }
@@ -72,7 +78,7 @@ export class Vitest implements VitestMethods {
     const runConcurrently = limitConcurrency(5)
 
     const promises = specs.map(([project, filename]) => runConcurrently(
-      () => astCollectTests(project, filename),
+      () => astCollectTests(project, filename, transformMode),
     ))
     const result = await Promise.all(promises)
     const files = result.filter(r => r != null).map((r => r!.file))

@@ -14,6 +14,7 @@ export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerMeta
   debug: boolean
+  astCollect: boolean
 }
 
 export interface EventReady {

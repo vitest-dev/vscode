@@ -182,8 +182,9 @@ export function astParseFile(filepath: string, code: string) {
 export async function astCollectTests(
   ctx: WorkspaceProject,
   filepath: string,
+  transformMode: 'web' | 'ssr',
 ): Promise<null | FileInformation> {
-  const request = await ctx.vitenode.transformRequest(filepath, filepath, 'web')
+  const request = await ctx.vitenode.transformRequest(filepath, filepath, transformMode)
   // TODO: error cannot parse
   const testFilepath = relative(ctx.config.root, filepath)
   if (!request) {

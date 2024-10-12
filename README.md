@@ -81,8 +81,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 
-> [!NOTE]
-> The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
+> 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
 > The `vitest.terminalShellPath` and `vitest.terminalShellArgs` settings are used as `shellPath` and `shellArgs` when creating a new [terminal](https://code.visualstudio.com/api/references/vscode-api#Terminal)
 
 ### Other Options
@@ -95,6 +94,10 @@ These options are resolved relative to the [workspace file](https://code.visuals
   `[\"<node_internals>/**\", \"**/node_modules/**\"]`
 - `vitest.maximumConfigs`: The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file. Default: `3`
 - `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
+
+### Experimental
+
+If the extension hangs, consider enabling `vitest.experimentalStaticAstCollect` option to use static analysis instead of actually running the test file every time you make a change which can cause visible hangs if it takes a long time to setup the test.
 
 ## FAQs (Frequently Asked Questions)
 

@@ -117,6 +117,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
             : undefined,
         },
         debug: false,
+        astCollect: getConfig(pkg.folder).experimentalStaticAstCollect,
       }
 
       vitest.send(runnerOptions)
