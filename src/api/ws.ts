@@ -86,6 +86,7 @@ export function waitForWsResolvedMeta(
             : undefined,
         },
         debug,
+        astCollect: getConfig(pkg.folder).experimentalStaticAstCollect,
       }
 
       ws.send(JSON.stringify(runnerOptions))

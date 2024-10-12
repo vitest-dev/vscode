@@ -207,6 +207,12 @@
           "markdownDescription": "The arguments to pass to the shell executable. This is applied only when `vitest.shellType` is `terminal`.",
           "type": "array",
           "scope": "resource"
+        },
+        "vitest.experimentalStaticAstCollect": {
+          "markdownDescription": "Enable static AST analysis for faster test discovery. This feature is experimental and may not work with all projects.",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
         }
       }
     }

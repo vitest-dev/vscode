@@ -6,7 +6,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   esbuild: {
-    target: 'es2020',
+    target: 'es2022',
   },
   test: {
     include: ['src/should_included_test.ts', 'test/**/*.test.ts'],

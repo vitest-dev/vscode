@@ -31,7 +31,7 @@ emitter.on('message', async function onMessage(message: any) {
           : {},
       )
 
-      const rpc = createWorkerRPC(new Vitest(vitest, data.debug), {
+      const rpc = createWorkerRPC(new Vitest(vitest, data.debug, data.astCollect), {
         on(listener) {
           emitter.on('message', listener)
         },

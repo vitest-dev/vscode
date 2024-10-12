@@ -2,6 +2,7 @@
   "vitest.nodeEnv": {
     "TEST_CUSTOM_ENV": "hello"
   },
+  "vitest.experimentalStaticAstCollect": true,
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   }

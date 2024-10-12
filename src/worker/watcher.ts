@@ -46,20 +46,20 @@ export class VitestWatcher {
 
         const tests = Array.from(this.changedTests)
         const specs = tests.flatMap(file => this.getProjectsByTestFile(file))
-        const browserSpecs: [project: WorkspaceProject, file: string][] = []
+        const astSpecs: [project: WorkspaceProject, file: string][] = []
 
         for (const [project, file] of specs) {
-          if (project.config.browser.enabled) {
-            browserSpecs.push([project, file])
+          if (vitest.alwaysAstCollect || project.config.browser.enabled) {
+            astSpecs.push([project, file])
           }
         }
 
         ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
         ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
 
-        if (browserSpecs.length) {
+        if (astSpecs.length) {
           ctx.logger.log('Collecting using AST explorer...')
-          await vitest.astCollect(browserSpecs)
+          await vitest.astCollect(astSpecs, 'web')
           this.changedTests.clear()
           return await originalScheduleRerun.call(this, [])
         }
