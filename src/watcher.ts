@@ -11,14 +11,20 @@ export class ExtensionWatcher extends vscode.Disposable {
 
   constructor(private readonly testTree: TestTree) {
     super(() => {
-      this.watcherByFolder.forEach(x => x.dispose())
-      this.watcherByFolder.clear()
+      this.reset()
+      log.verbose?.('[VSCODE] Watcher disposed')
     })
   }
 
+  reset() {
+    this.watcherByFolder.forEach(x => x.dispose())
+    this.watcherByFolder.clear()
+  }
+
   watchTestFilesInWorkspace(api: VitestFolderAPI) {
-    if (this.watcherByFolder.has(api.workspaceFolder))
+    if (this.watcherByFolder.has(api.workspaceFolder)) {
       return
+    }
 
     const pattern = getConfig(api.workspaceFolder).filesWatcherInclude
     log.info('[VSCODE] Watching', api.workspaceFolder.name, 'with pattern', pattern)

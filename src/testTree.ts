@@ -33,6 +33,7 @@ export class TestTree extends vscode.Disposable {
       this.fileItems.clear()
       this.flatTestItems.clear()
       this.testItemsByFile.clear()
+      this.watcher.dispose()
     })
     this.watcher = new ExtensionWatcher(this)
   }
@@ -50,7 +51,7 @@ export class TestTree extends vscode.Disposable {
     this.testItemsByFile.clear()
     this.fileItems.clear()
     this.flatTestItems.clear()
-    this.watcher.dispose()
+    this.watcher.reset()
 
     this.loaderItem.busy = true
 
