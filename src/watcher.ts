@@ -20,8 +20,8 @@ export class ExtensionWatcher extends vscode.Disposable {
     if (this.watcherByFolder.has(api.workspaceFolder))
       return
 
-    const pattern = new vscode.RelativePattern(api.workspaceFolder, getConfig(api.workspaceFolder).filesWatcherInclude)
-    log.info('[VSCODE] Watching', pattern.pattern, 'in', api.workspaceFolder.uri.fsPath)
+    const pattern = getConfig(api.workspaceFolder).filesWatcherInclude
+    log.info('[VSCODE] Watching', api.workspaceFolder.name, 'with pattern', pattern)
     const watcher = vscode.workspace.createFileSystemWatcher(
       pattern,
     )
