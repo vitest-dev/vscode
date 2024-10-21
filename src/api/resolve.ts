@@ -16,7 +16,7 @@ export interface VitestResolution {
 }
 
 export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder | undefined): VitestResolution | null {
-  const vitestPackageJsonPath = resolveVitestPackagePath(cwd, folder)
+  const vitestPackageJsonPath = !process.versions.pnp && resolveVitestPackagePath(cwd, folder)
   if (vitestPackageJsonPath) {
     return {
       vitestNodePath: resolveVitestNodePath(vitestPackageJsonPath),
