@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import './polyfills'
+import { normalize } from 'pathe'
 import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
@@ -347,9 +348,18 @@ class VitestExtension {
     this.disposables.push(...configWatchers)
 
     const redefineTestProfiles = debounce((uri: vscode.Uri) => {
-      if (uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
+      if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
         return
-      this.defineTestProfiles(false)
+      const filePath = normalize(uri.fsPath)
+      for (const api of this.api.folderAPIs) {
+        if (
+          api.package.configFile === filePath
+          || api.package.workspaceFile === filePath
+        ) {
+          this.defineTestProfiles(false)
+          return
+        }
+      }
     }, 300)
 
     configWatchers.forEach(watcher => watcher.onDidChange(redefineTestProfiles))
