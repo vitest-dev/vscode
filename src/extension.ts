@@ -347,9 +347,15 @@ class VitestExtension {
     ]
     this.disposables.push(...configWatchers)
 
-    const redefineTestProfiles = debounce((uri: vscode.Uri) => {
+    const redefineTestProfiles = debounce((uri: vscode.Uri, event: 'create' | 'delete' | 'change') => {
       if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
         return
+      // if new config is created, always check if it should be respected
+      if (event === 'create') {
+        this.defineTestProfiles(false)
+        return
+      }
+      // otherwise ignore changes to unrelated configs
       const filePath = normalize(uri.fsPath)
       for (const api of this.api.folderAPIs) {
         if (
@@ -362,9 +368,9 @@ class VitestExtension {
       }
     }, 300)
 
-    configWatchers.forEach(watcher => watcher.onDidChange(redefineTestProfiles))
-    configWatchers.forEach(watcher => watcher.onDidCreate(redefineTestProfiles))
-    configWatchers.forEach(watcher => watcher.onDidDelete(redefineTestProfiles))
+    configWatchers.forEach(watcher => watcher.onDidChange(uri => redefineTestProfiles(uri, 'change')))
+    configWatchers.forEach(watcher => watcher.onDidCreate(uri => redefineTestProfiles(uri, 'create')))
+    configWatchers.forEach(watcher => watcher.onDidDelete(uri => redefineTestProfiles(uri, 'delete')))
 
     try {
       await this.defineTestProfiles(true)
