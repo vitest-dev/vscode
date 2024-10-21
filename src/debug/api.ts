@@ -1,4 +1,5 @@
 import { createServer } from 'node:http'
+import { pathToFileURL } from 'node:url'
 import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
 import getPort from 'get-port'
@@ -29,9 +30,7 @@ export async function debugTests(
   const config = getConfig(pkg.folder)
   const deferredPromise = Promise.withResolvers<void>()
 
-  const { runtimeArgs, runtimeExecutable } = await getRuntimeOptions(
-    pkg.folder,
-  )
+  const { runtimeArgs, runtimeExecutable } = await getRuntimeOptions(pkg)
   const env = config.env || {}
   const logLevel = config.logLevel
 
@@ -141,17 +140,28 @@ export async function debugTests(
   await deferredPromise.promise
 }
 
-async function getRuntimeOptions(folder: vscode.WorkspaceFolder) {
-  const config = getConfig(folder)
+async function getRuntimeOptions(pkg: VitestPackage) {
+  const config = getConfig(pkg.folder)
 
   // if (config.shellType === 'child_process') {
   const node = await findNode(
-    vscode.workspace.workspaceFile?.fsPath || folder.uri.fsPath,
+    vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath,
   )
-  const execArgs = config.nodeExecArgs
+  const runtimeArgs = config.nodeExecArgs || []
+  const pnpLoader = pkg.loader
+  const pnp = pkg.pnp
+  const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
+    ? [
+        '--require',
+        pnp,
+        '--experimental-loader',
+        pathToFileURL(pnpLoader).toString(),
+        ...runtimeArgs,
+      ]
+    : runtimeArgs
   return {
     runtimeExecutable: node,
-    runtimeArgs: execArgs,
+    runtimeArgs: execArgv,
   }
   // }
 
