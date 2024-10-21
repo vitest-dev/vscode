@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import './polyfills'
+import { normalize } from 'pathe'
 import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
@@ -346,15 +347,30 @@ class VitestExtension {
     ]
     this.disposables.push(...configWatchers)
 
-    const redefineTestProfiles = debounce((uri: vscode.Uri) => {
-      if (uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
+    const redefineTestProfiles = debounce((uri: vscode.Uri, event: 'create' | 'delete' | 'change') => {
+      if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
         return
-      this.defineTestProfiles(false)
+      // if new config is created, always check if it should be respected
+      if (event === 'create') {
+        this.defineTestProfiles(false)
+        return
+      }
+      // otherwise ignore changes to unrelated configs
+      const filePath = normalize(uri.fsPath)
+      for (const api of this.api.folderAPIs) {
+        if (
+          api.package.configFile === filePath
+          || api.package.workspaceFile === filePath
+        ) {
+          this.defineTestProfiles(false)
+          return
+        }
+      }
     }, 300)
 
-    configWatchers.forEach(watcher => watcher.onDidChange(redefineTestProfiles))
-    configWatchers.forEach(watcher => watcher.onDidCreate(redefineTestProfiles))
-    configWatchers.forEach(watcher => watcher.onDidDelete(redefineTestProfiles))
+    configWatchers.forEach(watcher => watcher.onDidChange(uri => redefineTestProfiles(uri, 'change')))
+    configWatchers.forEach(watcher => watcher.onDidCreate(uri => redefineTestProfiles(uri, 'create')))
+    configWatchers.forEach(watcher => watcher.onDidDelete(uri => redefineTestProfiles(uri, 'delete')))
 
     try {
       await this.defineTestProfiles(true)
