@@ -185,7 +185,7 @@
             "debug",
             "verbose"
           ],
-          "default": "info",
+          "default": "verbose",
           "scope": "resource"
         },
         "vitest.shellType": {
