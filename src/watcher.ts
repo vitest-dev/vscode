@@ -34,36 +34,40 @@ export class ExtensionWatcher extends vscode.Disposable {
     this.watcherByFolder.set(api.workspaceFolder, watcher)
 
     watcher.onDidDelete((uri) => {
-      log.verbose?.('[VSCODE] File deleted:', relative(api.workspaceFolder.uri.fsPath, uri.fsPath))
+      log.verbose?.('[VSCODE] File deleted:', this.relative(api, uri))
       this.testTree.removeFile(normalize(uri.fsPath))
     })
 
     watcher.onDidChange(async (uri) => {
-      const filepath = normalize(uri.fsPath)
-      if (await this.shouldIgnoreFile(filepath, uri)) {
+      const path = normalize(uri.fsPath)
+      if (await this.shouldIgnoreFile(api, path, uri)) {
         return
       }
-      log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, uri.fsPath))
-      api.onFileChanged(filepath)
+      log.verbose?.('[VSCODE] File changed:', this.relative(api, uri))
+      api.onFileChanged(path)
     })
 
     watcher.onDidCreate(async (uri) => {
-      const filepath = normalize(uri.fsPath)
-      if (await this.shouldIgnoreFile(filepath, uri)) {
+      const path = normalize(uri.fsPath)
+      if (await this.shouldIgnoreFile(api, path, uri)) {
         return
       }
-      log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, uri.fsPath))
-      api.onFileCreated(filepath)
+      log.verbose?.('[VSCODE] File created:', this.relative(api, uri))
+      api.onFileCreated(path)
     })
   }
 
-  private async shouldIgnoreFile(path: string, uri: vscode.Uri) {
+  private relative(api: VitestFolderAPI, uri: vscode.Uri) {
+    return relative(api.workspaceFolder.uri.fsPath, uri.fsPath)
+  }
+
+  private async shouldIgnoreFile(api: VitestFolderAPI, path: string, uri: vscode.Uri) {
     if (
       path.includes('/node_modules/')
       || path.includes('/.git/')
       || path.endsWith('.git')
     ) {
-      log.verbose?.('[VSCODE] Ignoring file:', uri.fsPath)
+      log.verbose?.('[VSCODE] Ignoring file:', this.relative(api, uri))
       return true
     }
     try {
@@ -74,13 +78,13 @@ export class ExtensionWatcher extends vscode.Disposable {
         // if not a symlinked file
         && stats.type !== (vscode.FileType.File | vscode.FileType.SymbolicLink)
       ) {
-        log.verbose?.('[VSCODE]', uri.fsPath, 'is not a file. Ignoring.')
+        log.verbose?.('[VSCODE]', this.relative(api, uri), 'is not a file. Ignoring.')
         return true
       }
       return false
     }
     catch (err: unknown) {
-      log.verbose?.('[VSCODE] Error checking file stats:', uri.fsPath, err as string)
+      log.verbose?.('[VSCODE] Error checking file stats:', this.relative(api, uri), err as string)
       return true
     }
   }
