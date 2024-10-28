@@ -33,54 +33,54 @@ export class ExtensionWatcher extends vscode.Disposable {
     )
     this.watcherByFolder.set(api.workspaceFolder, watcher)
 
-    watcher.onDidDelete((file) => {
-      log.verbose?.('[VSCODE] File deleted:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
-      this.testTree.removeFile(normalize(file.fsPath))
+    watcher.onDidDelete((uri) => {
+      log.verbose?.('[VSCODE] File deleted:', relative(api.workspaceFolder.uri.fsPath, uri.fsPath))
+      this.testTree.removeFile(normalize(uri.fsPath))
     })
 
-    watcher.onDidChange(async (file) => {
-      const filepath = normalize(file.fsPath)
-      if (await this.shouldIgnoreFile(filepath, file)) {
+    watcher.onDidChange(async (uri) => {
+      const filepath = normalize(uri.fsPath)
+      if (await this.shouldIgnoreFile(filepath, uri)) {
         return
       }
-      log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
+      log.verbose?.('[VSCODE] File changed:', relative(api.workspaceFolder.uri.fsPath, uri.fsPath))
       api.onFileChanged(filepath)
     })
 
-    watcher.onDidCreate(async (file) => {
-      const filepath = normalize(file.fsPath)
-      if (await this.shouldIgnoreFile(filepath, file)) {
+    watcher.onDidCreate(async (uri) => {
+      const filepath = normalize(uri.fsPath)
+      if (await this.shouldIgnoreFile(filepath, uri)) {
         return
       }
-      log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, file.fsPath))
+      log.verbose?.('[VSCODE] File created:', relative(api.workspaceFolder.uri.fsPath, uri.fsPath))
       api.onFileCreated(filepath)
     })
   }
 
-  private async shouldIgnoreFile(filepath: string, file: vscode.Uri) {
+  private async shouldIgnoreFile(path: string, uri: vscode.Uri) {
     if (
-      filepath.includes('/node_modules/')
-      || filepath.includes('/.git/')
-      || filepath.endsWith('.git')
+      path.includes('/node_modules/')
+      || path.includes('/.git/')
+      || path.endsWith('.git')
     ) {
-      log.verbose?.('[VSCODE] Ignoring file:', file.fsPath)
+      log.verbose?.('[VSCODE] Ignoring file:', uri.fsPath)
       return true
     }
     try {
-      const stats = await vscode.workspace.fs.stat(file)
+      const stats = await vscode.workspace.fs.stat(uri)
       if (
         // if not a file
         stats.type !== vscode.FileType.File
         // if not a symlinked file
         && stats.type !== (vscode.FileType.File | vscode.FileType.SymbolicLink)
       ) {
-        log.verbose?.('[VSCODE]', file.fsPath, 'is not a file. Ignoring.')
+        log.verbose?.('[VSCODE]', uri.fsPath, 'is not a file. Ignoring.')
         return true
       }
       return false
     }
     catch (err: unknown) {
-      log.verbose?.('[VSCODE] Error checking file stats:', file.fsPath, err as string)
+      log.verbose?.('[VSCODE] Error checking file stats:', uri.fsPath, err as string)
       return true
     }
   }
