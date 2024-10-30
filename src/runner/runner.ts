@@ -12,6 +12,7 @@ import { log } from '../log'
 import { showVitestError } from '../utils'
 import { coverageContext, readCoverageReport } from '../coverage'
 import { normalizeDriveLetter } from '../worker/utils'
+import type { SerializedTestSpecification } from '../api/rpc'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -257,7 +258,7 @@ export class TestRunner extends vscode.Disposable {
     log.verbose?.('Initiating deferred test run')
     this.testRunDefer = Promise.withResolvers()
 
-    const runTests = (files?: string[], testNamePatern?: string) =>
+    const runTests = (files?: SerializedTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
         ? this.api.updateSnapshots(files, testNamePatern)
         : this.api.runFiles(files, testNamePatern)
@@ -471,8 +472,8 @@ export class TestRunner extends vscode.Disposable {
     this.markTestCase(testRun, test, result)
   }
 
-  private relative(file: string) {
-    return relative(this.api.workspaceFolder.uri.fsPath, file)
+  private relative(file: string | SerializedTestSpecification) {
+    return relative(this.api.workspaceFolder.uri.fsPath, typeof file === 'string' ? file : file[1])
   }
 }
 
@@ -529,16 +530,38 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
   log.verbose?.('Could not find a valid stack for', testItem.label, JSON.stringify(stacks, null, 2))
 }
 
-function getTestFiles(tests: readonly vscode.TestItem[]) {
-  return Array.from(
-    new Set(tests.map((test) => {
-      const data = getTestData(test)
-      const fsPath = normalize(test.uri!.fsPath)
-      if (data instanceof TestFolder)
-        return `${fsPath}/`
-      return fsPath
-    }).filter(Boolean) as string[]),
-  )
+function getTestFiles(tests: readonly vscode.TestItem[]): string[] | SerializedTestSpecification[] {
+  // if there is a folder, we can't limit the tests to a specific project
+  const hasFolder = tests.some(test => getTestData(test) instanceof TestFolder)
+  if (hasFolder) {
+    return Array.from(
+      new Set(tests.map((test) => {
+        const data = getTestData(test)
+        const fsPath = normalize(test.uri!.fsPath)
+        if (data instanceof TestFolder)
+          return `${fsPath}/`
+        return fsPath
+      }).filter(Boolean) as string[]),
+    )
+  }
+  const testSpecs: SerializedTestSpecification[] = []
+  const testFiles = new Set<string>()
+  for (const test of tests) {
+    const fsPath = test.uri!.fsPath
+    const data = getTestData(test)
+    // just to type guard, actually not possible to have
+    if (data instanceof TestFolder) {
+      continue
+    }
+    const project = data instanceof TestFile ? data.project : data.file.project
+    const key = `${project}\0${fsPath}`
+    if (testFiles.has(key)) {
+      continue
+    }
+    testFiles.add(key)
+    testSpecs.push([{ name: project }, fsPath])
+  }
+  return testSpecs
 }
 
 function formatTestPattern(tests: readonly vscode.TestItem[]) {

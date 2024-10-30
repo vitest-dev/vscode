@@ -2,14 +2,20 @@ import v8 from 'node:v8'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 
+export type SerializedTestSpecification = [
+  project: { name: string | undefined },
+  file: string,
+]
+
 export interface VitestMethods {
   getFiles: () => Promise<[project: string, file: string][]>
   collectTests: (testFile: [project: string, filepath: string][]) => Promise<void>
   cancelRun: () => Promise<void>
-  runTests: (files?: string[], testNamePattern?: string) => Promise<void>
-  updateSnapshots: (files?: string[], testNamePattern?: string) => Promise<void>
+  // accepts files with the project or folders (project doesn't matter for them)
+  runTests: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
+  updateSnapshots: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
 
-  watchTests: (files?: string[], testNamePattern?: string) => void
+  watchTests: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => void
   unwatchTests: () => void
 
   enableCoverage: () => void
