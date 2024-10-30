@@ -1,7 +1,7 @@
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import type { VitestEvents, VitestRPC } from './api/rpc'
+import type { SerializedTestSpecification, VitestEvents, VitestRPC } from './api/rpc'
 import type { VitestPackage } from './api/pkg'
 import { showVitestError } from './utils'
 import type { VitestProcess } from './api/types'
@@ -105,12 +105,12 @@ export class VitestFolderAPI {
     return this.pkg
   }
 
-  async runFiles(files?: string[], testNamePatern?: string) {
-    await this.meta.rpc.runTests(files?.map(normalize), testNamePatern)
+  async runFiles(specs?: SerializedTestSpecification[] | string[], testNamePatern?: string) {
+    await this.meta.rpc.runTests(normalizeSpecs(specs), testNamePatern)
   }
 
-  async updateSnapshots(files?: string[], testNamePatern?: string) {
-    await this.meta.rpc.updateSnapshots(files?.map(normalize), testNamePatern)
+  async updateSnapshots(specs?: SerializedTestSpecification[] | string[], testNamePatern?: string) {
+    await this.meta.rpc.updateSnapshots(normalizeSpecs(specs), testNamePatern)
   }
 
   getFiles() {
@@ -194,8 +194,8 @@ export class VitestFolderAPI {
     await this.meta.rpc.disableCoverage()
   }
 
-  async watchTests(files?: string[], testNamePattern?: string) {
-    await this.meta.rpc.watchTests(files?.map(normalize), testNamePattern)
+  async watchTests(files?: SerializedTestSpecification[] | string[], testNamePattern?: string) {
+    await this.meta.rpc.watchTests(normalizeSpecs(files), testNamePattern)
   }
 
   async unwatchTests() {
@@ -271,4 +271,16 @@ export interface ResolvedMeta {
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
   }
+}
+
+function normalizeSpecs(specs?: string[] | SerializedTestSpecification[]) {
+  if (!specs) {
+    return specs
+  }
+  return specs.map((spec) => {
+    if (typeof spec === 'string') {
+      return normalize(spec)
+    }
+    return [spec[0], normalize(spec[1])] as SerializedTestSpecification
+  }) as string[] | SerializedTestSpecification[]
 }

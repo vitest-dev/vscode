@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import { relative } from 'pathe'
 import mm from 'micromatch'
-import type { VitestMethods } from '../api/rpc'
+import type { SerializedTestSpecification, VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
 import { assert, limitConcurrency } from './utils'
@@ -57,7 +57,9 @@ export class Vitest implements VitestMethods {
       })(),
       (async () => {
         if (otherTests.length) {
-          const files = otherTests.map(([_, filepath]) => filepath)
+          const files = otherTests.map<SerializedTestSpecification>(
+            ([project, filepath]) => [{ name: project.getName() }, filepath],
+          )
 
           try {
             await this.runTestFiles(files, Vitest.COLLECT_NAME_PATTERN)
@@ -87,7 +89,7 @@ export class Vitest implements VitestMethods {
     this.setTestNamePattern(undefined)
   }
 
-  public async updateSnapshots(files?: string[] | undefined, testNamePattern?: string | undefined) {
+  public async updateSnapshots(files?: SerializedTestSpecification[] | string[] | undefined, testNamePattern?: string | undefined) {
     this.ctx.configOverride.snapshotOptions = {
       updateSnapshot: 'all',
       // environment is resolved inside a worker thread
@@ -101,17 +103,23 @@ export class Vitest implements VitestMethods {
     }
   }
 
-  public async runTests(files: string[] | undefined, testNamePattern?: string) {
+  async resolveTestSpecs(specs: string[] | SerializedTestSpecification[] | undefined): Promise<SerializedTestSpecification[]> {
+    if (!specs || typeof specs[0] === 'string') {
+      const files = await this.globTestFiles(specs as string[] | undefined)
+      return files.map<SerializedTestSpecification>(([project, file]) => {
+        return [{ name: project.getName() }, file]
+      })
+    }
+    return (specs || []) as SerializedTestSpecification[]
+  }
+
+  public async runTests(specsOrPaths: SerializedTestSpecification[] | string[] | undefined, testNamePattern?: string) {
     // @ts-expect-error private method
     await this.ctx.initBrowserProviders()
 
-    if (testNamePattern) {
-      await this.runTestFiles(files || this.ctx.state.getFilepaths(), testNamePattern)
-    }
-    else {
-      const specs = await this.globTestFiles(files)
-      await this.runTestFiles(specs.map(([_, spec]) => spec), undefined, !files)
-    }
+    const specs = await this.resolveTestSpecs(specsOrPaths)
+
+    await this.runTestFiles(specs, testNamePattern, !specs)
   }
 
   public cancelRun() {
@@ -145,7 +153,7 @@ export class Vitest implements VitestMethods {
     })
   }
 
-  private async runTestFiles(files: string[], testNamePattern?: string | undefined, runAllFiles = false) {
+  private async runTestFiles(specs: SerializedTestSpecification[], testNamePattern?: string | undefined, runAllFiles = false) {
     await this.ctx.runningPromise
     this.watcher.markRerun(false)
 
@@ -153,20 +161,34 @@ export class Vitest implements VitestMethods {
 
     // populate cache so it can find test files
     if (this.debug)
-      await this.globTestFiles(files)
+      await this.globTestFiles(specs.map(f => f[1]))
 
-    await this.rerunTests(files, runAllFiles)
+    await this.rerunTests(specs, runAllFiles)
   }
 
   private setTestNamePattern(pattern: string | undefined) {
     this.ctx.configOverride.testNamePattern = pattern ? new RegExp(pattern) : undefined
   }
 
-  private async rerunTests(files: string[], runAllFiles = false) {
-    await this.ctx.report('onWatcherRerun', files)
-    await this.ctx.runFiles(files.flatMap(file => this.ctx.getProjectsByTestFile(file)), runAllFiles)
+  private async rerunTests(specs: SerializedTestSpecification[], runAllFiles = false) {
+    const paths = specs.map(spec => spec[1])
+    await this.ctx.report('onWatcherRerun', paths)
 
-    await this.ctx.report('onWatcherStart', this.ctx.state.getFiles(files))
+    const specsToRun = specs.flatMap((spec) => {
+      const file = typeof spec === 'string' ? spec : spec[1]
+      const fileSpecs = this.ctx.getFileWorkspaceSpecs
+        ? this.ctx.getFileWorkspaceSpecs(file)
+        // supported by the older version
+        : this.ctx.getProjectsByTestFile(file)
+      if (!fileSpecs.length) {
+        return []
+      }
+      return fileSpecs.filter(([project]) => project.getName() === spec[0].name)
+    })
+
+    await this.ctx.runFiles(specsToRun, runAllFiles)
+
+    await this.ctx.report('onWatcherStart', this.ctx.state.getFiles(paths))
   }
 
   private handleFileChanged(file: string): string[] {
@@ -262,9 +284,9 @@ export class Vitest implements VitestMethods {
     return this.watcher.stopTracking()
   }
 
-  watchTests(files?: string[], testNamePatern?: string) {
+  watchTests(files?: SerializedTestSpecification[] | string[] | undefined, testNamePatern?: string) {
     if (files)
-      this.watcher.trackTests(files, testNamePatern)
+      this.watcher.trackTests(files.map(f => typeof f === 'string' ? f : f[1]), testNamePatern)
     else
       this.watcher.trackEveryFile()
   }
