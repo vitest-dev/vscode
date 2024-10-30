@@ -22,7 +22,11 @@ export class VSCodeTester {
   }
 
   async runAllTests() {
-    await this.page.getByRole('button', { name: /^Run Tests$/ }).click()
+    await this.page
+      .getByRole('toolbar', { name: 'Testing actions', exact: true })
+      .getByRole('button', { name: /^Run Tests$/ })
+      .first()
+      .click()
   }
 }
 
