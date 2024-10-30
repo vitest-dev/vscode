@@ -1,6 +1,5 @@
 import type { SourceMap } from 'node:module'
 import { relative } from 'pathe'
-import type { TemplateLiteral } from 'acorn'
 import { parse } from 'acorn'
 import { TraceMap, originalPositionFor } from '@vitest/utils/source-map'
 import { ancestor as walkAst } from 'acorn-walk'
@@ -34,7 +33,6 @@ interface LocalCallDefinition {
   start: number
   end: number
   name: string
-  unknown: boolean
   type: 'suite' | 'test'
   mode: 'run' | 'skip' | 'only' | 'todo'
   task: ParsedSuite | ParsedFile | ParsedTest
@@ -106,7 +104,6 @@ export function astParseFile(filepath: string, code: string) {
     CallExpression(node) {
       const { callee } = node as any
       const name = getName(callee)
-      let unknown = false
       if (!name) {
         return
       }
@@ -137,22 +134,11 @@ export function astParseFile(filepath: string, code: string) {
       const {
         arguments: [messageNode],
       } = node
-      let message: string | null = null
 
-      if (messageNode.type === 'Literal') {
-        message = String(messageNode.value)
-      }
-      else if (messageNode.type === 'Identifier') {
-        message = messageNode.name
-      }
-      else if (messageNode.type === 'TemplateLiteral') {
-        message = mergeTemplateLiteral(messageNode as any)
-      }
-      else {
-        message = '<unknown>'
-        unknown = true
-        // TODO: support dynamic messages
-      }
+      const isQuoted = messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral'
+      const message = isQuoted
+        ? code.slice(messageNode.start + 1, messageNode.end - 1)
+        : code.slice(messageNode.start, messageNode.end)
 
       // cannot statically analyze, so we always skip it
       if (mode === 'skipIf' || mode === 'runIf') {
@@ -165,7 +151,6 @@ export function astParseFile(filepath: string, code: string) {
         start,
         end,
         name: message,
-        unknown,
         type: name === 'it' || name === 'test' ? 'test' : 'suite',
         mode,
         task: null as any,
@@ -325,20 +310,6 @@ export async function astCollectTests(
     map: request.map,
     definitions,
   }
-}
-
-function mergeTemplateLiteral(node: TemplateLiteral): string {
-  let result = ''
-  let expressionsIndex = 0
-
-  for (let quasisIndex = 0; quasisIndex < node.quasis.length; quasisIndex++) {
-    result += node.quasis[quasisIndex].value.raw
-    if (expressionsIndex in node.expressions) {
-      result += `{${node.expressions[expressionsIndex]}}`
-      expressionsIndex++
-    }
-  }
-  return result
 }
 
 function createIndexMap(source: string) {
