@@ -46,7 +46,7 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
               execArgv: pnpExecArgv,
             },
           }
-        : undefined,
+        : {},
     },
     {
       server: {
