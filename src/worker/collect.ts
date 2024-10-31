@@ -42,7 +42,7 @@ interface LocalCallDefinition {
 export interface FileInformation {
   file: RunnerTestFile
   filepath: string
-  parsed: string
+  parsed: string | null
   map: SourceMap | { mappings: string } | null
   definitions: LocalCallDefinition[]
 }
@@ -164,17 +164,51 @@ export function astParseFile(filepath: string, code: string) {
   }
 }
 
+export function createFailedFileTask(ctx: WorkspaceProject, filepath: string, error: Error) {
+  const testFilepath = relative(ctx.config.root, filepath)
+  const file: ParsedFile = {
+    filepath,
+    type: 'suite',
+    id: /* @__PURE__ */ generateHash(`${testFilepath}${ctx.config.name || ''}`),
+    name: testFilepath,
+    mode: 'run',
+    tasks: [],
+    start: 0,
+    end: 0,
+    projectName: ctx.getName(),
+    meta: {},
+    pool: 'browser',
+    file: null!,
+    result: {
+      state: 'fail',
+      errors: [
+        {
+          name: error.name,
+          stack: error.stack,
+          message: error.message,
+        },
+      ],
+    },
+  }
+  file.file = file
+  return file
+}
+
 export async function astCollectTests(
   ctx: WorkspaceProject,
   filepath: string,
   transformMode: 'web' | 'ssr',
-): Promise<null | FileInformation> {
+): Promise<ParsedFile> {
   const request = await ctx.vitenode.transformRequest(filepath, filepath, transformMode)
   // TODO: error cannot parse
   const testFilepath = relative(ctx.config.root, filepath)
   if (!request) {
     debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
-    return null
+    return createFailedFileTask(
+      ctx,
+      filepath,
+      new Error(`Failed to parse ${testFilepath}. Vite didn't return anything.`),
+    )
   }
   const { definitions, ast } = astParseFile(testFilepath, request.code)
   const file: ParsedFile = {
@@ -303,13 +337,7 @@ export async function astCollectTests(
       ],
     }
   }
-  return {
-    file,
-    parsed: request.code,
-    filepath,
-    map: request.map,
-    definitions,
-  }
+  return file
 }
 
 function createIndexMap(source: string) {

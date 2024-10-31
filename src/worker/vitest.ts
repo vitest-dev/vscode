@@ -6,7 +6,7 @@ import type { SerializedTestSpecification, VitestMethods } from '../api/rpc'
 import { VitestWatcher } from './watcher'
 import { VitestCoverage } from './coverage'
 import { assert, limitConcurrency } from './utils'
-import { astCollectTests } from './collect'
+import { astCollectTests, createFailedFileTask } from './collect'
 
 const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
   ? (...args: any[]) => {
@@ -80,10 +80,9 @@ export class Vitest implements VitestMethods {
     const runConcurrently = limitConcurrency(5)
 
     const promises = specs.map(([project, filename]) => runConcurrently(
-      () => astCollectTests(project, filename, transformMode).catch(() => null),
+      () => astCollectTests(project, filename, transformMode).catch(err => createFailedFileTask(project, filename, err)),
     ))
-    const result = await Promise.all(promises)
-    const files = result.filter(r => r != null).map((r => r!.file))
+    const files = await Promise.all(promises)
     this.ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
     await this.ctx.report('onCollected', files)
     this.setTestNamePattern(undefined)
