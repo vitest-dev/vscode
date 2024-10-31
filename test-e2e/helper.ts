@@ -46,7 +46,9 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
       const app = await _electron.launch({
         executablePath,
         env: {
+          ...process.env,
           VITEST_VSCODE_E2E_LOG_FILE: logPath,
+          VITEST_VSCODE_LOG: 'verbose',
         },
         args: [
           '--no-sandbox',
