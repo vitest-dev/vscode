@@ -26,6 +26,27 @@ test('basic', async ({ launch }) => {
   await expect(tester.tree.getFileItem('mix.test.ts')).toHaveState('failed')
 })
 
+test('workspaces', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/monorepo-vitest-workspace',
+  })
+  await tester.tree.expand('packages/react/test')
+
+  const basicTest = tester.tree.getFileItem('basic.test.tsx [@vitest/test-react]')
+
+  await expect(basicTest.locator).toBeVisible()
+  await expect(tester.tree.getFileItem('basic.test.tsx [0]').locator).toBeVisible()
+
+  await basicTest.run()
+
+  // only runs tests in a single workspace project
+  await expect(tester.tree.getResults()).toHaveText('1/1')
+
+  await tester.runAllTests()
+
+  await expect(tester.tree.getResults()).toHaveText('4/4')
+})
+
 test('custom imba language', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/imba',
