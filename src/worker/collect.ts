@@ -9,7 +9,7 @@ import {
   generateHash,
   someTasksAreOnly,
 } from '@vitest/runner/utils'
-import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase } from 'vitest'
+import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase, TestError } from 'vitest'
 import type { WorkspaceProject } from 'vitest/node'
 
 interface ParsedFile extends RunnerTestFile {
@@ -181,17 +181,33 @@ export function createFailedFileTask(ctx: WorkspaceProject, filepath: string, er
     file: null!,
     result: {
       state: 'fail',
-      errors: [
-        {
-          name: error.name,
-          stack: error.stack,
-          message: error.message,
-        },
-      ],
+      errors: serializeError(ctx, error),
     },
   }
   file.file = file
   return file
+}
+
+function serializeError(ctx: WorkspaceProject, error: any): TestError[] {
+  if ('errors' in error && 'pluginCode' in error) {
+    const errors = error.errors.map((e: any) => {
+      return {
+        name: error.name,
+        message: e.text,
+        stack: e.location
+          ? `${error.name}: ${e.text}\n  at ${relative(ctx.config.root, e.location.file)}:${e.location.line}:${e.location.column}`
+          : '',
+      }
+    })
+    return errors
+  }
+  return [
+    {
+      name: error.name,
+      stack: error.stack,
+      message: error.message,
+    },
+  ]
 }
 
 export async function astCollectTests(
