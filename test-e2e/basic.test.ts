@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './helper'
@@ -13,6 +13,9 @@ beforeAll(() => {
 beforeEach<{ logPath: string }>(({ logPath }) => {
   onTestFailed(() => {
     console.error(`Log during test:\n${readFileSync(logPath, 'utf-8')}`)
+    if (!process.env.CI) {
+      rmSync(logPath)
+    }
   })
 })
 
@@ -68,6 +71,24 @@ test('custom imba language', async ({ launch }) => {
   await expect(tester.tree.getFileItem('basic.test.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('utils.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')
+})
+
+test('browser mode correctly collects tests', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/browser',
+  })
+
+  await tester.tree.expand('test/console.test.ts')
+  const consoleTest = tester.tree.getFileItem('console.test.ts')
+  await consoleTest.navigate()
+
+  await expect(consoleTest).toHaveTests({
+    console: 'waiting',
+  })
+
+  editFile('samples/browser/test/console.test.ts', content => `/arakara---\n${content}`)
+
+  await expect(consoleTest).toHaveError('Error: Unterminated regular expression')
 })
 
 describe('continuous testing', () => {

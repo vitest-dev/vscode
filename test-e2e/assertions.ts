@@ -33,6 +33,17 @@ expect.extend({
       name: 'toHaveState',
     }
   },
+  async toHaveError(item: TesterTestItem, error: string) {
+    const page = item.page
+    const depth = Number(await item.locator.getAttribute('aria-level'))
+
+    await expect(page.locator(`[aria-label*="${error}"][aria-level="${depth + 1}"]`)).toBeVisible()
+
+    return {
+      pass: true,
+      message: () => '',
+    }
+  },
   async toHaveTests(item: TesterTestItem, tests: TestsTree) {
     const page = item.page
     const depth = Number(await item.locator.getAttribute('aria-level'))
@@ -81,6 +92,7 @@ declare global {
        * })
        */
       toHaveTests: (tests: TestsTree) => Promise<R>
+      toHaveError: (error: string) => Promise<R>
     }
   }
 }
