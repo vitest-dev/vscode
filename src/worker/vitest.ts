@@ -80,7 +80,7 @@ export class Vitest implements VitestMethods {
     const runConcurrently = limitConcurrency(5)
 
     const promises = specs.map(([project, filename]) => runConcurrently(
-      () => astCollectTests(project, filename, transformMode),
+      () => astCollectTests(project, filename, transformMode).catch(() => null),
     ))
     const result = await Promise.all(promises)
     const files = result.filter(r => r != null).map((r => r!.file))
