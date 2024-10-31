@@ -73,7 +73,7 @@ test('custom imba language', async ({ launch }) => {
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')
 })
 
-test.only('browser mode correctly collects tests', async ({ launch }) => {
+test('browser mode correctly collects tests', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/browser',
   })
