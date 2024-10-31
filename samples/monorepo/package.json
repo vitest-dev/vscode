@@ -8,9 +8,6 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "mime-types": "^2.1.35"
-  },
   "devDependencies": {
     "happy-dom": "^2.49.0",
     "vitest": "^1.4.0"
