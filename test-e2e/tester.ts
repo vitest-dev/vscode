@@ -35,7 +35,7 @@ class TesterTree {
     private page: Page,
   ) {}
 
-  getResults() {
+  getResultsLocator() {
     return this.page.locator(`.result-summary > [custom-hover]`)
   }
 
