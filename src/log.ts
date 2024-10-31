@@ -1,9 +1,11 @@
 /* eslint-disable no-console */
 
+import { appendFileSync, writeFileSync } from 'node:fs'
 import { window } from 'vscode'
 import { getConfig } from './config'
 
-const _log = window.createOutputChannel('Vitest')
+const logFile = process.env.VITEST_VSCODE_E2E_LOG_FILE!
+const channel = window.createOutputChannel('Vitest')
 export const log = {
   worker: (type: 'info' | 'error', ...args: any[]) => {
     if (typeof args.at(-1) === 'string' && args.at(-1).endsWith('\n'))
@@ -13,14 +15,22 @@ export const log = {
     if (process.env.EXTENSION_NODE_ENV === 'dev') {
       console[type](`[INFO ${time}]`, '[Worker]', ...args)
     }
-    _log.appendLine(`[INFO ${time}] [Worker] ${args.join(' ')}`)
+    const message = `[INFO ${time}] [Worker] ${args.join(' ')}`
+    if (logFile) {
+      appendFile(message)
+    }
+    channel.appendLine(message)
   },
   info: (...args: any[]) => {
     if (process.env.EXTENSION_NODE_ENV === 'dev') {
       console.log(...args)
     }
     const time = new Date().toLocaleTimeString()
-    _log.appendLine(`[INFO ${time}] ${args.join(' ')}`)
+    const message = `[INFO ${time}] ${args.join(' ')}`
+    if (logFile) {
+      appendFile(message)
+    }
+    channel.appendLine(message)
   },
   error: (...args: any[]) => {
     if (process.env.EXTENSION_NODE_ENV === 'dev') {
@@ -33,7 +43,11 @@ export const log = {
         args[i] = `[Error ${err.name}] ${err.message}\n${err.stack}`
       }
     }
-    _log.appendLine(`[Error ${time}] ${args.join(' ')}`)
+    const message = `[Error ${time}] ${args.join(' ')}`
+    if (logFile) {
+      appendFile(message)
+    }
+    channel.appendLine(message)
   },
   verbose: getConfig().logLevel === 'verbose' || process.env.VITEST_VSCODE_LOG === 'verbose'
     ? (...args: string[]) => {
@@ -41,7 +55,11 @@ export const log = {
         if (process.env.EXTENSION_NODE_ENV === 'dev') {
           console.log(`[${time}]`, ...args)
         }
-        _log.appendLine(`[${time}] ${args.join(' ')}`)
+        const message = `[${time}] ${args.join(' ')}`
+        if (logFile) {
+          appendFile(message)
+        }
+        channel.appendLine(message)
       }
     : undefined,
   workspaceInfo: (folder: string, ...args: any[]) => {
@@ -51,6 +69,15 @@ export const log = {
     log.error(`[Workspace ${folder}]`, ...args)
   },
   openOuput() {
-    _log.show()
+    channel.show()
   },
 } as const
+
+let exitsts = false
+function appendFile(log: string) {
+  if (!exitsts) {
+    writeFileSync(logFile, '')
+    exitsts = true
+  }
+  appendFileSync(logFile, `${log}\n`)
+}

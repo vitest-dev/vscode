@@ -1,4 +1,5 @@
-import { beforeAll, describe } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './helper'
 import { editFile } from './tester'
@@ -7,6 +8,12 @@ import { editFile } from './tester'
 beforeAll(() => {
   delete process.env.CI
   delete process.env.GITHUB_ACTIONS
+})
+
+beforeEach<{ logPath: string }>(({ logPath }) => {
+  onTestFailed(() => {
+    console.error(`Log during test:\n${readFileSync(logPath, 'utf-8')}`)
+  })
 })
 
 test('basic', async ({ launch }) => {
@@ -26,26 +33,26 @@ test('basic', async ({ launch }) => {
   await expect(tester.tree.getFileItem('mix.test.ts')).toHaveState('failed')
 })
 
-// test('workspaces', async ({ launch }) => {
-//   const { tester } = await launch({
-//     workspacePath: './samples/monorepo-vitest-workspace',
-//   })
-//   await tester.tree.expand('packages/react/test')
+test('workspaces', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/monorepo-vitest-workspace',
+  })
+  await tester.tree.expand('packages/react/test')
 
-//   const basicTest = tester.tree.getFileItem('basic.test.tsx [@vitest/test-react]')
+  const basicTest = tester.tree.getFileItem('basic.test.tsx [@vitest/test-react]')
 
-//   await expect(basicTest.locator).toBeVisible()
-//   await expect(tester.tree.getFileItem('basic.test.tsx [0]').locator).toBeVisible()
+  await expect(basicTest.locator).toBeVisible()
+  await expect(tester.tree.getFileItem('basic.test.tsx [0]').locator).toBeVisible()
 
-//   await basicTest.run()
+  await basicTest.run()
 
-//   // only runs tests in a single workspace project
-//   await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+  // only runs tests in a single workspace project
+  await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
 
-//   await tester.runAllTests()
+  await tester.runAllTests()
 
-//   await expect(tester.tree.getResultsLocator()).toHaveText('4/4')
-// })
+  await expect(tester.tree.getResultsLocator()).toHaveText('4/4')
+})
 
 test('custom imba language', async ({ launch }) => {
   const { tester } = await launch({
