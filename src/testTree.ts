@@ -136,13 +136,15 @@ export class TestTree extends vscode.Disposable {
 
     const fileUri = vscode.Uri.file(file)
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
-    const label = basename(file)
+    const label = `${basename(file)}${project ? ` [${project}]` : ''}`
     const testFileItem = this.controller.createTestItem(
       fileId,
       label,
       fileUri,
     )
-    testFileItem.description = project
+    // "description" looks nicer in the test explorer,
+    // but it's not displayed in the gutter icon
+    // testFileItem.description = project
     testFileItem.tags = [api.tag]
     testFileItem.canResolveChildren = true
     TestFile.register(
