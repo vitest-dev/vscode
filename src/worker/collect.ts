@@ -176,7 +176,7 @@ export async function astCollectTests(
     debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
     return null
   }
-  const { definitions, ast } = astParseFile(filepath, request.code)
+  const { definitions, ast } = astParseFile(testFilepath, request.code)
   const file: ParsedFile = {
     filepath,
     type: 'suite',
