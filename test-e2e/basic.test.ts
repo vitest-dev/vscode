@@ -1,4 +1,5 @@
-import { beforeAll, describe } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './helper'
 import { editFile } from './tester'
@@ -7,6 +8,12 @@ import { editFile } from './tester'
 beforeAll(() => {
   delete process.env.CI
   delete process.env.GITHUB_ACTIONS
+})
+
+beforeEach<{ logPath: string }>(({ logPath }) => {
+  onTestFailed(() => {
+    console.error(`Log during test:\n${readFileSync(logPath, 'utf-8')}`)
+  })
 })
 
 test('basic', async ({ launch }) => {

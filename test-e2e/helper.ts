@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import os from 'node:os'
-import path from 'node:path'
+import path, { resolve } from 'node:path'
 import { _electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import type { Awaitable } from 'vitest'
@@ -30,8 +30,10 @@ const defaultConfig = process.env as {
   VSCODE_E2E_TRACE?: 'on' | 'off'
 }
 
-export const test = baseTest.extend<{ launch: LaunchFixture }>({
-  launch: async ({ task }, use) => {
+export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; logPath: string }>({
+  taskName: async ({ task }, use) => use(`${task.name}-${task.id}`),
+  logPath: async ({ taskName }, use) => use(resolve(`./logs-${taskName}.txt`)),
+  launch: async ({ taskName, logPath }, use) => {
     const teardowns: (() => Promise<void>)[] = []
 
     await use(async (options) => {
@@ -43,6 +45,9 @@ export const test = baseTest.extend<{ launch: LaunchFixture }>({
       const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'vscode-e2e-'))
       const app = await _electron.launch({
         executablePath,
+        env: {
+          VITEST_VSCODE_E2E_LOG_FILE: logPath,
+        },
         args: [
           '--no-sandbox',
           '--disable-gpu-sandbox',
@@ -63,8 +68,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture }>({
 
       const teardown = async () => {
         if (trace) {
-          const name = `${task.name.replace(/\W/g, '-')}-${task.id}`
-          await page.context().tracing.stop({ path: `test-results/${name}/basic.zip` })
+          await page.context().tracing.stop({ path: `test-results/${taskName}/basic.zip` })
         }
         await app.close()
         await fs.promises.rm(tempDir, { recursive: true, force: true })
