@@ -35,7 +35,7 @@ class TesterTree {
     private page: Page,
   ) {}
 
-  getResults() {
+  getResultsLocator() {
     return this.page.locator(`.result-summary > [custom-hover]`)
   }
 
@@ -48,7 +48,11 @@ class TesterTree {
     const segments = path.split('/')
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i]
-      const locator = this.page.locator(`[aria-label*="${segment} "][aria-level="${i + 1}"]`)
+      const locator = this.page
+        // not yet run
+        .locator(`[aria-label*="${segment} (Not"][aria-level="${i + 1}"]`)
+        // test already run
+        .or(this.page.locator(`[aria-label="${segment}"][aria-level="${i + 1}"]`))
       const state = await locator.getAttribute('aria-expanded')
       if (state === 'true')
         continue
@@ -89,22 +93,27 @@ export class TesterTestItem {
   ) {}
 
   async run() {
-    await this.locator.getByLabel('Run Test').click()
+    await this.locator.hover()
+    await this.locator.getByLabel('Run Test', { exact: true }).click()
   }
 
   async debug() {
-    await this.locator.getByLabel('Debug Test').click()
+    await this.locator.hover()
+    await this.locator.getByLabel('Debug Test', { exact: true }).click()
   }
 
   async coverage() {
-    await this.locator.getByLabel('Run Test with Coverage').click()
+    await this.locator.hover()
+    await this.locator.getByLabel('Run Test with Coverage', { exact: true }).click()
   }
 
   async toggleContinuousRun() {
+    await this.locator.hover()
     await this.locator.getByLabel(/Turn (on|off) Continuous Run/).click()
   }
 
   async navigate() {
+    await this.locator.hover()
     await this.locator.getByLabel(/Go to Test/).click()
     // wait until the page is navigated
     await this.page.getByRole('tab', { name: new RegExp(this.name) }).waitFor()

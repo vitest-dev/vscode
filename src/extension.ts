@@ -11,8 +11,7 @@ import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
 import { createVitestWorkspaceFile, debounce, noop, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
-import type { TestFile } from './testTreeData'
-import { getTestData } from './testTreeData'
+import { TestFile, getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
 import { coverageContext } from './coverage'
 import { debugTests } from './debug/api'
@@ -248,14 +247,16 @@ class VitestExtension {
     // collect tests inside a test file
     vscode.window.visibleTextEditors.forEach(async (editor) => {
       const testItems = this.testTree.getFileTestItems(editor.document.uri.fsPath)
-      const apis = new Set()
+      const promises = []
       for (const item of testItems) {
         const data = getTestData(item) as TestFile
-        if (!apis.has(data.api)) {
-          await this.resolveTestFile(item)
-          apis.add(data.api)
+        if (data instanceof TestFile) {
+          promises.push(this.resolveTestFile(item))
         }
       }
+      await Promise.all(promises).catch((err) => {
+        log.error('Failed to collect tests from visible text editors', err)
+      })
     })
   }
 

@@ -144,7 +144,7 @@ export class VitestFolderAPI {
       return [projectName, filepath] as [string, string]
     })
     const root = this.workspaceFolder.uri.fsPath
-    log.info('[API]', `Collecting tests: ${tests.map(t => relative(root, t[1])).join(', ')}`)
+    log.info('[API]', `Collecting tests: ${tests.map(t => `${relative(root, t[1])}${t[0] ? ` [${t[0]}]` : ''}`).join(', ')}`)
     return this.meta.rpc.collectTests(tests)
   })
 

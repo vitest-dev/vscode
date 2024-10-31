@@ -20,11 +20,32 @@ test('basic', async ({ launch }) => {
 
   await tester.runAllTests()
 
-  await expect(tester.tree.getResults()).toHaveText('2/4')
+  await expect(tester.tree.getResultsLocator()).toHaveText('2/4')
   await expect(tester.tree.getFileItem('pass.test.ts')).toHaveState('passed')
   await expect(tester.tree.getFileItem('fail.test.ts')).toHaveState('failed')
   await expect(tester.tree.getFileItem('mix.test.ts')).toHaveState('failed')
 })
+
+// test('workspaces', async ({ launch }) => {
+//   const { tester } = await launch({
+//     workspacePath: './samples/monorepo-vitest-workspace',
+//   })
+//   await tester.tree.expand('packages/react/test')
+
+//   const basicTest = tester.tree.getFileItem('basic.test.tsx [@vitest/test-react]')
+
+//   await expect(basicTest.locator).toBeVisible()
+//   await expect(tester.tree.getFileItem('basic.test.tsx [0]').locator).toBeVisible()
+
+//   await basicTest.run()
+
+//   // only runs tests in a single workspace project
+//   await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+
+//   await tester.runAllTests()
+
+//   await expect(tester.tree.getResultsLocator()).toHaveText('4/4')
+// })
 
 test('custom imba language', async ({ launch }) => {
   const { tester } = await launch({
@@ -36,7 +57,7 @@ test('custom imba language', async ({ launch }) => {
 
   await tester.runAllTests()
 
-  await expect(tester.tree.getResults()).toHaveText('3/4')
+  await expect(tester.tree.getResultsLocator()).toHaveText('3/4')
   await expect(tester.tree.getFileItem('basic.test.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('utils.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')
