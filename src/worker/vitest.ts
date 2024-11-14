@@ -113,9 +113,6 @@ export class Vitest implements VitestMethods {
   }
 
   public async runTests(specsOrPaths: SerializedTestSpecification[] | string[] | undefined, testNamePattern?: string) {
-    // @ts-expect-error private method
-    await this.ctx.initBrowserProviders()
-
     const specs = await this.resolveTestSpecs(specsOrPaths)
 
     await this.runTestFiles(specs, testNamePattern, !specs)
