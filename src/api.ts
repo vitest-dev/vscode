@@ -97,6 +97,10 @@ export class VitestFolderAPI {
     return this.meta.process
   }
 
+  get configs() {
+    return this.meta.configs
+  }
+
   get version() {
     return this.pkg.version
   }
@@ -261,6 +265,7 @@ export interface ResolvedMeta {
   rpc: VitestRPC
   process: VitestProcess
   pkg: VitestPackage
+  configs: string[]
   handlers: {
     onConsoleLog: (listener: VitestEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: VitestEvents['onTaskUpdate']) => void

@@ -353,17 +353,21 @@ class VitestExtension {
         return
       // if new config is created, always check if it should be respected
       if (event === 'create') {
-        this.defineTestProfiles(false)
+        this.defineTestProfiles(false).catch((err) => {
+          log.error('Failed to define test profiles after a new config file was created', err)
+        })
         return
       }
       // otherwise ignore changes to unrelated configs
       const filePath = normalize(uri.fsPath)
       for (const api of this.api.folderAPIs) {
         if (
-          api.package.configFile === filePath
-          || api.package.workspaceFile === filePath
+          api.package.workspaceFile === filePath
+          || api.configs.includes(filePath)
         ) {
-          this.defineTestProfiles(false)
+          this.defineTestProfiles(false).catch((err) => {
+            log.error('Failed to define test profiles after a new config file was updated', err)
+          })
           return
         }
       }

@@ -80,9 +80,11 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     },
   )
   reporter.init(vitest)
+  const configs = vitest.projects.map(p => p.server.config.configFile).filter(c => c != null)
   return {
     vitest,
     reporter,
+    configs,
     meta,
   }
 }

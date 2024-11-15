@@ -34,6 +34,7 @@ export function waitForWsResolvedMeta(
           resolve({
             rpc: api,
             handlers,
+            configs: message.configs,
             process: new VitestWebSocketProcess(Math.random(), wss, ws),
             pkg,
           })

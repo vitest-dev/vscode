@@ -68,13 +68,13 @@ async function createChildVitestProcess(pkg: VitestPackage) {
     }
   })
 
-  return new Promise<ChildProcess>((resolve, reject) => {
+  return new Promise<{ process: ChildProcess; configs: string[] }>((resolve, reject) => {
     function onMessage(message: WorkerEvent) {
       if (message.type === 'debug')
         log.worker('info', ...message.args)
 
       if (message.type === 'ready') {
-        resolve(vitest)
+        resolve({ process: vitest, configs: message.configs })
       }
       if (message.type === 'error') {
         const error = new Error(`Vitest failed to start: \n${message.error}`)
@@ -126,7 +126,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
 }
 
 export async function createVitestProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
-  const vitest = await createChildVitestProcess(pkg)
+  const { process: vitest, configs } = await createChildVitestProcess(pkg)
 
   log.info('[API]', `${formatPkg(pkg)} child process ${vitest.pid} created`)
 
@@ -142,6 +142,7 @@ export async function createVitestProcess(pkg: VitestPackage): Promise<ResolvedM
 
   return {
     rpc: api,
+    configs,
     process: new VitestChildProcess(vitest),
     handlers,
     pkg,

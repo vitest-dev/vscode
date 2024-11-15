@@ -19,6 +19,7 @@ export interface WorkerRunnerOptions {
 
 export interface EventReady {
   type: 'ready'
+  configs: string[]
 }
 
 export interface EventDebug {
