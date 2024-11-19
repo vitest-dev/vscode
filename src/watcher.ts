@@ -8,6 +8,7 @@ import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
+  private apisByFolder = new Map<vscode.WorkspaceFolder, VitestFolderAPI[]>()
 
   constructor(private readonly testTree: TestTree) {
     super(() => {
@@ -22,16 +23,20 @@ export class ExtensionWatcher extends vscode.Disposable {
   }
 
   watchTestFilesInWorkspace(api: VitestFolderAPI) {
-    if (this.watcherByFolder.has(api.workspaceFolder)) {
+    const folder = api.workspaceFolder
+    const apis = this.apisByFolder.get(folder) ?? []
+    if (!apis.includes(api)) {
+      apis.push(api)
+    }
+    this.apisByFolder.set(folder, apis)
+    if (this.watcherByFolder.has(folder)) {
       return
     }
 
-    const pattern = new vscode.RelativePattern(api.workspaceFolder, getConfig(api.workspaceFolder).filesWatcherInclude)
-    log.info('[VSCODE] Watching', api.workspaceFolder.name, 'with pattern', pattern.pattern)
-    const watcher = vscode.workspace.createFileSystemWatcher(
-      pattern,
-    )
-    this.watcherByFolder.set(api.workspaceFolder, watcher)
+    const pattern = new vscode.RelativePattern(folder, getConfig(folder).filesWatcherInclude)
+    log.info('[VSCODE] Watching', folder.name, 'with pattern', pattern.pattern)
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern)
+    this.watcherByFolder.set(folder, watcher)
 
     watcher.onDidDelete((uri) => {
       log.verbose?.('[VSCODE] File deleted:', this.relative(api, uri))
@@ -44,7 +49,8 @@ export class ExtensionWatcher extends vscode.Disposable {
         return
       }
       log.verbose?.('[VSCODE] File changed:', this.relative(api, uri))
-      api.onFileChanged(path)
+      const apis = this.apisByFolder.get(folder) || []
+      apis.forEach(api => api.onFileChanged(path))
     })
 
     watcher.onDidCreate(async (uri) => {
@@ -53,7 +59,8 @@ export class ExtensionWatcher extends vscode.Disposable {
         return
       }
       log.verbose?.('[VSCODE] File created:', this.relative(api, uri))
-      api.onFileCreated(path)
+      const apis = this.apisByFolder.get(folder) || []
+      apis.forEach(api => api.onFileChanged(path))
     })
   }
 

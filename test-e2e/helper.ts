@@ -32,7 +32,7 @@ const defaultConfig = process.env as {
 
 export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; logPath: string }>({
   taskName: async ({ task }, use) => use(`${task.name}-${task.id}`),
-  logPath: async ({ taskName }, use) => use(resolve(`./logs-${taskName}.txt`)),
+  logPath: async ({ taskName }, use) => use(resolve(`./tests-logs-${taskName}.txt`)),
   launch: async ({ taskName, logPath }, use) => {
     const teardowns: (() => Promise<void>)[] = []
 
