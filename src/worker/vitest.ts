@@ -118,7 +118,7 @@ export class Vitest implements VitestMethods {
 
     const specs = await this.resolveTestSpecs(specsOrPaths)
 
-    await this.runTestFiles(specs, testNamePattern, !specs)
+    await this.runTestFiles(specs, testNamePattern, !specsOrPaths)
   }
 
   public cancelRun() {
