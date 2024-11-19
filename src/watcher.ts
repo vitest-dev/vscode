@@ -8,7 +8,7 @@ import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
-  private apisByFolder = new Map<vscode.WorkspaceFolder, VitestFolderAPI[]>()
+  private apisByFolder = new WeakMap<vscode.WorkspaceFolder, VitestFolderAPI[]>()
 
   constructor(private readonly testTree: TestTree) {
     super(() => {
@@ -26,6 +26,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     const folder = api.workspaceFolder
     const apis = this.apisByFolder.get(folder) ?? []
     if (!apis.includes(api)) {
+      log.info('[API] Watching', api.id)
       apis.push(api)
     }
     this.apisByFolder.set(folder, apis)
