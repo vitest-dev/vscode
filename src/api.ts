@@ -125,14 +125,18 @@ export class VitestFolderAPI {
     if (this.process.closed) {
       return
     }
-    return this.meta.rpc.onFilesCreated(files)
+    return this.meta.rpc.onFilesCreated(files).catch((err) => {
+      log.error('[API]', 'Failed to notify Vitest about file creation', err)
+    })
   })
 
   onFileChanged = createQueuedHandler(async (files: string[]) => {
     if (this.process.closed) {
       return
     }
-    return this.meta.rpc.onFilesChanged(files)
+    return this.meta.rpc.onFilesChanged(files).catch((err) => {
+      log.error('[API]', 'Failed to notify Vitest about file change', err)
+    })
   })
 
   async collectTests(projectName: string, testFile: string) {

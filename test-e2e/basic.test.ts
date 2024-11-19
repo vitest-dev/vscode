@@ -91,6 +91,36 @@ test('browser mode correctly collects tests', async ({ launch }) => {
   await expect(consoleTest).toHaveError('Error: Unterminated regular expression')
 })
 
+test('watcher updates the file if there are several config files', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/multiple-configs',
+  })
+
+  await tester.tree.expand('app1/test-app1.test.ts')
+  const app1Test = tester.tree.getFileItem('test-app1.test.ts')
+
+  await expect(app1Test).toHaveTests({
+    math: 'waiting',
+  })
+
+  await tester.tree.expand('app2/test-app2.test.ts')
+  const app2Test = tester.tree.getFileItem('test-app2.test.ts')
+
+  await expect(app2Test).toHaveTests({
+    math: 'waiting',
+  })
+
+  editFile('samples/multiple-configs/app1/test-app1.test.ts', content => content.replace('math', 'math-123'))
+  editFile('samples/multiple-configs/app2/test-app2.test.ts', content => content.replace('math', 'math-987'))
+
+  await expect(app1Test).toHaveTests({
+    'math-123': 'waiting',
+  })
+  await expect(app2Test).toHaveTests({
+    'math-987': 'waiting',
+  })
+})
+
 describe('continuous testing', () => {
   test('reruns tests on test file change', async ({ launch }) => {
     const { tester } = await launch({

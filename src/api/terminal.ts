@@ -51,6 +51,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
     handlers: meta.handlers,
     pkg,
     process: vitestProcess,
+    configs: meta.configs,
   }
 }
 

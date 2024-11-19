@@ -1,0 +1,7 @@
+{
+  "name": "multiple-configs",
+  "private": true,
+  "dependencies": {
+    "vitest": "^2.1.5"
+  }
+}
