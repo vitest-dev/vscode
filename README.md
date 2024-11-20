@@ -95,6 +95,16 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.maximumConfigs`: The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file. Default: `3`
 - `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
 
+### Commands
+
+You can reveal the current test file in the test explorer view by selecting the "Reveal in Test Explorer" option (the last option on the screenshot) in the file context:
+
+![Reveal test in explorer](./img/reveal-in-explorer.png "Reveal test in explorer")
+
+You can also type the same command in the quick picker while the file is open.
+
+![Reveal test in explorer](./img/reveal-in-picker.png "Reveal test in explorer")
+
 ### Experimental
 
 If the extension hangs, consider enabling `vitest.experimentalStaticAstCollect` option to use static analysis instead of actually running the test file every time you make a change which can cause visible hangs if it takes a long time to setup the test.

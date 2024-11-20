@@ -159,6 +159,11 @@ export class TestTree extends vscode.Disposable {
     const cachedItems = this.testItemsByFile.get(normalizedFile) || []
     cachedItems.push(testFileItem)
     this.testItemsByFile.set(normalizedFile, cachedItems)
+    vscode.commands.executeCommand(
+      'setContext',
+      'vitest.testFiles',
+      Array.from(this.testItemsByFile.keys()),
+    )
 
     return testFileItem
   }

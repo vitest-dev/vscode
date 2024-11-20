@@ -75,9 +75,20 @@
         "title": "Show Shell Terminal",
         "command": "vitest.showShellTerminal",
         "category": "Vitest"
+      },
+      {
+        "title": "Reveal in Test Explorer",
+        "command": "vitest.revealInTestExplorer",
+        "category": "Vitest"
       }
     ],
     "menus": {
+      "editor/title/context": [
+        {
+          "command": "vitest.revealInTestExplorer",
+          "when": "vitest.testFiles && resourcePath in vitest.testFiles"
+        }
+      ],
       "commandPalette": [
         {
           "command": "vitest.updateSnapshot",

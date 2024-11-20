@@ -155,9 +155,10 @@ class VitestExtension {
       })
 
       for (const api of this.api.folderAPIs) {
+        const files = await api.getFiles()
         await this.testTree.watchTestFilesInWorkspace(
           api,
-          await api.getFiles(),
+          files,
         )
       }
     }
@@ -296,6 +297,18 @@ class VitestExtension {
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
+      }),
+      vscode.commands.registerCommand('vitest.revealInTestExplorer', async (uri: vscode.Uri | undefined) => {
+        if (uri === undefined) {
+          uri = vscode.window.activeTextEditor?.document.uri
+        }
+        if (!(uri instanceof vscode.Uri)) {
+          return
+        }
+        const testItems = this.testTree.getFileTestItems(uri.fsPath)
+        if (testItems[0]) {
+          vscode.commands.executeCommand('vscode.revealTestInExplorer', testItems[0])
+        }
       }),
       vscode.commands.registerCommand('vitest.showShellTerminal', async () => {
         const apis = this.api?.folderAPIs
