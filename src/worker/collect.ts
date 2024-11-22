@@ -90,6 +90,12 @@ export function astParseFile(filepath: string, code: string) {
       return getName(callee.tag)
     }
     if (callee.type === 'MemberExpression') {
+      if (
+        callee.object?.type === 'Identifier'
+        && ['it', 'test', 'describe', 'suite'].includes(callee.object.name)
+      ) {
+        return callee.object?.name
+      }
       // direct call as `__vite_ssr_exports_0__.test()`
       if (callee.object?.name?.startsWith('__vite_ssr_')) {
         return getName(callee.property)
