@@ -22,6 +22,7 @@ export class TestRunner extends vscode.Disposable {
 
   private testRun: vscode.TestRun | undefined
   private testRunDefer: PromiseWithResolvers<void> | undefined
+  private testRunRequest: vscode.TestRunRequest | undefined
 
   private disposables: vscode.Disposable[] = []
 
@@ -91,8 +92,14 @@ export class TestRunner extends vscode.Disposable {
         }
 
         if (task.mode === 'skip' || task.mode === 'todo') {
-          log.verbose?.(`Marking "${test.label}" as skipped during collection`)
-          testRun.skipped(test)
+          const include = this.testRunRequest?.include
+          if (this.testRunRequest && (!include || this.isTestIncluded(test, include))) {
+            log.verbose?.(`Marking "${test.label}" as skipped`)
+            testRun.skipped(test)
+          }
+          else {
+            log.verbose?.(`Ignore "${test.label}" during collection`)
+          }
         }
         else if (!task.result && task.type !== 'suite') {
           log.verbose?.(`Enqueuing "${test.label}" because it was just collected`)
@@ -153,6 +160,7 @@ export class TestRunner extends vscode.Disposable {
     this.testRunDefer?.resolve()
     this.testRun = undefined
     this.testRunDefer = undefined
+    this.testRunRequest = undefined
   }
 
   private async watchContinuousTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
@@ -280,6 +288,17 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
+  private isTestIncluded(test: vscode.TestItem, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
+    for (const _item of include) {
+      const item = 'id' in _item ? _item : _item[1]
+      if (item === test)
+        return true
+      if (this.isTestIncluded(test, item.children))
+        return true
+    }
+    return false
+  }
+
   private isFileIncluded(file: string, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
     for (const _item of include) {
       const item = 'id' in _item ? _item : _item[1]
@@ -345,6 +364,7 @@ export class TestRunner extends vscode.Disposable {
       : this.relative(files[0])
 
     const run = this.testRun = this.controller.createTestRun(request, name)
+    this.testRunRequest = request
 
     for (const file of files) {
       if (file[file.length - 1] === '/') {
