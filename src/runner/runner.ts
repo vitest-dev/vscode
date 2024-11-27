@@ -507,6 +507,8 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
   else
     testMessage = new vscode.TestMessage(stripVTControlCharacters(error.message) ?? '')
 
+  testMessage.stackTrace = parseMessageStackFramesFromErrorStacks(error.stacks)
+
   const location = parseLocationFromStacks(testItem, error.stacks ?? [])
   if (location) {
     const position = new vscode.Position(location.line - 1, location.column - 1)
@@ -548,6 +550,17 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
   }
 
   log.verbose?.('Could not find a valid stack for', testItem.label, JSON.stringify(stacks, null, 2))
+}
+
+function parseMessageStackFramesFromErrorStacks(stacks: ParsedStack[] | undefined): vscode.TestMessageStackFrame[] | undefined {
+  if (!stacks || stacks.length === 0)
+    return undefined
+
+  return stacks.map((stack) => {
+    const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
+    const sourceUri = sourceFilepath ? vscode.Uri.file(sourceFilepath) : undefined
+    return new vscode.TestMessageStackFrame(stack.method, sourceUri, new vscode.Position(line - 1, column - 1))
+  })
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]): string[] | SerializedTestSpecification[] {
