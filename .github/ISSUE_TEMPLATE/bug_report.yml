@@ -33,8 +33,8 @@ body:
   - type: input
     id: extension-version
     attributes:
-      label: Version
-      description: Specify the version of the extension
+      label: Versions
+      description: Specify versions of the extension, Vitest and Vite
     validations:
       required: true
   - type: checkboxes
