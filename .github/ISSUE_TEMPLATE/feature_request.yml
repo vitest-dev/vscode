@@ -38,7 +38,7 @@ body:
       options:
         - label: Follow our [Code of Conduct](https://github.com/vitest-dev/vscode/blob/main/CODE_OF_CONDUCT.md)
           required: true
-        - label: Read the [Contributing Guidelines](https://github.com/vitest-dev/vscode/blob/main/CONTRIBUTING.md).
+        - label: Read the [Contributing Guidelines](https://github.com/vitest-dev/vscode/blob/main/CONTRIBUTION.md).
           required: true
         - label: Read the [docs](https://vitest.dev/guide/).
           required: true
