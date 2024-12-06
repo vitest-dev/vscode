@@ -15,7 +15,7 @@ export class VitestWatcher {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
     const ctx = vitest.ctx
-    ;(ctx.getCoreWorkspaceProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
+    ;(vitest.getRootTestProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
       get continuousFiles() {
         return state.files || []
       },
