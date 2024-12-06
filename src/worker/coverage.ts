@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'pathe'
-import type { CoverageProvider, ResolvedCoverageOptions, Vitest as VitestCore } from 'vitest/node'
+import type { CoverageProvider, ResolvedCoverageOptions } from 'vitest/node'
 import { finalCoverageFileName } from '../constants'
 import type { Vitest } from './vitest'
 
@@ -13,11 +13,10 @@ export class VitestCoverage {
   private _config: ResolvedCoverageOptions
 
   constructor(
-    private ctx: VitestCore,
     private vitest: Vitest,
   ) {
-    this._config = ctx.config.coverage
-    const projects = new Set([...ctx.projects, ctx.getCoreWorkspaceProject()])
+    this._config = vitest.ctx.config.coverage
+    const projects = new Set([...vitest.ctx.projects, vitest.getRootTestProject()])
     projects.forEach((project) => {
       Object.defineProperty(project.config, 'coverage', {
         get: () => {
@@ -28,7 +27,7 @@ export class VitestCoverage {
         },
       })
     })
-    Object.defineProperty(ctx, 'coverageProvider', {
+    Object.defineProperty(vitest.ctx, 'coverageProvider', {
       get: () => {
         if (this.enabled)
           return this._provider
@@ -57,7 +56,7 @@ export class VitestCoverage {
   }
 
   public async enable() {
-    const vitest = this.ctx
+    const vitest = this.vitest.ctx
     this._enabled = true
 
     const jsonReporter = this._config.reporter.find(([name]) => name === 'json')
@@ -70,7 +69,7 @@ export class VitestCoverage {
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
-    this.ctx.logger.log('Running coverage with configuration:', this.config)
+    this.vitest.ctx.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
       // @ts-expect-error private method
@@ -89,16 +88,17 @@ export class VitestCoverage {
   async waitForReport() {
     if (!this.enabled)
       return null
-    const coverage = this.ctx.config.coverage
-    if (!coverage.enabled || !this.ctx.coverageProvider)
+    const ctx = this.vitest.ctx
+    const coverage = ctx.config.coverage
+    if (!coverage.enabled || !ctx.coverageProvider)
       return null
-    this.ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
-    await this.ctx.runningPromise
+    ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
+    await ctx.runningPromise
     if (existsSync(coverage.reportsDirectory)) {
-      this.ctx.logger.error(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
+      ctx.logger.error(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
       return coverage.reportsDirectory
     }
-    this.ctx.logger.error(`Coverage reports directory not found: ${coverage.reportsDirectory}`)
+    ctx.logger.error(`Coverage reports directory not found: ${coverage.reportsDirectory}`)
     return null
   }
 }

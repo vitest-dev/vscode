@@ -27,11 +27,19 @@ export class Vitest implements VitestMethods {
     public readonly alwaysAstCollect = false,
   ) {
     this.watcher = new VitestWatcher(this)
-    this.coverage = new VitestCoverage(ctx, this)
+    this.coverage = new VitestCoverage(this)
   }
 
   public get collecting() {
     return this.ctx.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
+  }
+
+  public getRootTestProject(): WorkspaceProject {
+    // vitest 3 uses getRootTestProject
+    if ('getRootTestProject' in this.ctx) {
+      return (this.ctx.getRootTestProject as () => WorkspaceProject)()
+    }
+    return this.ctx.getCoreWorkspaceProject()
   }
 
   public async collectTests(files: [projectName: string, filepath: string][]) {
