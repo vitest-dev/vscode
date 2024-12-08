@@ -35,7 +35,11 @@ export class Vitest implements VitestMethods {
   }
 
   public getRootTestProject(): WorkspaceProject {
-    // vitest 3 uses getRootTestProject
+    // vitest 3 uses getRootProject
+    if ('getRootProject' in this.ctx) {
+      return (this.ctx.getRootProject as () => WorkspaceProject)()
+    }
+    // vitest 3.beta uses getRootTestProject
     if ('getRootTestProject' in this.ctx) {
       return (this.ctx.getRootTestProject as () => WorkspaceProject)()
     }
@@ -207,8 +211,7 @@ export class Vitest implements VitestMethods {
   }
 
   private updateLastChanged(filepath: string) {
-    const projects = this.ctx.getModuleProjects(filepath)
-    projects.forEach(({ server, browser }) => {
+    this.ctx.projects.forEach(({ server, browser }) => {
       const serverMods = server.moduleGraph.getModulesByFile(filepath)
       serverMods?.forEach(mod => server.moduleGraph.invalidateModule(mod))
       if (browser) {
