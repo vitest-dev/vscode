@@ -55,6 +55,9 @@ export class VSCodeReporter implements Reporter {
     // @ts-expect-error internal
     project[name] = async function _initBrowserProvider(this: WorkspaceProject) {
       await original()
+      if (!this.browser) {
+        return
+      }
       const config = this.browser!.vite.config
       if (!config.server.fs.allow.includes(setupFilePath)) {
         config.server.fs.allow.push(setupFilePath)
