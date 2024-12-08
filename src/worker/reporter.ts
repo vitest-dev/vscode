@@ -5,7 +5,7 @@ import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
 import type { Reporter } from 'vitest/reporters'
 import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
-import type { Vitest as VitestCore } from 'vitest/node'
+import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { VitestEvents, VitestMethods } from '../api/rpc'
 import { setupFilePath } from '../constants'
 import { Vitest } from './vitest'
@@ -31,6 +31,14 @@ export class VSCodeReporter implements Reporter {
       const server = project.server.config.server
       if (!server.fs.allow.includes(setupFilePath))
         server.fs.allow.push(setupFilePath)
+      // @ts-expect-error internal, Vitest 3
+      if (project._initBrowserProvider) {
+        this.overrideInitBrowserProvider(project, '_initBrowserProvider')
+      }
+      // @ts-expect-error internal, Vitest 2
+      else if (project.initBrowserProvider) {
+        this.overrideInitBrowserProvider(project, 'initBrowserProvider')
+      }
       const browser = project.browser as any
       if (!browser) {
         return
@@ -39,6 +47,19 @@ export class VSCodeReporter implements Reporter {
       if (!config.fs.allow.includes(setupFilePath))
         config.fs.allow.push(setupFilePath)
     })
+  }
+
+  overrideInitBrowserProvider(project: WorkspaceProject, name: string) {
+    // @ts-expect-error internal
+    const original = project[name].bind(project)
+    // @ts-expect-error internal
+    project[name] = async function _initBrowserProvider(this: WorkspaceProject) {
+      await original()
+      const config = this.browser!.vite.config
+      if (!config.server.fs.allow.includes(setupFilePath)) {
+        config.server.fs.allow.push(setupFilePath)
+      }
+    }
   }
 
   initRpc(rpc: BirpcReturn<VitestEvents, VitestMethods>) {
