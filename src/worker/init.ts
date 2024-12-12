@@ -28,7 +28,9 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
       api: false,
       // @ts-expect-error private property
       reporter: undefined,
-      reporters: [reporter],
+      reporters: meta.shellType === 'terminal'
+        ? [reporter, ['default', { isTTY: false }]]
+        : [reporter],
       ui: false,
       includeTaskLocation: true,
       poolOptions: meta.pnpApi && meta.pnpLoader
@@ -79,7 +81,7 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
       ],
     },
   )
-  reporter.init(vitest)
+  await vitest.report('onInit', vitest)
   const configs = vitest.projects.map(p => p.server.config.configFile).filter(c => c != null)
   return {
     vitest,

@@ -13,6 +13,7 @@ export function waitForWsResolvedMeta(
   wss: WebSocketServer,
   pkg: VitestPackage,
   debug: boolean,
+  shellType: 'terminal' | 'child_process',
 ) {
   return new Promise<ResolvedMeta>((resolve, reject) => {
     wss.once('connection', (ws) => {
@@ -74,6 +75,7 @@ export function waitForWsResolvedMeta(
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
         meta: {
+          shellType,
           vitestNodePath: pkg.vitestNodePath,
           env: getConfig(pkg.folder).env || undefined,
           configFile: pkg.configFile,

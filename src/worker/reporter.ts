@@ -12,14 +12,14 @@ import { Vitest } from './vitest'
 
 export class VSCodeReporter implements Reporter {
   private rpc!: BirpcReturn<VitestEvents, VitestMethods>
-  private ctx!: VitestCore
+  private vitest!: VitestCore
 
   private get collecting(): boolean {
-    return this.ctx.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
+    return this.vitest.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
   }
 
-  init(ctx: VitestCore) {
-    this.ctx = ctx
+  onInit(ctx: VitestCore) {
+    this.vitest = ctx
     const server = ctx.server.config.server
     if (!server.fs.allow.includes(setupFilePath))
       server.fs.allow.push(setupFilePath)
@@ -75,7 +75,7 @@ export class VSCodeReporter implements Reporter {
 
   onTaskUpdate(packs: TaskResultPack[]) {
     packs.forEach(([taskId, result]) => {
-      const project = this.ctx.getProjectByTaskId(taskId)
+      const project = this.vitest.getProjectByTaskId(taskId)
 
       // the new version uses browser.parseErrorStacktrace
       if ('getBrowserSourceMapModuleById' in project) {
@@ -89,7 +89,7 @@ export class VSCodeReporter implements Reporter {
         return
       }
 
-      const task = this.ctx.state.idMap.get(taskId)
+      const task = this.vitest.state.idMap.get(taskId)
       const isBrowser = task && task.file?.pool === 'browser'
 
       result?.errors?.forEach((error) => {
@@ -107,7 +107,7 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onTaskUpdate(packs)
   }
 
-  async onFinished(files?: RunnerTestFile[], errors: unknown[] = this.ctx.state.getUnhandledErrors()) {
+  async onFinished(files?: RunnerTestFile[], errors: unknown[] = this.vitest.state.getUnhandledErrors()) {
     const collecting = this.collecting
 
     let output = ''
@@ -118,16 +118,16 @@ export class VSCodeReporter implements Reporter {
           callback()
         },
       })
-      const _console = this.ctx.logger.console
-      const errorStream = this.ctx.logger.errorStream
-      const outputStream = this.ctx.logger.outputStream
-      this.ctx.logger.errorStream = writable as any
-      this.ctx.logger.outputStream = writable as any
-      this.ctx.logger.console = new Console(writable, writable)
-      await this.ctx.logger.printUnhandledErrors(errors)
-      this.ctx.logger.console = _console
-      this.ctx.logger.errorStream = errorStream
-      this.ctx.logger.outputStream = outputStream
+      const _console = this.vitest.logger.console
+      const errorStream = this.vitest.logger.errorStream
+      const outputStream = this.vitest.logger.outputStream
+      this.vitest.logger.errorStream = writable as any
+      this.vitest.logger.outputStream = writable as any
+      this.vitest.logger.console = new Console(writable, writable)
+      await this.vitest.logger.printUnhandledErrors(errors)
+      this.vitest.logger.console = _console
+      this.vitest.logger.errorStream = errorStream
+      this.vitest.logger.outputStream = outputStream
     }
     nextTick(() => {
       this.rpc.onFinished(files || [], output, collecting)
