@@ -162,7 +162,7 @@ async function findNodeViaShell(cwd: string): Promise<string | undefined> {
     const startToken = '___START_SHELL__'
     const endToken = '___END_SHELL__'
     try {
-      const childProcess = spawn(`${vscode.env.shell} -i -c 'echo ${startToken} && which node && echo ${endToken}'`, {
+      const childProcess = spawn(`${vscode.env.shell} -i -c 'if type node 2>/dev/null | grep -q "function"; then node --version; fi; echo ${startToken} && which node && echo ${endToken}'`, {
         stdio: 'pipe',
         shell: true,
         cwd,
