@@ -21,6 +21,7 @@ export class TestTree extends vscode.Disposable {
   // file test items have the project name in their id, so we need a separate map
   // to store all of them
   private testItemsByFile = new Map<string, vscode.TestItem[]>()
+  private testFiles = new Set<string>()
 
   private watcher: ExtensionWatcher
 
@@ -134,7 +135,7 @@ export class TestTree extends vscode.Disposable {
     if (cached)
       return cached
 
-    const fileUri = vscode.Uri.file(file)
+    const fileUri = vscode.Uri.file(resolve(file))
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
     const label = `${basename(file)}${project ? ` [${project}]` : ''}`
     const testFileItem = this.controller.createTestItem(
@@ -159,10 +160,11 @@ export class TestTree extends vscode.Disposable {
     const cachedItems = this.testItemsByFile.get(normalizedFile) || []
     cachedItems.push(testFileItem)
     this.testItemsByFile.set(normalizedFile, cachedItems)
+    this.testFiles.add(fileUri.fsPath)
     vscode.commands.executeCommand(
       'setContext',
       'vitest.testFiles',
-      Array.from(this.testItemsByFile.keys()),
+      Array.from(this.testFiles),
     )
 
     return testFileItem

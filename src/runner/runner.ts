@@ -407,6 +407,25 @@ export class TestRunner extends vscode.Disposable {
       return
 
     const coverage = readCoverageReport(reportsDirectory)
+    // TODO: quick patch, coverage shouldn't report negative columns
+    function ensureLoc(loc: any) {
+      if (!loc) {
+        return
+      }
+      if (loc.start?.column && loc.start.column < 0) {
+        loc.start.column = 0
+      }
+      if (loc.end?.column && loc.end.column < 0) {
+        loc.end.column = 0
+      }
+    }
+    for (const file in coverage) {
+      for (const key in coverage[file].branchMap) {
+        const branch = coverage[file].branchMap[key]
+        ensureLoc(branch.loc)
+        branch.locations?.forEach((loc: any) => ensureLoc(loc))
+      }
+    }
     await coverageContext.applyJson(testRun, coverage)
 
     rm(reportsDirectory, { recursive: true, force: true }).then(() => {
