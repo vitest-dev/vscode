@@ -104,6 +104,7 @@ async function createChildVitestProcess(pkg: VitestPackage) {
       const runnerOptions: WorkerRunnerOptions = {
         type: 'init',
         meta: {
+          shellType: 'child_process',
           vitestNodePath: pkg.vitestNodePath,
           env: getConfig(pkg.folder).env || undefined,
           configFile: pkg.configFile,

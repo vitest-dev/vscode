@@ -95,7 +95,7 @@ export async function debugTests(
     let vitest!: ResolvedMeta
 
     try {
-      vitest = await waitForWsResolvedMeta(wss, pkg, true)
+      vitest = await waitForWsResolvedMeta(wss, pkg, true, 'child_process')
       const api = new VitestFolderAPI(pkg, vitest)
       const runner = new TestRunner(
         controller,

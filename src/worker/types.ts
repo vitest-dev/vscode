@@ -6,6 +6,7 @@ export interface WorkerMeta {
   configFile?: string
   workspaceFile?: string
   env: Record<string, any> | undefined
+  shellType: 'terminal' | 'child_process'
   pnpApi?: string
   pnpLoader?: string
 }
