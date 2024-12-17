@@ -152,7 +152,7 @@ describe('continuous testing', () => {
     const errors = await tester.errors.getInlineErrors()
 
     expect(errors).toEqual([
-      'expected 1000 to be 2 // Object.is equality',
+      '1000 != 2',
     ])
   })
 })
