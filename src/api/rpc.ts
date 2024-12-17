@@ -18,6 +18,7 @@ export interface VitestMethods {
   watchTests: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => void
   unwatchTests: () => void
 
+  invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
   enableCoverage: () => void
   disableCoverage: () => void
   waitForCoverageReport: () => Promise<string | null>

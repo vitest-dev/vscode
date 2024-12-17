@@ -194,6 +194,10 @@ export class VitestFolderAPI {
     return this.meta.rpc.waitForCoverageReport()
   }
 
+  async invalidateIstanbulTestModules(modules: string[] | null) {
+    await this.meta.rpc.invalidateIstanbulTestModules(modules)
+  }
+
   async enableCoverage() {
     await this.meta.rpc.enableCoverage()
   }
