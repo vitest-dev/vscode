@@ -113,8 +113,9 @@ export class TesterTestItem {
   }
 
   async navigate() {
-    await this.locator.hover()
-    await this.locator.getByLabel(/Go to Test/).click()
+    await this.locator.click()
+    await this.locator.press('Alt+Enter')
+    // await this.locator.getByLabel(/Go to Test/).click()
     // wait until the page is navigated
     await this.page.getByRole('tab', { name: new RegExp(this.name) }).waitFor()
   }
