@@ -222,6 +222,16 @@ export class TestRunner extends vscode.Disposable {
       }),
     )
 
+    const modules = !request.include
+      ? null
+      : getTestFiles(request.include).map((f) => {
+        if (typeof f === 'string') {
+          return f
+        }
+        return f[1]
+      })
+
+    await this.api.invalidateIstanbulTestModules(modules)
     await this.runTests(request, token)
   }
 

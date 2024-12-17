@@ -301,6 +301,23 @@ export class Vitest implements VitestMethods {
       this.watcher.trackEveryFile()
   }
 
+  // we need to invalidate the modules because Vitest caches the code injected by istanbul
+  async invalidateIstanbulTestModules(modules: string[] | null) {
+    if (!this.coverage.enabled || this.coverage.config.provider !== 'istanbul') {
+      return
+    }
+    if (!modules) {
+      this.ctx.server.moduleGraph.invalidateAll()
+      return
+    }
+    modules.forEach((moduleId) => {
+      const mod = this.ctx.server.moduleGraph.getModuleById(moduleId)
+      if (mod) {
+        this.invalidateTree(mod)
+      }
+    })
+  }
+
   disableCoverage() {
     return this.coverage.disable()
   }
