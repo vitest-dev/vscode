@@ -67,7 +67,7 @@ class TesterErrorOutput {
   ) {}
 
   async getInlineErrors() {
-    const locator = this.page.locator('.test-message-inline-content')
+    const locator = this.page.locator('.test-error-content-widget')
     const text = await locator.allInnerTexts()
     return text.map(t => t.trim().replace(/\s/g, ' '))
   }
