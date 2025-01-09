@@ -10,7 +10,6 @@ import type { TestTree } from '../testTree'
 import { log } from '../log'
 import { getConfig } from '../config'
 import { TestRunner } from '../runner/runner'
-import { findNode } from '../utils'
 import { workerPath } from '../constants'
 import { waitForWsResolvedMeta } from '../api/ws'
 
@@ -144,9 +143,6 @@ async function getRuntimeOptions(pkg: VitestPackage) {
   const config = getConfig(pkg.folder)
 
   // if (config.shellType === 'child_process') {
-  const node = await findNode(
-    vscode.workspace.workspaceFile?.fsPath || pkg.folder.uri.fsPath,
-  )
   const runtimeArgs = config.nodeExecArgs || []
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
@@ -160,7 +156,7 @@ async function getRuntimeOptions(pkg: VitestPackage) {
       ]
     : runtimeArgs
   return {
-    runtimeExecutable: node,
+    runtimeExecutable: 'node',
     runtimeArgs: execArgv,
   }
   // }
