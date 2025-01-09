@@ -1,11 +1,8 @@
 import fs from 'node:fs'
-import { spawn } from 'node:child_process'
 import * as vscode from 'vscode'
-import which from 'which'
 import { dirname, relative } from 'pathe'
 import type { VitestPackage } from './api/pkg'
 import { log } from './log'
-import { getConfig } from './config'
 
 export function noop() {}
 
@@ -92,119 +89,5 @@ export function waitUntilExists(file: string, timeoutMs = 5000) {
         resolve()
       }
     }, 50)
-  })
-}
-
-let pathToNodeJS: string | undefined
-
-// based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
-export async function findNode(cwd: string): Promise<string> {
-  if (getConfig().nodeExecutable)
-    // if empty string, keep as undefined
-    pathToNodeJS = getConfig().nodeExecutable || undefined
-
-  if (pathToNodeJS)
-    return pathToNodeJS
-
-  // Stage 1: Try to find Node.js via process.env.PATH
-  let node = await which('node').catch(() => undefined)
-  // Stage 2: When extension host boots, it does not have the right env set, so we might need to wait.
-  for (let i = 0; i < 5 && !node; ++i) {
-    await new Promise(f => setTimeout(f, 200))
-    node = await which('node').catch(() => undefined)
-  }
-  // Stage 3: If we still haven't found Node.js, try to find it via a subprocess.
-  // This evaluates shell rc/profile files and makes nvm work.
-  node ??= await findNodeViaShell(cwd)
-
-  // If volta isn't installed in a Volta folder, this test will fail.
-  // If anyone got a better idea for checking volta's presence, please let me know.
-  const voltaRegex = /Volta\\node\.exe/i
-
-  // Stage 4: We have found Node.js, but it might be managed by Volta.
-  // This attempt to ask volta for the path to the node executable.
-  if (node && voltaRegex.test(node))
-    node = await findNodeUsingVoltaOnWindows(cwd) ?? node
-
-  if (!node) {
-    const msg = `Unable to find 'node' executable.\nMake sure to have Node.js installed and available in your PATH.\nCurrent PATH: '${process.env.PATH}'.`
-    log.error(msg)
-    throw new Error(msg)
-  }
-  pathToNodeJS = node
-  return node
-}
-
-function findNodeUsingVoltaOnWindows(cwd: string): Promise<string | undefined> {
-  if (process.platform !== 'win32')
-    return Promise.resolve(undefined)
-  return new Promise<string | undefined>((resolve) => {
-    const childProcess = spawn('volta which node', {
-      stdio: 'pipe',
-      shell: true,
-      cwd,
-    })
-    let output = ''
-    childProcess.stdout.on('data', data => output += data.toString())
-    childProcess.on('error', () => resolve(undefined))
-    childProcess.on('exit', (exitCode) => {
-      if (exitCode !== 0)
-        return resolve(undefined)
-      return resolve(output.trim())
-    })
-  })
-}
-
-async function findNodeViaShell(cwd: string): Promise<string | undefined> {
-  if (process.platform === 'win32')
-    return undefined
-  return new Promise<string | undefined>((resolve) => {
-    const startToken = '___START_SHELL__'
-    const endToken = '___END_SHELL__'
-    try {
-      const childProcess = spawn(`${vscode.env.shell} -i -c 'if type node 2>/dev/null | grep -q "function"; then node --version; fi; echo ${startToken} && which node && echo ${endToken}'`, {
-        stdio: 'pipe',
-        shell: true,
-        cwd,
-      })
-      let output = ''
-      childProcess.stdout.on('data', data => output += data.toString())
-      childProcess.on('error', () => resolve(undefined))
-      childProcess.on('exit', (exitCode) => {
-        if (exitCode !== 0)
-          return resolve(undefined)
-        const start = output.indexOf(startToken)
-        const end = output.indexOf(endToken)
-        if (start === -1 || end === -1)
-          return resolve(undefined)
-        return resolve(output.substring(start + startToken.length, end).trim())
-      })
-    }
-    catch (e) {
-      log.error('[SPAWN]', vscode.env.shell, e)
-      resolve(undefined)
-    }
-  })
-}
-
-export function getNodeJsVersion(nodeJsPath: string) {
-  return new Promise<string>((resolve) => {
-    const childProcess = spawn(nodeJsPath, ['--version'], {
-      stdio: 'pipe',
-    })
-    let output = ''
-    childProcess.stdout.on('data', data => output += data.toString())
-    childProcess.on('error', (error) => {
-      log.error(`Failed to run ${nodeJsPath} --version`)
-      log.error(error)
-      return resolve('')
-    })
-    childProcess.on('exit', (exitCode) => {
-      if (exitCode !== 0) {
-        log.error(`${nodeJsPath} --version exited with code ${exitCode}`)
-        return resolve('')
-      }
-      return resolve(output.trim())
-    })
   })
 }
