@@ -24,9 +24,10 @@ emitter.on('message', async function onMessage(message: any) {
         data.meta,
         data.debug
           ? {
+              disableConsoleIntercept: true,
               fileParallelism: false,
-              testTimeout: Number.POSITIVE_INFINITY,
-              hookTimeout: Number.POSITIVE_INFINITY,
+              testTimeout: 0,
+              hookTimeout: 0,
             }
           : {},
       )
