@@ -203,7 +203,12 @@ export class Vitest implements VitestMethods {
   }
 
   private handleFileChanged(file: string): string[] {
-    return (this.ctx as any).handleFileChanged(file)
+    const ctx = this.ctx as any
+    // support Vitest 3
+    if (ctx.watcher) {
+      return ctx.watcher.handleFileChanged(file) ? [file] : []
+    }
+    return ctx.handleFileChanged(file)
   }
 
   private scheduleRerun(files: string[]): Promise<void> {
