@@ -82,12 +82,12 @@ export class VitestWatcher {
 
       if (!isTestFileTrigger) {
         // if souce code is changed and related tests are not continious, remove them from changedTests
-        const updatedTests = new Set<string>()
-        for (const file of this.changedTests) {
+        const currentChanged = Array.from(this.changedTests)
+        this.changedTests.clear()
+        for (const file of currentChanged) {
           if (state.isTestFileWatched(file))
-            updatedTests.add(file)
+            this.changedTests.add(file)
         }
-        this.changedTests = updatedTests
       }
 
       if (this.changedTests.size) {
