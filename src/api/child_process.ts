@@ -67,7 +67,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
 
     vitest.on('exit', onExit)
 
-    waitForWsResolvedMeta(wss, pkg, true, 'child_process')
+    waitForWsResolvedMeta(wss, pkg, false, 'child_process')
       .then(resolve, reject)
       .finally(() => {
         vitest.off('exit', onExit)
