@@ -27,14 +27,14 @@ export async function createVitestProcess(pkg: VitestPackage) {
         ...runtimeArgs,
       ]
     : runtimeArgs
-  const script = `node ${workerPath} ${execArgv.join(' ')}`.trim()
+  const script = `node ${execArgv.join(' ')} ${workerPath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = getConfig(pkg.folder).logLevel
   const port = await getPort()
   const server = createServer().listen(port)
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
-  const vitest = spawn('node', [workerPath, ...execArgv], {
+  const vitest = spawn('node', [...execArgv, workerPath], {
     env: {
       ...process.env,
       ...env,
