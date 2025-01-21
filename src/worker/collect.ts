@@ -89,6 +89,13 @@ export function astParseFile(filepath: string, code: string) {
     if (callee.type === 'TaggedTemplateExpression') {
       return getName(callee.tag)
     }
+    if (callee.type === 'SequenceExpression') {
+      const memberExpression = callee.expressions.find((e: any) => e.type === 'MemberExpression')
+      if (!memberExpression) {
+        return null
+      }
+      return getName(memberExpression)
+    }
     if (callee.type === 'MemberExpression') {
       if (
         callee.object?.type === 'Identifier'
