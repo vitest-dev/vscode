@@ -34,7 +34,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
   const server = createServer().listen(port)
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
-  const vitest = spawn('node', [...execArgv, workerPath], {
+  const vitest = spawn(getConfig(pkg.folder).nodeExecutable || 'node', [...execArgv, workerPath], {
     env: {
       ...process.env,
       ...env,

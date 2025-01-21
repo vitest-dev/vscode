@@ -123,7 +123,7 @@
           "scope": "resource"
         },
         "vitest.nodeExecutable": {
-          "markdownDescription": "The path to the Node.js executable. If not assigned, tries to find Node.js path via a PATH variable or a `which` command. This is applied only when `vitest.shellType` is `child_process` (the default).",
+          "markdownDescription": "The path to the Node.js executable. If not assigned, Vitest just passes down `'node'` to `child_process.spawn`. This is applied only when `vitest.shellType` is `child_process` (the default).",
           "type": "string",
           "scope": "window"
         },
