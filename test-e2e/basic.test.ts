@@ -70,7 +70,7 @@ test('vite-6', async ({ launch }) => {
     workspacePath: './samples/vite-6',
   })
 
-  await expect(page.getByText('No test results yet.')).toBeVisible()  
+  await expect(page.getByText('No test results yet.')).toBeVisible()
 
   await tester.tree.expand('test')
   await tester.tree.expand('test/pass.test.ts')
