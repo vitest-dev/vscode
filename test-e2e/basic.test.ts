@@ -65,6 +65,52 @@ test('basic', async ({ launch }) => {
   })
 })
 
+test('vite-6', async ({ launch }) => {
+  const { page, tester } = await launch({
+    workspacePath: './samples/vite-6',
+  })
+
+  await expect(page.getByText('No test results yet.')).toBeVisible()  
+
+  await tester.tree.expand('test')
+  await tester.tree.expand('test/pass.test.ts')
+  await tester.tree.expand('test/fail.test.ts')
+  await tester.tree.expand('test/mix.test.ts')
+
+  const allPassTests = tester.tree.getFileItem('pass.test.ts')
+  await expect(allPassTests).toHaveTests({
+    'all-pass': 'waiting',
+  })
+
+  const allFailTests = tester.tree.getFileItem('fail.test.ts')
+  await expect(allFailTests).toHaveTests({
+    'all-fail': 'waiting',
+  })
+
+  const mixedTests = tester.tree.getFileItem('mix.test.ts')
+  await expect(mixedTests).toHaveTests({
+    'mix-pass': 'waiting',
+    'mix-fail': 'waiting',
+  })
+
+  await tester.runAllTests()
+
+  await expect(tester.tree.getResultsLocator()).toHaveText('2/4')
+  await expect(allPassTests).toHaveState('passed')
+  await expect(allPassTests).toHaveTests({
+    'all-pass': 'passed',
+  })
+  await expect(allFailTests).toHaveState('failed')
+  await expect(allFailTests).toHaveTests({
+    'all-fail': 'failed',
+  })
+  await expect(mixedTests).toHaveState('failed')
+  await expect(mixedTests).toHaveTests({
+    'mix-pass': 'passed',
+    'mix-fail': 'failed',
+  })
+})
+
 test('workspaces', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/monorepo-vitest-workspace',
