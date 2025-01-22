@@ -37,15 +37,21 @@ export async function debugTests(
 
   const debugConfig = {
     __name: 'Vitest',
-    type: 'pwa-node',
+    type: config.shellType === 'terminal' ? 'node-terminal' : 'pwa-node',
     request: 'launch',
     name: 'Debug Tests',
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
     smartStep: true,
-    runtimeArgs,
-    runtimeExecutable,
-    program: workerPath,
+    ...(config.shellType === 'terminal'
+      ? {
+          command: `${runtimeExecutable} ${workerPath}`,
+        }
+      : {
+          program: workerPath,
+          runtimeArgs,
+          runtimeExecutable,
+        }),
     cwd: pkg.cwd,
     env: {
       ...process.env,

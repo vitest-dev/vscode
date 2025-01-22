@@ -56,19 +56,24 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
 }
 
 export class VitestTerminalProcess implements VitestProcess {
+  private stopped: Promise<void>
+
   constructor(
     public readonly id: number,
     private wsProcess: VitestWebSocketProcess,
     private readonly terminal: vscode.Terminal,
   ) {
-    const disposer = vscode.window.onDidCloseTerminal(async (e) => {
-      if (e === terminal) {
-        const exitCode = e.exitStatus?.code
-        // TODO: have a single emitter, don't reuse ws one
-        // this event is required for api.dispose() and onUnexpectedExit
-        wsProcess.ws.emit('exit', exitCode)
-        disposer.dispose()
-      }
+    this.stopped = new Promise((resolve) => {
+      const disposer = vscode.window.onDidCloseTerminal(async (e) => {
+        if (e === terminal) {
+          const exitCode = e.exitStatus?.code
+          // TODO: have a single emitter, don't reuse ws one
+          // this event is required for api.dispose() and onUnexpectedExit
+          wsProcess.ws.emit('exit', exitCode)
+          disposer.dispose()
+          resolve()
+        }
+      })
     })
   }
 
@@ -82,7 +87,11 @@ export class VitestTerminalProcess implements VitestProcess {
 
   close() {
     this.wsProcess.close()
-    this.terminal.dispose()
+    // send ctrl+c to sigint any running processs (vscode/#108289)
+    this.terminal.sendText('\x03')
+    // and then destroy it on the next event loop tick
+    setTimeout(() => this.terminal.dispose(), 1)
+    return this.stopped
   }
 
   on(event: string, listener: (...args: any[]) => void) {

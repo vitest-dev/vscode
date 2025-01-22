@@ -39,6 +39,9 @@ class VitestExtension {
 
   private disposables: vscode.Disposable[] = []
 
+  /** @internal */
+  _debugDisposable: vscode.Disposable | undefined
+
   constructor() {
     log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
@@ -206,6 +209,8 @@ class VitestExtension {
       }
       debugProfile.tag = api.tag
       debugProfile.runHandler = async (request, token) => {
+        await this.registerDebugOptions()
+
         await debugTests(
           this.testController,
           this.testTree,
@@ -397,6 +402,38 @@ class VitestExtension {
     }
     catch (err) {
       showVitestError('There was an error during Vitest startup', err)
+    }
+  }
+
+  async registerDebugOptions() {
+    if (this._debugDisposable) {
+      return
+    }
+    const config = getConfig()
+    if (config.shellType !== 'terminal') {
+      return
+    }
+    try {
+      const jsDebugExt = vscode.extensions.getExtension('ms-vscode.js-debug-nightly') || vscode.extensions.getExtension('ms-vscode.js-debug')
+      await jsDebugExt?.activate()
+      const jsDebug: import('@vscode/js-debug').IExports = jsDebugExt?.exports
+
+      if (jsDebug) {
+        this._debugDisposable = jsDebug.registerDebugTerminalOptionsProvider({
+          provideTerminalOptions(options) {
+            options.shellArgs = getConfig().terminalShellArgs
+            options.shellPath = getConfig().terminalShellPath
+            return options
+          },
+        })
+        this.disposables.push(this._debugDisposable)
+      }
+      else {
+        log.error('Failed to connect to the debug extension. Debugger will open a terminal window.')
+      }
+    }
+    catch (err) {
+      log.error('Cannot create debug options provider.', err)
     }
   }
 
