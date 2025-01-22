@@ -89,13 +89,6 @@ export function astParseFile(filepath: string, code: string) {
     if (callee.type === 'TaggedTemplateExpression') {
       return getName(callee.tag)
     }
-    if (callee.type === 'SequenceExpression') {
-      const memberExpression = callee.expressions.find((e: any) => e.type === 'MemberExpression')
-      if (!memberExpression) {
-        return null
-      }
-      return getName(memberExpression)
-    }
     if (callee.type === 'MemberExpression') {
       if (
         callee.object?.type === 'Identifier'
@@ -109,6 +102,13 @@ export function astParseFile(filepath: string, code: string) {
       }
       // call as `__vite_ssr__.test.skip()`
       return getName(callee.object?.property)
+    }
+    // unwrap (0, ...)
+    if (callee.type === 'SequenceExpression' && callee.expressions.length === 2) {
+      const [e0, e1] = callee.expressions
+      if (e0.type === 'Literal' && e0.value === 0) {
+        return getName(e1)
+      }
     }
     return null
   }
