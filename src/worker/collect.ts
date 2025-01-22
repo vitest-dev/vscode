@@ -103,6 +103,13 @@ export function astParseFile(filepath: string, code: string) {
       // call as `__vite_ssr__.test.skip()`
       return getName(callee.object?.property)
     }
+    // unwrap (0, ...)
+    if (callee.type === 'SequenceExpression' && callee.expressions.length === 2) {
+      const [e0, e1] = callee.expressions
+      if (e0.type === 'Literal' && e0.value === 0) {
+        return getName(e1)
+      }
+    }
     return null
   }
 
