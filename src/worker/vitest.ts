@@ -183,7 +183,6 @@ export class Vitest implements VitestMethods {
 
   private async rerunTests(specs: SerializedTestSpecification[], runAllFiles = false) {
     const paths = specs.map(spec => spec[1])
-    await this.ctx.report('onWatcherRerun', paths)
 
     const specsToRun = specs.flatMap((spec) => {
       const file = typeof spec === 'string' ? spec : spec[1]
@@ -196,6 +195,12 @@ export class Vitest implements VitestMethods {
       }
       return fileSpecs.filter(([project]) => project.getName() === spec[0].name)
     })
+    await Promise.all([
+      this.ctx.report('onWatcherRerun', paths),
+      // `_onUserTestsRerun` exists only in Vitest 3 and it's private
+      // the extension needs to migrate to the new API
+      ...((this.ctx as any)._onUserTestsRerun || []).map((fn: any) => fn(specs)),
+    ])
 
     await this.ctx.runFiles(specsToRun, runAllFiles)
 
