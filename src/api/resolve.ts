@@ -42,9 +42,12 @@ export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFo
   if (customPackagePath && !customPackagePath.endsWith('package.json'))
     throw new Error(`"vitest.vitestPackagePath" must point to a package.json file, instead got: ${customPackagePath}`)
   try {
-    return customPackagePath || require.resolve('vitest/package.json', {
+    const result = customPackagePath || require.resolve('vitest/package.json', {
       paths: [cwd],
     })
+    delete require.cache['vitest/package.json']
+    delete require.cache[result]
+    return result
   }
   catch {
     return null
