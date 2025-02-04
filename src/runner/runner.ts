@@ -282,8 +282,8 @@ export class TestRunner extends vscode.Disposable {
         : this.api.runFiles(files, testNamePatern)
 
     const tests = request.include || []
-    const root = this.api.workspaceFolder.uri.fsPath
     if (!tests.length) {
+      const root = this.api.workspaceFolder.uri.fsPath
       log.info(`Running all tests in ${basename(root)}`)
       await runTests()
     }

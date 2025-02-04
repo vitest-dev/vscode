@@ -51,7 +51,8 @@ export async function debugTests(
           program: workerPath,
           runtimeArgs,
           runtimeExecutable,
-        }),
+        }
+    ),
     cwd: pkg.cwd,
     env: {
       ...process.env,
@@ -148,11 +149,10 @@ export async function debugTests(
 async function getRuntimeOptions(pkg: VitestPackage) {
   const config = getConfig(pkg.folder)
 
-  // if (config.shellType === 'child_process') {
   const runtimeArgs = config.nodeExecArgs || []
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
-  const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
+  const execArgv = pnpLoader && pnp
     ? [
         '--require',
         pnp,
@@ -161,16 +161,14 @@ async function getRuntimeOptions(pkg: VitestPackage) {
         ...runtimeArgs,
       ]
     : runtimeArgs
+  if (config.shellType === 'child_process') {
+    return {
+      runtimeExecutable: config.nodeExecutable || 'node',
+      runtimeArgs: execArgv,
+    }
+  }
   return {
     runtimeExecutable: 'node',
     runtimeArgs: execArgv,
   }
-  // }
-
-  // const shellPath = config.terminalShellPath || vscode.env.shell
-  // const runtimeArgs = config.terminalShellArgs
-  // return {
-  //   runtimeExecutable: `${shellPath} node`,
-  //   runtimeArgs,
-  // }
 }
