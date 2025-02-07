@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url'
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { WebSocket, type WebSocketServer } from 'ws'
 import { gte } from 'semver'
 import type { ResolvedMeta } from '../api'
@@ -14,6 +15,7 @@ export function waitForWsResolvedMeta(
   pkg: VitestPackage,
   debug: boolean,
   shellType: 'terminal' | 'child_process',
+  child?: ChildProcessWithoutNullStreams,
 ) {
   return new Promise<ResolvedMeta>((resolve, reject) => {
     wss.once('connection', (ws) => {
@@ -36,7 +38,7 @@ export function waitForWsResolvedMeta(
             rpc: api,
             handlers,
             configs: message.configs,
-            process: new VitestWebSocketProcess(Math.random(), wss, ws),
+            process: new VitestWebSocketProcess(Math.random(), wss, ws, child),
             pkg,
           })
         }
@@ -113,14 +115,23 @@ export class VitestWebSocketProcess implements VitestProcess {
     public id: number,
     public wss: WebSocketServer,
     public ws: WebSocket,
-  ) {}
+    private child?: ChildProcessWithoutNullStreams,
+  ) {
+    if (child && child.pid) {
+      this.id = child.pid
+      child.on('exit', (code) => {
+        this.ws.emit('exit', code)
+      })
+    }
+  }
 
   get closed() {
-    return this.ws.readyState === WebSocket.CLOSED
+    return this.ws.readyState === WebSocket.CLOSED && (!this.child || !!this.child.killed)
   }
 
   close() {
     this.wss.close()
+    this.child?.kill()
   }
 
   on(event: string, listener: (...args: any[]) => void) {

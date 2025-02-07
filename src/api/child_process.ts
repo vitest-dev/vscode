@@ -18,7 +18,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
     throw new Error('pnp file is required if loader option is used')
   const env = getConfig().env || {}
   const runtimeArgs = getConfig(pkg.folder).nodeExecArgs || []
-  const execArgv = pnpLoader && pnp // && !gte(execVersion, '18.19.0')
+  const execArgv = pnpLoader && pnp
     ? [
         '--require',
         pnp,
@@ -27,7 +27,8 @@ export async function createVitestProcess(pkg: VitestPackage) {
         ...runtimeArgs,
       ]
     : runtimeArgs
-  const script = `node ${execArgv.join(' ')} ${workerPath}`.trim()
+  const arvString = execArgv.join(' ')
+  const script = `node ${arvString ? `${arvString} ` : ''}${workerPath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = getConfig(pkg.folder).logLevel
   const port = await getPort()
@@ -67,7 +68,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
 
     vitest.on('exit', onExit)
 
-    waitForWsResolvedMeta(wss, pkg, false, 'child_process')
+    waitForWsResolvedMeta(wss, pkg, false, 'child_process', vitest)
       .then(resolve, reject)
       .finally(() => {
         vitest.off('exit', onExit)
