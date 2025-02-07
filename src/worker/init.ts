@@ -17,12 +17,17 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
         meta.pnpLoader,
       ]
     : undefined
+  const args = meta.arguments
+    ? vitestModule.parseCLI(meta.arguments, {
+      allowUnknownOptions: false,
+    }).options
+    : {}
   const vitest = await vitestModule.createVitest(
     'test',
     {
       config: meta.configFile,
       workspace: meta.workspaceFile,
-      ...meta.arguments ? vitestModule.parseCLI(meta.arguments).options : {},
+      ...args,
       ...options,
       watch: true,
       api: false,

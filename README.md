@@ -80,6 +80,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.terminalShellArgs`: The arguments to pass to the shell executable. This is applied only when `vitest.shellType` is `terminal`.
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
+- `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
 
 > 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
 > The `vitest.terminalShellPath` and `vitest.terminalShellArgs` settings are used as `shellPath` and `shellArgs` when creating a new [terminal](https://code.visualstudio.com/api/references/vscode-api#Terminal)

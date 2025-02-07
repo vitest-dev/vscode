@@ -47,7 +47,7 @@ class VitestExtension {
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
     this.testController.refreshHandler = cancelToken => this.defineTestProfiles(true, cancelToken).catch((err) => {
-      log.error('[API]', 'Failed to refresh Vitest', err)
+      showVitestError('Failed to refresh Vitest', err)
     })
     this.testController.resolveHandler = item => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
@@ -292,6 +292,7 @@ class VitestExtension {
       'vitest.terminalShellPath',
       'vitest.filesWatcherInclude',
       'vitest.experimentalStaticAstCollect',
+      'vitest.cliArguments',
     ]
 
     this.disposables = [

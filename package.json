@@ -224,6 +224,11 @@
           "type": "boolean",
           "default": false,
           "scope": "resource"
+        },
+        "vitest.cliArguments": {
+          "markdownDescription": "Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }

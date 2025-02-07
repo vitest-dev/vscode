@@ -260,6 +260,9 @@ function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
 export async function resolveVitestAPI(packages: VitestPackage[]) {
   const promises = packages.map(async (pkg) => {
     const config = getConfig(pkg.folder)
+    if (config.cliArguments && !pkg.arguments) {
+      pkg.arguments = `vitest ${config.cliArguments}`
+    }
     const vitest = config.shellType === 'terminal'
       ? await createVitestTerminalProcess(pkg)
       : await createVitestProcess(pkg)
