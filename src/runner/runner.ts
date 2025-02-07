@@ -48,7 +48,7 @@ export class TestRunner extends vscode.Disposable {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
       }
       else {
-        log.verbose?.('The runner is starting because tests', ...files.map(f => this.relative(f)), 'were started due to a file change')
+        log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'were started due to a file change')
         this.startTestRun(files)
       }
     })
@@ -135,7 +135,8 @@ export class TestRunner extends vscode.Disposable {
       if (unhandledError)
         testRun.appendOutput(formatTestOutput(unhandledError))
 
-      this.endTestRun()
+      if (!collecting)
+        this.endTestRun()
     })
 
     api.onConsoleLog(({ content, taskId }) => {
