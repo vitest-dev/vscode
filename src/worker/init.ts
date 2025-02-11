@@ -26,7 +26,7 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     'test',
     {
       config: meta.configFile,
-      workspace: meta.workspaceFile,
+      ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
       ...args,
       ...options,
       watch: true,
