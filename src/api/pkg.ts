@@ -108,17 +108,22 @@ function validateVitestPkg(showWarning: boolean, pkgJsonPath: string, pkg: any) 
   return true
 }
 
-export async function resolveVitestPackages(showWarning: boolean): Promise<VitestPackage[]> {
-  // try to resolve configs first
-  const vitest = await resolveVitestPackagesViaConfigs(showWarning)
-  // if no viable configs found, try to resolve via package.json
-  if (!vitest.meta.length && !vitest.warned) {
+export async function resolveVitestPackages(showWarning: boolean): Promise<{ configs: VitestPackage[]; workspaces: VitestPackage[] }> {
+  // TODO: update "warned" logic
+  const [workspaceConfigs, configs] = await Promise.all([
+    resolveVitestWorkspaceConfigs(showWarning),
+    resolveVitestConfigs(showWarning),
+  ])
+  if (!workspaceConfigs.meta.length && !configs.meta.length) {
     const pkg = await resolveVitestPackagesViaPackageJson(showWarning)
     if (!pkg.meta.length && !pkg.warned)
-      return resolveVitestWorkspacePackages(showWarning).meta
-    return pkg.meta
+      return { configs: resolveVitestWorkspacePackages(showWarning).meta, workspaces: [] }
+    return { configs: pkg.meta, workspaces: [] }
   }
-  return vitest.meta
+  return {
+    workspaces: workspaceConfigs.meta,
+    configs: configs.meta,
+  }
 }
 
 function resolveVitestWorkspacePackages(showWarning: boolean) {
@@ -213,7 +218,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
   }
 }
 
-export async function resolveVitestPackagesViaConfigs(showWarning: boolean): Promise<{ meta: VitestPackage[]; warned: boolean }> {
+async function resolveVitestWorkspaceConfigs(showWarning: boolean) {
   const config = getConfig()
   const userWorkspace = config.workspaceConfig
   const rootConfig = config.rootConfig
@@ -226,7 +231,6 @@ export async function resolveVitestPackagesViaConfigs(showWarning: boolean): Pro
     : await vscode.workspace.findFiles(workspaceGlob, config.configSearchPatternExclude)
 
   let warned = false
-
   if (vitestWorkspaces.length) {
     // if there is a workspace config, use it as root
     const meta = resolvePackagUniquePrefixes(vitestWorkspaces.map((config) => {
@@ -247,6 +251,17 @@ export async function resolveVitestPackagesViaConfigs(showWarning: boolean): Pro
       warned,
     }
   }
+  return {
+    meta: [],
+    warned,
+  }
+}
+
+async function resolveVitestConfigs(showWarning: boolean) {
+  const config = getConfig()
+  const rootConfig = config.rootConfig
+
+  let warned = false
 
   if (rootConfig)
     log.info('[API] Using user root config:', rootConfig)

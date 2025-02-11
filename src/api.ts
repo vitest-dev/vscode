@@ -3,7 +3,7 @@ import * as vscode from 'vscode'
 import { log } from './log'
 import type { SerializedTestSpecification, VitestEvents, VitestRPC } from './api/rpc'
 import type { VitestPackage } from './api/pkg'
-import { showVitestError } from './utils'
+import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
 import type { VitestProcess } from './api/types'
 import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
@@ -257,19 +257,77 @@ function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
   }
 }
 
-export async function resolveVitestAPI(packages: VitestPackage[]) {
-  const promises = packages.map(async (pkg) => {
-    const config = getConfig(pkg.folder)
-    if (config.cliArguments && !pkg.arguments) {
-      pkg.arguments = `vitest ${config.cliArguments}`
-    }
-    const vitest = config.shellType === 'terminal'
-      ? await createVitestTerminalProcess(pkg)
-      : await createVitestProcess(pkg)
-    return new VitestFolderAPI(pkg, vitest)
+export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], configs: VitestPackage[]) {
+  const usedConfigs = new Set<string>()
+  const workspacePromises = workspaceConfigs.map(pkg => createVitestFolderAPI(usedConfigs, pkg))
+  const apis = await Promise.all(workspacePromises)
+  const configsToResolve = configs.filter((pkg) => {
+    return !pkg.configFile || pkg.workspaceFile || !usedConfigs.has(pkg.configFile)
   })
-  const apis = await Promise.all(promises)
+
+  const maximumConfigs = getConfig().maximumConfigs ?? 3
+
+  if (configsToResolve.length > maximumConfigs) {
+    const warningMessage = [
+      'Vitest found multiple config files.',
+      `The extension will use only the first ${maximumConfigs} due to performance concerns.`,
+      'Consider using a workspace configuration to group your configs or increase',
+      'the limit via "vitest.maximumConfigs" option.',
+    ].join(' ')
+
+    const folders = Array.from(new Set(configsToResolve.map(c => c.folder)))
+    const allConfigs = [...configsToResolve]
+    // remove all but the first 3
+    const discardedConfigs = configsToResolve.splice(maximumConfigs)
+
+    if (folders.every(f => getConfig(f).disableWorkspaceWarning !== true)) {
+      vscode.window.showWarningMessage(
+        warningMessage,
+        'Create vitest.workspace.js',
+        'Disable notification',
+      ).then((result) => {
+        if (result === 'Create vitest.workspace.js')
+          createVitestWorkspaceFile(allConfigs).catch(noop)
+
+        if (result === 'Disable notification') {
+          folders.forEach((folder) => {
+            const rootConfig = vscode.workspace.getConfiguration('vitest', folder)
+            rootConfig.update('disableWorkspaceWarning', true)
+          })
+        }
+      })
+    }
+    else {
+      log.info(warningMessage)
+      log.info(`Discarded config files: ${discardedConfigs.map(x => x.workspaceFile || x.configFile).join(', ')}`)
+    }
+  }
+
+  // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
+  for (const pkg of configsToResolve) {
+    if (pkg.configFile && usedConfigs.has(pkg.configFile)) {
+      continue
+    }
+
+    const api = await createVitestFolderAPI(usedConfigs, pkg)
+    apis.push(api)
+  }
+
   return new VitestAPI(apis)
+}
+
+async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackage) {
+  const config = getConfig(pkg.folder)
+  if (config.cliArguments && !pkg.arguments) {
+    pkg.arguments = `vitest ${config.cliArguments}`
+  }
+  const vitest = config.shellType === 'terminal'
+    ? await createVitestTerminalProcess(pkg)
+    : await createVitestProcess(pkg)
+  vitest.configs.forEach((config) => {
+    usedConfigs.add(config)
+  })
+  return new VitestFolderAPI(pkg, vitest)
 }
 
 export interface ResolvedMeta {

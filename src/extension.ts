@@ -9,7 +9,7 @@ import { TestRunner } from './runner/runner'
 import { TestTree } from './testTree'
 import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
-import { createVitestWorkspaceFile, debounce, noop, showVitestError } from './utils'
+import { debounce, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
 import { TestFile, getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
@@ -72,13 +72,13 @@ class VitestExtension {
     this.runners.forEach(runner => runner.dispose())
     this.runners = []
 
-    const vitest = await resolveVitestPackages(showWarning)
+    const { workspaces, configs } = await resolveVitestPackages(showWarning)
 
     if (cancelToken?.isCancellationRequested) {
       return
     }
 
-    if (!vitest.length) {
+    if (!workspaces.length && !configs.length) {
       log.error('[API]', 'Failed to start Vitest: No vitest config files found')
       this.testController.items.delete(this.loadingTestItem.id)
 
@@ -86,45 +86,7 @@ class VitestExtension {
       return
     }
 
-    const configFiles = vitest.filter(x => x.configFile && !x.workspaceFile)
-
-    const maximumConfigs = getConfig().maximumConfigs ?? 3
-
-    if (configFiles.length > maximumConfigs) {
-      const warningMessage = [
-        'Vitest found multiple config files.',
-        `The extension will use only the first ${maximumConfigs} due to performance concerns.`,
-        'Consider using a workspace configuration to group your configs or increase',
-        'the limit via "vitest.maximumConfigs" option.',
-      ].join(' ')
-
-      // remove all but the first 3
-      const discardedConfigs = vitest.splice(maximumConfigs)
-
-      if (configFiles.every(c => getConfig(c.folder).disableWorkspaceWarning !== true)) {
-        vscode.window.showWarningMessage(
-          warningMessage,
-          'Create vitest.workspace.js',
-          'Disable notification',
-        ).then((result) => {
-          if (result === 'Create vitest.workspace.js')
-            createVitestWorkspaceFile(configFiles).catch(noop)
-
-          if (result === 'Disable notification') {
-            configFiles.forEach((c) => {
-              const rootConfig = vscode.workspace.getConfiguration('vitest', c.folder)
-              rootConfig.update('disableWorkspaceWarning', true)
-            })
-          }
-        })
-      }
-      else {
-        log.info(warningMessage)
-        log.info(`Discarded config files: ${discardedConfigs.map(x => x.workspaceFile || x.configFile).join(', ')}`)
-      }
-    }
-
-    const folders = new Set(vitest.map(x => x.folder))
+    const folders = new Set([...workspaces, ...configs].map(x => x.folder))
     this.testTree.reset(Array.from(folders))
 
     const previousRunProfiles = this.runProfiles
@@ -137,7 +99,7 @@ class VitestExtension {
         return
       }
 
-      this.api = await resolveVitestAPI(vitest)
+      this.api = await resolveVitestAPI(workspaces, configs)
 
       this.api.onUnexpectedExit((code) => {
         if (code) {
