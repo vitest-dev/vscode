@@ -267,46 +267,18 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
 
   const maximumConfigs = getConfig().maximumConfigs ?? 3
 
-  if (configsToResolve.length > maximumConfigs) {
-    const warningMessage = [
-      'Vitest found multiple config files.',
-      `The extension will use only the first ${maximumConfigs} due to performance concerns.`,
-      'Consider using a workspace configuration to group your configs or increase',
-      'the limit via "vitest.maximumConfigs" option.',
-    ].join(' ')
-
-    const folders = Array.from(new Set(configsToResolve.map(c => c.folder)))
-    const allConfigs = [...configsToResolve]
-    // remove all but the first 3
-    const discardedConfigs = configsToResolve.splice(maximumConfigs)
-
-    if (folders.every(f => getConfig(f).disableWorkspaceWarning !== true)) {
-      vscode.window.showWarningMessage(
-        warningMessage,
-        'Create vitest.workspace.js',
-        'Disable notification',
-      ).then((result) => {
-        if (result === 'Create vitest.workspace.js')
-          createVitestWorkspaceFile(allConfigs).catch(noop)
-
-        if (result === 'Disable notification') {
-          folders.forEach((folder) => {
-            const rootConfig = vscode.workspace.getConfiguration('vitest', folder)
-            rootConfig.update('disableWorkspaceWarning', true)
-          })
-        }
-      })
-    }
-    else {
-      log.info(warningMessage)
-      log.info(`Discarded config files: ${discardedConfigs.map(x => x.workspaceFile || x.configFile).join(', ')}`)
-    }
-  }
+  let configsResolved = 0
 
   // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
   for (const pkg of configsToResolve) {
     if (pkg.configFile && usedConfigs.has(pkg.configFile)) {
       continue
+    }
+    configsResolved++
+
+    if (configsResolved > maximumConfigs) {
+      warnPerformanceConfigLimit(configsToResolve)
+      break
     }
 
     const api = await createVitestFolderAPI(usedConfigs, pkg)
@@ -314,6 +286,43 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
   }
 
   return new VitestAPI(apis)
+}
+
+function warnPerformanceConfigLimit(configsToResolve: VitestPackage[]) {
+  const maximumConfigs = getConfig().maximumConfigs ?? 3
+  const warningMessage = [
+    'Vitest found multiple config files.',
+    `The extension will use only the first ${maximumConfigs} due to performance concerns.`,
+    'Consider using a workspace configuration to group your configs or increase',
+    'the limit via "vitest.maximumConfigs" option.',
+  ].join(' ')
+
+  const folders = Array.from(new Set(configsToResolve.map(c => c.folder)))
+  const allConfigs = [...configsToResolve]
+  // remove all but the first 3
+  const discardedConfigs = configsToResolve.splice(maximumConfigs)
+
+  if (folders.every(f => getConfig(f).disableWorkspaceWarning !== true)) {
+    vscode.window.showWarningMessage(
+      warningMessage,
+      'Create vitest.workspace.js',
+      'Disable notification',
+    ).then((result) => {
+      if (result === 'Create vitest.workspace.js')
+        createVitestWorkspaceFile(allConfigs).catch(noop)
+
+      if (result === 'Disable notification') {
+        folders.forEach((folder) => {
+          const rootConfig = vscode.workspace.getConfiguration('vitest', folder)
+          rootConfig.update('disableWorkspaceWarning', true)
+        })
+      }
+    })
+  }
+  else {
+    log.info(warningMessage)
+    log.info(`Discarded config files: ${discardedConfigs.map(x => x.workspaceFile || x.configFile).join(', ')}`)
+  }
 }
 
 async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackage) {
