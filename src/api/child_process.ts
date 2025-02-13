@@ -77,7 +77,12 @@ export async function createVitestProcess(pkg: VitestPackage) {
       reject(new Error(`Vitest process exited with code ${code}`))
     }
 
+    function onError(error: Error) {
+      reject(error)
+    }
+
     vitest.on('exit', onExit)
+    vitest.on('error', onError)
 
     waitForWsResolvedMeta(wss, pkg, false, 'child_process', vitest)
       .then((resolved) => {
@@ -93,6 +98,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
       }, reject)
       .finally(() => {
         vitest.off('exit', onExit)
+        vitest.off('exit', onError)
       })
   })
 }
