@@ -43,6 +43,12 @@ export class TestRunner extends vscode.Disposable {
       this.disposables = []
     })
 
+    api.onStdout((content) => {
+      if (this.testRun) {
+        this.testRun.appendOutput(formatTestOutput(content))
+      }
+    })
+
     api.onWatcherRerun((files, _trigger, collecting) => {
       if (collecting) {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))

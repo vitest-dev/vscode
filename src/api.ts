@@ -228,7 +228,11 @@ export class VitestFolderAPI {
     this.handlers.clearListeners()
   }
 
-  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>>(name: K) {
+  onStdout(callback: (log: string) => void) {
+    this.handlers.onStdout(callback)
+  }
+
+  private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener' | 'onStdout'>>(name: K) {
     return (callback: VitestEvents[K]) => {
       this.handlers[name](callback as any)
     }
@@ -345,6 +349,7 @@ export interface ResolvedMeta {
   pkg: VitestPackage
   configs: string[]
   handlers: {
+    onStdout: (listener: (log: string) => void) => void
     onConsoleLog: (listener: VitestEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: VitestEvents['onTaskUpdate']) => void
     onFinished: (listener: VitestEvents['onFinished']) => void

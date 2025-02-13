@@ -6,7 +6,21 @@ import { getConfig } from './config'
 
 const logFile = process.env.VITEST_VSCODE_E2E_LOG_FILE!
 const channel = window.createOutputChannel('Vitest')
+const callbacks: Set<((message: string) => void)> = new Set()
+
+function logToCallbacks(message: string) {
+  for (const callback of callbacks) {
+    callback(message)
+  }
+}
+
 export const log = {
+  onWorkerLog(callback: (message: string) => void) {
+    callbacks.add(callback)
+  },
+  offWorkerLog(callback: (message: string) => void) {
+    callbacks.delete(callback)
+  },
   worker: (type: 'info' | 'error', ...args: any[]) => {
     if (typeof args.at(-1) === 'string' && args.at(-1).endsWith('\n'))
       args[args.length - 1] = args.at(-1).slice(0, process.platform === 'win32' ? -2 : -1)
@@ -19,6 +33,7 @@ export const log = {
     if (logFile) {
       appendFile(message)
     }
+    logToCallbacks(message)
     channel.appendLine(message)
   },
   info: (...args: any[]) => {
