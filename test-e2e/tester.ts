@@ -113,7 +113,7 @@ export class TesterTestItem {
   }
 
   async navigate() {
-    await this.locator.click()
+    await this.locator.click({ force: true })
     await this.locator.press('Alt+Enter')
     // await this.locator.getByLabel(/Go to Test/).click()
     // wait until the page is navigated
