@@ -28,18 +28,20 @@ test('basic', async ({ launch }) => {
 
   await tester.tree.expand('test')
   await tester.tree.expand('test/pass.test.ts')
-  await tester.tree.expand('test/fail.test.ts')
-  await tester.tree.expand('test/mix.test.ts')
 
   const allPassTests = tester.tree.getFileItem('pass.test.ts')
   await expect(allPassTests).toHaveTests({
     'all-pass': 'waiting',
   })
 
+  await tester.tree.expand('test/fail.test.ts')
+
   const allFailTests = tester.tree.getFileItem('fail.test.ts')
   await expect(allFailTests).toHaveTests({
     'all-fail': 'waiting',
   })
+
+  await tester.tree.expand('test/mix.test.ts')
 
   const mixedTests = tester.tree.getFileItem('mix.test.ts')
   await expect(mixedTests).toHaveTests({
