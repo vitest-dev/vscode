@@ -70,7 +70,11 @@ export function astParseFile(filepath: string, code: string) {
   })
 
   if (verbose) {
-    verbose('Collecting', filepath, code)
+    verbose(
+      'Collecting',
+      filepath,
+      code.replace(/\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,\w/, ''),
+    )
   }
   else {
     debug?.('Collecting', filepath)

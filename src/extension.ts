@@ -286,6 +286,7 @@ class VitestExtension {
           return
         }
         if (apis.length === 1) {
+          log.info('Showing the only available shell terminal');
           (apis[0].process as VitestTerminalProcess).show()
           return
         }
@@ -298,6 +299,7 @@ class VitestExtension {
           }),
         )
         if (pick) {
+          log.info('Showing picked shell terminal:', pick.label)
           pick.process.show()
         }
       }),
