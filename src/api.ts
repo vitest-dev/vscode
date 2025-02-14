@@ -291,7 +291,9 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
 
   let configsResolved = 0
 
-  log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(p.folder.uri.fsPath, p.configFile!)).join(', ')}`)
+  if (configsToResolve.length) {
+    log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(p.folder.uri.fsPath, p.configFile!)).join(', ')}`)
+  }
 
   // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
   for (const pkg of configsToResolve) {
