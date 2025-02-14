@@ -20,7 +20,7 @@ emitter.on('message', async function onMessage(message: any) {
     const data = message as WorkerRunnerOptions
 
     try {
-      const { reporter, vitest, configs } = await initVitest(
+      const { reporter, vitest, configs, workspaceSource } = await initVitest(
         data.meta,
         data.debug
           ? {
@@ -43,7 +43,7 @@ emitter.on('message', async function onMessage(message: any) {
         deserialize: v => v8.deserialize(Buffer.from(v) as any),
       })
       reporter.initRpc(rpc)
-      emitter.ready(configs)
+      emitter.ready(configs, workspaceSource)
     }
     catch (err: any) {
       emitter.error(err)

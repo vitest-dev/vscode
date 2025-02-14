@@ -92,9 +92,15 @@ export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
     'getRootProject' in vitest ? vitest.getRootProject() : vitest.getCoreWorkspaceProject(),
     ...vitest.projects,
   ] as WorkspaceProject[]).map(p => p.server.config.configFile).filter(c => c != null)
+  const workspaceSource: string | false = meta.workspaceFile
+    ? meta.workspaceFile
+    : vitest.config.workspace != null
+      ? vitest.server.config.configFile || false
+      : false
   return {
     vitest,
     reporter,
+    workspaceSource,
     configs: Array.from(new Set(configs)),
     meta,
   }

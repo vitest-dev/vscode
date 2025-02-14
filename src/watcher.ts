@@ -26,7 +26,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     const folder = api.workspaceFolder
     const apis = this.apisByFolder.get(folder) ?? []
     if (!apis.includes(api)) {
-      log.info('[API] Watching', api.id)
+      log.info('[API] Watching', relative(folder.uri.fsPath, api.id))
       apis.push(api)
     }
     this.apisByFolder.set(folder, apis)

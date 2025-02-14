@@ -36,6 +36,7 @@ export function waitForWsResolvedMeta(
           })
           resolve({
             rpc: api,
+            workspaceSource: message.workspaceSource,
             handlers: {
               ...handlers,
               onStdout() {
