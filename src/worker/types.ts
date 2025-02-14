@@ -21,6 +21,7 @@ export interface WorkerRunnerOptions {
 export interface EventReady {
   type: 'ready'
   configs: string[]
+  workspaceSource: string | false
 }
 
 export interface EventDebug {

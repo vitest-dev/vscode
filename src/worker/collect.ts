@@ -73,7 +73,7 @@ export function astParseFile(filepath: string, code: string) {
     verbose(
       'Collecting',
       filepath,
-      code.replace(/\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,\w/, ''),
+      code.replace(/\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,[\w+/=]+/, ''),
     )
   }
   else {

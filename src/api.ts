@@ -1,3 +1,4 @@
+import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
@@ -99,6 +100,10 @@ export class VitestFolderAPI {
 
   get configs() {
     return this.meta.configs
+  }
+
+  get workspaceSource() {
+    return this.meta.workspaceSource
   }
 
   get version() {
@@ -264,20 +269,44 @@ function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
 export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], configs: VitestPackage[]) {
   const usedConfigs = new Set<string>()
   const workspacePromises = workspaceConfigs.map(pkg => createVitestFolderAPI(usedConfigs, pkg))
+
+  if (workspacePromises.length) {
+    log.info('[API]', `Resolving workspace configs: ${workspaceConfigs.map(p => relative(p.folder.uri.fsPath, p.id)).join(', ')}`)
+  }
+
   const apis = await Promise.all(workspacePromises)
   const configsToResolve = configs.filter((pkg) => {
     return !pkg.configFile || pkg.workspaceFile || !usedConfigs.has(pkg.configFile)
+  }).sort((a, b) => {
+    const depthA = a.id.split('/').length
+    const depthB = b.id.split('/').length
+    return depthA - depthB
   })
 
   const maximumConfigs = getConfig().maximumConfigs ?? 3
 
+  const workspaceRoots: string[] = apis
+    .map(api => api.workspaceSource ? dirname(api.workspaceSource) : null)
+    .filter(api => api != null)
+
   let configsResolved = 0
+
+  log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(p.folder.uri.fsPath, p.configFile!)).join(', ')}`)
 
   // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
   for (const pkg of configsToResolve) {
+    // if the config is used by the workspace, ignore the config
     if (pkg.configFile && usedConfigs.has(pkg.configFile)) {
+      log.info('[API]', `Ignoring config ${relative(pkg.folder.uri.fsPath, pkg.configFile)} because it's already used by the workspace`)
       continue
     }
+
+    // if the config is defined in the directory that is covered by the workspace, ignore the config
+    if (pkg.configFile && isCoveredByWorkspace(workspaceRoots, pkg.configFile)) {
+      log.info('[API]', `Ignoring config ${relative(pkg.folder.uri.fsPath, pkg.configFile)} because there is a workspace config in the parent folder`)
+      continue
+    }
+
     configsResolved++
 
     if (configsResolved > maximumConfigs) {
@@ -287,9 +316,19 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
 
     const api = await createVitestFolderAPI(usedConfigs, pkg)
     apis.push(api)
+    if (api.workspaceSource) {
+      workspaceRoots.push(dirname(api.workspaceSource))
+    }
   }
 
   return new VitestAPI(apis)
+}
+
+function isCoveredByWorkspace(workspacesRoots: string[], currentConfig: string): boolean {
+  return workspacesRoots.some((root) => {
+    const relative_ = relative(root, currentConfig)
+    return !relative_.startsWith('..') && !isAbsolute(relative_)
+  })
 }
 
 function warnPerformanceConfigLimit(configsToResolve: VitestPackage[]) {
@@ -346,6 +385,7 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
 export interface ResolvedMeta {
   rpc: VitestRPC
   process: VitestProcess
+  workspaceSource: string | false
   pkg: VitestPackage
   configs: string[]
   handlers: {
