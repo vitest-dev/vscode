@@ -54,7 +54,7 @@ export class TestRunner extends vscode.Disposable {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
       }
       else {
-        log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'were started due to a file change')
+        log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
         this.startTestRun(files)
       }
     })
@@ -248,19 +248,8 @@ export class TestRunner extends vscode.Disposable {
     if (request.continuous)
       return await this.watchContinuousTests(request, token)
 
-    this.nonContinuousRequest = request
-
-    this.disposables.push(
-      token.onCancellationRequested(() => {
-        this.endTestRun()
-        this.nonContinuousRequest = undefined
-        this.api.cancelRun()
-        log.verbose?.('Test run was cancelled manually for', join(request.include))
-      }),
-    )
-
     try {
-      await this.runTestItems(request)
+      await this.scheduleTestItems(request, token)
     }
     catch (err: any) {
       // the rpc can be closed during the test run by clicking on reload
@@ -269,19 +258,23 @@ export class TestRunner extends vscode.Disposable {
       }
       this.endTestRun()
     }
-
-    this.nonContinuousRequest = undefined
-    this._onRequestsExhausted.fire()
   }
 
-  protected async runTestItems(request: vscode.TestRunRequest) {
-    if (this.testRunDefer) {
-      log.verbose?.('Waiting for the previous test run to finish')
-      await this.testRunDefer.promise
-    }
+  protected scheduleTestRunsQueue: (() => Promise<void>)[] = []
 
-    log.verbose?.('Initiating deferred test run')
-    this.testRunDefer = Promise.withResolvers()
+  private async runTestItems(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    this.nonContinuousRequest = request
+
+    this.disposables.push(
+      token.onCancellationRequested(() => {
+        this.endTestRun()
+        if (request === this.nonContinuousRequest) {
+          this.nonContinuousRequest = undefined
+        }
+        this.api.cancelRun()
+        log.verbose?.('Test run was cancelled manually for', join(request.include))
+      }),
+    )
 
     const runTests = (files?: SerializedTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
@@ -302,6 +295,26 @@ export class TestRunner extends vscode.Disposable {
       else
         log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
       await runTests(files, testNamePatern)
+    }
+
+    if (request === this.nonContinuousRequest) {
+      this.nonContinuousRequest = undefined
+      this._onRequestsExhausted.fire()
+    }
+  }
+
+  protected async scheduleTestItems(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    if (!this.testRunDefer) {
+      await this.runTestItems(request, token)
+    }
+    else {
+      log.verbose?.('Queueing a new test run to execute when the current one is finished.')
+      return new Promise((resolve, reject) => {
+        this.scheduleTestRunsQueue.push(() => {
+          log.verbose?.('Scheduled test run is starting now.')
+          return this.runTestItems(request, token).then(resolve, reject)
+        })
+      })
     }
   }
 
@@ -373,7 +386,6 @@ export class TestRunner extends vscode.Disposable {
     if (this.testRun) {
       log.verbose?.('Waiting for the previous test run to finish')
       await this.testRunDefer?.promise
-      this.endTestRun()
     }
 
     const name = files.length > 1
@@ -382,6 +394,12 @@ export class TestRunner extends vscode.Disposable {
 
     const run = this.testRun = this.controller.createTestRun(request, name)
     this.testRunRequest = request
+    this.testRunDefer = Promise.withResolvers()
+    this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
+      run.end()
+      log.verbose?.(`Test run promise is finished, the queue is ${this.scheduleTestRunsQueue.length}`)
+      this.scheduleTestRunsQueue.shift()?.()
+    })
 
     for (const file of files) {
       if (file[file.length - 1] === '/') {
