@@ -26,6 +26,8 @@ export class TestRunner extends vscode.Disposable {
 
   private disposables: vscode.Disposable[] = []
 
+  private cancelled = false
+
   constructor(
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
@@ -260,19 +262,25 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  protected scheduleTestRunsQueue: (() => Promise<void>)[] = []
+  protected scheduleTestRunsQueue: {
+    runTests: () => Promise<void>
+    resolveWithoutRunning: () => void
+  }[] = []
 
   private async runTestItems(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    this.cancelled = false
     this.nonContinuousRequest = request
 
     this.disposables.push(
       token.onCancellationRequested(() => {
-        this.endTestRun()
         if (request === this.nonContinuousRequest) {
-          this.nonContinuousRequest = undefined
+          this.cancelled = true
+          this.api.cancelRun().then(() => {
+            this.nonContinuousRequest = undefined
+            this.endTestRun()
+          })
+          log.verbose?.('Test run was cancelled manually for', join(request.include))
         }
-        this.api.cancelRun()
-        log.verbose?.('Test run was cancelled manually for', join(request.include))
       }),
     )
 
@@ -309,10 +317,13 @@ export class TestRunner extends vscode.Disposable {
     }
     else {
       log.verbose?.('Queueing a new test run to execute when the current one is finished.')
-      return new Promise((resolve, reject) => {
-        this.scheduleTestRunsQueue.push(() => {
-          log.verbose?.('Scheduled test run is starting now.')
-          return this.runTestItems(request, token).then(resolve, reject)
+      return new Promise<void>((resolve, reject) => {
+        this.scheduleTestRunsQueue.push({
+          runTests: () => {
+            log.verbose?.('Scheduled test run is starting now.')
+            return this.runTestItems(request, token).then(resolve, reject)
+          },
+          resolveWithoutRunning: resolve,
         })
       })
     }
@@ -397,8 +408,15 @@ export class TestRunner extends vscode.Disposable {
     this.testRunDefer = Promise.withResolvers()
     this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
       run.end()
-      log.verbose?.(`Test run promise is finished, the queue is ${this.scheduleTestRunsQueue.length}`)
-      this.scheduleTestRunsQueue.shift()?.()
+      if (this.cancelled) {
+        log.verbose?.('Not starting a new test run because the previous one was cancelled manually.')
+        this.scheduleTestRunsQueue.forEach(item => item.resolveWithoutRunning())
+        this.scheduleTestRunsQueue.length = 0
+      }
+      else {
+        log.verbose?.(`Test run promise is finished, the queue is ${this.scheduleTestRunsQueue.length}`)
+        this.scheduleTestRunsQueue.shift()?.runTests()
+      }
     })
 
     for (const file of files) {
