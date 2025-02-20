@@ -278,20 +278,20 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
   let configsResolved = 0
 
   if (configsToResolve.length) {
-    log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(p.folder.uri.fsPath, p.configFile!)).join(', ')}`)
+    log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(dirname(p.cwd), p.id)).join(', ')}`)
   }
 
   // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
   for (const pkg of configsToResolve) {
     // if the config is used by the workspace, ignore the config
     if (pkg.configFile && usedConfigs.has(pkg.configFile)) {
-      log.info('[API]', `Ignoring config ${relative(pkg.folder.uri.fsPath, pkg.configFile)} because it's already used by the workspace`)
+      log.info('[API]', `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because it's already used by the workspace`)
       continue
     }
 
     // if the config is defined in the directory that is covered by the workspace, ignore the config
     if (pkg.configFile && isCoveredByWorkspace(workspaceRoots, pkg.configFile)) {
-      log.info('[API]', `Ignoring config ${relative(pkg.folder.uri.fsPath, pkg.configFile)} because there is a workspace config in the parent folder`)
+      log.info('[API]', `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because there is a workspace config in the parent folder`)
       continue
     }
 
