@@ -2,13 +2,13 @@ import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import type { SerializedTestSpecification, VitestEvents, VitestRPC } from './api/rpc'
+import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
 import type { VitestPackage } from './api/pkg'
 import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
-import type { VitestProcess } from './api/types'
 import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
 import { createVitestProcess } from './api/child_process'
+import type { ExtensionWorkerProcess } from './api/types'
 
 export class VitestAPI {
   private disposing = false
@@ -22,10 +22,8 @@ export class VitestAPI {
         if (!this.disposing)
           showVitestError('Vitest process failed', error)
       }
-      process.on('error', warn)
-      this._disposes.push(() => {
-        process.off('error', warn)
-      })
+      const dispose = process.onError(warn)
+      this._disposes.push(dispose)
     })
   }
 
@@ -35,10 +33,8 @@ export class VitestAPI {
         if (!this.disposing)
           callback(code)
       }
-      process.on('exit', onExit)
-      this._disposes.push(() => {
-        process.off('exit', onExit)
-      })
+      const dispose = process.onExit(onExit)
+      this._disposes.push(dispose)
     })
   }
 
@@ -173,17 +169,7 @@ export class VitestFolderAPI {
       catch (err) {
         log.error('[API]', 'Failed to close Vitest RPC', err)
       }
-      const promise = new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          reject(new Error('Vitest process did not exit in time'))
-        }, 5_000)
-        this.meta.process.once('exit', () => {
-          resolve()
-          clearTimeout(timer)
-        })
-      })
-      this.meta.process.close()
-      await promise.catch((err) => {
+      await this.meta.process.close().catch((err) => {
         log.error('[API]', 'Failed to close Vitest process', err)
       })
     }
@@ -238,7 +224,7 @@ export class VitestFolderAPI {
   }
 
   private createHandler<K extends Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener' | 'onStdout'>>(name: K) {
-    return (callback: VitestEvents[K]) => {
+    return (callback: ExtensionWorkerEvents[K]) => {
       this.handlers[name](callback as any)
     }
   }
@@ -292,20 +278,20 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
   let configsResolved = 0
 
   if (configsToResolve.length) {
-    log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(p.folder.uri.fsPath, p.configFile!)).join(', ')}`)
+    log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(dirname(p.cwd), p.id)).join(', ')}`)
   }
 
   // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
   for (const pkg of configsToResolve) {
     // if the config is used by the workspace, ignore the config
     if (pkg.configFile && usedConfigs.has(pkg.configFile)) {
-      log.info('[API]', `Ignoring config ${relative(pkg.folder.uri.fsPath, pkg.configFile)} because it's already used by the workspace`)
+      log.info('[API]', `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because it's already used by the workspace`)
       continue
     }
 
     // if the config is defined in the directory that is covered by the workspace, ignore the config
     if (pkg.configFile && isCoveredByWorkspace(workspaceRoots, pkg.configFile)) {
-      log.info('[API]', `Ignoring config ${relative(pkg.folder.uri.fsPath, pkg.configFile)} because there is a workspace config in the parent folder`)
+      log.info('[API]', `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because there is a workspace config in the parent folder`)
       continue
     }
 
@@ -386,18 +372,18 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
 
 export interface ResolvedMeta {
   rpc: VitestRPC
-  process: VitestProcess
+  process: ExtensionWorkerProcess
   workspaceSource: string | false
   pkg: VitestPackage
   configs: string[]
   handlers: {
     onStdout: (listener: (log: string) => void) => void
-    onConsoleLog: (listener: VitestEvents['onConsoleLog']) => void
-    onTaskUpdate: (listener: VitestEvents['onTaskUpdate']) => void
-    onFinished: (listener: VitestEvents['onFinished']) => void
-    onCollected: (listener: VitestEvents['onCollected']) => void
-    onWatcherStart: (listener: VitestEvents['onWatcherStart']) => void
-    onWatcherRerun: (listener: VitestEvents['onWatcherRerun']) => void
+    onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void
+    onTaskUpdate: (listener: ExtensionWorkerEvents['onTaskUpdate']) => void
+    onFinished: (listener: ExtensionWorkerEvents['onFinished']) => void
+    onCollected: (listener: ExtensionWorkerEvents['onCollected']) => void
+    onWatcherStart: (listener: ExtensionWorkerEvents['onWatcherStart']) => void
+    onWatcherRerun: (listener: ExtensionWorkerEvents['onWatcherRerun']) => void
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
   }

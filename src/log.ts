@@ -96,3 +96,9 @@ function appendFile(log: string) {
   }
   appendFileSync(logFile, `${log}\n`)
 }
+
+export function createErrorLogger(prefix: string) {
+  return (...args: any[]) => {
+    log.error(prefix, ...args)
+  }
+}

@@ -1,8 +1,7 @@
-export interface VitestProcess {
-  close: () => void
+export interface ExtensionWorkerProcess {
   id: number
   closed: boolean
-  on: (event: string, listener: (...args: any[]) => void) => void
-  off: (event: string, listener: (...args: any[]) => void) => void
-  once: (event: string, listener: (...args: any[]) => void) => void
+  close: () => Promise<void>
+  onError: (listener: (error: Error) => void) => () => void
+  onExit: (listener: (code: number | null) => void) => () => void
 }

@@ -1,17 +1,19 @@
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import * as vscode from 'vscode'
+import type { WebSocket } from 'ws'
 import { WebSocketServer } from 'ws'
 import getPort from 'get-port'
-import type { ResolvedMeta } from '../api'
-import { VitestFolderAPI } from '../api'
-import type { VitestPackage } from '../api/pkg'
-import type { TestTree } from '../testTree'
-import { log } from '../log'
-import { getConfig } from '../config'
-import { TestRunner } from '../runner/runner'
-import { workerPath } from '../constants'
-import { waitForWsResolvedMeta } from '../api/ws'
+import { VitestFolderAPI } from './api'
+import type { VitestPackage } from './api/pkg'
+import type { TestTree } from './testTree'
+import { log } from './log'
+import { getConfig } from './config'
+import { TestRunner } from './runner'
+import { workerPath } from './constants'
+import type { WsConnectionMetadata } from './api/ws'
+import { waitForWsConnection } from './api/ws'
+import type { ExtensionWorkerProcess } from './api/types'
 
 export async function debugTests(
   controller: vscode.TestController,
@@ -98,11 +100,14 @@ export async function debugTests(
       vscode.debug.stopDebugging(session)
       return
     }
-    let vitest!: ResolvedMeta
+    let metadata!: WsConnectionMetadata
 
     try {
-      vitest = await waitForWsResolvedMeta(wss, pkg, true, 'child_process')
-      const api = new VitestFolderAPI(pkg, vitest)
+      metadata = await waitForWsConnection(wss, pkg, true, config.shellType)
+      const api = new VitestFolderAPI(pkg, {
+        ...metadata,
+        process: new ExtensionDebugProcess(session, metadata.ws),
+      })
       const runner = new TestRunner(
         controller,
         tree,
@@ -111,7 +116,7 @@ export async function debugTests(
       disposables.push(api, runner)
 
       token.onCancellationRequested(async () => {
-        await vitest.rpc.close()
+        await metadata.rpc.close()
         await vscode.debug.stopDebugging(session)
       })
 
@@ -129,7 +134,7 @@ export async function debugTests(
     }
 
     if (!token.isCancellationRequested) {
-      await vitest?.rpc.close()
+      await metadata?.rpc.close()
       await vscode.debug.stopDebugging(session)
     }
   })
@@ -170,5 +175,52 @@ async function getRuntimeOptions(pkg: VitestPackage) {
   return {
     runtimeExecutable: 'node',
     runtimeArgs: execArgv,
+  }
+}
+
+class ExtensionDebugProcess implements ExtensionWorkerProcess {
+  public id: number = Math.random()
+  public closed = false
+
+  private _stopped: Promise<void>
+  private _onDidExit = new vscode.EventEmitter<void>()
+
+  constructor(
+    private session: vscode.DebugSession,
+    ws: WebSocket,
+  ) {
+    this._stopped = new Promise((resolve) => {
+      const { dispose } = vscode.debug.onDidTerminateDebugSession((terminatedSession) => {
+        if (session === terminatedSession) {
+          dispose()
+          resolve()
+          this._onDidExit.fire()
+          this._onDidExit.dispose()
+          this.closed = true
+        }
+      })
+    })
+    // if websocket connection stopped working, close the debug session
+    // otherwise it might hand indefinitely
+    ws.on('close', () => {
+      this.close()
+    })
+  }
+
+  close() {
+    vscode.debug.stopDebugging(this.session)
+    return this._stopped
+  }
+
+  onError() {
+    // do nothing
+    return () => {}
+  }
+
+  onExit(listener: (code: number | null) => void) {
+    const { dispose } = this._onDidExit.event(() => {
+      listener(null)
+    })
+    return dispose
   }
 }

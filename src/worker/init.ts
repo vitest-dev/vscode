@@ -1,10 +1,10 @@
 import { pathToFileURL } from 'node:url'
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
 import { VSCodeReporter } from './reporter'
-import type { WorkerMeta } from './types'
+import type { WorkerInitMetadata } from './types'
 import { normalizeDriveLetter } from './utils'
 
-export async function initVitest(meta: WorkerMeta, options?: UserConfig) {
+export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig) {
   const vitestModule = await import(
     pathToFileURL(normalizeDriveLetter(meta.vitestNodePath)).toString()
   ) as typeof import('vitest/node')

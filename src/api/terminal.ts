@@ -1,20 +1,21 @@
+import type { Server } from 'node:http'
 import { createServer } from 'node:http'
 import * as vscode from 'vscode'
 import getPort from 'get-port'
+import type { WebSocket } from 'ws'
 import { WebSocketServer } from 'ws'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
-import { log } from '../log'
+import { createErrorLogger, log } from '../log'
 import { formatPkg } from '../utils'
 import type { ResolvedMeta } from '../api'
 import type { VitestPackage } from './pkg'
-import type { VitestWebSocketProcess } from './ws'
-import { waitForWsResolvedMeta } from './ws'
-import type { VitestProcess } from './types'
+import { waitForWsConnection } from './ws'
+import type { ExtensionWorkerProcess } from './types'
 
 export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
   const port = await getPort()
-  const server = createServer().listen(port)
+  const server = createServer().listen(port).unref()
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
   const config = getConfig(pkg.folder)
@@ -38,13 +39,14 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   log.info('[API]', `Initiated ws connection via ${wsAddress}`)
   log.info('[API]', `Starting ${formatPkg(pkg)} in the terminal: ${command}`)
   terminal.sendText(command, true)
-  const meta = await waitForWsResolvedMeta(wss, pkg, false, 'terminal')
-  const processId = (await terminal.processId) ?? meta.process.id
+  const meta = await waitForWsConnection(wss, pkg, false, 'terminal')
+  const processId = (await terminal.processId) ?? Math.random()
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)
-  const vitestProcess = new VitestTerminalProcess(
+  const vitestProcess = new ExtensionTerminalProcess(
     processId,
-    meta.process as VitestWebSocketProcess,
     terminal,
+    server,
+    meta.ws,
   )
   return {
     rpc: meta.rpc,
@@ -56,25 +58,31 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   }
 }
 
-export class VitestTerminalProcess implements VitestProcess {
+export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
+  private _onDidExit = new vscode.EventEmitter<number | null>()
+
   private stopped: Promise<void>
 
   constructor(
     public readonly id: number,
-    private wsProcess: VitestWebSocketProcess,
     private readonly terminal: vscode.Terminal,
+    server: Server,
+    ws: WebSocket,
   ) {
     this.stopped = new Promise((resolve) => {
       const disposer = vscode.window.onDidCloseTerminal(async (e) => {
         if (e === terminal) {
           const exitCode = e.exitStatus?.code
-          // TODO: have a single emitter, don't reuse ws one
-          // this event is required for api.dispose() and onUnexpectedExit
-          wsProcess.ws.emit('exit', exitCode)
+          this._onDidExit.fire(exitCode ?? null)
+          this._onDidExit.dispose()
+          server.close(createErrorLogger('Failed to close server'))
           disposer.dispose()
           resolve()
         }
       })
+    })
+    ws.on('close', () => {
+      this.close()
     })
   }
 
@@ -83,27 +91,35 @@ export class VitestTerminalProcess implements VitestProcess {
   }
 
   get closed() {
-    return this.wsProcess.closed || this.terminal.exitStatus !== undefined
+    return this.terminal.exitStatus !== undefined
   }
 
   close() {
-    this.wsProcess.close()
     // send ctrl+c to sigint any running processs (vscode/#108289)
     this.terminal.sendText('\x03')
     // and then destroy it on the next event loop tick
     setTimeout(() => this.terminal.dispose(), 1)
-    return this.stopped
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('The extension terminal process did not exit in time.'))
+      }, 5_000)
+      this.stopped
+        .finally(() => clearTimeout(timer))
+        .then(resolve, reject)
+    })
   }
 
-  on(event: string, listener: (...args: any[]) => void) {
-    this.wsProcess.on(event, listener)
+  onError() {
+    // do nothing
+    return () => {
+      // do nothing
+    }
   }
 
-  off(event: string, listener: (...args: any[]) => void) {
-    this.wsProcess.on(event, listener)
-  }
-
-  once(event: string, listener: (...args: any[]) => void) {
-    this.wsProcess.once(event, listener)
+  onExit(listener: (code: number | null) => void) {
+    const disposable = this._onDidExit.event(listener)
+    return () => {
+      disposable.dispose()
+    }
   }
 }

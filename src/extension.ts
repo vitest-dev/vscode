@@ -5,7 +5,7 @@ import { version } from '../package.json'
 import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
-import { TestRunner } from './runner/runner'
+import { TestRunner } from './runner'
 import { TestTree } from './testTree'
 import { configGlob, workspaceGlob } from './constants'
 import { log } from './log'
@@ -14,8 +14,8 @@ import { resolveVitestPackages } from './api/pkg'
 import { TestFile, getTestData } from './testTreeData'
 import { TagsManager } from './tagsManager'
 import { coverageContext } from './coverage'
-import { debugTests } from './debug/api'
-import { VitestTerminalProcess } from './api/terminal'
+import { ExtensionTerminalProcess } from './api/terminal'
+import { debugTests } from './debug'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -280,21 +280,21 @@ class VitestExtension {
       }),
       vscode.commands.registerCommand('vitest.showShellTerminal', async () => {
         const apis = this.api?.folderAPIs
-          .filter(api => api.process instanceof VitestTerminalProcess)
+          .filter(api => api.process instanceof ExtensionTerminalProcess)
         if (!apis?.length) {
           vscode.window.showInformationMessage('No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration?')
           return
         }
         if (apis.length === 1) {
           log.info('Showing the only available shell terminal');
-          (apis[0].process as VitestTerminalProcess).show()
+          (apis[0].process as ExtensionTerminalProcess).show()
           return
         }
         const pick = await vscode.window.showQuickPick(
           apis.map((api) => {
             return {
               label: api.prefix,
-              process: api.process as VitestTerminalProcess,
+              process: api.process as ExtensionTerminalProcess,
             }
           }),
         )

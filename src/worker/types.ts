@@ -1,4 +1,4 @@
-export interface WorkerMeta {
+export interface WorkerInitMetadata {
   vitestNodePath: string
   id: string
   cwd: string
@@ -13,7 +13,7 @@ export interface WorkerMeta {
 
 export interface WorkerRunnerOptions {
   type: 'init'
-  meta: WorkerMeta
+  meta: WorkerInitMetadata
   debug: boolean
   astCollect: boolean
 }

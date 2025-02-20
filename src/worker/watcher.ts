@@ -1,9 +1,9 @@
 import type { ProvidedContext } from 'vitest'
 import { relative } from 'pathe'
 import type { WorkspaceProject } from 'vitest/node'
-import { Vitest } from './vitest'
+import { ExtensionWorker } from './worker'
 
-export class VitestWatcher {
+export class ExtensionWorkerWatcher {
   private files: string[] = []
   private testNamePattern: string | undefined
   private watchEveryFile = false
@@ -11,7 +11,7 @@ export class VitestWatcher {
 
   private enabled = false
 
-  constructor(vitest: Vitest) {
+  constructor(vitest: ExtensionWorker) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
     const ctx = vitest.ctx
@@ -54,7 +54,7 @@ export class VitestWatcher {
           }
         }
 
-        ctx.configOverride.testNamePattern = new RegExp(Vitest.COLLECT_NAME_PATTERN)
+        ctx.configOverride.testNamePattern = new RegExp(ExtensionWorker.COLLECT_NAME_PATTERN)
         ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
 
         if (astSpecs.length) {

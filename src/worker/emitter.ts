@@ -48,19 +48,3 @@ export class WorkerWSEventEmitter extends WorkerEventEmitter {
     this.ws.off(event, listener)
   }
 }
-
-export class WorkerProcessEmitter extends WorkerEventEmitter {
-  name = 'process'
-
-  override send(event: WorkerEvent) {
-    process.send!(event)
-  }
-
-  override on(event: string, listener: (...args: any[]) => void) {
-    process.on(event, listener)
-  }
-
-  override off(event: string, listener: (...args: any[]) => void) {
-    process.off(event, listener)
-  }
-}
