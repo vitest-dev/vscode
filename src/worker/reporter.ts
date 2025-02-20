@@ -6,16 +6,16 @@ import type { BirpcReturn } from 'birpc'
 import type { Reporter } from 'vitest/reporters'
 import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
-import type { VitestEvents, VitestMethods } from '../api/rpc'
+import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from '../api/rpc'
 import { setupFilePath } from '../constants'
-import { Vitest } from './vitest'
+import { ExtensionWorker } from './worker'
 
 export class VSCodeReporter implements Reporter {
-  private rpc!: BirpcReturn<VitestEvents, VitestMethods>
+  private rpc!: BirpcReturn<ExtensionWorkerEvents, ExtensionWorkerTransport>
   private vitest!: VitestCore
 
   private get collecting(): boolean {
-    return this.vitest.configOverride.testNamePattern?.toString() === `/${Vitest.COLLECT_NAME_PATTERN}/`
+    return this.vitest.configOverride.testNamePattern?.toString() === `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
   }
 
   onInit(ctx: VitestCore) {
@@ -65,7 +65,7 @@ export class VSCodeReporter implements Reporter {
     }
   }
 
-  initRpc(rpc: BirpcReturn<VitestEvents, VitestMethods>) {
+  initRpc(rpc: BirpcReturn<ExtensionWorkerEvents, ExtensionWorkerTransport>) {
     this.rpc = rpc
   }
 

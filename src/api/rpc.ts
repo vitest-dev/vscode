@@ -7,7 +7,7 @@ export type SerializedTestSpecification = [
   file: string,
 ]
 
-export interface VitestMethods {
+export interface ExtensionWorkerTransport {
   getFiles: () => Promise<[project: string, file: string][]>
   collectTests: (testFile: [project: string, filepath: string][]) => Promise<void>
   cancelRun: () => Promise<void>
@@ -28,7 +28,7 @@ export interface VitestMethods {
   onFilesChanged: (files: string[]) => void
 }
 
-export interface VitestEvents {
+export interface ExtensionWorkerEvents {
   onConsoleLog: (log: UserConsoleLog) => void
   onTaskUpdate: (task: TaskResultPack[]) => void
   onFinished: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
@@ -37,7 +37,7 @@ export interface VitestEvents {
   onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
 }
 
-export type VitestRPC = BirpcReturn<VitestMethods, VitestEvents>
+export type VitestRPC = BirpcReturn<ExtensionWorkerTransport, ExtensionWorkerEvents>
 
 function createHandler<T extends (...args: any) => any>() {
   const handlers: T[] = []
@@ -56,15 +56,15 @@ function createHandler<T extends (...args: any) => any>() {
 
 export function createRpcOptions() {
   const handlers = {
-    onConsoleLog: createHandler<VitestEvents['onConsoleLog']>(),
-    onTaskUpdate: createHandler<VitestEvents['onTaskUpdate']>(),
-    onFinished: createHandler<VitestEvents['onFinished']>(),
-    onCollected: createHandler<VitestEvents['onCollected']>(),
-    onWatcherRerun: createHandler<VitestEvents['onWatcherRerun']>(),
-    onWatcherStart: createHandler<VitestEvents['onWatcherStart']>(),
+    onConsoleLog: createHandler<ExtensionWorkerEvents['onConsoleLog']>(),
+    onTaskUpdate: createHandler<ExtensionWorkerEvents['onTaskUpdate']>(),
+    onFinished: createHandler<ExtensionWorkerEvents['onFinished']>(),
+    onCollected: createHandler<ExtensionWorkerEvents['onCollected']>(),
+    onWatcherRerun: createHandler<ExtensionWorkerEvents['onWatcherRerun']>(),
+    onWatcherStart: createHandler<ExtensionWorkerEvents['onWatcherStart']>(),
   }
 
-  const events: Omit<VitestEvents, 'onReady' | 'onError'> = {
+  const events: Omit<ExtensionWorkerEvents, 'onReady' | 'onError'> = {
     onConsoleLog: handlers.onConsoleLog.trigger,
     onFinished: handlers.onFinished.trigger,
     onTaskUpdate: handlers.onTaskUpdate.trigger,
@@ -99,7 +99,7 @@ export function createVitestRpc(options: {
 }) {
   const { events, handlers } = createRpcOptions()
 
-  const api = createBirpc<VitestMethods, VitestEvents>(
+  const api = createBirpc<ExtensionWorkerTransport, ExtensionWorkerEvents>(
     events,
     {
       timeout: -1,

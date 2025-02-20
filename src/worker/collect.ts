@@ -3,7 +3,6 @@ import { relative } from 'pathe'
 import { parse } from 'acorn'
 import { TraceMap, originalPositionFor } from '@vitest/utils/source-map'
 import { ancestor as walkAst } from 'acorn-walk'
-
 import {
   calculateSuiteHash,
   generateHash,

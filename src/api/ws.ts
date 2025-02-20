@@ -1,23 +1,24 @@
 import { pathToFileURL } from 'node:url'
-import type { ChildProcessWithoutNullStreams } from 'node:child_process'
-import { WebSocket, type WebSocketServer } from 'ws'
+import type { WebSocket, WebSocketServer } from 'ws'
 import { gte } from 'semver'
 import type { ResolvedMeta } from '../api'
 import { log } from '../log'
 import type { WorkerEvent, WorkerRunnerOptions } from '../worker/types'
 import { getConfig } from '../config'
-import type { VitestProcess } from './types'
 import { createVitestRpc } from './rpc'
 import type { VitestPackage } from './pkg'
 
-export function waitForWsResolvedMeta(
+export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
+  ws: WebSocket
+}
+
+export function waitForWsConnection(
   wss: WebSocketServer,
   pkg: VitestPackage,
   debug: boolean,
   shellType: 'terminal' | 'child_process',
-  child?: ChildProcessWithoutNullStreams,
 ) {
-  return new Promise<ResolvedMeta>((resolve, reject) => {
+  return new Promise<WsConnectionMetadata>((resolve, reject) => {
     wss.once('connection', (ws) => {
       function onMessage(_message: any) {
         const message = JSON.parse(_message.toString()) as WorkerEvent
@@ -44,7 +45,7 @@ export function waitForWsResolvedMeta(
               },
             },
             configs: message.configs,
-            process: new VitestWebSocketProcess(Math.random(), wss, ws, child),
+            ws,
             pkg,
           })
         }
@@ -114,41 +115,4 @@ export function waitForWsResolvedMeta(
     wss.on('error', onUnexpectedError)
     wss.once('close', onUnexpectedExit)
   })
-}
-
-export class VitestWebSocketProcess implements VitestProcess {
-  constructor(
-    public id: number,
-    public wss: WebSocketServer,
-    public ws: WebSocket,
-    private child?: ChildProcessWithoutNullStreams,
-  ) {
-    if (child && child.pid) {
-      this.id = child.pid
-      child.on('exit', (code) => {
-        this.ws.emit('exit', code)
-      })
-    }
-  }
-
-  get closed() {
-    return this.ws.readyState === WebSocket.CLOSED && (!this.child || !!this.child.killed)
-  }
-
-  close() {
-    this.wss.close()
-    this.child?.kill()
-  }
-
-  on(event: string, listener: (...args: any[]) => void) {
-    this.ws.on(event, listener)
-  }
-
-  once(event: string, listener: (...args: any[]) => void) {
-    this.ws.once(event, listener)
-  }
-
-  off(event: string, listener: (...args: any[]) => void) {
-    this.ws.off(event, listener)
-  }
 }

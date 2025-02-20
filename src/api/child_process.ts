@@ -1,15 +1,19 @@
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { spawn } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
+import type { Server } from 'node:http'
 import { createServer } from 'node:http'
 import getPort from 'get-port'
+import type WebSocket from 'ws'
 import { WebSocketServer } from 'ws'
 import { formatPkg, showVitestError } from '../utils'
-import { log } from '../log'
+import { createErrorLogger, log } from '../log'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import type { ResolvedMeta } from '../api'
 import type { VitestPackage } from './pkg'
-import { waitForWsResolvedMeta } from './ws'
+import { waitForWsConnection } from './ws'
+import type { ExtensionWorkerProcess } from './types'
 
 export async function createVitestProcess(pkg: VitestPackage) {
   const pnpLoader = pkg.loader
@@ -32,7 +36,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = getConfig(pkg.folder).logLevel
   const port = await getPort()
-  const server = createServer().listen(port)
+  const server = createServer().listen(port).unref()
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
   const vitest = spawn(getConfig(pkg.folder).nodeExecutable || 'node', [...execArgv, workerPath], {
@@ -84,7 +88,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
     vitest.on('exit', onExit)
     vitest.on('error', onError)
 
-    waitForWsResolvedMeta(wss, pkg, false, 'child_process', vitest)
+    waitForWsConnection(wss, pkg, false, 'child_process')
       .then((resolved) => {
         resolved.handlers.onStdout = (callback: (data: string) => void) => {
           stdoutCallbacks.add(callback)
@@ -94,11 +98,73 @@ export async function createVitestProcess(pkg: VitestPackage) {
           clearListeners()
           stdoutCallbacks.clear()
         }
-        resolve(resolved)
+        resolve({
+          ...resolved,
+          process: new ExtensionChildProcess(vitest, server, resolved.ws),
+        })
       }, reject)
       .finally(() => {
         vitest.off('exit', onExit)
         vitest.off('exit', onError)
       })
   })
+}
+
+class ExtensionChildProcess implements ExtensionWorkerProcess {
+  public id: number
+  private stopped: Promise<void>
+
+  constructor(
+    private child: ChildProcessWithoutNullStreams,
+    server: Server,
+    ws: WebSocket,
+  ) {
+    // the execution process cannot be created without a pid
+    this.id = child.pid!
+    this.stopped = new Promise<void>((resolve, reject) => {
+      child.on('exit', () => {
+        server.close(createErrorLogger('Failed to close server'))
+        resolve()
+      })
+      child.on('error', reject)
+    })
+    // stop the process if websocket connection was somehow closed
+    ws.on('close', () => {
+      if (!child.killed) {
+        child.kill()
+      }
+    })
+  }
+
+  get closed(): boolean {
+    return this.child.killed
+  }
+
+  close() {
+    this.child.kill()
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('The extension child process did not exit in time.'))
+      }, 5_000)
+      this.stopped
+        .finally(() => clearTimeout(timer))
+        .then(resolve, reject)
+    })
+  }
+
+  onError(listener: (error: Error) => void, options?: { once?: boolean }) {
+    const method = options?.once ? 'once' : 'on'
+    this.child[method]('error', listener)
+    return () => {
+      this.child.off('error', listener)
+    }
+  }
+
+  onExit(listener: (code: number | null) => void, options?: { once?: boolean }) {
+    const method = options?.once ? 'once' : 'on'
+    this.child[method]('exit', listener)
+    return () => {
+      this.child.off('exit', listener)
+    }
+  }
 }

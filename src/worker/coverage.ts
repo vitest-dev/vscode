@@ -4,16 +4,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'pathe'
 import type { CoverageProvider, ResolvedCoverageOptions } from 'vitest/node'
 import { finalCoverageFileName } from '../constants'
-import type { Vitest } from './vitest'
+import type { ExtensionWorker } from './worker'
 
-export class VitestCoverage {
+export class ExtensionCoverageManager {
   private _enabled = false
   private _provider: CoverageProvider | null | undefined = undefined
 
   private _config: ResolvedCoverageOptions
 
   constructor(
-    private vitest: Vitest,
+    private vitest: ExtensionWorker,
   ) {
     this._config = vitest.ctx.config.coverage
     const projects = new Set([...vitest.ctx.projects, vitest.getRootTestProject()])
