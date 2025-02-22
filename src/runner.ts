@@ -406,12 +406,14 @@ export class TestRunner extends vscode.Disposable {
     const run = this.testRun = this.controller.createTestRun(request, name)
     this.testRunRequest = request
     this.testRunDefer = Promise.withResolvers()
+    // run the next test when this one finished, or cancell or test runs if they were cancelled
     this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
       run.end()
       if (this.cancelled) {
         log.verbose?.('Not starting a new test run because the previous one was cancelled manually.')
         this.scheduleTestRunsQueue.forEach(item => item.resolveWithoutRunning())
         this.scheduleTestRunsQueue.length = 0
+        this.cancelled = false
       }
       else {
         log.verbose?.(`Test run promise is finished, the queue is ${this.scheduleTestRunsQueue.length}`)
