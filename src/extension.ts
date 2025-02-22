@@ -127,6 +127,11 @@ class VitestExtension {
         )
       }
     }
+    catch (err) {
+      this.testTree.reset([])
+      showVitestError('Failed to start Vitest', err)
+      return
+    }
     finally {
       this.testController.items.delete(this.loadingTestItem.id)
     }
