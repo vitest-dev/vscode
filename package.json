@@ -179,6 +179,11 @@
           ],
           "scope": "resource"
         },
+        "vitest.debugOutFiles": {
+          "markdownDescription": "If source maps are enabled, these glob patterns specify the generated JavaScript files.",
+          "type": "array",
+          "scope": "resource"
+        },
         "vitest.nodeEnv": {
           "markdownDescription": "The env passed to runner process in addition to `process.env`",
           "type": [

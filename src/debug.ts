@@ -44,6 +44,11 @@ export async function debugTests(
     name: 'Debug Tests',
     autoAttachChildProcesses: true,
     skipFiles: config.debugExclude,
+    ...(
+      config.debugOutFiles?.length
+        ? { outFiles: config.debugOutFiles }
+        : {}
+    ),
     smartStep: true,
     ...(config.shellType === 'terminal'
       ? {

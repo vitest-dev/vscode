@@ -63,9 +63,12 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const cliArguments = get<string | undefined>('cliArguments')
 
+  const debugOutFiles = get<string[]>('debugOutFiles', [])
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
-    debugExclude: get<string[]>('debugExclude', []),
+    debugExclude: get<string[]>('debugExclude'),
+    debugOutFiles,
     filesWatcherInclude,
     terminalShellArgs,
     terminalShellPath,
