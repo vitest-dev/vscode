@@ -81,6 +81,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 - `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
+- `vitest.debugSecondaryLaunchConfigName`: The name of the VS Code [launch configuration](https://code.visualstudio.com/docs/editor/debugging-configuration#_launch-versus-attach-configurations) to run after starting a test debug session but before running the tests. This is useful to support in-browser test scenarios, for example by specifying an 'attach' config. See [Browser mode debugging](https://vitest.dev/guide/debugging.html#browser-mode) in the Vitest docs for more information.
 
 > 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
 > The `vitest.terminalShellPath` and `vitest.terminalShellArgs` settings are used as `shellPath` and `shellArgs` when creating a new [terminal](https://code.visualstudio.com/api/references/vscode-api#Terminal)
@@ -131,3 +132,7 @@ This is a vscode's built-in option and will control every plugin.
 ### I am using `vitest.shellType: terminal`, but I don't see the terminal
 
 The extension uses a modified Vitest script that removes the reporter output. For this reason, the terminal is hidden by default. However, it might be useful to debug issues with the extension or Vitest itself - to open the terminal in the "Terminals" view you can use the "Vitest: Show Shell Terminal" command.
+
+### How can I debug tests using the browser?
+
+You can configure a launch configuration to connect the VS Code debugger to the browser launched by Vitest using the `vitest.debugSecondaryLaunchConfigName` setting. See [the samples](./samples/browser-headed/) for an example.

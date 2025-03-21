@@ -1,0 +1,11 @@
+{
+  "vitest.nodeEnv": {
+    "TEST_CUSTOM_ENV": "hello"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  // See launch.json
+  "vitest.debugSecondaryLaunchConfigName": "vitest:test-explorer:attach",
+  "vitest.cliArguments": "--inspect-brk=localhost:30001"
+}

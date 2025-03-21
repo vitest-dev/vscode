@@ -125,6 +125,32 @@ export async function debugTests(
         await vscode.debug.stopDebugging(session)
       })
 
+      // Start secondary debug config before running test
+      // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
+      if (config.debugSecondaryLaunchConfigName) {
+        vscode.debug.startDebugging(
+          pkg.folder,
+          config.debugSecondaryLaunchConfigName,
+          session,
+        ).then(
+          (fulfilled) => {
+            if (fulfilled) {
+              log.info('[DEBUG] Secondary debug launch config started')
+            }
+            else {
+              log.error('[DEBUG] Secondary debug launch config failed')
+            }
+          }
+          ,
+          (err) => {
+            log.error('[DEBUG] Secondary debug launch config failed')
+            log.error(err.toString())
+            deferredPromise.reject(new Error('Failed to start secondary launch config', { cause: err }))
+          },
+        )
+      }
+
+
       await runner.runTests(request, token)
 
       deferredPromise.resolve()

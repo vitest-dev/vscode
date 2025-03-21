@@ -65,10 +65,13 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const debugOutFiles = get<string[]>('debugOutFiles', [])
 
+  const debugSecondaryLaunchConfigName = get<string | undefined>('debugSecondaryLaunchConfigName')
+
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugExclude: get<string[]>('debugExclude'),
     debugOutFiles,
+    debugSecondaryLaunchConfigName,
     filesWatcherInclude,
     terminalShellArgs,
     terminalShellPath,
