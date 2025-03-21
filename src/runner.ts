@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { rm } from 'node:fs/promises'
-import { stripVTControlCharacters } from 'node:util'
+import { inspect, stripVTControlCharacters } from 'node:util'
 import * as vscode from 'vscode'
 import { getTasks } from '@vitest/runner/utils'
 import type { ParsedStack, TaskResult, TestError } from 'vitest'
@@ -577,9 +577,9 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
 
   let testMessage
   if (error.actual != null && error.expected != null && error.actual !== 'undefined' && error.expected !== 'undefined')
-    testMessage = vscode.TestMessage.diff(stripVTControlCharacters(error.message) ?? '', error.expected, error.actual)
+    testMessage = vscode.TestMessage.diff(getErrorMessage(error), error.expected, error.actual)
   else
-    testMessage = new vscode.TestMessage(stripVTControlCharacters(error.message) ?? '')
+    testMessage = new vscode.TestMessage(getErrorMessage(error))
 
   setMessageStackFramesFromErrorStacks(testMessage, error.stacks)
 
@@ -589,6 +589,64 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
     testMessage.location = new vscode.Location(vscode.Uri.file(location.path), position)
   }
   return testMessage
+}
+
+function getErrorMessage(error: TestError) {
+  let message = stripVTControlCharacters(error.message ?? '')
+  if (typeof error.frame === 'string') {
+    message += `\n${error.frame}`
+  }
+  else {
+    const errorProperties = getErrorProperties(error)
+    if (Object.keys(errorProperties).length) {
+      const errorsInspect = inspect(errorProperties, {
+        showHidden: false,
+        colors: false,
+      })
+      message += `\nSerialized Error: ${errorsInspect.slice('[Object: null prototype] '.length)}`
+    }
+  }
+  return message
+}
+
+const skipErrorProperties = new Set([
+  'nameStr',
+  'stack',
+  'cause',
+  'stacks',
+  'stackStr',
+  'type',
+  'showDiff',
+  'ok',
+  'operator',
+  'diff',
+  'codeFrame',
+  'actual',
+  'expected',
+  'diffOptions',
+  'sourceURL',
+  'column',
+  'line',
+  'VITEST_TEST_NAME',
+  'VITEST_TEST_PATH',
+  'VITEST_AFTER_ENV_TEARDOWN',
+  ...Object.getOwnPropertyNames(Error.prototype),
+  ...Object.getOwnPropertyNames(Object.prototype),
+])
+
+function getErrorProperties(e: TestError) {
+  const errorObject = Object.create(null)
+  if (e.name === 'AssertionError') {
+    return errorObject
+  }
+
+  for (const key of Object.getOwnPropertyNames(e)) {
+    if (!skipErrorProperties.has(key)) {
+      errorObject[key] = e[key as keyof TestError]
+    }
+  }
+
+  return errorObject
 }
 
 export interface DebuggerLocation {
