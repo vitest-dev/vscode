@@ -83,6 +83,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
 
     function onError(error: Error) {
       reject(error)
+      log.error('Current PATH:', process.env.PATH)
     }
 
     vitest.on('exit', onExit)
