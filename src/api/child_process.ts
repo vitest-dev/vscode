@@ -6,7 +6,7 @@ import { createServer } from 'node:http'
 import getPort from 'get-port'
 import type WebSocket from 'ws'
 import { WebSocketServer } from 'ws'
-import { formatPkg, showVitestError } from '../utils'
+import { findNode, formatPkg, showVitestError } from '../utils'
 import { createErrorLogger, log } from '../log'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
@@ -32,14 +32,15 @@ export async function createVitestProcess(pkg: VitestPackage) {
       ]
     : runtimeArgs
   const arvString = execArgv.join(' ')
-  const script = `node ${arvString ? `${arvString} ` : ''}${workerPath}`.trim()
+  const executable = await findNode(pkg.cwd)
+  const script = `${executable} ${arvString ? `${arvString} ` : ''}${workerPath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = getConfig(pkg.folder).logLevel
   const port = await getPort()
   const server = createServer().listen(port).unref()
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
-  const vitest = spawn(getConfig(pkg.folder).nodeExecutable || 'node', [...execArgv, workerPath], {
+  const vitest = spawn(executable, [...execArgv, workerPath], {
     env: {
       ...process.env,
       ...env,
