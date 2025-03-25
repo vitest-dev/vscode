@@ -170,8 +170,14 @@ export async function debugTests(
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
-    if (session.configuration.__name !== 'Vitest')
+    // Child/secondary debug session should stop the main debugging session
+    if (session.parentSession?.configuration.__name === 'Vitest') {
+      vscode.debug.stopDebugging(session.parentSession)
       return
+    }
+    else if (session.configuration.__name !== 'Vitest') {
+      return
+    }
     disposables.reverse().forEach(d => d.dispose())
     server.close()
   })
