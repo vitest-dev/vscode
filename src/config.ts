@@ -62,6 +62,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const experimentalStaticAstCollect = get<boolean>('experimentalStaticAstCollect', false)!
 
   const cliArguments = get<string | undefined>('cliArguments')
+  const cliArgumentsDebug = get<string | undefined>('cliArgumentsDebug')
 
   const debugOutFiles = get<string[]>('debugOutFiles', [])
 
@@ -77,6 +78,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     terminalShellPath,
     shellType,
     cliArguments,
+    cliArgumentsDebug,
     nodeExecArgs,
     experimentalStaticAstCollect,
     vitestPackagePath: resolvedVitestPackagePath,

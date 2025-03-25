@@ -23,6 +23,7 @@ export interface VitestPackage {
   cwd: string
   version: string
   arguments?: string
+  debugArguments?: string
   configFile?: string
   workspaceFile?: string
   loader?: string

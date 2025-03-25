@@ -7,5 +7,6 @@
   },
   // See launch.json
   "vitest.debugSecondaryLaunchConfigName": "vitest:test-explorer:attach",
-  "vitest.cliArguments": "--inspect-brk=localhost:30001"
+  "vitest.cliArguments": "",
+  "vitest.cliArgumentsDebug": "--inspect-brk=localhost:30001 --browser --no-file-parallelism"
 }

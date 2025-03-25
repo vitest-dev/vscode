@@ -150,7 +150,6 @@ export async function debugTests(
         )
       }
 
-
       await runner.runTests(request, token)
 
       deferredPromise.resolve()

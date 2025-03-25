@@ -37,6 +37,7 @@ export function waitForWsConnection(
           })
           resolve({
             rpc: api,
+            debug,
             workspaceSource: message.workspaceSource,
             handlers: {
               ...handlers,
@@ -89,7 +90,7 @@ export function waitForWsConnection(
           env: getConfig(pkg.folder).env || undefined,
           configFile: pkg.configFile,
           cwd: pkg.cwd,
-          arguments: pkg.arguments,
+          arguments: debug ? pkg.debugArguments : pkg.arguments,
           workspaceFile: pkg.workspaceFile,
           id: pkg.id,
           pnpApi: pnp,

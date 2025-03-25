@@ -239,6 +239,11 @@
           "markdownDescription": "Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
           "type": "string",
           "scope": "resource"
+        },
+        "vitest.cliArgumentsDebug": {
+          "markdownDescription": "Additional arguments to pass to the Vitest CLI when debugging. If not specified, falls back to `#vitest.cliArguments#`. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }

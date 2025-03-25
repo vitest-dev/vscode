@@ -361,6 +361,9 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
   if (config.cliArguments && !pkg.arguments) {
     pkg.arguments = `vitest ${config.cliArguments}`
   }
+  if (!pkg.debugArguments) {
+    pkg.debugArguments = `vitest ${config.cliArgumentsDebug ?? config.cliArguments}`
+  }
   const vitest = config.shellType === 'terminal'
     ? await createVitestTerminalProcess(pkg)
     : await createVitestProcess(pkg)
@@ -374,6 +377,7 @@ export interface ResolvedMeta {
   rpc: VitestRPC
   process: ExtensionWorkerProcess
   workspaceSource: string | false
+  debug: boolean
   pkg: VitestPackage
   configs: string[]
   handlers: {
