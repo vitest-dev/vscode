@@ -81,6 +81,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 - `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
+- `vitest.cliArgumentsDebug`: Additional arguments to pass to the Vitest CLI when debugging. Will fall back to `vitest.cliArguments` if not specified. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
 - `vitest.debugSecondaryLaunchConfigName`: The name of the VS Code [launch configuration](https://code.visualstudio.com/docs/editor/debugging-configuration#_launch-versus-attach-configurations) to run after starting a test debug session but before running the tests. This is useful to support in-browser test scenarios, for example by specifying an 'attach' config. See [Browser mode debugging](https://vitest.dev/guide/debugging.html#browser-mode) in the Vitest docs for more information.
 
 > 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).

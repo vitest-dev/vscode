@@ -4,5 +4,8 @@
   },
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  }
+  },
+  // See launch.json
+  "vitest.debugSecondaryLaunchConfigName": "vitest:test-explorer:attach",
+  "vitest.cliArgumentsDebug": "--inspect-brk=localhost:30001 --browser --no-file-parallelism"
 }
