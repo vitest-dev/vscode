@@ -364,6 +364,15 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
   const vitest = config.shellType === 'terminal'
     ? await createVitestTerminalProcess(pkg)
     : await createVitestProcess(pkg)
+
+  pkg.resolvedBrowserOptions = await vitest.rpc.getResolvedBrowserOptions()
+  if (!pkg.argumentsForBrowserAttach) {
+    const inspectBrk = pkg.resolvedBrowserOptions?.provider === 'playwright' ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
+    const browser = pkg.resolvedBrowserOptions?.provider === 'playwright' ? 'chromium' : 'chrome'
+    // regardless of user config, some properties need to be set when debugging with browser mode enabled
+    pkg.argumentsForBrowserAttach = `${pkg.arguments ?? 'vitest'} ${inspectBrk} --browser=${browser} ${pkg.arguments ? '' : (config.cliArguments ?? '')}`
+  }
+
   vitest.configs.forEach((config) => {
     usedConfigs.add(config)
   })

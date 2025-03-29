@@ -1,6 +1,7 @@
 import v8 from 'node:v8'
 import { type BirpcReturn, createBirpc } from 'birpc'
 import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { ResolvedBrowserOptions } from 'vitest/dist/node.js'
 
 export type SerializedTestSpecification = [
   project: { name: string | undefined },
@@ -23,6 +24,8 @@ export interface ExtensionWorkerTransport {
   disableCoverage: () => void
   waitForCoverageReport: () => Promise<string | null>
   close: () => void
+
+  getResolvedBrowserOptions: () => ResolvedBrowserOptions | undefined
 
   onFilesCreated: (files: string[]) => void
   onFilesChanged: (files: string[]) => void
