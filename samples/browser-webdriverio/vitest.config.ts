@@ -4,6 +4,13 @@
 // Configure Vitest (https://vitest.dev/config)
 
 import { defineConfig } from "vitest/config";
+import { BrowserCommand } from "vitest/node";
+
+export const debugCommand: BrowserCommand<[]> = async (context) => {
+  if (context.provider.name === "webdriverio") {
+    await context.browser.debug();
+  }
+};
 
 export default defineConfig({
   esbuild: {
@@ -14,16 +21,16 @@ export default defineConfig({
     exclude: ["test/ignored.test.ts"],
     browser: {
       enabled: true,
-      headless: true,
       provider: "webdriverio",
+      commands: { debugCommand },
       instances: [
         {
           browser: "chrome",
-          providerOptions: {
-            capabilities: {
-              browserName: "chrome",
-              browserVersion: "latest",
-              platformName: "macOS 11.00",
+          capabilities: {
+            "goog:chromeOptions": {
+              args: [
+                "--remote-debugging-port=9224"
+              ],
             },
           },
         },

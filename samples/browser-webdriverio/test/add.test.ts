@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { add, sum } from '../src/add'
+import { debugCommand } from '../vitest.config'
+import { commands } from '@vitest/browser/context'
 
 describe('addition', () => {
-  it('add', () => {
+  it('add', async () => {
+    commands.debugCommand();
     expect(add(1, 1)).toBe(2)
   })
 

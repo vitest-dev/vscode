@@ -147,7 +147,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   public getResolvedBrowserOptions(): ResolvedBrowserOptions | undefined {
-    return this.ctx.config?.browser
+    return { ...this.ctx.config?.browser, commands: undefined }
   }
 
   private async globTestFiles(filters?: string[]) {

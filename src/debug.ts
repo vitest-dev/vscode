@@ -107,7 +107,7 @@ export async function debugTests(
     }
     let metadata!: WsConnectionMetadata
 
-    const needsAttach = !!pkg.resolvedBrowserOptions?.enabled && pkg.resolvedBrowserOptions.provider === 'playwright'
+    const needsAttach = !!pkg.resolvedBrowserOptions?.enabled
 
     try {
       metadata = await waitForWsConnection(wss, pkg, true, needsAttach, config.shellType)
