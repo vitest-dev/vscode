@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
+import type { ResolvedBrowserOptions, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import { relative } from 'pathe'
 import mm from 'micromatch'
 import type { ExtensionWorkerTransport, SerializedTestSpecification } from '../api/rpc'
@@ -144,6 +144,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     })
     const files = await this.globTestFiles()
     return files.map(([project, spec]) => [project.config.name || '', spec])
+  }
+
+  public getResolvedBrowserOptions(): ResolvedBrowserOptions | undefined {
+    return this.ctx.config?.browser
   }
 
   private async globTestFiles(filters?: string[]) {

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import * as vscode from 'vscode'
 import { basename, dirname, normalize, resolve } from 'pathe'
 import { gte } from 'semver'
+import type { ResolvedBrowserOptions } from 'vitest/dist/node.js'
 import { log } from '../log'
 import { configGlob, minimumVersion, workspaceGlob } from '../constants'
 import { getConfig } from '../config'
@@ -23,7 +24,8 @@ export interface VitestPackage {
   cwd: string
   version: string
   arguments?: string
-  debugArguments?: string
+  argumentsForBrowserAttach?: string
+  resolvedBrowserOptions?: ResolvedBrowserOptions
   configFile?: string
   workspaceFile?: string
   loader?: string

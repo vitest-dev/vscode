@@ -3,6 +3,6 @@
     "TEST_CUSTOM_ENV": "hello"
   },
   "[typescript]": {
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
 }

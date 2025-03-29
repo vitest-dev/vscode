@@ -89,7 +89,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
     vitest.on('exit', onExit)
     vitest.on('error', onError)
 
-    waitForWsConnection(wss, pkg, false, 'child_process')
+    waitForWsConnection(wss, pkg, false, false, 'child_process')
       .then((resolved) => {
         resolved.handlers.onStdout = (callback: (data: string) => void) => {
           stdoutCallbacks.add(callback)

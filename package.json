@@ -184,11 +184,6 @@
           "type": "array",
           "scope": "resource"
         },
-        "vitest.debugSecondaryLaunchConfigName": {
-          "markdownDescription": "The name of the VS Code [launch configuration](https://code.visualstudio.com/docs/editor/debugging-configuration#_launch-versus-attach-configurations) to run after starting a test debug session but before running the tests. This is useful to support in-browser test scenarios, for example by specifying an 'attach' config. See [Browser mode debugging](https://vitest.dev/guide/debugging.html#browser-mode) in the Vitest docs for more information.",
-          "type": "string",
-          "scope": "resource"
-        },
         "vitest.nodeEnv": {
           "markdownDescription": "The env passed to runner process in addition to `process.env`",
           "type": [
@@ -237,11 +232,6 @@
         },
         "vitest.cliArguments": {
           "markdownDescription": "Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
-          "type": "string",
-          "scope": "resource"
-        },
-        "vitest.cliArgumentsDebug": {
-          "markdownDescription": "Additional arguments to pass to the Vitest CLI when debugging. If not specified, falls back to `#vitest.cliArguments#`. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
           "type": "string",
           "scope": "resource"
         }

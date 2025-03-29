@@ -1,0 +1,1 @@
+Debugging with the VS Code test explorer is currently only supported when using Playwright with Chromium.

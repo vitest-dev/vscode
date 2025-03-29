@@ -26,6 +26,26 @@
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
+      "name": "Run Extension Browser (multiple instances) Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/browser-multiple"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
+      "name": "Run Extension Browser (webdriverio) Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/browser-webdriverio"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
       "name": "Run Extension Continuous Sample",
       "type": "extensionHost",
       "request": "launch",

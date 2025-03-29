@@ -39,7 +39,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   log.info('[API]', `Initiated ws connection via ${wsAddress}`)
   log.info('[API]', `Starting ${formatPkg(pkg)} in the terminal: ${command}`)
   terminal.sendText(command, true)
-  const meta = await waitForWsConnection(wss, pkg, false, 'terminal')
+  const meta = await waitForWsConnection(wss, pkg, false, false, 'terminal')
   const processId = (await terminal.processId) ?? Math.random()
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)
   const vitestProcess = new ExtensionTerminalProcess(

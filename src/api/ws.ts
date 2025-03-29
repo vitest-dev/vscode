@@ -16,6 +16,7 @@ export function waitForWsConnection(
   wss: WebSocketServer,
   pkg: VitestPackage,
   debug: boolean,
+  browserAttach: boolean,
   shellType: 'terminal' | 'child_process',
 ) {
   return new Promise<WsConnectionMetadata>((resolve, reject) => {
@@ -37,7 +38,6 @@ export function waitForWsConnection(
           })
           resolve({
             rpc: api,
-            debug,
             workspaceSource: message.workspaceSource,
             handlers: {
               ...handlers,
@@ -90,7 +90,7 @@ export function waitForWsConnection(
           env: getConfig(pkg.folder).env || undefined,
           configFile: pkg.configFile,
           cwd: pkg.cwd,
-          arguments: debug ? pkg.debugArguments : pkg.arguments,
+          arguments: browserAttach ? pkg.argumentsForBrowserAttach : pkg.arguments,
           workspaceFile: pkg.workspaceFile,
           id: pkg.id,
           pnpApi: pnp,

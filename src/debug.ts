@@ -107,8 +107,10 @@ export async function debugTests(
     }
     let metadata!: WsConnectionMetadata
 
+    const needsAttach = !!pkg.resolvedBrowserOptions?.enabled && pkg.resolvedBrowserOptions.provider === 'playwright'
+
     try {
-      metadata = await waitForWsConnection(wss, pkg, true, config.shellType)
+      metadata = await waitForWsConnection(wss, pkg, true, needsAttach, config.shellType)
       const api = new VitestFolderAPI(pkg, {
         ...metadata,
         process: new ExtensionDebugProcess(session, metadata.ws),
@@ -125,12 +127,13 @@ export async function debugTests(
         await vscode.debug.stopDebugging(session)
       })
 
-      // Start secondary debug config before running test
-      // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
-      if (config.debugSecondaryLaunchConfigName) {
+      if (needsAttach) {
+        const attachConfig = getAttachConfigForBrowser(config, pkg)
+        // Start secondary debug config before running test
+        // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
         vscode.debug.startDebugging(
           pkg.folder,
-          config.debugSecondaryLaunchConfigName,
+          attachConfig,
           session,
         ).then(
           (fulfilled) => {
@@ -211,6 +214,24 @@ async function getRuntimeOptions(pkg: VitestPackage) {
   return {
     runtimeExecutable: 'node',
     runtimeArgs: execArgv,
+  }
+}
+
+function getAttachConfigForBrowser(config: ReturnType<typeof getConfig>, pkg: VitestPackage): vscode.DebugConfiguration {
+  return {
+    __name: 'Vitest_Attach',
+    request: 'attach',
+    name: 'Debug Tests (Browser)',
+    port: config.debuggerPort ?? '9229',
+    skipFiles: config.debugExclude,
+    ...(
+      config.debugOutFiles?.length
+        ? { outFiles: config.debugOutFiles }
+        : {}
+    ),
+    smartStep: true,
+    cwd: pkg.cwd,
+    type: 'chrome',
   }
 }
 
