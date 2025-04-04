@@ -76,6 +76,22 @@ export async function debugTests(
     },
   }
 
+  const browserModeAttachConfig = {
+    __name: 'Vitest_Attach',
+    request: 'attach',
+    name: 'Debug Tests (Browser)',
+    port: config.debuggerPort ?? '9229',
+    skipFiles: config.debugExclude,
+    ...(
+      config.debugOutFiles?.length
+        ? { outFiles: config.debugOutFiles }
+        : {}
+    ),
+    smartStep: true,
+    cwd: pkg.cwd,
+    type: 'chrome',
+  }
+
   vscode.debug.startDebugging(
     pkg.folder,
     debugConfig,
@@ -108,8 +124,10 @@ export async function debugTests(
     }
     let metadata!: WsConnectionMetadata
 
+    const needsAttach = !!pkg.resolvedBrowserOptions?.enabled
+
     try {
-      metadata = await waitForWsConnection(wss, pkg, true, config.shellType)
+      metadata = await waitForWsConnection(wss, pkg, true, needsAttach, config.shellType)
       const api = new VitestFolderAPI(pkg, {
         ...metadata,
         process: new ExtensionDebugProcess(session, metadata.ws),
@@ -125,6 +143,31 @@ export async function debugTests(
         await metadata.rpc.close()
         await vscode.debug.stopDebugging(session)
       })
+
+      if (needsAttach) {
+        // Start secondary debug config before running test
+        // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
+        vscode.debug.startDebugging(
+          pkg.folder,
+          browserModeAttachConfig,
+          session,
+        ).then(
+          (fulfilled) => {
+            if (fulfilled) {
+              log.info('[DEBUG] Secondary debug launch config started')
+            }
+            else {
+              log.error('[DEBUG] Secondary debug launch config failed')
+            }
+          }
+          ,
+          (err) => {
+            log.error('[DEBUG] Secondary debug launch config failed')
+            log.error(err.toString())
+            deferredPromise.reject(new Error('Failed to start secondary launch config', { cause: err }))
+          },
+        )
+      }
 
       await runner.runTests(request, token)
 
@@ -146,8 +189,14 @@ export async function debugTests(
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
-    if (session.configuration.__name !== 'Vitest')
+    // Child/secondary debug session should stop the main debugging session
+    if (session.parentSession?.configuration.__name === 'Vitest') {
+      vscode.debug.stopDebugging(session.parentSession)
       return
+    }
+    else if (session.configuration.__name !== 'Vitest') {
+      return
+    }
     disposables.reverse().forEach(d => d.dispose())
     server.close()
   })

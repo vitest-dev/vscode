@@ -1,0 +1,9 @@
+{
+  "vitest.nodeEnv": {
+    "TEST_CUSTOM_ENV": "hello"
+  },
+  "vitest.debuggerPort": "9224",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+}
