@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { add, sum } from '../src/add'
-import { debugCommand } from '../vitest.config'
 import { commands } from '@vitest/browser/context'
+
+// Needed to enable and connect to debugger
+// See vitest.config.ts
+await commands.debugCommand();
 
 describe('addition', () => {
   it('add', async () => {
-    commands.debugCommand();
     expect(add(1, 1)).toBe(2)
   })
 
