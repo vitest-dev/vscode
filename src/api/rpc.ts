@@ -25,7 +25,7 @@ export interface ExtensionWorkerTransport {
   waitForCoverageReport: () => Promise<string | null>
   close: () => void
 
-  getResolvedBrowserOptions: () => ResolvedBrowserOptions | undefined
+  getBrowserDebugOptions: () => Pick<ResolvedBrowserOptions, 'enabled' | 'provider'> | undefined
 
   onFilesCreated: (files: string[]) => void
   onFilesChanged: (files: string[]) => void

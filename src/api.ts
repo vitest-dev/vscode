@@ -365,7 +365,7 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
     ? await createVitestTerminalProcess(pkg)
     : await createVitestProcess(pkg)
 
-  pkg.resolvedBrowserOptions = await vitest.rpc.getResolvedBrowserOptions()
+  pkg.resolvedBrowserOptions = await vitest.rpc.getBrowserDebugOptions()
   if (!pkg.argumentsForBrowserAttach) {
     const inspectBrk = pkg.resolvedBrowserOptions?.provider === 'playwright' ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
     const browser = pkg.resolvedBrowserOptions?.provider === 'playwright' ? 'chromium' : 'chrome'

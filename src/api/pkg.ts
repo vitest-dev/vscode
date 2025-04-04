@@ -25,7 +25,7 @@ export interface VitestPackage {
   version: string
   arguments?: string
   argumentsForBrowserAttach?: string
-  resolvedBrowserOptions?: ResolvedBrowserOptions
+  resolvedBrowserOptions?: Pick<ResolvedBrowserOptions, 'provider' | 'enabled'>
   configFile?: string
   workspaceFile?: string
   loader?: string

@@ -75,6 +75,22 @@ export async function debugTests(
     },
   }
 
+  const browserModeAttachConfig = {
+    __name: 'Vitest_Attach',
+    request: 'attach',
+    name: 'Debug Tests (Browser)',
+    port: config.debuggerPort ?? '9229',
+    skipFiles: config.debugExclude,
+    ...(
+      config.debugOutFiles?.length
+        ? { outFiles: config.debugOutFiles }
+        : {}
+    ),
+    smartStep: true,
+    cwd: pkg.cwd,
+    type: 'chrome',
+  }
+
   vscode.debug.startDebugging(
     pkg.folder,
     debugConfig,
@@ -128,12 +144,11 @@ export async function debugTests(
       })
 
       if (needsAttach) {
-        const attachConfig = getAttachConfigForBrowser(config, pkg)
         // Start secondary debug config before running test
         // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
         vscode.debug.startDebugging(
           pkg.folder,
-          attachConfig,
+          browserModeAttachConfig,
           session,
         ).then(
           (fulfilled) => {
@@ -214,24 +229,6 @@ async function getRuntimeOptions(pkg: VitestPackage) {
   return {
     runtimeExecutable: 'node',
     runtimeArgs: execArgv,
-  }
-}
-
-function getAttachConfigForBrowser(config: ReturnType<typeof getConfig>, pkg: VitestPackage): vscode.DebugConfiguration {
-  return {
-    __name: 'Vitest_Attach',
-    request: 'attach',
-    name: 'Debug Tests (Browser)',
-    port: config.debuggerPort ?? '9229',
-    skipFiles: config.debugExclude,
-    ...(
-      config.debugOutFiles?.length
-        ? { outFiles: config.debugOutFiles }
-        : {}
-    ),
-    smartStep: true,
-    cwd: pkg.cwd,
-    type: 'chrome',
   }
 }
 
