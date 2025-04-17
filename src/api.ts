@@ -205,6 +205,18 @@ export class VitestFolderAPI {
     await this.meta.rpc.unwatchTests()
   }
 
+  async getBrowserModeInfo() {
+    const resolvedBrowserOptions = await this.meta.rpc.getBrowserDebugOptions()
+    // Only playwright provider supports --inspect-brk currently
+    const isPlaywright = resolvedBrowserOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
+    const browserModeProjects = resolvedBrowserOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
+
+    return {
+      browserModeProjects,
+      isPlaywright,
+    }
+  }
+
   onConsoleLog = this.createHandler('onConsoleLog')
   onTaskUpdate = this.createHandler('onTaskUpdate')
   onFinished = this.createHandler('onFinished')
