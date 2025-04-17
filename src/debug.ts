@@ -78,27 +78,12 @@ export async function debugTests(
     },
   }
 
-  const browserModeAttachConfig = {
-    __name: 'Vitest_Attach',
-    request: 'attach',
-    name: 'Debug Tests (Browser)',
-    port: config.debuggerPort ?? '9229',
-    skipFiles: config.debugExclude,
-    ...(
-      config.debugOutFiles?.length
-        ? { outFiles: config.debugOutFiles }
-        : {}
-    ),
-    smartStep: true,
-    cwd: pkg.cwd,
-    type: 'chrome',
-  }
-  const { browser, browserModeProjects, isPlaywright } = await api.getBrowserModeInfo()
-  const directlyIncluded = request.include?.filter(inc => inc.uri?.fsPath != null).flatMap(inc => getTestProjectsInFolder(inc.uri!.fsPath, api, tree))
-  const testProjects = (directlyIncluded?.length ? directlyIncluded : request.include?.flatMap(inc => getProjectFromParent(inc, api, tree))) ?? []
-  // Get project metadata, determine if browser mode is needed
-  const selectedProjects = Array.from(new Set(testProjects.filter(item => item != null)))
-  const needsBrowserMode = !!browserModeProjects?.length && selectedProjects.some(project => browserModeProjects?.includes(project))
+  // If the debug request includes any test files belonging the browser-mode projects,
+  // vitest needs to be started with the correct --inspect-brk and --browser arguments.
+  // Later, after debugging session starts, a secondary debug session is started; that session attaches to the launched browser instance.
+  const { browserModeProjects, isPlaywright } = await api.getBrowserModeInfo()
+  const testProjects = request.include?.filter(inc => inc.uri?.fsPath != null).flatMap(inc => getProjectsFromTests(inc, api, tree)) ?? []
+  const needsBrowserMode = !!browserModeProjects?.length && testProjects.some(project => browserModeProjects?.includes(project))
 
   vscode.debug.startDebugging(
     pkg.folder,
@@ -133,7 +118,7 @@ export async function debugTests(
     let metadata!: WsConnectionMetadata
 
     try {
-      const browserModeLaunchArgs = needsBrowserMode ? getBrowserModeLaunchArgs(browser, isPlaywright, config) : undefined
+      const browserModeLaunchArgs = needsBrowserMode ? getBrowserModeLaunchArgs(isPlaywright, config) : undefined
       metadata = await waitForWsConnection(wss, pkg, true, config.shellType, browserModeLaunchArgs)
       const api = new VitestFolderAPI(pkg, {
         ...metadata,
@@ -152,6 +137,21 @@ export async function debugTests(
       })
 
       if (needsBrowserMode) {
+        const browserModeAttachConfig = {
+          __name: 'Vitest_Attach',
+          request: 'attach',
+          name: 'Debug Tests (Browser)',
+          port: config.debuggerPort ?? '9229',
+          skipFiles: config.debugExclude,
+          ...(
+            config.debugOutFiles?.length
+              ? { outFiles: config.debugOutFiles }
+              : {}
+          ),
+          smartStep: true,
+          cwd: pkg.cwd,
+          type: 'chrome',
+        }
         // Start secondary debug config before running test
         // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
         vscode.debug.startDebugging(
@@ -219,19 +219,20 @@ function getTestProjectsInFolder(path: string, api: VitestFolderAPI, tree: TestT
   return items.map(item => (getTestData(item) as TestFile).project)
 }
 
-function getProjectFromParent(item: vscode.TestItem | undefined, api: VitestFolderAPI, tree: TestTree): string[] {
+function getProjectsFromTests(item: vscode.TestItem | undefined, api: VitestFolderAPI, tree: TestTree): string[] {
+  const items = getTestProjectsInFolder(item?.uri?.fsPath ?? '', api, tree)
+  if (items.length > 0) {
+    return items
+  }
   // Climb up tree until entry with project is found
   if (item?.parent) {
-    const projects = getTestProjectsInFolder(item.parent.uri?.fsPath ?? '', api, tree)
-    if (projects.length) {
-      return projects
-    }
-    return getProjectFromParent(item.parent, api, tree)
+    return getProjectsFromTests(item.parent, api, tree)
   }
   return []
 }
 
-function getBrowserModeLaunchArgs(browser: string, isPlaywright: boolean, config: any): string {
+function getBrowserModeLaunchArgs(isPlaywright: boolean, config: any): string {
+  const browser = isPlaywright ? 'chromium' : 'chrome'
   // Only playwright provider supports --inspect-brk currently
   const inspectBrk = isPlaywright ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
   // regardless of user config, some properties need to be set when debugging with browser mode enabled

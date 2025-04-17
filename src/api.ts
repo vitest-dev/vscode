@@ -210,12 +210,10 @@ export class VitestFolderAPI {
     // Only playwright provider supports --inspect-brk currently
     const isPlaywright = resolvedBrowserOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
     const browserModeProjects = resolvedBrowserOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
-    const browser = isPlaywright ? 'chromium' : 'chrome'
 
     return {
       browserModeProjects,
       isPlaywright,
-      browser,
     }
   }
 
@@ -378,7 +376,6 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
   const vitest = config.shellType === 'terminal'
     ? await createVitestTerminalProcess(pkg)
     : await createVitestProcess(pkg)
-
   vitest.configs.forEach((config) => {
     usedConfigs.add(config)
   })
