@@ -35,9 +35,12 @@ export default defineConfig({
         {
           browser: "chrome",
           capabilities: {
+            browserName: 'chrome',
+            browserVersion: 'stable',
             "goog:chromeOptions": {
               args: [
-                "--remote-debugging-port=9224"
+                // Note: needs to be commented out to enable running without debug
+                "--remote-debugging-port=9227"
               ],
             },
           },
