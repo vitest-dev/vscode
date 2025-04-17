@@ -16,6 +16,7 @@ import { waitForWsConnection } from './api/ws'
 import type { ExtensionWorkerProcess } from './api/types'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
+import { findNode } from './utils'
 
 export async function debugTests(
   controller: vscode.TestController,
@@ -255,8 +256,9 @@ async function getRuntimeOptions(pkg: VitestPackage) {
       ]
     : runtimeArgs
   if (config.shellType === 'child_process') {
+    const executable = await findNode(pkg.cwd)
     return {
-      runtimeExecutable: config.nodeExecutable || 'node',
+      runtimeExecutable: executable,
       runtimeArgs: execArgv,
     }
   }
@@ -280,17 +282,18 @@ class ExtensionDebugProcess implements ExtensionWorkerProcess {
     this._stopped = new Promise((resolve) => {
       const { dispose } = vscode.debug.onDidTerminateDebugSession((terminatedSession) => {
         if (session === terminatedSession) {
-          dispose()
-          resolve()
           this._onDidExit.fire()
           this._onDidExit.dispose()
           this.closed = true
+          resolve()
+          dispose()
         }
       })
     })
     // if websocket connection stopped working, close the debug session
-    // otherwise it might hand indefinitely
+    // otherwise it might hang indefinitely
     ws.on('close', () => {
+      this.closed = true
       this.close()
     })
   }
