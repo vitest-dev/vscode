@@ -260,7 +260,6 @@ class VitestExtension {
       'vitest.filesWatcherInclude',
       'vitest.experimentalStaticAstCollect',
       'vitest.cliArguments',
-      'vitest.cliArgumentsDebug',
     ]
 
     this.disposables = [
