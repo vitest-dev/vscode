@@ -205,6 +205,20 @@ export class VitestFolderAPI {
     await this.meta.rpc.unwatchTests()
   }
 
+  async getBrowserModeInfo() {
+    const resolvedBrowserOptions = await this.meta.rpc.getBrowserDebugOptions()
+    // Only playwright provider supports --inspect-brk currently
+    const isPlaywright = resolvedBrowserOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
+    const browserModeProjects = resolvedBrowserOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
+    const browser = isPlaywright ? 'chromium' : 'chrome'
+
+    return {
+      browserModeProjects,
+      isPlaywright,
+      browser,
+    }
+  }
+
   onConsoleLog = this.createHandler('onConsoleLog')
   onTaskUpdate = this.createHandler('onTaskUpdate')
   onFinished = this.createHandler('onFinished')
@@ -364,17 +378,6 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
   const vitest = config.shellType === 'terminal'
     ? await createVitestTerminalProcess(pkg)
     : await createVitestProcess(pkg)
-
-  pkg.resolvedBrowserOptions = await vitest.rpc.getBrowserDebugOptions()
-  if (!pkg.argumentsForBrowserAttach) {
-    const provider = pkg.resolvedBrowserOptions?.provider
-    // Only playwright provider supports --inspect-brk currently
-    const isPlaywright = provider === 'playwright'
-    const inspectBrk = isPlaywright ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
-    const browser = isPlaywright ? 'chromium' : 'chrome'
-    // regardless of user config, some properties need to be set when debugging with browser mode enabled
-    pkg.argumentsForBrowserAttach = `${pkg.arguments ?? 'vitest'} ${inspectBrk} --browser=${browser} ${pkg.arguments ? '' : (config.cliArguments ?? '')}`
-  }
 
   vitest.configs.forEach((config) => {
     usedConfigs.add(config)

@@ -146,8 +146,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return files.map(([project, spec]) => [project.config.name || '', spec])
   }
 
-  public getBrowserDebugOptions(): Pick<ResolvedBrowserOptions, 'enabled' | 'provider'> | undefined {
-    return { enabled: this.ctx.config?.browser.enabled, provider: this.ctx.config?.browser.provider }
+  public getBrowserDebugOptions(): (Pick<ResolvedBrowserOptions, 'enabled' | 'provider'> & { project: string })[] | undefined {
+    return this.ctx.projects.map((project) => {
+      return { enabled: project.config?.browser.enabled, provider: project.config?.browser.provider, project: project.getName() }
+    })
   }
 
   private async globTestFiles(filters?: string[]) {
