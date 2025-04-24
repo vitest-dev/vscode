@@ -260,7 +260,18 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
     log.info('[API]', `Resolving workspace configs: ${workspaceConfigs.map(p => relative(p.folder.uri.fsPath, p.id)).join(', ')}`)
   }
 
-  const apis = await Promise.all(workspacePromises)
+  const resolvedApisPromises = await Promise.allSettled(workspacePromises)
+  const errors: unknown[] = []
+  const apis: VitestFolderAPI[] = []
+  for (const api of resolvedApisPromises) {
+    if (api.status === 'fulfilled') {
+      apis.push(api.value)
+    }
+    else {
+      errors.push(api.reason)
+    }
+  }
+
   const configsToResolve = configs.filter((pkg) => {
     return !pkg.configFile || pkg.workspaceFile || !usedConfigs.has(pkg.configFile)
   }).sort((a, b) => {
@@ -302,11 +313,25 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
       break
     }
 
-    const api = await createVitestFolderAPI(usedConfigs, pkg)
-    apis.push(api)
-    if (api.workspaceSource) {
-      workspaceRoots.push(dirname(api.workspaceSource))
+    try {
+      const api = await createVitestFolderAPI(usedConfigs, pkg)
+      apis.push(api)
+      if (api.workspaceSource) {
+        workspaceRoots.push(dirname(api.workspaceSource))
+      }
     }
+    catch (err: unknown) {
+      errors.push(err)
+    }
+  }
+
+  if (!apis.length) {
+    throw new AggregateError(errors, 'The extension could not load some configs.')
+  }
+  else if (errors.length) {
+    log.error('There were errors during config load.')
+    log.error(errors)
+    showVitestError('The extension could not load some configs')
   }
 
   return new VitestAPI(apis)
