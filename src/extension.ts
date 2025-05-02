@@ -185,6 +185,7 @@ class VitestExtension {
           this.testController,
           this.testTree,
           api.package,
+          this.diagnostic,
 
           request,
           token,
