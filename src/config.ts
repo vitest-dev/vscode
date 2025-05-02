@@ -64,6 +64,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const cliArguments = get<string | undefined>('cliArguments')
 
   const debugOutFiles = get<string[]>('debugOutFiles', [])
+  const applyDiagnostic = get<boolean>('applyDiagnostic', true)
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
@@ -73,6 +74,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     terminalShellArgs,
     terminalShellPath,
     shellType,
+    applyDiagnostic,
     cliArguments,
     nodeExecArgs,
     experimentalStaticAstCollect,

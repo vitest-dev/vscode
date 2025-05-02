@@ -13,6 +13,7 @@ import { showVitestError } from './utils'
 import { coverageContext, readCoverageReport } from './coverage'
 import { normalizeDriveLetter } from './worker/utils'
 import type { SerializedTestSpecification } from './api/rpc'
+import type { ExtensionDiagnostic } from './diagnostic'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -32,6 +33,7 @@ export class TestRunner extends vscode.Disposable {
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
+    private readonly diagnostic: ExtensionDiagnostic | undefined,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
@@ -56,6 +58,10 @@ export class TestRunner extends vscode.Disposable {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
       }
       else {
+        files.forEach((file) => {
+          const uri = vscode.Uri.file(file)
+          this.diagnostic?.deleteDiagnostic(uri)
+        })
         log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
         this.startTestRun(files)
       }
@@ -121,6 +127,7 @@ export class TestRunner extends vscode.Disposable {
 
     api.onFinished(async (files = [], unhandledError, collecting) => {
       const testRun = this.testRun
+
       if (!testRun) {
         log.verbose?.('No test run to finish for', files.map(f => this.relative(f.filepath)).join(', '))
         if (!files.length) {
@@ -503,6 +510,9 @@ export class TestRunner extends vscode.Disposable {
         if (!errors.length) {
           log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
           return
+        }
+        if (test.uri) {
+          this.diagnostic?.addDiagnostic(test.uri, errors)
         }
         log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         testRun.failed(test, errors, result.duration)
