@@ -15,11 +15,13 @@ import type { WsConnectionMetadata } from './api/ws'
 import { waitForWsConnection } from './api/ws'
 import type { ExtensionWorkerProcess } from './api/types'
 import { findNode } from './utils'
+import type { ExtensionDiagnostic } from './diagnostic'
 
 export async function debugTests(
   controller: vscode.TestController,
   tree: TestTree,
   pkg: VitestPackage,
+  diagnostic: ExtensionDiagnostic | undefined,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
@@ -118,6 +120,7 @@ export async function debugTests(
         controller,
         tree,
         api,
+        diagnostic,
       )
       disposables.push(api, runner)
 
