@@ -181,7 +181,7 @@ class VitestExtension {
         await debugTests(
           this.testController,
           this.testTree,
-          api.package,
+          api,
 
           request,
           token,
