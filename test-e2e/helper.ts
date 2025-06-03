@@ -13,7 +13,6 @@ import { VSCodeTester } from './tester'
 interface Context {
   page: Page
   tester: VSCodeTester
-
 }
 
 type LaunchFixture = (options: {

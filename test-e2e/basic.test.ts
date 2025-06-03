@@ -198,6 +198,67 @@ test('watcher updates the file if there are several config files', async ({ laun
   })
 })
 
+test('ast collector keeps the pattern on rerun', async ({ launch }) => {
+  const sample = 'samples/ast-collector'
+
+  const { tester } = await launch({
+    workspacePath: sample,
+  })
+
+  await tester.tree.expand('test/each.test.ts/testing')
+  // dynamic tests have a "pattern" label
+  await tester.tree.expand('test/each.test.ts/pattern')
+
+  const item = tester.tree.getFileItem('each.test.ts')
+
+  await expect(item).toHaveTests({
+    'testing': {
+      // all pass: %i => %i
+      'pattern|3': 'waiting',
+      // table1: returns $expected when $a is added $b
+      'pattern|4': 'waiting',
+    },
+    // testing %s
+    'pattern|5': {
+      'hello world': 'waiting',
+      // testing %s and %s
+      'pattern|7': 'waiting',
+    },
+  })
+
+  await tester.runAllTests()
+
+  await tester.tree.expand('test/each.test.ts/testing 1')
+  await tester.tree.expand('test/each.test.ts/testing 2')
+
+  await expect(item).toHaveTests({
+    'testing|2': {
+      // all pass: %i => %i
+      'pattern|3': 'waiting',
+      'all pass: 1 => 1': 'passed',
+      'all pass: 2 => 2': 'passed',
+      // table1: returns $expected when $a is added $b
+      'pattern|6': 'waiting',
+      'table1: returns 2 when 1 is added 1': 'passed',
+      'table1: returns \'ab\' when \'a\' is added \'b\'': 'passed',
+    },
+    // testing %s
+    'pattern|9': 'waiting',
+    'testing 1': {
+      'hello world|11': 'passed',
+      'pattern|12': 'waiting',
+      'testing test 3|13': 'passed',
+      'testing test 4|14': 'passed',
+    },
+    'testing 2': {
+      'hello world|16': 'passed',
+      'pattern|17': 'waiting',
+      'testing test 3|18': 'passed',
+      'testing test 4|19': 'passed',
+    },
+  })
+})
+
 describe('continuous testing', () => {
   test('reruns tests on test file change', async ({ launch }) => {
     const { tester } = await launch({

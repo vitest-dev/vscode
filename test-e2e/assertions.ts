@@ -49,7 +49,12 @@ expect.extend({
     const depth = Number(await item.locator.getAttribute('aria-level'))
 
     async function assert(test: string, level: number, state: TestState) {
-      await expect(page.locator(`[aria-label*="${test} ${getTitleFromState(state)}"][aria-level="${level}"]`)).toBeVisible()
+      const [name, index] = test.split('|')
+      let locator = `[aria-label*="${name} ${getTitleFromState(state)}"][aria-level="${level}"]`
+      if (index) {
+        locator += `[data-index="${index}"]`
+      }
+      await expect(page.locator(locator)).toBeAttached()
     }
 
     async function traverse(tests: TestsTree, level = depth + 1) {
@@ -59,7 +64,12 @@ expect.extend({
           await assert(test, level, item)
         }
         else {
-          await expect(page.locator(`[aria-label*="${test}"][aria-level="${level}"]`)).toBeVisible()
+          const [name, index] = test.split('|')
+          let locator = `[aria-label*="${name}"][aria-level="${level}"]`
+          if (index) {
+            locator += `[data-index="${index}"]`
+          }
+          await expect(page.locator(locator)).toBeAttached()
 
           await traverse(item, level + 1)
         }
