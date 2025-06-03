@@ -82,7 +82,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     workspaceConfig: resolveConfigPath(workspaceConfig),
     rootConfig: resolveConfigPath(rootConfigFile),
     configSearchPatternExclude,
-    maximumConfigs: get<number>('maximumConfigs', 3),
+    maximumConfigs: get<number>('maximumConfigs', 5),
     nodeExecutable: resolveConfigPath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
     debuggerPort: get<number>('debuggerPort') || undefined,
