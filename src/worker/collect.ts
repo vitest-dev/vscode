@@ -137,19 +137,23 @@ export function astParseFile(filepath: string, code: string) {
       let start: number
       const end = node.end
       // .each or (0, __vite_ssr_exports_0__.test)()
-      if (callee.type === 'CallExpression' || callee.type === 'SequenceExpression') {
+      if (
+        callee.type === 'CallExpression'
+        || callee.type === 'SequenceExpression'
+        || callee.type === 'TaggedTemplateExpression'
+      ) {
         start = callee.end
-      }
-      else if (callee.type === 'TaggedTemplateExpression') {
-        start = callee.end + 1
       }
       else {
         start = node.start
       }
 
-      const {
-        arguments: [messageNode],
-      } = node
+      const messageNode = node.arguments?.[0]
+
+      if (messageNode == null) {
+        verbose?.(`Skipping node at ${node.start} because it doesn't have a name`)
+        return
+      }
 
       const isQuoted = messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral'
       const message = isQuoted
@@ -160,8 +164,14 @@ export function astParseFile(filepath: string, code: string) {
       if (mode === 'skipIf' || mode === 'runIf') {
         mode = 'skip'
       }
+
       const parentCalleeName = typeof callee?.callee === 'object' && callee?.callee.type === 'MemberExpression' && callee?.callee.property?.name
-      const isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
+      let isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
+      if (!isDynamicEach && callee.type === 'TaggedTemplateExpression') {
+        const property = callee.tag?.property?.name
+        isDynamicEach = property === 'each' || property === 'for'
+      }
+
       debug?.('Found', name, message, `(${mode})`)
       definitions.push({
         start,
@@ -243,7 +253,7 @@ export function createFileTask(
   const file: ParsedFile = {
     filepath: options.filepath,
     type: 'suite',
-    id: /* @__PURE__ */ generateHash(`${testFilepath}${options.name}`),
+    id: /* @__PURE__ */ generateHash(`${testFilepath}${options.name || ''}`),
     name: testFilepath,
     mode: 'run',
     tasks: [],
@@ -469,8 +479,8 @@ function markDynamicTests(tasks: TaskBase[]) {
     if ((task as any).dynamic) {
       task.id += '-dynamic'
     }
-    if ('children' in task) {
-      markDynamicTests(task.children as TaskBase[])
+    if ('tasks' in task) {
+      markDynamicTests(task.tasks as TaskBase[])
     }
   }
 }
