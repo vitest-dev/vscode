@@ -41,7 +41,7 @@ class TesterTree {
 
   getFileItem(file: string) {
     const name = basename(file)
-    return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} "]`), this.page)
+    return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} ("]`), this.page)
   }
 
   async expand(path: string) {
@@ -50,7 +50,7 @@ class TesterTree {
       const segment = segments[i]
       const locator = this.page
         // not yet run
-        .locator(`[aria-label*="${segment} (Not"][aria-level="${i + 1}"]`)
+        .locator(`[aria-label*="${segment} ("][aria-level="${i + 1}"]`)
         // test already run
         .or(this.page.locator(`[aria-label="${segment}"][aria-level="${i + 1}"]`))
       const state = await locator.getAttribute('aria-expanded')

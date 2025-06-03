@@ -2,7 +2,7 @@
   "publisher": "vitest",
   "name": "explorer",
   "displayName": "Vitest",
-  "version": "1.17.0",
+  "version": "1.18.1",
   "packageManager": "pnpm@8.15.3",
   "description": "A Vite-native testing framework. It's fast!",
   "author": "Vitest Team",
@@ -227,13 +227,18 @@
         "vitest.experimentalStaticAstCollect": {
           "markdownDescription": "Enable static AST analysis for faster test discovery. This feature is experimental and may not work with all projects.",
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "resource"
         },
         "vitest.cliArguments": {
           "markdownDescription": "Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
           "type": "string",
           "scope": "resource"
+        },
+        "vitest.applyDiagnostic": {
+          "description": "Show a squiggly line where the error was thrown. This also enables the error count in the File Tab.",
+          "type": "boolean",
+          "default": true
         }
       }
     }
