@@ -198,20 +198,18 @@ test('watcher updates the file if there are several config files', async ({ laun
   })
 })
 
-test.only('ast collector keeps the pattern on rerun', async ({ launch }) => {
+test('ast collector keeps the pattern on rerun', async ({ launch }) => {
   const sample = 'samples/ast-collector'
 
   const { tester } = await launch({
-    trace: 'on',
     workspacePath: sample,
   })
-
-  await tester.tree.expand('test/each.test.ts')
-  const item = tester.tree.getFileItem('each.test.ts')
 
   await tester.tree.expand('test/each.test.ts/testing')
   // dynamic tests have a "pattern" label
   await tester.tree.expand('test/each.test.ts/pattern')
+
+  const item = tester.tree.getFileItem('each.test.ts')
 
   await expect(item).toHaveTests({
     'testing': {

@@ -246,7 +246,7 @@
     "dev": "EXTENSION_NODE_ENV=dev tsup --watch --sourcemap",
     "test": "vscode-test",
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
-    "test-e2e": "vitest --root test-e2e --allow-only",
+    "test-e2e": "vitest --root test-e2e",
     "ecosystem-ci:build": "pnpm build",
     "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
     "typecheck": "tsc -b ./ ./test ./test-e2e",
