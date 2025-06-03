@@ -280,7 +280,7 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
     return depthA - depthB
   })
 
-  const maximumConfigs = getConfig().maximumConfigs ?? 3
+  const maximumConfigs = getConfig().maximumConfigs ?? 5
 
   const workspaceRoots: string[] = apis
     .map(api => api.workspaceSource ? dirname(api.workspaceSource) : null)
