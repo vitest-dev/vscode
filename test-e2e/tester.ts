@@ -41,7 +41,7 @@ class TesterTree {
 
   getFileItem(file: string) {
     const name = basename(file)
-    return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} "]`), this.page)
+    return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} ("]`), this.page)
   }
 
   async expand(path: string) {

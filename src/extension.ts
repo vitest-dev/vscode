@@ -16,6 +16,7 @@ import { TagsManager } from './tagsManager'
 import { coverageContext } from './coverage'
 import { ExtensionTerminalProcess } from './api/terminal'
 import { debugTests } from './debug'
+import { ExtensionDiagnostic } from './diagnostic'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -38,6 +39,7 @@ class VitestExtension {
   private runners: TestRunner[] = []
 
   private disposables: vscode.Disposable[] = []
+  private diagnostic: ExtensionDiagnostic | undefined
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -141,6 +143,7 @@ class VitestExtension {
         this.testController,
         this.testTree,
         api,
+        this.diagnostic,
       )
       this.runners.push(runner)
 
@@ -182,6 +185,7 @@ class VitestExtension {
           this.testController,
           this.testTree,
           api.package,
+          this.diagnostic,
 
           request,
           token,
@@ -245,6 +249,10 @@ class VitestExtension {
   }
 
   async activate() {
+    this.diagnostic = getConfig().applyDiagnostic
+      ? new ExtensionDiagnostic()
+      : undefined
+
     this.loadingTestItem.busy = true
     this.testController.items.replace([this.loadingTestItem])
 
