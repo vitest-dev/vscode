@@ -61,7 +61,7 @@ export class ExtensionWatcher extends vscode.Disposable {
       }
       log.verbose?.('[VSCODE] File created:', this.relative(api, uri))
       const apis = this.apisByFolder.get(folder) || []
-      apis.forEach(api => api.onFileChanged(path))
+      apis.forEach(api => api.onFileCreated(path))
     })
   }
 
