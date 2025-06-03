@@ -72,7 +72,7 @@ export function astParseFile(filepath: string, code: string) {
     verbose(
       'Collecting',
       filepath,
-      code, // .replace(/\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,[\w+/=]+/, ''),
+      code,
     )
   }
   else {
@@ -136,20 +136,24 @@ export function astParseFile(filepath: string, code: string) {
 
       let start: number
       const end = node.end
-      // .each
-      if (callee.type === 'CallExpression') {
+      // .each or (0, __vite_ssr_exports_0__.test)()
+      if (
+        callee.type === 'CallExpression'
+        || callee.type === 'SequenceExpression'
+        || callee.type === 'TaggedTemplateExpression'
+      ) {
         start = callee.end
-      }
-      else if (callee.type === 'TaggedTemplateExpression') {
-        start = callee.end + 1
       }
       else {
         start = node.start
       }
 
-      const {
-        arguments: [messageNode],
-      } = node
+      const messageNode = node.arguments?.[0]
+
+      if (messageNode == null) {
+        verbose?.(`Skipping node at ${node.start} because it doesn't have a name`)
+        return
+      }
 
       const isQuoted = messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral'
       const message = isQuoted
@@ -160,8 +164,14 @@ export function astParseFile(filepath: string, code: string) {
       if (mode === 'skipIf' || mode === 'runIf') {
         mode = 'skip'
       }
+
       const parentCalleeName = typeof callee?.callee === 'object' && callee?.callee.type === 'MemberExpression' && callee?.callee.property?.name
-      const isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
+      let isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
+      if (!isDynamicEach && callee.type === 'TaggedTemplateExpression') {
+        const property = callee.tag?.property?.name
+        isDynamicEach = property === 'each' || property === 'for'
+      }
+
       debug?.('Found', name, message, `(${mode})`)
       definitions.push({
         start,
@@ -226,40 +236,37 @@ function serializeError(ctx: WorkspaceProject, error: any): TestError[] {
   ]
 }
 
-export async function astCollectTests(
-  ctx: WorkspaceProject,
-  filepath: string,
-  transformMode: 'web' | 'ssr',
-): Promise<ParsedFile> {
-  const request = await ctx.vitenode.transformRequest(filepath, filepath, transformMode)
-  // TODO: error cannot parse
-  const testFilepath = relative(ctx.config.root, filepath)
-  if (!request) {
-    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
-    return createFailedFileTask(
-      ctx,
-      filepath,
-      new Error(`Failed to parse ${testFilepath}. Vite didn't return anything.`),
-    )
-  }
-  const { definitions, ast } = astParseFile(testFilepath, request.code)
+interface ParseOptions {
+  name: string
+  filepath: string
+  allowOnly: boolean
+  testNamePattern?: RegExp | undefined
+}
+
+export function createFileTask(
+  testFilepath: string,
+  code: string,
+  requestMap: any,
+  options: ParseOptions,
+) {
+  const { definitions, ast } = astParseFile(testFilepath, code)
   const file: ParsedFile = {
-    filepath,
+    filepath: options.filepath,
     type: 'suite',
-    id: /* @__PURE__ */ generateHash(`${testFilepath}${ctx.config.name || ''}`),
+    id: /* @__PURE__ */ generateHash(`${testFilepath}${options.name || ''}`),
     name: testFilepath,
     mode: 'run',
     tasks: [],
     start: ast.start,
     end: ast.end,
-    projectName: ctx.getName(),
+    projectName: options.name,
     meta: {},
     pool: 'browser',
     file: null!,
   }
   file.file = file
-  const indexMap = createIndexMap(request.code)
-  const map = request.map && new TraceMap(request.map as any)
+  const indexMap = createIndexMap(code)
+  const map = requestMap && new TraceMap(requestMap)
   let lastSuite: ParsedSuite = file as any
   const updateLatestSuite = (index: number) => {
     while (lastSuite.suite && lastSuite.end < index) {
@@ -352,10 +359,10 @@ export async function astCollectTests(
   const hasOnly = someTasksAreOnly(file)
   interpretTaskModes(
     file,
-    ctx.config.testNamePattern,
+    options.testNamePattern,
     hasOnly,
     false,
-    ctx.config.allowOnly,
+    options.allowOnly,
   )
   markDynamicTests(file.tasks)
   if (!file.tasks.length) {
@@ -364,12 +371,35 @@ export async function astCollectTests(
       errors: [
         {
           name: 'Error',
-          message: `No test suite found in file ${filepath}`,
+          message: `No test suite found in file ${options.filepath}`,
         },
       ],
     }
   }
   return file
+}
+
+export async function astCollectTests(
+  ctx: WorkspaceProject,
+  filepath: string,
+  transformMode: 'web' | 'ssr',
+): Promise<ParsedFile> {
+  const request = await ctx.vitenode.transformRequest(filepath, filepath, transformMode)
+  const testFilepath = relative(ctx.config.root, filepath)
+  if (!request) {
+    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
+    return createFailedFileTask(
+      ctx,
+      filepath,
+      new Error(`Failed to parse ${testFilepath}. Vite didn't return anything.`),
+    )
+  }
+  return createFileTask(testFilepath, request.code, request.map, {
+    name: ctx.config.name,
+    filepath,
+    allowOnly: ctx.config.allowOnly,
+    testNamePattern: ctx.config.testNamePattern,
+  })
 }
 
 function createIndexMap(source: string) {
@@ -449,8 +479,8 @@ function markDynamicTests(tasks: TaskBase[]) {
     if ((task as any).dynamic) {
       task.id += '-dynamic'
     }
-    if ('children' in task) {
-      markDynamicTests(task.children as TaskBase[])
+    if ('tasks' in task) {
+      markDynamicTests(task.tasks as TaskBase[])
     }
   }
 }

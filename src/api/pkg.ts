@@ -50,7 +50,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
     if (showWarning) {
       const isVitestConfig = configOrWorkspaceFile.fsPath.includes('vitest.')
       if (isVitestConfig || isVitestInPackageJson(folder.uri.fsPath))
-        vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.'`)
+        vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.`)
     }
     log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
     return null

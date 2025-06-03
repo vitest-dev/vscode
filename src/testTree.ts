@@ -297,8 +297,22 @@ export class TestTree extends vscode.Disposable {
     fileTestItem.canResolveChildren = false
   }
 
+  private cacheDynamic: {
+    [file: string]: {
+      [dynamicTitle: string]: {
+        id: string
+        type: 'test' | 'suite'
+        children: Set<string>
+      }
+    }
+  } = {}
+
   collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: RunnerTask[], parent: vscode.TestItem) {
+    const fileCachedTests = this.cacheDynamic[fileData.filepath] || (this.cacheDynamic[fileData.filepath] = {})
+    const ids = new Set()
+
     for (const task of tasks) {
+      ids.add(task.id)
       const cachedItem = this.flatTestItems.get(task.id)
       // suite became a test or vice versa
       if (cachedItem) {
@@ -327,13 +341,71 @@ export class TestTree extends vscode.Disposable {
         log.error(`Cannot find location for "${testItem.label}". Using "id" to sort instead.`)
         testItem.sortText = task.id
       }
-      // dynamic exists only during browser collection
+      // dynamic exists only during AST collection
       // see src/worker/collect.ts:172
       const isDynamic = (task as any).dynamic
       if (task.type === 'suite')
         TestSuite.register(testItem, parent, fileData, isDynamic)
       else if (task.type === 'test' || task.type === 'custom')
         TestCase.register(testItem, parent, fileData, isDynamic)
+
+      if (isDynamic) {
+        testItem.description = 'pattern'
+        const dynamicTestRegExp = (getTestData(testItem) as TestCase | TestSuite).getTestNamePattern()
+
+        const cachedDynamicTest = fileCachedTests[dynamicTestRegExp] || (fileCachedTests[dynamicTestRegExp] = {
+          id: task.id,
+          type: task.type === 'custom' ? 'test' : task.type,
+          children: new Set(),
+        })
+        cachedDynamicTest.children.forEach((fileId) => {
+          // don't remove tests that were collected during runtime
+          ids.add(fileId)
+        })
+      }
+      else if (task.each) {
+        const fullName = getTaskFullName(task)
+        // order in the opposite order so we only match one item with the longest name
+        const orderedTests = Object.entries(fileCachedTests).sort(([a1], [a2]) => a2.localeCompare(a1))
+        for (const [testRegexp, cachedDynamicTask] of orderedTests) {
+          if (new RegExp(testRegexp).test(fullName)) {
+            const testId = cachedDynamicTask.id
+            const childId = `${testId}_${task.suite?.id || 'none'}`
+
+            // keep the dynamic pattern to display it alongside normal tests,
+            // if the parent suite was also dynamic, this item will be duplicated
+            // in every suite, but scoped only to that suite
+            const dynamicTestItem = this.flatTestItems.get(testId)
+            ids.add(childId)
+            if (dynamicTestItem) {
+              // we are creating a separate one because we can't use the same one in multiple places
+              const suiteCopyChild = this.flatTestItems.get(childId) || this.controller.createTestItem(
+                childId,
+                dynamicTestItem.label,
+                dynamicTestItem.uri,
+              )
+              this.flatTestItems.set(childId, suiteCopyChild)
+              suiteCopyChild.tags = dynamicTestItem.tags
+              suiteCopyChild.canResolveChildren = dynamicTestItem.canResolveChildren
+              suiteCopyChild.description = dynamicTestItem.description
+              suiteCopyChild.range = dynamicTestItem.range
+              suiteCopyChild.error = dynamicTestItem.error
+              suiteCopyChild.sortText = dynamicTestItem.sortText
+
+              if (task.type === 'suite') {
+                TestSuite.register(suiteCopyChild, parent, fileData, true)
+              }
+              else {
+                TestCase.register(suiteCopyChild, parent, fileData, true)
+              }
+
+              parent.children.add(suiteCopyChild)
+              break
+            }
+            cachedDynamicTask.children.add(task.id)
+          }
+        }
+      }
 
       this.flatTestItems.set(task.id, testItem)
       parent.children.add(testItem)
@@ -350,7 +422,6 @@ export class TestTree extends vscode.Disposable {
     }
 
     // remove tasks that are no longer present
-    const ids = new Set(tasks.map(x => x.id))
     parent.children.forEach((child) => {
       if (!ids.has(child.id))
         parent.children.delete(child.id)
@@ -382,4 +453,8 @@ function getAPIFromTestItem(testItem: vscode.TestItem): VitestFolderAPI | null {
   if (data instanceof TestFile)
     return data.api
   return data.file.api
+}
+
+function getTaskFullName(task: RunnerTask): string {
+  return `${task.suite ? `${getTaskFullName(task.suite)} ` : ''}${task.name}`
 }

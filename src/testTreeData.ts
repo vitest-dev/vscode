@@ -105,7 +105,7 @@ export class TestCase extends BaseTestData {
     item: vscode.TestItem,
     parent: vscode.TestItem,
     public readonly file: TestFile,
-    dynamic: boolean,
+    public readonly dynamic: boolean,
   ) {
     super(item, parent)
     this.name = new TaskName(this, dynamic)
