@@ -372,12 +372,13 @@ export class TestTree extends vscode.Disposable {
             const testId = cachedDynamicTask.id
             const childId = `${testId}_${task.suite?.id || 'none'}`
 
-            // keep the dynamic id to display it alongside normal tests,
+            // keep the dynamic pattern to display it alongside normal tests,
             // if the parent suite was also dynamic, this item will be duplicated
             // in every suite, but scoped only to that suite
             const dynamicTestItem = this.flatTestItems.get(testId)
             ids.add(childId)
             if (dynamicTestItem) {
+              // we are creating a separate one because we can't use the same one in multiple places
               const suiteCopyChild = this.flatTestItems.get(childId) || this.controller.createTestItem(
                 childId,
                 dynamicTestItem.label,
