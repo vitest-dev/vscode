@@ -436,7 +436,7 @@ export class TestRunner extends vscode.Disposable {
       function enqueue(test: vscode.TestItem) {
         const testData = getTestData(test)
         // we only change the state of test cases to keep the correct test count
-        if (testData instanceof TestCase) {
+        if (testData instanceof TestCase && !testData.dynamic) {
           log.verbose?.(`Enqueuing "${test.label}"`)
           run.enqueued(test)
         }
