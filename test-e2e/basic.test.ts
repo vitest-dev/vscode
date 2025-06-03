@@ -198,10 +198,11 @@ test('watcher updates the file if there are several config files', async ({ laun
   })
 })
 
-test('ast collector keeps the pattern on rerun', async ({ launch }) => {
+test.only('ast collector keeps the pattern on rerun', async ({ launch }) => {
   const sample = 'samples/ast-collector'
 
   const { tester } = await launch({
+    trace: 'on',
     workspacePath: sample,
   })
 
