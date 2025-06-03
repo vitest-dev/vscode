@@ -227,7 +227,7 @@
         "vitest.experimentalStaticAstCollect": {
           "markdownDescription": "Enable static AST analysis for faster test discovery. This feature is experimental and may not work with all projects.",
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "resource"
         },
         "vitest.cliArguments": {
