@@ -167,7 +167,7 @@
         "vitest.maximumConfigs": {
           "description": "The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file.",
           "type": "number",
-          "default": 3,
+          "default": 5,
           "scope": "window"
         },
         "vitest.debugExclude": {
