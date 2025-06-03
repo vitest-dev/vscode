@@ -301,6 +301,7 @@ export class TestTree extends vscode.Disposable {
     [file: string]: {
       [dynamicTitle: string]: {
         id: string
+        type: 'test' | 'suite'
         children: Set<string>
       }
     }
@@ -351,20 +352,56 @@ export class TestTree extends vscode.Disposable {
       if (isDynamic) {
         testItem.description = 'pattern'
         const dynamicTestRegExp = (getTestData(testItem) as TestCase | TestSuite).getTestNamePattern()
-        const cachedDynamicTest = fileCachedTests[dynamicTestRegExp] || (fileCachedTests[dynamicTestRegExp] = { id: task.id, children: new Set() })
+
+        const cachedDynamicTest = fileCachedTests[dynamicTestRegExp] || (fileCachedTests[dynamicTestRegExp] = {
+          id: task.id,
+          type: task.type === 'custom' ? 'test' : task.type,
+          children: new Set(),
+        })
         cachedDynamicTest.children.forEach((fileId) => {
           // don't remove tests that were collected during runtime
           ids.add(fileId)
         })
       }
-
-      if (task.each) {
+      else if (task.each) {
         const fullName = getTaskFullName(task)
-        for (const testRegexp in fileCachedTests) {
-          if (fileCachedTests[testRegexp] && new RegExp(testRegexp).test(fullName)) {
-            // keep the dynamic id to display it alongside normal tests
-            ids.add(fileCachedTests[testRegexp].id)
-            fileCachedTests[testRegexp].children.add(task.id)
+        // order in the opposite order so we only match one item with the longest name
+        const orderedTests = Object.entries(fileCachedTests).sort(([a1], [a2]) => a2.localeCompare(a1))
+        for (const [testRegexp, cachedDynamicTask] of orderedTests) {
+          if (new RegExp(testRegexp).test(fullName)) {
+            const testId = cachedDynamicTask.id
+            const childId = `${testId}_${task.suite?.id || 'none'}`
+
+            // keep the dynamic id to display it alongside normal tests,
+            // if the parent suite was also dynamic, this item will be duplicated
+            // in every suite, but scoped only to that suite
+            const dynamicTestItem = this.flatTestItems.get(testId)
+            ids.add(childId)
+            if (dynamicTestItem) {
+              const suiteCopyChild = this.flatTestItems.get(childId) || this.controller.createTestItem(
+                childId,
+                dynamicTestItem.label,
+                dynamicTestItem.uri,
+              )
+              this.flatTestItems.set(childId, suiteCopyChild)
+              suiteCopyChild.tags = dynamicTestItem.tags
+              suiteCopyChild.canResolveChildren = dynamicTestItem.canResolveChildren
+              suiteCopyChild.description = dynamicTestItem.description
+              suiteCopyChild.range = dynamicTestItem.range
+              suiteCopyChild.error = dynamicTestItem.error
+              suiteCopyChild.sortText = dynamicTestItem.sortText
+
+              if (task.type === 'suite') {
+                TestSuite.register(suiteCopyChild, parent, fileData, true)
+              }
+              else {
+                TestCase.register(suiteCopyChild, parent, fileData, true)
+              }
+
+              parent.children.add(suiteCopyChild)
+              break
+            }
+            cachedDynamicTask.children.add(task.id)
           }
         }
       }
