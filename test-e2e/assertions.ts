@@ -47,9 +47,10 @@ expect.extend({
   async toHaveTests(item: TesterTestItem, tests: TestsTree) {
     const page = item.page
     const depth = Number(await item.locator.getAttribute('aria-level'))
+    const currentIndex = Number(await item.locator.getAttribute('data-index'))
 
-    async function assert(test: string, level: number, state: TestState) {
-      const [name, index] = test.split('|')
+    async function assert(test: string, level: number, state: TestState, itemIndex: number) {
+      const [name, index = itemIndex] = test.split('|')
       let locator = `[aria-label*="${name} ${getTitleFromState(state)}"][aria-level="${level}"]`
       if (index) {
         locator += `[data-index="${index}"]`
@@ -57,14 +58,18 @@ expect.extend({
       await expect(page.locator(locator)).toBeAttached()
     }
 
+    const counter = { index: currentIndex }
+
     async function traverse(tests: TestsTree, level = depth + 1) {
       for (const test in tests) {
+        counter.index++
+
         const item = tests[test]
         if (typeof item === 'string') {
-          await assert(test, level, item)
+          await assert(test, level, item, counter.index)
         }
         else {
-          const [name, index] = test.split('|')
+          const [name, index = counter.index] = test.split('|')
           let locator = `[aria-label*="${name}"][aria-level="${level}"]`
           if (index) {
             locator += `[data-index="${index}"]`
