@@ -17,11 +17,13 @@ import type { ExtensionWorkerProcess } from './api/types'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
 import { findNode } from './utils'
+import type { ExtensionDiagnostic } from './diagnostic'
 
 export async function debugTests(
   controller: vscode.TestController,
   tree: TestTree,
   api: VitestFolderAPI,
+  diagnostic: ExtensionDiagnostic | undefined,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
@@ -129,6 +131,7 @@ export async function debugTests(
         controller,
         tree,
         api,
+        diagnostic,
       )
       disposables.push(api, runner)
 
