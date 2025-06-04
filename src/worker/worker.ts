@@ -8,13 +8,6 @@ import { ExtensionCoverageManager } from './coverage'
 import { assert, limitConcurrency } from './utils'
 import { astCollectTests, createFailedFileTask } from './collect'
 
-const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
-  ? (...args: any[]) => {
-      // eslint-disable-next-line no-console
-      console.info(...args)
-    }
-  : undefined
-
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
   private readonly coverage: ExtensionCoverageManager
@@ -264,9 +257,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
             project.testFilesList?.push(file)
             this.ctx.changedTests.add(file)
             projects.push(project)
-          }
-          else {
-            verbose?.('file', file, 'is not part of workspace', project.getName() || 'core')
           }
         }
         // to support Vitest 1.4.0
