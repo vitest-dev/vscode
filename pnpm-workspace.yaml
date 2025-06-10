@@ -1,10 +1,6 @@
 packages:
   - ./
   - samples/*
-  - '!samples/monorepo-vitest-workspace'
-  - '!samples/monorepo-nx'
-  - '!samples/monorepo-no-root'
-  - '!samples/monorepo'
 
 catalog:
   vite: ^6.3.5

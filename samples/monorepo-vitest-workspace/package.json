@@ -1,10 +1,10 @@
 {
   "name": "monorepo",
   "version": "1.0.1",
+  "private": true,
   "description": "",
   "author": "",
   "license": "ISC",
-  "main": "index.js",
   "scripts": {
     "test": "vitest"
   },

@@ -35,12 +35,7 @@ jobs:
           pnpm test
 
       - name: test-e2e
-        run: |
-          pnpm -C samples/e2e i
-          pnpm -C samples/monorepo-vitest-workspace i
-          pnpm -C samples/browser i
-          npm -C samples/imba i
-          pnpm test-e2e --retry 2
+        run: pnpm test-e2e --retry 2
 
       - uses: actions/upload-artifact@v4
         if: always()
