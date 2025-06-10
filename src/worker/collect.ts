@@ -9,7 +9,7 @@ import {
   someTasksAreOnly,
 } from '@vitest/runner/utils'
 import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase, TestError } from 'vitest'
-import type { WorkspaceProject } from 'vitest/node'
+import type { Vite, WorkspaceProject } from 'vitest/node'
 
 interface ParsedFile extends RunnerTestFile {
   start: number
@@ -33,7 +33,7 @@ interface LocalCallDefinition {
   end: number
   name: string
   type: 'suite' | 'test'
-  mode: 'run' | 'skip' | 'only' | 'todo'
+  mode: 'run' | 'skip' | 'only' | 'todo' | 'queued'
   task: ParsedSuite | ParsedFile | ParsedTest
   dynamic: boolean
 }
@@ -351,6 +351,8 @@ export function createFileTask(
         location,
         dynamic: definition.dynamic,
         meta: {},
+        timeout: 0,
+        annotations: [],
       }
       definition.task = task
       latestSuite.tasks.push(task)
@@ -380,26 +382,34 @@ export function createFileTask(
 }
 
 export async function astCollectTests(
-  ctx: WorkspaceProject,
+  project: WorkspaceProject,
   filepath: string,
-  transformMode: 'web' | 'ssr',
 ): Promise<ParsedFile> {
-  const request = await ctx.vitenode.transformRequest(filepath, filepath, transformMode)
-  const testFilepath = relative(ctx.config.root, filepath)
+  const request = await transformSSR(project, filepath)
+  const testFilepath = relative(project.config.root, filepath)
   if (!request) {
     debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
     return createFailedFileTask(
-      ctx,
+      project,
       filepath,
       new Error(`Failed to parse ${testFilepath}. Vite didn't return anything.`),
     )
   }
   return createFileTask(testFilepath, request.code, request.map, {
-    name: ctx.config.name,
+    name: project.config.name,
     filepath,
-    allowOnly: ctx.config.allowOnly,
-    testNamePattern: ctx.config.testNamePattern,
+    allowOnly: project.config.allowOnly,
+    testNamePattern: project.config.testNamePattern,
   })
+}
+
+async function transformSSR(project: WorkspaceProject, filepath: string) {
+  const vite: Vite.ViteDevServer = 'vite' in project ? project.vite : (project as any).server
+  const request = await vite.transformRequest(filepath, { ssr: false })
+  if (!request) {
+    return null
+  }
+  return await vite.ssrTransform(request.code, request.map, filepath)
 }
 
 function createIndexMap(source: string) {

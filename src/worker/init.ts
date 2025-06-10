@@ -86,7 +86,7 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
       ],
     },
   )
-  await vitest.report('onInit', vitest)
+  await (vitest as any).report('onInit', vitest)
   const configs = ([
     // @ts-expect-error -- getRootProject in Vitest 3.0
     'getRootProject' in vitest ? vitest.getRootProject() : vitest.getCoreWorkspaceProject(),

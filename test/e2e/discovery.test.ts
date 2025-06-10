@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import type { RunnerTestCase, RunnerTestSuite } from 'vitest'
 import { describe, expect, it } from 'vitest'
 import { createVitest } from 'vitest/node'
-import { astCollectTests } from '../src/worker/collect'
+import { astCollectTests } from '../../src/worker/collect'
 
 describe('can discover tests', () => {
   it.for([
@@ -12,11 +12,11 @@ describe('can discover tests', () => {
     const vitest = await createVitest('test', { config: false })
     const file = await astCollectTests(
       vitest.getCoreWorkspaceProject(),
-      resolve(`test-e2e/fixtures/collect/${fixture}`),
+      resolve(`test/e2e/fixtures/collect/${fixture}`),
       'web',
     )
-    expect(file.filepath).toBe(resolve(`test-e2e/fixtures/collect/${fixture}`))
-    expect(file.name).toBe(`test-e2e/fixtures/collect/${fixture}`)
+    expect(file.filepath).toBe(resolve(`test/e2e/fixtures/collect/${fixture}`))
+    expect(file.name).toBe(`test/e2e/fixtures/collect/${fixture}`)
 
     expect(file.tasks).toHaveLength(1)
     const suite = file.tasks[0] as RunnerTestSuite

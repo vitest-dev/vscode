@@ -529,6 +529,7 @@ export class TestRunner extends vscode.Disposable {
         break
       case 'only':
       case 'run':
+      case 'queued':
         log.verbose?.(`Marking "${test.label}" as running`)
         testRun.started(test)
         break

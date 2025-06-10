@@ -1,13 +1,13 @@
 import * as path from 'node:path'
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from '../src/testTreeData'
+import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from '../../src/testTreeData'
 
 describe('TestData', () => {
   const ctrl = vscode.tests.createTestController('mocha', 'Vitest')
   describe('TestFile', () => {
     it('getTestNamePattern', async () => {
-      const filepath = path.resolve(__dirname, './testdata/discover/00_simple.ts')
+      const filepath = path.resolve(__dirname, './fixtures/discover/00_simple.ts')
       const uri = vscode.Uri.file(filepath)
       const folderItem = ctrl.createTestItem(
         path.dirname(filepath),

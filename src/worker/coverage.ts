@@ -74,11 +74,15 @@ export class ExtensionCoverageManager {
     if (!this._provider) {
       // @ts-expect-error private method
       await vitest.initCoverageProvider()
-      await vitest.coverageProvider?.clean(this._config.clean)
+      await this.coverageProvider?.clean(this._config.clean)
     }
     else {
       await this._provider.clean(this._config.clean)
     }
+  }
+
+  private get coverageProvider() {
+    return (this.vitest as any).coverageProvider as CoverageProvider | null | undefined
   }
 
   public disable() {
@@ -90,10 +94,10 @@ export class ExtensionCoverageManager {
       return null
     const ctx = this.vitest.ctx
     const coverage = ctx.config.coverage
-    if (!coverage.enabled || !ctx.coverageProvider)
+    if (!coverage.enabled || !this.coverageProvider)
       return null
     ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
-    await ctx.runningPromise
+    await (ctx as any).runningPromise
     if (existsSync(coverage.reportsDirectory)) {
       ctx.logger.error(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
       return coverage.reportsDirectory

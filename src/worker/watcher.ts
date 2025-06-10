@@ -11,11 +11,11 @@ export class ExtensionWorkerWatcher {
 
   private enabled = false
 
-  constructor(vitest: ExtensionWorker) {
+  constructor(extension: ExtensionWorker) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
-    const ctx = vitest.ctx
-    ;(vitest.getRootTestProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
+    const ctx = extension.ctx
+    ;(extension.getRootTestProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
       get continuousFiles() {
         return state.files || []
       },
@@ -49,17 +49,17 @@ export class ExtensionWorkerWatcher {
         const astSpecs: [project: WorkspaceProject, file: string][] = []
 
         for (const [project, file] of specs) {
-          if (vitest.alwaysAstCollect || project.config.browser.enabled) {
+          if (extension.alwaysAstCollect || project.config.browser.enabled) {
             astSpecs.push([project, file])
           }
         }
 
-        ctx.configOverride.testNamePattern = new RegExp(ExtensionWorker.COLLECT_NAME_PATTERN)
+        extension.setGlobalTestNamePattern(ExtensionWorker.COLLECT_NAME_PATTERN)
         ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
 
         if (astSpecs.length) {
           ctx.logger.log('Collecting using AST explorer...')
-          await vitest.astCollect(astSpecs, 'web')
+          await extension.astCollect(astSpecs)
           this.changedTests.clear()
           return await originalScheduleRerun.call(this, [])
         }
@@ -70,7 +70,7 @@ export class ExtensionWorkerWatcher {
       state.rerunTriggered = true
 
       const namePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
-      ctx.configOverride.testNamePattern = namePattern
+      extension.setGlobalTestNamePattern(namePattern)
       if (state.watchEveryFile) {
         ctx.logger.log(
           'Rerunning all tests due to file changes:',
