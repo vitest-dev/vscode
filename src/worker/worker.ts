@@ -37,7 +37,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       this.configOverride.testNamePattern = undefined
     }
     else if ('setGlobalTestNamePattern' in this.ctx) {
-      return this.setGlobalTestNamePattern(pattern)
+      return this.ctx.setGlobalTestNamePattern(pattern)
     }
     else {
       this.configOverride.testNamePattern = typeof pattern === 'string'

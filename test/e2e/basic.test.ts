@@ -113,7 +113,7 @@ test('vite-6', async ({ launch }) => {
   })
 })
 
-test.only('workspaces', async ({ launch }) => {
+test('workspaces', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/monorepo-vitest-workspace',
   })
@@ -157,7 +157,6 @@ test('browser mode correctly collects tests', async ({ launch }) => {
 
   await tester.tree.expand('test/console.test.ts [chromium]')
   const consoleTest = tester.tree.getFileItem('console.test.ts', 'chromium')
-  await consoleTest.navigate()
 
   await expect(consoleTest).toHaveTests({
     console: 'waiting',
