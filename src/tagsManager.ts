@@ -1,5 +1,5 @@
-import * as vscode from 'vscode'
 import type { TestTree } from './testTree'
+import * as vscode from 'vscode'
 
 export class TagsManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []

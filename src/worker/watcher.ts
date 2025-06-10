@@ -1,6 +1,6 @@
 import type { ProvidedContext } from 'vitest'
-import { relative } from 'pathe'
 import type { WorkspaceProject } from 'vitest/node'
+import { relative } from 'pathe'
 import { ExtensionWorker } from './worker'
 
 export class ExtensionWorkerWatcher {

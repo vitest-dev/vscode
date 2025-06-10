@@ -1,13 +1,13 @@
-import { readFileSync } from 'node:fs'
-import type { Reporter, ResolvedConfig, TestSpecification, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
-import { relative } from 'pathe'
-import mm from 'micromatch'
 import type { ArgumentsType } from 'vitest'
+import type { Reporter, ResolvedConfig, TestSpecification, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { ExtensionWorkerTransport, SerializedTestSpecification } from '../api/rpc'
-import { ExtensionWorkerWatcher } from './watcher'
+import { readFileSync } from 'node:fs'
+import mm from 'micromatch'
+import { relative } from 'pathe'
+import { astCollectTests, createFailedFileTask } from './collect'
 import { ExtensionCoverageManager } from './coverage'
 import { assert, limitConcurrency } from './utils'
-import { astCollectTests, createFailedFileTask } from './collect'
+import { ExtensionWorkerWatcher } from './watcher'
 
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher

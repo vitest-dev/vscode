@@ -1,10 +1,10 @@
+import type { CoverageProvider, ResolvedCoverageOptions } from 'vitest/node'
+import type { ExtensionWorker } from './worker'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'pathe'
-import type { CoverageProvider, ResolvedCoverageOptions } from 'vitest/node'
 import { finalCoverageFileName } from '../constants'
-import type { ExtensionWorker } from './worker'
 
 export class ExtensionCoverageManager {
   private _enabled = false

@@ -1,19 +1,19 @@
-import path from 'node:path'
-import { rm } from 'node:fs/promises'
-import { inspect, stripVTControlCharacters } from 'node:util'
-import * as vscode from 'vscode'
-import { getTasks } from '@vitest/runner/utils'
 import type { ParsedStack, TaskResult, TestError } from 'vitest'
-import { basename, normalize, relative } from 'pathe'
-import { TestCase, TestFile, TestFolder, getTestData } from './testTreeData'
-import type { TestTree } from './testTree'
 import type { VitestFolderAPI } from './api'
-import { log } from './log'
-import { showVitestError } from './utils'
-import { coverageContext, readCoverageReport } from './coverage'
-import { normalizeDriveLetter } from './worker/utils'
 import type { SerializedTestSpecification } from './api/rpc'
 import type { ExtensionDiagnostic } from './diagnostic'
+import type { TestTree } from './testTree'
+import { rm } from 'node:fs/promises'
+import path from 'node:path'
+import { inspect, stripVTControlCharacters } from 'node:util'
+import { getTasks } from '@vitest/runner/utils'
+import { basename, normalize, relative } from 'pathe'
+import * as vscode from 'vscode'
+import { coverageContext, readCoverageReport } from './coverage'
+import { log } from './log'
+import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
+import { showVitestError } from './utils'
+import { normalizeDriveLetter } from './worker/utils'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -241,11 +241,11 @@ export class TestRunner extends vscode.Disposable {
     const modules = !request.include
       ? null
       : getTestFiles(request.include).map((f) => {
-        if (typeof f === 'string') {
-          return f
-        }
-        return f[1]
-      })
+          if (typeof f === 'string') {
+            return f
+          }
+          return f[1]
+        })
 
     await this.api.invalidateIstanbulTestModules(modules)
     await this.runTests(request, token)

@@ -1,6 +1,6 @@
 import type * as vscode from 'vscode'
-import { dirname, resolve } from 'pathe'
 import { findUpSync } from 'find-up'
+import { dirname, resolve } from 'pathe'
 import { getConfig } from '../config'
 import { normalizeDriveLetter } from '../worker/utils'
 

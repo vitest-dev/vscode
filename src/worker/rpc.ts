@@ -1,7 +1,7 @@
 import type { ChannelOptions } from 'birpc'
-import { createBirpc } from 'birpc'
 import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from '../api/rpc'
 import type { ExtensionWorker } from './worker'
+import { createBirpc } from 'birpc'
 
 export function createWorkerRPC(vitest: ExtensionWorker, channel: ChannelOptions) {
   const rpc = createBirpc<ExtensionWorkerEvents, ExtensionWorkerTransport>(vitest, {

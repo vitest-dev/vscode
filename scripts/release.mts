@@ -1,7 +1,7 @@
-import { SemVer } from 'semver'
-import prompts from 'prompts'
-import c from 'picocolors'
 import versionBump from 'bumpp'
+import c from 'picocolors'
+import prompts from 'prompts'
+import { SemVer } from 'semver'
 import { version } from '../package.json'
 
 // vscode support _only_ major.minor.patch, it doesn't support -beta.1

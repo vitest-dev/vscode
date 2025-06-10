@@ -1,7 +1,7 @@
-import { pathToFileURL } from 'node:url'
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
-import { VSCodeReporter } from './reporter'
 import type { WorkerInitMetadata } from './types'
+import { pathToFileURL } from 'node:url'
+import { VSCodeReporter } from './reporter'
 import { normalizeDriveLetter } from './utils'
 
 export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig) {

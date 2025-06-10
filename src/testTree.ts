@@ -1,11 +1,11 @@
+import type { RunnerTask, RunnerTestFile } from 'vitest'
+import type { VitestFolderAPI } from './api'
 import { lstatSync, readlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
-import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
-import type { RunnerTask, RunnerTestFile } from 'vitest'
-import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
+import * as vscode from 'vscode'
 import { log } from './log'
-import type { VitestFolderAPI } from './api'
+import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { ExtensionWatcher } from './watcher'
 
 // testItem -> vscode.TestItem

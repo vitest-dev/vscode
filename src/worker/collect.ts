@@ -1,15 +1,15 @@
 import type { SourceMap } from 'node:module'
-import { relative } from 'pathe'
-import { parse } from 'acorn'
-import { TraceMap, originalPositionFor } from '@vitest/utils/source-map'
-import { ancestor as walkAst } from 'acorn-walk'
+import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase, TestError } from 'vitest'
+import type { Vite, WorkspaceProject } from 'vitest/node'
 import {
   calculateSuiteHash,
   generateHash,
   someTasksAreOnly,
 } from '@vitest/runner/utils'
-import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase, TestError } from 'vitest'
-import type { Vite, WorkspaceProject } from 'vitest/node'
+import { originalPositionFor, TraceMap } from '@vitest/utils/source-map'
+import { parse } from 'acorn'
+import { ancestor as walkAst } from 'acorn-walk'
+import { relative } from 'pathe'
 
 interface ParsedFile extends RunnerTestFile {
   start: number

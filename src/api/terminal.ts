@@ -1,17 +1,17 @@
 import type { Server } from 'node:http'
-import { createServer } from 'node:http'
-import * as vscode from 'vscode'
-import getPort from 'get-port'
 import type { WebSocket } from 'ws'
+import type { ResolvedMeta } from '../api'
+import type { VitestPackage } from './pkg'
+import type { ExtensionWorkerProcess } from './types'
+import { createServer } from 'node:http'
+import getPort from 'get-port'
+import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import { createErrorLogger, log } from '../log'
 import { formatPkg } from '../utils'
-import type { ResolvedMeta } from '../api'
-import type { VitestPackage } from './pkg'
 import { waitForWsConnection } from './ws'
-import type { ExtensionWorkerProcess } from './types'
 
 export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
   const port = await getPort()

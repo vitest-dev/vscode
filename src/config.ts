@@ -1,6 +1,6 @@
+import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, resolve } from 'node:path'
-import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import * as vscode from 'vscode'
 
 export const extensionId = 'vitest.explorer'
@@ -44,10 +44,10 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const vitestPackagePath = get<string | undefined>('vitestPackagePath')
   const resolvedVitestPackagePath = workspaceFolder && vitestPackagePath
     ? resolve(
-      workspaceFolder.uri.fsPath,
-      // eslint-disable-next-line no-template-curly-in-string
-      vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
-    )
+        workspaceFolder.uri.fsPath,
+        // eslint-disable-next-line no-template-curly-in-string
+        vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
+      )
     : vitestPackagePath
 
   const logLevel = get<string>('logLevel', 'info')
