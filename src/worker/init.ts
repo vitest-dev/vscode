@@ -94,9 +94,9 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
   ] as WorkspaceProject[]).map(p => p.server.config.configFile).filter(c => c != null)
   const workspaceSource: string | false = meta.workspaceFile
     ? meta.workspaceFile
-    : vitest.config.workspace != null
-      ? vitest.server.config.configFile || false
-      : false
+    : (vitest.config.workspace != null || vitest.config.projects != null)
+        ? vitest.server.config.configFile || false
+        : false
   return {
     vitest,
     reporter,

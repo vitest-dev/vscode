@@ -1,6 +1,7 @@
 packages:
   - ./
   - samples/*
+  - samples/monorepo-vitest-workspace/packages/*
 
 catalog:
   '@vitest/browser': ^3.2.2

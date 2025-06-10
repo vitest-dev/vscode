@@ -113,7 +113,7 @@ test('vite-6', async ({ launch }) => {
   })
 })
 
-test('workspaces', async ({ launch }) => {
+test.only('workspaces', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/monorepo-vitest-workspace',
   })
