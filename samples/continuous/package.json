@@ -10,6 +10,6 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "vitest": "^1.4.0"
+    "vitest": "catalog:"
   }
 }

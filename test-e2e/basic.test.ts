@@ -150,13 +150,13 @@ test('custom imba language', async ({ launch }) => {
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')
 })
 
-test('browser mode correctly collects tests', async ({ launch }) => {
+test.only('browser mode correctly collects tests', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/browser',
   })
 
-  await tester.tree.expand('test/console.test.ts')
-  const consoleTest = tester.tree.getFileItem('console.test.ts')
+  await tester.tree.expand('test/console.test.ts [chromium]')
+  const consoleTest = tester.tree.getFileItem('console.test.ts', 'chromium')
   await consoleTest.navigate()
 
   await expect(consoleTest).toHaveTests({

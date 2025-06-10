@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "vite": "^5.1.6",
-    "vitest": "^1.4.0"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }

@@ -39,9 +39,10 @@ class TesterTree {
     return this.page.locator(`.result-summary > [custom-hover]`)
   }
 
-  getFileItem(file: string) {
+  getFileItem(file: string, project?: string) {
     const name = basename(file)
-    return new TesterTestItem(name, this.page.locator(`[aria-label*="${name} ("]`), this.page)
+    const label = project ? `${name} [${project}]` : name
+    return new TesterTestItem(name, this.page.locator(`[aria-label*="${label} ("]`), this.page, project)
   }
 
   async expand(path: string) {
@@ -90,6 +91,7 @@ export class TesterTestItem {
     public name: string,
     public locator: Locator,
     public page: Page,
+    public project: string | undefined,
   ) {}
 
   async run() {
