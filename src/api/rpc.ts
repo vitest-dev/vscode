@@ -1,6 +1,6 @@
+import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 import v8 from 'node:v8'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 
 export type SerializedTestSpecification = [
   project: { name: string | undefined },

@@ -1,11 +1,11 @@
+import type { RunnerTask, RunnerTestFile } from 'vitest'
+import type { VitestFolderAPI } from './api'
 import { lstatSync, readlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
-import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
-import type { RunnerTask, RunnerTestFile } from 'vitest'
-import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
+import * as vscode from 'vscode'
 import { log } from './log'
-import type { VitestFolderAPI } from './api'
+import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { ExtensionWatcher } from './watcher'
 
 // testItem -> vscode.TestItem
@@ -317,7 +317,7 @@ export class TestTree extends vscode.Disposable {
       // suite became a test or vice versa
       if (cachedItem) {
         const data = getTestData(cachedItem)
-        const taskType = task.type === 'custom' ? 'test' : task.type
+        const taskType = isTest(task) ? 'test' : task.type
         if (data.type !== taskType) {
           parent.children.delete(cachedItem.id)
           this.flatTestItems.delete(task.id)
@@ -346,7 +346,7 @@ export class TestTree extends vscode.Disposable {
       const isDynamic = (task as any).dynamic
       if (task.type === 'suite')
         TestSuite.register(testItem, parent, fileData, isDynamic)
-      else if (task.type === 'test' || task.type === 'custom')
+      else if (isTest(task))
         TestCase.register(testItem, parent, fileData, isDynamic)
 
       if (isDynamic) {
@@ -355,7 +355,7 @@ export class TestTree extends vscode.Disposable {
 
         const cachedDynamicTest = fileCachedTests[dynamicTestRegExp] || (fileCachedTests[dynamicTestRegExp] = {
           id: task.id,
-          type: task.type === 'custom' ? 'test' : task.type,
+          type: isTest(task) ? 'test' : task.type,
           children: new Set(),
         })
         cachedDynamicTest.children.forEach((fileId) => {
@@ -427,6 +427,13 @@ export class TestTree extends vscode.Disposable {
         parent.children.delete(child.id)
     })
   }
+}
+
+function isTest(task: RunnerTask) {
+  if (task.type === 'suite') {
+    return false
+  }
+  return true
 }
 
 function getAPIFromFolder(folder: vscode.TestItem): VitestFolderAPI | null {

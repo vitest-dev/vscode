@@ -1,12 +1,12 @@
-import { nextTick } from 'node:process'
-import { Writable } from 'node:stream'
-import { Console } from 'node:console'
-import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import type { BirpcReturn } from 'birpc'
-import type { Reporter } from 'vitest/reporters'
 import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
+import type { Reporter } from 'vitest/reporters'
 import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from '../api/rpc'
+import { Console } from 'node:console'
+import { nextTick } from 'node:process'
+import { Writable } from 'node:stream'
+import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import { setupFilePath } from '../constants'
 import { ExtensionWorker } from './worker'
 
@@ -15,15 +15,15 @@ export class VSCodeReporter implements Reporter {
   private vitest!: VitestCore
 
   private get collecting(): boolean {
-    return this.vitest.configOverride.testNamePattern?.toString() === `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
+    return (this.vitest as any).configOverride.testNamePattern?.toString() === `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
   }
 
-  onInit(ctx: VitestCore) {
-    this.vitest = ctx
-    const server = ctx.server.config.server
+  onInit(vitest: VitestCore) {
+    this.vitest = vitest
+    const server = vitest.server.config.server
     if (!server.fs.allow.includes(setupFilePath))
       server.fs.allow.push(setupFilePath)
-    ctx.projects.forEach((project) => {
+    vitest.projects.forEach((project) => {
       project.config.setupFiles = [
         ...project.config.setupFiles || [],
         setupFilePath,

@@ -1,11 +1,11 @@
-import fs from 'node:fs'
-import { spawn } from 'node:child_process'
-import * as vscode from 'vscode'
-import { dirname, relative } from 'pathe'
-import which from 'which'
 import type { VitestPackage } from './api/pkg'
-import { log } from './log'
+import { spawn } from 'node:child_process'
+import fs from 'node:fs'
+import { dirname, relative } from 'pathe'
+import * as vscode from 'vscode'
+import which from 'which'
 import { getConfig } from './config'
+import { log } from './log'
 
 export function noop() {}
 

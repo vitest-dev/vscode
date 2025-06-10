@@ -1,14 +1,14 @@
+import type { VitestPackage } from './api/pkg'
+import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
+import type { ExtensionWorkerProcess } from './api/types'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
-import { log } from './log'
-import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
-import type { VitestPackage } from './api/pkg'
-import { showVitestError } from './utils'
+import { createVitestProcess } from './api/child_process'
 import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
-import { createVitestProcess } from './api/child_process'
-import type { ExtensionWorkerProcess } from './api/types'
+import { log } from './log'
+import { showVitestError } from './utils'
 
 export class VitestAPI {
   private disposing = false
