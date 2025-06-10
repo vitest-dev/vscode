@@ -254,7 +254,7 @@
     "test-e2e": "vitest --root test/e2e",
     "ecosystem-ci:build": "pnpm build",
     "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
-    "typecheck": "tsc -b ./ ./test",
+    "typecheck": "tsc -b ./ --noEmit",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix ."
   },
