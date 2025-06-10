@@ -249,6 +249,18 @@ importers:
         specifier: 'catalog:'
         version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.0)(@vitest/browser@3.2.3)(happy-dom@15.11.7)(jiti@2.4.2)(jsdom@24.1.3)(msw@2.10.2(@types/node@24.0.0)(typescript@5.8.3))(tsx@4.19.4)(yaml@2.8.0)
 
+  samples/monorepo-vitest-workspace:
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 3.2.3(@vitest/browser@3.2.3)(vitest@3.2.3)
+      happy-dom:
+        specifier: ^15.7.4
+        version: 15.11.7
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.0)(@vitest/browser@3.2.3)(happy-dom@15.11.7)(jiti@2.4.2)(jsdom@24.1.3)(msw@2.10.2(@types/node@24.0.0)(typescript@5.8.3))(tsx@4.19.4)(yaml@2.8.0)
+
   samples/multiple-configs:
     dependencies:
       vitest:
@@ -7392,7 +7404,6 @@ snapshots:
       entities: 4.5.0
       webidl-conversions: 7.0.0
       whatwg-mimetype: 3.0.0
-    optional: true
 
   has-bigints@1.1.0: {}
 
