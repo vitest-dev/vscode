@@ -1,9 +1,9 @@
-import { relative } from 'node:path'
-import * as vscode from 'vscode'
-import { normalize } from 'pathe'
-import type { TestTree } from './testTree'
-import { getConfig } from './config'
 import type { VitestFolderAPI } from './api'
+import type { TestTree } from './testTree'
+import { relative } from 'node:path'
+import { normalize } from 'pathe'
+import * as vscode from 'vscode'
+import { getConfig } from './config'
 import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
@@ -61,7 +61,7 @@ export class ExtensionWatcher extends vscode.Disposable {
       }
       log.verbose?.('[VSCODE] File created:', this.relative(api, uri))
       const apis = this.apisByFolder.get(folder) || []
-      apis.forEach(api => api.onFileChanged(path))
+      apis.forEach(api => api.onFileCreated(path))
     })
   }
 

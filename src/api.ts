@@ -1,14 +1,14 @@
+import type { VitestPackage } from './api/pkg'
+import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
+import type { ExtensionWorkerProcess } from './api/types'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
-import { log } from './log'
-import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
-import type { VitestPackage } from './api/pkg'
-import { createVitestWorkspaceFile, noop, showVitestError } from './utils'
+import { createVitestProcess } from './api/child_process'
 import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
-import { createVitestProcess } from './api/child_process'
-import type { ExtensionWorkerProcess } from './api/types'
+import { log } from './log'
+import { showVitestError } from './utils'
 
 export class VitestAPI {
   private disposing = false
@@ -280,7 +280,7 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
     return depthA - depthB
   })
 
-  const maximumConfigs = getConfig().maximumConfigs ?? 3
+  const maximumConfigs = getConfig().maximumConfigs ?? 5
 
   const workspaceRoots: string[] = apis
     .map(api => api.workspaceSource ? dirname(api.workspaceSource) : null)
@@ -345,27 +345,31 @@ function isCoveredByWorkspace(workspacesRoots: string[], currentConfig: string):
 }
 
 function warnPerformanceConfigLimit(configsToResolve: VitestPackage[]) {
-  const maximumConfigs = getConfig().maximumConfigs ?? 3
+  const maximumConfigs = getConfig().maximumConfigs ?? 5
   const warningMessage = [
-    'Vitest found multiple config files.',
+    'Vitest found multiple projects.',
     `The extension will use only the first ${maximumConfigs} due to performance concerns.`,
-    'Consider using a workspace configuration to group your configs or increase',
+    'Consider using a projects configuration to group your configs or increase',
     'the limit via "vitest.maximumConfigs" option.',
   ].join(' ')
 
   const folders = Array.from(new Set(configsToResolve.map(c => c.folder)))
-  const allConfigs = [...configsToResolve]
-  // remove all but the first 3
+  // remove all but the first 5
   const discardedConfigs = configsToResolve.splice(maximumConfigs)
 
   if (folders.every(f => getConfig(f).disableWorkspaceWarning !== true)) {
     vscode.window.showWarningMessage(
       warningMessage,
-      'Create vitest.workspace.js',
+      'Documentation',
       'Disable notification',
     ).then((result) => {
-      if (result === 'Create vitest.workspace.js')
-        createVitestWorkspaceFile(allConfigs).catch(noop)
+      if (result === 'Documentation') {
+        vscode.commands.executeCommand(
+          'vscode.open',
+          // /workspace redirects to /projects on the new version
+          vscode.Uri.parse('https://vitest.dev/guide/workspace'),
+        )
+      }
 
       if (result === 'Disable notification') {
         folders.forEach((folder) => {

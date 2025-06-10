@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { window } from 'vscode'
 import { getConfig } from './config'
 
@@ -91,6 +92,7 @@ export const log = {
 let exitsts = false
 function appendFile(log: string) {
   if (!exitsts) {
+    mkdirSync(dirname(logFile), { recursive: true })
     writeFileSync(logFile, '')
     exitsts = true
   }

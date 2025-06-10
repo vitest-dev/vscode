@@ -1,7 +1,7 @@
-import { pathToFileURL } from 'node:url'
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
-import { VSCodeReporter } from './reporter'
 import type { WorkerInitMetadata } from './types'
+import { pathToFileURL } from 'node:url'
+import { VSCodeReporter } from './reporter'
 import { normalizeDriveLetter } from './utils'
 
 export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig) {
@@ -86,7 +86,7 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
       ],
     },
   )
-  await vitest.report('onInit', vitest)
+  await (vitest as any).report('onInit', vitest)
   const configs = ([
     // @ts-expect-error -- getRootProject in Vitest 3.0
     'getRootProject' in vitest ? vitest.getRootProject() : vitest.getCoreWorkspaceProject(),
@@ -94,9 +94,9 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
   ] as WorkspaceProject[]).map(p => p.server.config.configFile).filter(c => c != null)
   const workspaceSource: string | false = meta.workspaceFile
     ? meta.workspaceFile
-    : vitest.config.workspace != null
-      ? vitest.server.config.configFile || false
-      : false
+    : (vitest.config.workspace != null || vitest.config.projects != null)
+        ? vitest.server.config.configFile || false
+        : false
   return {
     vitest,
     reporter,
