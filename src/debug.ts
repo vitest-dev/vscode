@@ -80,7 +80,7 @@ export async function debugTests(
 
   if (debugManager.sessions.size) {
     await Promise.all(
-      [...debugManager.sessions].map(session => vscode.debug.stopDebugging(session))
+      [...debugManager.sessions].map(session => vscode.debug.stopDebugging(session)),
     ).catch((error) => {
       log.error('[DEBUG] Failed to stop debugging sessions', error)
     })
@@ -255,7 +255,7 @@ export class DebugManager {
       }
     })
 
-    vscode.debug.onDidTerminateDebugSession(session => {
+    vscode.debug.onDidTerminateDebugSession((session) => {
       this.sessions.delete(session)
     })
   }
