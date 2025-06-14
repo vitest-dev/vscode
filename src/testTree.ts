@@ -82,28 +82,30 @@ export class TestTree extends vscode.Disposable {
     return files
   }
 
+  getSymlinkFolder(uri: vscode.Uri) {
+    const stats = lstatSync(uri.fsPath)
+    if (stats.isSymbolicLink()) {
+      const actualPath = readlinkSync(uri.fsPath)
+      const dir = dirname(uri.fsPath)
+      const id = resolve(dir, actualPath)
+      return vscode.Uri.file(id)
+    }
+    return uri
+  }
+
   // in cases where there is only a single workspace, we don't show it as a folder
   // this inline folder is required for "createFolderItem" to properly resolve the parent,
   // otherwise it will go into an infinite loop
   getOrCreateInlineFolderItem(folderUri: vscode.Uri) {
-    let id = normalize(folderUri.fsPath)
+    const symlinkUri = this.getSymlinkFolder(folderUri)
+    const id = normalize(symlinkUri.fsPath)
     const cached = this.folderItems.get(id)
     if (cached)
       return cached
-    const stats = lstatSync(folderUri.fsPath)
-    if (stats.isSymbolicLink()) {
-      const actualPath = readlinkSync(folderUri.fsPath)
-      const dir = dirname(folderUri.fsPath)
-      id = resolve(dir, actualPath)
-      folderUri = vscode.Uri.file(id)
-    }
-    const cachedSymlink = this.folderItems.get(id)
-    if (cachedSymlink)
-      return cachedSymlink
     const item: vscode.TestItem = {
-      id: folderUri.toString(),
+      id: symlinkUri.toString(),
       children: this.controller.items,
-      uri: folderUri,
+      uri: symlinkUri,
       label: '<root>',
       canResolveChildren: false,
       busy: false,
@@ -114,17 +116,28 @@ export class TestTree extends vscode.Disposable {
     }
     TestFolder.register(item)
     this.folderItems.set(id, item)
+
+    if (symlinkUri !== folderUri) {
+      const originalId = normalize(folderUri.fsPath)
+      this.folderItems.set(originalId, item)
+    }
     return item
   }
 
   getOrCreateWorkspaceFolderItem(folderUri: vscode.Uri) {
-    const folderId = normalize(folderUri.fsPath)
+    const symlinkUri = this.getSymlinkFolder(folderUri)
+    const folderId = normalize(symlinkUri.fsPath)
     const cached = this.folderItems.get(folderId)
     if (cached)
       return cached
 
-    const folderItem = this._createFolderItem(folderUri)
+    const folderItem = this._createFolderItem(symlinkUri)
     this.folderItems.set(folderId, folderItem)
+    // if item is symlink, also store it in the symlink location
+    if (symlinkUri !== folderUri) {
+      const originalId = normalize(folderUri.fsPath)
+      this.folderItems.set(originalId, folderItem)
+    }
     return folderItem
   }
 

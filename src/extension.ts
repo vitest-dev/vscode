@@ -128,6 +128,10 @@ class VitestExtension {
           files,
         )
       }
+
+      this.testController.items.forEach((item) => {
+        item.busy = false
+      })
     }
     catch (err) {
       this.testTree.reset([])
