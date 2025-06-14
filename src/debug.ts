@@ -1,4 +1,3 @@
-import type { WebSocket } from 'ws'
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerProcess } from './api/types'
 import type { WsConnectionMetadata } from './api/ws'
@@ -10,7 +9,7 @@ import getPort from 'get-port'
 import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
 import { VitestFolderAPI } from './api'
-import { waitForWsConnection } from './api/ws'
+import { onWsConnection } from './api/ws'
 import { getConfig } from './config'
 import { workerPath } from './constants'
 import { log } from './log'
@@ -25,6 +24,7 @@ export async function debugTests(
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
+  debugManager: DebugManager,
 ) {
   const port = await getPort()
   const server = createServer().listen(port)
@@ -78,6 +78,14 @@ export async function debugTests(
     },
   }
 
+  if (debugManager.sessions.size) {
+    await Promise.all(
+      [...debugManager.sessions].map(session => vscode.debug.stopDebugging(session))
+    ).catch((error) => {
+      log.error('[DEBUG] Failed to stop debugging sessions', error)
+    })
+  }
+
   vscode.debug.startDebugging(
     pkg.folder,
     debugConfig,
@@ -101,61 +109,74 @@ export async function debugTests(
 
   const disposables: vscode.Disposable[] = []
 
-  const onDidStart = vscode.debug.onDidStartDebugSession(async (session) => {
-    if (session.configuration.__name !== 'Vitest')
-      return
-    if (token.isCancellationRequested) {
-      vscode.debug.stopDebugging(session)
-      return
-    }
-    let metadata!: WsConnectionMetadata
+  wss.on(
+    'connection',
+    ws => onWsConnection(
+      ws,
+      pkg,
+      true,
+      config.shellType,
+      async (metadata) => {
+        try {
+          const api = new VitestFolderAPI(pkg, {
+            ...metadata,
+            process: new ExtensionDebugProcess(
+              metadata,
+            ),
+          })
+          const runner = new TestRunner(
+            controller,
+            tree,
+            api,
+            diagnostic,
+          )
+          disposables.push(api, runner)
 
-    try {
-      metadata = await waitForWsConnection(wss, pkg, true, config.shellType)
-      const api = new VitestFolderAPI(pkg, {
-        ...metadata,
-        process: new ExtensionDebugProcess(session, metadata.ws),
-      })
-      const runner = new TestRunner(
-        controller,
-        tree,
-        api,
-        diagnostic,
-      )
-      disposables.push(api, runner)
+          token.onCancellationRequested(async () => {
+            await metadata.rpc.close()
+          })
 
-      token.onCancellationRequested(async () => {
-        await metadata.rpc.close()
-        await vscode.debug.stopDebugging(session)
-      })
+          await runner.runTests(request, token)
 
-      await runner.runTests(request, token)
+          deferredPromise.resolve()
+        }
+        catch (err: any) {
+          if (err.message.startsWith('[birpc] rpc is closed')) {
+            deferredPromise.resolve()
+            return
+          }
 
-      deferredPromise.resolve()
-    }
-    catch (err: any) {
-      if (err.message.startsWith('[birpc] rpc is closed')) {
-        deferredPromise.resolve()
-        return
-      }
+          deferredPromise.reject(err)
+        }
+      },
+      (err) => {
+        if (err.message.startsWith('[birpc] rpc is closed')) {
+          deferredPromise.resolve()
+          return
+        }
 
-      deferredPromise.reject(err)
-    }
+        deferredPromise.reject(err)
+      },
+    ),
+  )
 
-    if (!token.isCancellationRequested) {
-      await metadata?.rpc.close()
-      await vscode.debug.stopDebugging(session)
+  const onDidWorkerTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
+    const parent = session.parentSession
+
+    // dispose all test runners
+    if (parent && parent.configuration.__name === 'Vitest') {
+      disposables.reverse().forEach(d => d.dispose())
+      disposables.length = 0
     }
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
     if (session.configuration.__name !== 'Vitest')
       return
-    disposables.reverse().forEach(d => d.dispose())
     server.close()
+    onDidTerminate.dispose()
+    onDidWorkerTerminate.dispose()
   })
-
-  disposables.push(onDidStart, onDidTerminate)
 
   await deferredPromise.promise
 }
@@ -192,35 +213,23 @@ class ExtensionDebugProcess implements ExtensionWorkerProcess {
   public id: number = Math.random()
   public closed = false
 
-  private _stopped: Promise<void>
   private _onDidExit = new vscode.EventEmitter<void>()
 
-  constructor(
-    private session: vscode.DebugSession,
-    ws: WebSocket,
-  ) {
-    this._stopped = new Promise((resolve) => {
-      const { dispose } = vscode.debug.onDidTerminateDebugSession((terminatedSession) => {
-        if (session === terminatedSession) {
-          this._onDidExit.fire()
-          this._onDidExit.dispose()
-          this.closed = true
-          resolve()
-          dispose()
-        }
-      })
-    })
+  constructor(private metadata: WsConnectionMetadata) {
     // if websocket connection stopped working, close the debug session
     // otherwise it might hang indefinitely
-    ws.on('close', () => {
+    metadata.ws.on('close', () => {
       this.closed = true
-      this.close()
+      this._onDidExit.fire()
+      this._onDidExit.dispose()
     })
   }
 
-  close() {
-    vscode.debug.stopDebugging(this.session)
-    return this._stopped
+  async close() {
+    if (this.metadata.rpc.$closed) {
+      return
+    }
+    await this.metadata.rpc.close()
   }
 
   onError() {
@@ -233,5 +242,21 @@ class ExtensionDebugProcess implements ExtensionWorkerProcess {
       listener(null)
     })
     return dispose
+  }
+}
+
+export class DebugManager {
+  public sessions: Set<vscode.DebugSession> = new Set()
+
+  constructor() {
+    vscode.debug.onDidStartDebugSession((session) => {
+      if (session.configuration.__name === 'Vitest') {
+        this.sessions.add(session)
+      }
+    })
+
+    vscode.debug.onDidTerminateDebugSession(session => {
+      this.sessions.delete(session)
+    })
   }
 }

@@ -8,7 +8,7 @@ import { ExtensionTerminalProcess } from './api/terminal'
 import { getConfig, testControllerId } from './config'
 import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
-import { debugTests } from './debug'
+import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
 import { log } from './log'
 import { TestRunner } from './runner'
@@ -40,6 +40,7 @@ class VitestExtension {
 
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
+  private debugManager: DebugManager
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -56,6 +57,7 @@ class VitestExtension {
     this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
     this.tagsManager = new TagsManager(this.testTree)
+    this.debugManager = new DebugManager()
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -193,6 +195,7 @@ class VitestExtension {
 
           request,
           token,
+          this.debugManager,
         )
       }
       this.runProfiles.set(`${api.id}:debug`, debugProfile)

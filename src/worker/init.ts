@@ -22,39 +22,40 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
       allowUnknownOptions: false,
     }).options
     : {}
+  const cliOptions: UserConfig = {
+    config: meta.configFile,
+    ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
+    ...args,
+    ...options,
+    watch: true,
+    api: false,
+    // @ts-expect-error private property
+    reporter: undefined,
+    reporters: meta.shellType === 'terminal'
+      ? [reporter, ['default', { isTTY: false }]]
+      : [reporter],
+    ui: false,
+    includeTaskLocation: true,
+    poolOptions: meta.pnpApi && meta.pnpLoader
+      ? {
+          threads: {
+            execArgv: pnpExecArgv,
+          },
+          forks: {
+            execArgv: pnpExecArgv,
+          },
+          vmForks: {
+            execArgv: pnpExecArgv,
+          },
+          vmThreads: {
+            execArgv: pnpExecArgv,
+          },
+        }
+      : {},
+  }
   const vitest = await vitestModule.createVitest(
     'test',
-    {
-      config: meta.configFile,
-      ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
-      ...args,
-      ...options,
-      watch: true,
-      api: false,
-      // @ts-expect-error private property
-      reporter: undefined,
-      reporters: meta.shellType === 'terminal'
-        ? [reporter, ['default', { isTTY: false }]]
-        : [reporter],
-      ui: false,
-      includeTaskLocation: true,
-      poolOptions: meta.pnpApi && meta.pnpLoader
-        ? {
-            threads: {
-              execArgv: pnpExecArgv,
-            },
-            forks: {
-              execArgv: pnpExecArgv,
-            },
-            vmForks: {
-              execArgv: pnpExecArgv,
-            },
-            vmThreads: {
-              execArgv: pnpExecArgv,
-            },
-          }
-        : {},
-    },
+    cliOptions,
     {
       server: {
         middlewareMode: true,

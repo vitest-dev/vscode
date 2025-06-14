@@ -35,7 +35,7 @@ emitter.on('message', async function onMessage(message: any) {
       )
 
       const rpc = createWorkerRPC(
-        new ExtensionWorker(vitest, data.debug, data.astCollect),
+        new ExtensionWorker(vitest, data.debug, data.astCollect, emitter),
         {
           on(listener) {
             emitter.on('message', listener)

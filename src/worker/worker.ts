@@ -1,6 +1,7 @@
 import type { ArgumentsType } from 'vitest'
 import type { Reporter, ResolvedConfig, TestSpecification, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { ExtensionWorkerTransport, SerializedTestSpecification } from '../api/rpc'
+import type { WorkerWSEventEmitter } from './emitter'
 import { readFileSync } from 'node:fs'
 import mm from 'micromatch'
 import { relative } from 'pathe'
@@ -19,6 +20,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     public readonly ctx: VitestCore,
     private readonly debug = false,
     public readonly alwaysAstCollect = false,
+    private emitter: WorkerWSEventEmitter,
   ) {
     this.watcher = new ExtensionWorkerWatcher(this)
     this.coverage = new ExtensionCoverageManager(this)
@@ -143,6 +145,12 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     const specs = await this.resolveTestSpecs(specsOrPaths)
 
     await this.runTestFiles(specs, testNamePattern, !specsOrPaths)
+
+    // debugger never runs in watch mode
+    if (this.debug) {
+      await this.ctx.close()
+      this.emitter.close()
+    }
   }
 
   public cancelRun() {

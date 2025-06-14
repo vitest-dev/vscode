@@ -95,6 +95,9 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
   }
 
   close() {
+    if (this.closed) {
+      return Promise.resolve()
+    }
     // send ctrl+c to sigint any running processs (vscode/#108289)
     this.terminal.sendText('\x03')
     // and then destroy it on the next event loop tick

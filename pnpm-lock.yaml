@@ -87,8 +87,8 @@ importers:
         specifier: ^8.3.3
         version: 8.3.4
       birpc:
-        specifier: ^0.2.19
-        version: 0.2.19
+        specifier: ^2.4.0
+        version: 2.4.0
       bumpp:
         specifier: ^10.1.1
         version: 10.1.1(magicast@0.3.5)
@@ -1761,6 +1761,9 @@ packages:
 
   birpc@0.2.19:
     resolution: {integrity: sha512-5WeXXAvTmitV1RqJFppT5QtUiz2p1mRSYU000Jkft5ZUCLJIk4uQriYNO50HknxKwM6jd8utNc66K1qGIwwWBQ==}
+
+  birpc@2.4.0:
+    resolution: {integrity: sha512-5IdNxTyhXHv2UlgnPHQ0h+5ypVmkrYHzL8QT+DwFZ//2N/oNV8Ch+BCRmTJ3x6/z9Axo/cXYBc9eprsUVK/Jsg==}
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
@@ -6601,6 +6604,8 @@ snapshots:
       editions: 6.21.0
 
   birpc@0.2.19: {}
+
+  birpc@2.4.0: {}
 
   bl@4.1.0:
     dependencies:
