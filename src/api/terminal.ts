@@ -22,7 +22,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   const env = config.env || {}
   const terminal = vscode.window.createTerminal({
     hideFromUser: true,
-    cwd: pkg.folder.uri,
+    cwd: pkg.cwd,
     isTransient: false,
     shellArgs: config.terminalShellArgs,
     shellPath: config.terminalShellPath,
