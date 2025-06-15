@@ -123,7 +123,7 @@ See <https://vitest.dev/guide/workspace.html> for monorepo support.
 
 ### How to hide Test Results view when running tests
 
-You can change the behaviour of testing view by modifying `testing.openTesting` option:
+You can change the behaviour of testing view by modifying `testing.automaticallyOpenTestResults` option:
 
 - `neverOpen` will never open the testing view
 - `openOnTestStart` (default) opens the test results view when test starts running
