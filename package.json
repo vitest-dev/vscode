@@ -142,6 +142,18 @@
           "type": "string",
           "scope": "window"
         },
+        "vitest.ignoreWorkspace": {
+          "description": "Ignore workspace files resolution.",
+          "type": "boolean",
+          "default": false,
+          "scope": "window"
+        },
+        "vitest.configSearchPatternInclude": {
+          "markdownDescription": "A VSCode [glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) to include files from the search for Vitest config files. This pattern affects only regular config files.",
+          "type": "string",
+          "default": "**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}",
+          "scope": "window"
+        },
         "vitest.configSearchPatternExclude": {
           "markdownDescription": "A VSCode [glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) to exclude files from the search for Vitest config files. This pattern affects both workspace and regular config files.",
           "type": "string",

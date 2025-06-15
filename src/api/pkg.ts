@@ -235,6 +235,10 @@ async function resolveVitestWorkspaceConfigs(showWarning: boolean) {
   const userWorkspace = config.workspaceConfig
   const rootConfig = config.rootConfig
 
+  if (config.ignoreWorkspace) {
+    return { meta: [], warned: false }
+  }
+
   if (userWorkspace)
     log.info('[API] Using user workspace config:', userWorkspace)
 
@@ -280,7 +284,10 @@ async function resolveVitestConfigs(showWarning: boolean) {
 
   const configs = rootConfig
     ? [vscode.Uri.file(rootConfig)]
-    : await vscode.workspace.findFiles(configGlob, config.configSearchPatternExclude)
+    : await vscode.workspace.findFiles(
+        config.configSearchPatternInclude || configGlob,
+        config.configSearchPatternExclude,
+      )
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)
