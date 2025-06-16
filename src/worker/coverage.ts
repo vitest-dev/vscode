@@ -15,8 +15,8 @@ export class ExtensionCoverageManager {
   constructor(
     private worker: ExtensionWorker,
   ) {
-    this._config = worker.ctx.config.coverage
-    const projects = new Set([...worker.ctx.projects, worker.getRootTestProject()])
+    this._config = worker.vitest.config.coverage
+    const projects = new Set([...worker.vitest.projects, worker.getRootTestProject()])
     projects.forEach((project) => {
       Object.defineProperty(project.config, 'coverage', {
         get: () => {
@@ -27,7 +27,7 @@ export class ExtensionCoverageManager {
         },
       })
     })
-    Object.defineProperty(worker.ctx, 'coverageProvider', {
+    Object.defineProperty(worker.vitest, 'coverageProvider', {
       get: () => {
         if (this.enabled)
           return this._provider
@@ -56,7 +56,7 @@ export class ExtensionCoverageManager {
   }
 
   public async enable() {
-    const vitest = this.worker.ctx
+    const vitest = this.worker.vitest
     this._enabled = true
 
     const jsonReporter = this._config.reporter.find(([name]) => name === 'json')
@@ -69,7 +69,7 @@ export class ExtensionCoverageManager {
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
-    this.worker.ctx.logger.log('Running coverage with configuration:', this.config)
+    this.worker.vitest.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
       // @ts-expect-error private method
@@ -82,7 +82,7 @@ export class ExtensionCoverageManager {
   }
 
   private get coverageProvider() {
-    return (this.worker.ctx as any).coverageProvider as CoverageProvider | null | undefined
+    return (this.worker.vitest as any).coverageProvider as CoverageProvider | null | undefined
   }
 
   public disable() {
@@ -92,7 +92,7 @@ export class ExtensionCoverageManager {
   async waitForReport() {
     if (!this.enabled)
       return null
-    const ctx = this.worker.ctx
+    const ctx = this.worker.vitest
     const coverage = ctx.config.coverage
     if (!coverage.enabled || !this.coverageProvider)
       return null
