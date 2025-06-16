@@ -13,10 +13,10 @@ export class ExtensionCoverageManager {
   private _config: ResolvedCoverageOptions
 
   constructor(
-    private vitest: ExtensionWorker,
+    private worker: ExtensionWorker,
   ) {
-    this._config = vitest.ctx.config.coverage
-    const projects = new Set([...vitest.ctx.projects, vitest.getRootTestProject()])
+    this._config = worker.ctx.config.coverage
+    const projects = new Set([...worker.ctx.projects, worker.getRootTestProject()])
     projects.forEach((project) => {
       Object.defineProperty(project.config, 'coverage', {
         get: () => {
@@ -27,7 +27,7 @@ export class ExtensionCoverageManager {
         },
       })
     })
-    Object.defineProperty(vitest.ctx, 'coverageProvider', {
+    Object.defineProperty(worker.ctx, 'coverageProvider', {
       get: () => {
         if (this.enabled)
           return this._provider
@@ -48,7 +48,7 @@ export class ExtensionCoverageManager {
   }
 
   public get enabled() {
-    return this._enabled && !this.vitest.collecting
+    return this._enabled && !this.worker.collecting
   }
 
   public get resolved() {
@@ -56,7 +56,7 @@ export class ExtensionCoverageManager {
   }
 
   public async enable() {
-    const vitest = this.vitest.ctx
+    const vitest = this.worker.ctx
     this._enabled = true
 
     const jsonReporter = this._config.reporter.find(([name]) => name === 'json')
@@ -69,7 +69,7 @@ export class ExtensionCoverageManager {
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
-    this.vitest.ctx.logger.log('Running coverage with configuration:', this.config)
+    this.worker.ctx.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
       // @ts-expect-error private method
@@ -82,7 +82,7 @@ export class ExtensionCoverageManager {
   }
 
   private get coverageProvider() {
-    return (this.vitest.ctx as any).coverageProvider as CoverageProvider | null | undefined
+    return (this.worker.ctx as any).coverageProvider as CoverageProvider | null | undefined
   }
 
   public disable() {
@@ -92,7 +92,7 @@ export class ExtensionCoverageManager {
   async waitForReport() {
     if (!this.enabled)
       return null
-    const ctx = this.vitest.ctx
+    const ctx = this.worker.ctx
     const coverage = ctx.config.coverage
     if (!coverage.enabled || !this.coverageProvider)
       return null
