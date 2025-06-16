@@ -82,7 +82,7 @@ export class ExtensionCoverageManager {
   }
 
   private get coverageProvider() {
-    return (this.vitest as any).coverageProvider as CoverageProvider | null | undefined
+    return (this.vitest.ctx as any).coverageProvider as CoverageProvider | null | undefined
   }
 
   public disable() {
