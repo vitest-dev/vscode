@@ -28,6 +28,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
     shellPath: config.terminalShellPath,
     env: {
       ...env,
+      VITEST_VSCODE_LOG: env.VITEST_VSCODE_LOG ?? process.env.VITEST_VSCODE_LOG ?? config.logLevel,
       VITEST_WS_ADDRESS: wsAddress,
       VITEST_VSCODE: 'true',
       TEST: 'true',

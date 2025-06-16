@@ -11,7 +11,7 @@ import { setupFilePath } from '../constants'
 import { ExtensionWorker } from './worker'
 
 export class VSCodeReporter implements Reporter {
-  private rpc!: BirpcReturn<ExtensionWorkerEvents, ExtensionWorkerTransport>
+  public rpc!: BirpcReturn<ExtensionWorkerEvents, ExtensionWorkerTransport>
   private vitest!: VitestCore
 
   private get collecting(): boolean {

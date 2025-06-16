@@ -1,14 +1,45 @@
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
 import type { WorkerInitMetadata } from './types'
+import { Console } from 'node:console'
+import { Writable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
 import { VSCodeReporter } from './reporter'
 import { normalizeDriveLetter } from './utils'
 
 export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig) {
+  const reporter = new VSCodeReporter()
+
+  let stdout: Writable | undefined
+  let stderr: Writable | undefined
+
+  if (meta.shellType === 'terminal') {
+    stdout = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        if (reporter.rpc) {
+          reporter.rpc.onProcessLog('stdout', log).catch(() => {})
+        }
+        process.stdout.write(log)
+        callback()
+      },
+    })
+
+    stderr = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        if (reporter.rpc) {
+          reporter.rpc.onProcessLog('stderr', log).catch(() => {})
+        }
+        process.stderr.write(log)
+        callback()
+      },
+    })
+    globalThis.console = new Console(stdout, stderr)
+  }
+
   const vitestModule = await import(
     pathToFileURL(normalizeDriveLetter(meta.vitestNodePath)).toString()
   ) as typeof import('vitest/node')
-  const reporter = new VSCodeReporter()
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
         '--require',
@@ -31,9 +62,7 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
-    reporters: meta.shellType === 'terminal'
-      ? [reporter, ['default', { isTTY: false }]]
-      : [reporter],
+    reporters: [reporter],
     ui: false,
     includeTaskLocation: true,
     poolOptions: meta.pnpApi && meta.pnpLoader
@@ -85,6 +114,10 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
           },
         },
       ],
+    },
+    {
+      stderr,
+      stdout,
     },
   )
   await (vitest as any).report('onInit', vitest)
