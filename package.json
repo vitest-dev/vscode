@@ -2,7 +2,7 @@
   "publisher": "vitest",
   "name": "explorer",
   "displayName": "Vitest",
-  "version": "1.24.4",
+  "version": "1.24.5",
   "packageManager": "pnpm@10.11.1",
   "description": "A Vite-native testing framework. It's fast!",
   "author": "Vitest Team",
