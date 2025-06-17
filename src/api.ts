@@ -326,11 +326,13 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
   }
 
   if (!apis.length) {
-    log.error('There were errors during config load.', errors)
+    log.error('There were errors during config load.')
+    errors.forEach(e => log.error(e))
     throw new Error('The extension could not load any config.')
   }
   else if (errors.length) {
-    log.error('There were errors during config load.', errors)
+    log.error('There were errors during config load.')
+    errors.forEach(e => log.error(e))
     showVitestError('The extension could not load some configs')
   }
 

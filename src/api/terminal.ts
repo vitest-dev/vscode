@@ -11,8 +11,8 @@ import { WebSocketServer } from 'ws'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import { createErrorLogger, log } from '../log'
-import { formatPkg } from '../utils'
-import { waitForWsConnection } from './ws'
+import { formatPkg, showVitestError } from '../utils'
+import { waitForWsConnection, WsConnectionMetadata } from './ws'
 
 export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
   const pnpLoader = pkg.loader
@@ -26,9 +26,10 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   const config = getConfig(pkg.folder)
   const env = config.env || {}
   const terminal = vscode.window.createTerminal({
-    hideFromUser: true,
+    hideFromUser: false,
     cwd: pkg.cwd,
     isTransient: false,
+    name: 'vitest',
     shellArgs: config.terminalShellArgs,
     shellPath: config.terminalShellPath,
     env: {
@@ -49,7 +50,15 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   log.info('[API]', `Initiated ws connection via ${wsAddress}`)
   log.info('[API]', `Starting ${formatPkg(pkg)} in the terminal: ${command}`)
   terminal.sendText(command, true)
-  const meta = await waitForWsConnection(wss, pkg, false, 'terminal')
+  const meta = await new Promise<WsConnectionMetadata>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      terminal.show(false)
+      reject(new Error(`The extension could not connect to the terminal in 5 seconds. See the "vitest" terminal output for more details.`))
+    }, 5000)
+    waitForWsConnection(wss, pkg, false, 'terminal').then(resolve, reject).finally(() => {
+      clearTimeout(timeout)
+    })
+  })
   const processId = (await terminal.processId) ?? Math.random()
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)
   const vitestProcess = new ExtensionTerminalProcess(
