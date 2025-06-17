@@ -4,6 +4,7 @@ import type { ResolvedMeta } from '../api'
 import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
 import { createServer } from 'node:http'
+import { pathToFileURL } from 'node:url'
 import getPort from 'get-port'
 import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
@@ -14,6 +15,10 @@ import { formatPkg } from '../utils'
 import { waitForWsConnection } from './ws'
 
 export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
+  const pnpLoader = pkg.loader
+  const pnp = pkg.pnp
+  if (pnpLoader && !pnp)
+    throw new Error('pnp file is required if loader option is used')
   const port = await getPort()
   const server = createServer().listen(port).unref()
   const wss = new WebSocketServer({ server })
@@ -36,7 +41,11 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
       NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
     },
   })
-  const command = `node ${workerPath}`
+  let command = 'node'
+  if (pnpLoader && pnp) {
+    command += ` --require ${pnp} --experimental-loader ${pathToFileURL(pnpLoader).toString()}`
+  }
+  command += ` ${workerPath}`
   log.info('[API]', `Initiated ws connection via ${wsAddress}`)
   log.info('[API]', `Starting ${formatPkg(pkg)} in the terminal: ${command}`)
   terminal.sendText(command, true)
