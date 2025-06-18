@@ -12,7 +12,7 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
   let stdout: Writable | undefined
   let stderr: Writable | undefined
 
-  if (meta.shellType === 'terminal') {
+  if (meta.shellType === 'terminal' && !meta.hasShellIntegration) {
     stdout = new Writable({
       write(chunk, __, callback) {
         const log = chunk.toString()

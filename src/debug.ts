@@ -55,7 +55,7 @@ export async function debugTests(
     smartStep: true,
     ...(config.shellType === 'terminal'
       ? {
-          command: `${runtimeExecutable} ${workerPath}`,
+          command: `${runtimeExecutable} ${workerPath};exit`,
         }
       : {
           program: workerPath,
@@ -116,6 +116,7 @@ export async function debugTests(
       pkg,
       true,
       config.shellType,
+      false,
       async (metadata) => {
         try {
           const api = new VitestFolderAPI(pkg, {
