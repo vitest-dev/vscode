@@ -135,3 +135,5 @@ This is a vscode's built-in option and will control every plugin.
 ### I am using `vitest.shellType: terminal`, but I don't see the terminal
 
 The extension uses a modified Vitest script that removes the reporter output. For this reason, the terminal is hidden by default. However, it might be useful to debug issues with the extension or Vitest itself - to open the terminal in the "Terminals" view you can use the "Vitest: Show Shell Terminal" command.
+
+## test
