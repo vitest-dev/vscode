@@ -75,11 +75,11 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.ignoreWorkspace`: Ignores the workspace resolution step. The extension will only look for `vitest.config` files.
 - `vitest.configSearchPatternInclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be used when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}`.
 - `vitest.configSearchPatternExclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be ignored when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `{**/node_modules/**,**/.*/**,*.d.ts}`. If the extension cannot find Vitest, please open an issue.
-- `vitest.shellType`: The method the extension uses to spawn a long-running Vitest process. This is particularly useful if you are using a custom shell script to set up the environment. When using the `terminal` shell type, the websocket connection will be established. Can either be `terminal` or `child_process`. Default: `terminal`.
-- `vitest.nodeExecutable`: The path to the Node.js executable. If not assigned, tries to find Node.js path via a PATH variable or a `which` command. This is applied only when `vitest.shellType` is `child_process`.
-- `vitest.nodeExecArgs`: The arguments to pass to the Node.js executable. This is applied only when `vitest.shellType` is `child_process`.
-- `vitest.terminalShellPath`: The path to the shell executable. This is applied only when `vitest.shellType` is `terminal` (the default).
-- `vitest.terminalShellArgs`: The arguments to pass to the shell executable. This is applied only when `vitest.shellType` is `terminal` (the default).
+- `vitest.shellType`: The method the extension uses to spawn a long-running Vitest process. This is particularly useful if you are using a custom shell script to set up the environment. When using the `terminal` shell type, the websocket connection will be established. Can either be `terminal` or `child_process`. Default: `child_process`.
+- `vitest.nodeExecutable`: The path to the Node.js executable. If not assigned, tries to find Node.js path via a PATH variable or a `which` command. This is applied only when `vitest.shellType` is `child_process` (the default).
+- `vitest.nodeExecArgs`: The arguments to pass to the Node.js executable. This is applied only when `vitest.shellType` is `child_process` (the default).
+- `vitest.terminalShellPath`: The path to the shell executable. This is applied only when `vitest.shellType` is `terminal`.
+- `vitest.terminalShellArgs`: The arguments to pass to the shell executable. This is applied only when `vitest.shellType` is `terminal`.
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 - `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`

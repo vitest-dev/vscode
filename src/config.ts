@@ -62,7 +62,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const terminalShellArgs = get<string[] | undefined>('terminalShellArgs')
   const terminalShellPath = get<string | undefined>('terminalShellPath')
-  const shellType = get<'child_process' | 'terminal'>('shellType', 'terminal')!
+  const shellType = get<'child_process' | 'terminal'>('shellType', 'child_process')!
   const nodeExecArgs = get<string[] | undefined>('nodeExecArgs')
 
   const experimentalStaticAstCollect = get<boolean>('experimentalStaticAstCollect', false)!

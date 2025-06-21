@@ -223,7 +223,7 @@
             "terminal",
             "child_process"
           ],
-          "default": "terminal",
+          "default": "child_process",
           "scope": "resource"
         },
         "vitest.terminalShellPath": {
