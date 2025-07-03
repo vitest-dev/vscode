@@ -274,10 +274,10 @@ function getProjectsFromTests(fsPath: string, parentItem: vscode.TestItem | unde
 
 function getBrowserModeLaunchArgs(isPlaywright: boolean, config: { debuggerPort?: number; cliArguments?: string }): string {
   const browser = !config.cliArguments?.includes('--browser') ? `--browser=${isPlaywright ? 'chromium' : 'chrome'}` : ''
-  // Only playwright provider supports --inspect-brk currently
-  const inspectBrk = isPlaywright && !config.cliArguments?.includes('--inspect-brk') ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
+  // Only playwright provider supports --inspect currently
+  const inspect = isPlaywright && !config.cliArguments?.includes('--inspect') ? `--inspect=localhost:${config.debuggerPort ?? '9229'}` : ''
   // regardless of user config, some properties need to be set when debugging with browser mode enabled
-  return `vitest ${config.cliArguments ?? ''} ${inspectBrk} ${browser}`
+  return `vitest ${config.cliArguments ?? ''} ${inspect} ${browser}`
 }
 
 async function getRuntimeOptions(pkg: VitestPackage) {
