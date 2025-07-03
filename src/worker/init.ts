@@ -1,14 +1,45 @@
-import { pathToFileURL } from 'node:url'
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
-import { VSCodeReporter } from './reporter'
 import type { WorkerInitMetadata } from './types'
+import { Console } from 'node:console'
+import { Writable } from 'node:stream'
+import { pathToFileURL } from 'node:url'
+import { VSCodeReporter } from './reporter'
 import { normalizeDriveLetter } from './utils'
 
 export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig) {
+  const reporter = new VSCodeReporter()
+
+  let stdout: Writable | undefined
+  let stderr: Writable | undefined
+
+  if (meta.shellType === 'terminal' && !meta.hasShellIntegration) {
+    stdout = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        if (reporter.rpc) {
+          reporter.rpc.onProcessLog('stdout', log).catch(() => {})
+        }
+        process.stdout.write(log)
+        callback()
+      },
+    })
+
+    stderr = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        if (reporter.rpc) {
+          reporter.rpc.onProcessLog('stderr', log).catch(() => {})
+        }
+        process.stderr.write(log)
+        callback()
+      },
+    })
+    globalThis.console = new Console(stdout, stderr)
+  }
+
   const vitestModule = await import(
     pathToFileURL(normalizeDriveLetter(meta.vitestNodePath)).toString()
   ) as typeof import('vitest/node')
-  const reporter = new VSCodeReporter()
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
         '--require',
@@ -22,39 +53,38 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
       allowUnknownOptions: false,
     }).options
     : {}
+  const cliOptions: UserConfig = {
+    config: meta.configFile,
+    ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
+    ...args,
+    ...options,
+    watch: true,
+    api: false,
+    // @ts-expect-error private property
+    reporter: undefined,
+    reporters: [reporter],
+    ui: false,
+    includeTaskLocation: true,
+    poolOptions: meta.pnpApi && meta.pnpLoader
+      ? {
+          threads: {
+            execArgv: pnpExecArgv,
+          },
+          forks: {
+            execArgv: pnpExecArgv,
+          },
+          vmForks: {
+            execArgv: pnpExecArgv,
+          },
+          vmThreads: {
+            execArgv: pnpExecArgv,
+          },
+        }
+      : {},
+  }
   const vitest = await vitestModule.createVitest(
     'test',
-    {
-      config: meta.configFile,
-      ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
-      ...args,
-      ...options,
-      watch: true,
-      api: false,
-      // @ts-expect-error private property
-      reporter: undefined,
-      reporters: meta.shellType === 'terminal'
-        ? [reporter, ['default', { isTTY: false }]]
-        : [reporter],
-      ui: false,
-      includeTaskLocation: true,
-      poolOptions: meta.pnpApi && meta.pnpLoader
-        ? {
-            threads: {
-              execArgv: pnpExecArgv,
-            },
-            forks: {
-              execArgv: pnpExecArgv,
-            },
-            vmForks: {
-              execArgv: pnpExecArgv,
-            },
-            vmThreads: {
-              execArgv: pnpExecArgv,
-            },
-          }
-        : {},
-    },
+    cliOptions,
     {
       server: {
         middlewareMode: true,
@@ -85,8 +115,12 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
         },
       ],
     },
+    {
+      stderr,
+      stdout,
+    },
   )
-  await vitest.report('onInit', vitest)
+  await (vitest as any).report('onInit', vitest)
   const configs = ([
     // @ts-expect-error -- getRootProject in Vitest 3.0
     'getRootProject' in vitest ? vitest.getRootProject() : vitest.getCoreWorkspaceProject(),
@@ -94,9 +128,9 @@ export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig)
   ] as WorkspaceProject[]).map(p => p.server.config.configFile).filter(c => c != null)
   const workspaceSource: string | false = meta.workspaceFile
     ? meta.workspaceFile
-    : vitest.config.workspace != null
-      ? vitest.server.config.configFile || false
-      : false
+    : (vitest.config.workspace != null || vitest.config.projects != null)
+        ? vitest.server.config.configFile || false
+        : false
   return {
     vitest,
     reporter,

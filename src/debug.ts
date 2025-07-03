@@ -1,23 +1,25 @@
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import * as vscode from 'vscode'
-import type { WebSocket } from 'ws'
-import { WebSocketServer } from 'ws'
 import getPort from 'get-port'
-import { VitestFolderAPI } from './api'
+import * as vscode from 'vscode'
+import { WebSocketServer } from 'ws'
 import type { VitestPackage } from './api/pkg'
-import type { TestTree } from './testTree'
-import { log } from './log'
-import { getConfig } from './config'
-import { TestRunner } from './runner'
-import { workerPath } from './constants'
-import type { WsConnectionMetadata } from './api/ws'
-import { waitForWsConnection } from './api/ws'
 import type { ExtensionWorkerProcess } from './api/types'
+import type { WsConnectionMetadata } from './api/ws'
+import type { ExtensionDiagnostic } from './diagnostic'
+import type { TestTree } from './testTree'
+import { VitestFolderAPI } from './api'
+import { onWsConnection } from './api/ws'
+import { getConfig } from './config'
+import { workerPath } from './constants'
+import { log } from './log'
+import { TestRunner } from './runner'
+import { findNode } from './utils'
 import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
-import { findNode } from './utils'
-import type { ExtensionDiagnostic } from './diagnostic'
+
+const DebugSessionName = 'Vitest'
+const BrowserDebugSessionName = 'Vitest_Attach'
 
 export async function debugTests(
   controller: vscode.TestController,
@@ -27,6 +29,7 @@ export async function debugTests(
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
+  debugManager: DebugManager,
 ) {
   const pkg = api.package
   const port = await getPort()
@@ -44,7 +47,7 @@ export async function debugTests(
   log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
 
   const debugConfig = {
-    __name: 'Vitest',
+    __name: DebugSessionName,
     type: config.shellType === 'terminal' ? 'node-terminal' : 'pwa-node',
     request: 'launch',
     name: 'Debug Tests',
@@ -58,7 +61,7 @@ export async function debugTests(
     smartStep: true,
     ...(config.shellType === 'terminal'
       ? {
-          command: `${runtimeExecutable} ${workerPath}`,
+          command: `${runtimeExecutable} ${workerPath};exit`,
         }
       : {
           program: workerPath,
@@ -79,6 +82,14 @@ export async function debugTests(
       VITEST: 'true',
       NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
     },
+  }
+
+  if (debugManager.sessions.size) {
+    await Promise.all(
+      [...debugManager.sessions].map(session => vscode.debug.stopDebugging(session)),
+    ).catch((error) => {
+      log.error('[DEBUG] Failed to stop debugging sessions', error)
+    })
   }
 
   // If the debug request includes any test files belonging the browser-mode projects,
@@ -119,108 +130,126 @@ export async function debugTests(
 
   const disposables: vscode.Disposable[] = []
 
-  const onDidStart = vscode.debug.onDidStartDebugSession(async (session) => {
-    if (session.configuration.__name !== 'Vitest')
-      return
-    if (token.isCancellationRequested) {
-      vscode.debug.stopDebugging(session)
-      return
-    }
-    let metadata!: WsConnectionMetadata
+  const browserModeLaunchArgs = needsBrowserMode ? getBrowserModeLaunchArgs(isPlaywright, config) : undefined
 
-    try {
-      const browserModeLaunchArgs = needsBrowserMode ? getBrowserModeLaunchArgs(isPlaywright, config) : undefined
-      metadata = await waitForWsConnection(wss, pkg, true, config.shellType, browserModeLaunchArgs)
-      const api = new VitestFolderAPI(pkg, {
-        ...metadata,
-        process: new ExtensionDebugProcess(session, metadata.ws),
-      })
-      const runner = new TestRunner(
-        controller,
-        tree,
-        api,
-        diagnostic,
-      )
-      disposables.push(api, runner)
+  wss.on(
+    'connection',
+    ws => onWsConnection(
+      ws,
+      pkg,
+      true,
+      config.shellType,
+      false,
+      browserModeLaunchArgs,
+      async (metadata) => {
+        try {
+          const api = new VitestFolderAPI(pkg, {
+            ...metadata,
+            process: new ExtensionDebugProcess(
+              metadata,
+            ),
+          })
+          const runner = new TestRunner(
+            controller,
+            tree,
+            api,
+            diagnostic,
+          )
+          disposables.push(api, runner)
 
-      token.onCancellationRequested(async () => {
-        await metadata.rpc.close()
-        await vscode.debug.stopDebugging(session)
-      })
+          token.onCancellationRequested(async () => {
+            await metadata.rpc.close()
+          })
 
-      if (needsBrowserMode) {
-        const browserModeAttachConfig = {
-          __name: 'Vitest_Attach',
-          request: 'attach',
-          name: 'Debug Tests (Browser)',
-          port: config.debuggerPort ?? '9229',
-          skipFiles: config.debugExclude,
-          ...(
-            config.debugOutFiles?.length
-              ? { outFiles: config.debugOutFiles }
-              : {}
-          ),
-          smartStep: true,
-          cwd: pkg.cwd,
-          type: 'chrome',
-        }
-        // Start secondary debug config before running test
-        // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
-        vscode.debug.startDebugging(
-          pkg.folder,
-          browserModeAttachConfig,
-          { parentSession: session, suppressDebugView: true },
-        ).then(
-          (fulfilled) => {
-            if (fulfilled) {
-              log.info('[DEBUG] Secondary debug launch config started')
+          if (needsBrowserMode) {
+            const browserModeAttachConfig = {
+              __name: BrowserDebugSessionName,
+              request: 'attach',
+              name: 'Debug Tests (Browser)',
+              port: config.debuggerPort ?? '9229',
+              skipFiles: config.debugExclude,
+              ...(
+                config.debugOutFiles?.length
+                  ? { outFiles: config.debugOutFiles }
+                  : {}
+              ),
+              smartStep: true,
+              cwd: pkg.cwd,
+              type: 'chrome',
             }
-            else {
-              log.error('[DEBUG] Secondary debug launch config failed')
-            }
+            // Start secondary debug config before running test
+            // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
+            const parentSession = debugManager.sessions.entries().find(s => s[0].name === DebugSessionName)?.[0]
+            vscode.debug.startDebugging(
+              pkg.folder,
+              browserModeAttachConfig,
+              { parentSession, suppressDebugView: true },
+            ).then(
+              (fulfilled) => {
+                if (fulfilled) {
+                  log.info('[DEBUG] Secondary debug launch config started')
+                }
+                else {
+                  log.error('[DEBUG] Secondary debug launch config failed')
+                }
+              }
+              ,
+              (err) => {
+                log.error('[DEBUG] Secondary debug launch config failed')
+                log.error(err.toString())
+                deferredPromise.reject(new Error('Failed to start secondary launch config', { cause: err }))
+              },
+            )
           }
-          ,
-          (err) => {
-            log.error('[DEBUG] Secondary debug launch config failed')
-            log.error(err.toString())
-            deferredPromise.reject(new Error('Failed to start secondary launch config', { cause: err }))
-          },
-        )
-      }
 
-      await runner.runTests(request, token)
+          await runner.runTests(request, token)
 
-      deferredPromise.resolve()
-    }
-    catch (err: any) {
-      if (err.message.startsWith('[birpc] rpc is closed')) {
-        deferredPromise.resolve()
-        return
-      }
+          deferredPromise.resolve()
+        }
+        catch (err: any) {
+          if (err.message.startsWith('[birpc] rpc is closed')) {
+            deferredPromise.resolve()
+            return
+          }
 
-      deferredPromise.reject(err)
-    }
+          deferredPromise.reject(err)
+        }
+      },
+      (err) => {
+        if (err.message.startsWith('[birpc] rpc is closed')) {
+          deferredPromise.resolve()
+          return
+        }
 
-    if (!token.isCancellationRequested) {
-      await metadata?.rpc.close()
-      await vscode.debug.stopDebugging(session)
+        deferredPromise.reject(err)
+      },
+    ),
+  )
+
+  const onDidWorkerTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
+    const parent = session.parentSession
+
+    // dispose all test runners
+    if (parent && parent.configuration.__name === DebugSessionName) {
+      disposables.reverse().forEach(d => d.dispose())
+      disposables.length = 0
     }
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
     // Child/secondary debug session should stop the main debugging session
-    if (session.parentSession?.configuration.__name === 'Vitest') {
+    if (session.parentSession?.configuration.__name === DebugSessionName) {
       vscode.debug.stopDebugging(session.parentSession)
       return
     }
-    else if (session.configuration.__name !== 'Vitest') {
+    else if (session.configuration.__name !== DebugSessionName) {
       return
     }
     disposables.reverse().forEach(d => d.dispose())
     server.close()
+    onDidTerminate.dispose()
+    onDidWorkerTerminate.dispose()
   })
-
-  disposables.push(onDidStart, onDidTerminate)
 
   await deferredPromise.promise
 }
@@ -284,35 +313,23 @@ class ExtensionDebugProcess implements ExtensionWorkerProcess {
   public id: number = Math.random()
   public closed = false
 
-  private _stopped: Promise<void>
   private _onDidExit = new vscode.EventEmitter<void>()
 
-  constructor(
-    private session: vscode.DebugSession,
-    ws: WebSocket,
-  ) {
-    this._stopped = new Promise((resolve) => {
-      const { dispose } = vscode.debug.onDidTerminateDebugSession((terminatedSession) => {
-        if (session === terminatedSession) {
-          this._onDidExit.fire()
-          this._onDidExit.dispose()
-          this.closed = true
-          resolve()
-          dispose()
-        }
-      })
-    })
+  constructor(private metadata: WsConnectionMetadata) {
     // if websocket connection stopped working, close the debug session
     // otherwise it might hang indefinitely
-    ws.on('close', () => {
+    metadata.ws.on('close', () => {
       this.closed = true
-      this.close()
+      this._onDidExit.fire()
+      this._onDidExit.dispose()
     })
   }
 
-  close() {
-    vscode.debug.stopDebugging(this.session)
-    return this._stopped
+  async close() {
+    if (this.metadata.rpc.$closed) {
+      return
+    }
+    await this.metadata.rpc.close()
   }
 
   onError() {
@@ -325,5 +342,22 @@ class ExtensionDebugProcess implements ExtensionWorkerProcess {
       listener(null)
     })
     return dispose
+  }
+}
+
+export class DebugManager {
+  public sessions: Set<vscode.DebugSession> = new Set()
+
+  constructor() {
+    vscode.debug.onDidStartDebugSession((session) => {
+      const name = session.configuration.__name
+      if (name === DebugSessionName || name === BrowserDebugSessionName) {
+        this.sessions.add(session)
+      }
+    })
+
+    vscode.debug.onDidTerminateDebugSession((session) => {
+      this.sessions.delete(session)
+    })
   }
 }

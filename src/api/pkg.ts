@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
-import * as vscode from 'vscode'
 import { basename, dirname, normalize, resolve } from 'pathe'
 import { gte } from 'semver'
-import { log } from '../log'
-import { configGlob, minimumVersion, workspaceGlob } from '../constants'
+import * as vscode from 'vscode'
 import { getConfig } from '../config'
+import { configGlob, minimumVersion, workspaceGlob } from '../constants'
+import { log } from '../log'
 import { resolveVitestPackage } from './resolve'
 
 const _require = require
@@ -49,8 +49,20 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
   if (!vitest) {
     if (showWarning) {
       const isVitestConfig = configOrWorkspaceFile.fsPath.includes('vitest.')
-      if (isVitestConfig || isVitestInPackageJson(folder.uri.fsPath))
-        vscode.window.showWarningMessage(`Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. Please run \`npm i --save-dev vitest\` to install Vitest.`)
+      const isInPkgJson = isVitestInPackageJson(folder.uri.fsPath)
+      if (isVitestConfig || isInPkgJson) {
+        const message = [
+          `Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. `,
+          `Please run \`npm i --save-dev vitest\` to install Vitest. `,
+        ]
+        if (isVitestConfig) {
+          message.push('You are seeing this message because the extension found a Vitest config in this folder.')
+        }
+        else if (isInPkgJson) {
+          message.push('You are seeing this message because the extension found a "vitest" dependency in the `package.json` file.')
+        }
+        vscode.window.showWarningMessage(message.join(''))
+      }
     }
     log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
     return null
@@ -223,6 +235,10 @@ async function resolveVitestWorkspaceConfigs(showWarning: boolean) {
   const userWorkspace = config.workspaceConfig
   const rootConfig = config.rootConfig
 
+  if (config.ignoreWorkspace) {
+    return { meta: [], warned: false }
+  }
+
   if (userWorkspace)
     log.info('[API] Using user workspace config:', userWorkspace)
 
@@ -268,7 +284,10 @@ async function resolveVitestConfigs(showWarning: boolean) {
 
   const configs = rootConfig
     ? [vscode.Uri.file(rootConfig)]
-    : await vscode.workspace.findFiles(configGlob, config.configSearchPatternExclude)
+    : await vscode.workspace.findFiles(
+      config.configSearchPatternInclude || configGlob,
+      config.configSearchPatternExclude,
+    )
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)

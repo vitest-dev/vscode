@@ -1,14 +1,14 @@
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
-import { log } from './log'
-import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
 import type { VitestPackage } from './api/pkg'
-import { showVitestError } from './utils'
+import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
+import type { ExtensionWorkerProcess } from './api/types'
+import { createVitestProcess } from './api/child_process'
 import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
-import { createVitestProcess } from './api/child_process'
-import type { ExtensionWorkerProcess } from './api/types'
+import { log } from './log'
+import { showVitestError } from './utils'
 import type { BrowserDebugOptions } from './worker/types'
 
 export class VitestAPI {
@@ -339,11 +339,13 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
   }
 
   if (!apis.length) {
-    throw new AggregateError(errors, 'The extension could not load some configs.')
+    log.error('There were errors during config load.')
+    errors.forEach(e => log.error(e))
+    throw new Error('The extension could not load any config.')
   }
   else if (errors.length) {
     log.error('There were errors during config load.')
-    log.error(errors)
+    errors.forEach(e => log.error(e))
     showVitestError('The extension could not load some configs')
   }
 

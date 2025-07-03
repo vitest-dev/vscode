@@ -1,11 +1,11 @@
+import type { RunnerTask, RunnerTestFile } from 'vitest'
+import type { VitestFolderAPI } from './api'
 import { lstatSync, readlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
-import * as vscode from 'vscode'
 import { basename, dirname, normalize } from 'pathe'
-import type { RunnerTask, RunnerTestFile } from 'vitest'
-import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from './testTreeData'
+import * as vscode from 'vscode'
 import { log } from './log'
-import type { VitestFolderAPI } from './api'
+import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { ExtensionWatcher } from './watcher'
 
 // testItem -> vscode.TestItem
@@ -82,28 +82,30 @@ export class TestTree extends vscode.Disposable {
     return files
   }
 
+  getSymlinkFolder(uri: vscode.Uri) {
+    const stats = lstatSync(uri.fsPath)
+    if (stats.isSymbolicLink()) {
+      const actualPath = readlinkSync(uri.fsPath)
+      const dir = dirname(uri.fsPath)
+      const id = resolve(dir, actualPath)
+      return vscode.Uri.file(id)
+    }
+    return uri
+  }
+
   // in cases where there is only a single workspace, we don't show it as a folder
   // this inline folder is required for "createFolderItem" to properly resolve the parent,
   // otherwise it will go into an infinite loop
   getOrCreateInlineFolderItem(folderUri: vscode.Uri) {
-    let id = normalize(folderUri.fsPath)
+    const symlinkUri = this.getSymlinkFolder(folderUri)
+    const id = normalize(symlinkUri.fsPath)
     const cached = this.folderItems.get(id)
     if (cached)
       return cached
-    const stats = lstatSync(folderUri.fsPath)
-    if (stats.isSymbolicLink()) {
-      const actualPath = readlinkSync(folderUri.fsPath)
-      const dir = dirname(folderUri.fsPath)
-      id = resolve(dir, actualPath)
-      folderUri = vscode.Uri.file(id)
-    }
-    const cachedSymlink = this.folderItems.get(id)
-    if (cachedSymlink)
-      return cachedSymlink
     const item: vscode.TestItem = {
-      id: folderUri.toString(),
+      id: symlinkUri.toString(),
       children: this.controller.items,
-      uri: folderUri,
+      uri: symlinkUri,
       label: '<root>',
       canResolveChildren: false,
       busy: false,
@@ -114,17 +116,28 @@ export class TestTree extends vscode.Disposable {
     }
     TestFolder.register(item)
     this.folderItems.set(id, item)
+
+    if (symlinkUri !== folderUri) {
+      const originalId = normalize(folderUri.fsPath)
+      this.folderItems.set(originalId, item)
+    }
     return item
   }
 
   getOrCreateWorkspaceFolderItem(folderUri: vscode.Uri) {
-    const folderId = normalize(folderUri.fsPath)
+    const symlinkUri = this.getSymlinkFolder(folderUri)
+    const folderId = normalize(symlinkUri.fsPath)
     const cached = this.folderItems.get(folderId)
     if (cached)
       return cached
 
-    const folderItem = this._createFolderItem(folderUri)
+    const folderItem = this._createFolderItem(symlinkUri)
     this.folderItems.set(folderId, folderItem)
+    // if item is symlink, also store it in the symlink location
+    if (symlinkUri !== folderUri) {
+      const originalId = normalize(folderUri.fsPath)
+      this.folderItems.set(originalId, folderItem)
+    }
     return folderItem
   }
 
@@ -317,7 +330,7 @@ export class TestTree extends vscode.Disposable {
       // suite became a test or vice versa
       if (cachedItem) {
         const data = getTestData(cachedItem)
-        const taskType = task.type === 'custom' ? 'test' : task.type
+        const taskType = isTest(task) ? 'test' : task.type
         if (data.type !== taskType) {
           parent.children.delete(cachedItem.id)
           this.flatTestItems.delete(task.id)
@@ -346,7 +359,7 @@ export class TestTree extends vscode.Disposable {
       const isDynamic = (task as any).dynamic
       if (task.type === 'suite')
         TestSuite.register(testItem, parent, fileData, isDynamic)
-      else if (task.type === 'test' || task.type === 'custom')
+      else if (isTest(task))
         TestCase.register(testItem, parent, fileData, isDynamic)
 
       if (isDynamic) {
@@ -355,7 +368,7 @@ export class TestTree extends vscode.Disposable {
 
         const cachedDynamicTest = fileCachedTests[dynamicTestRegExp] || (fileCachedTests[dynamicTestRegExp] = {
           id: task.id,
-          type: task.type === 'custom' ? 'test' : task.type,
+          type: isTest(task) ? 'test' : task.type,
           children: new Set(),
         })
         cachedDynamicTest.children.forEach((fileId) => {
@@ -427,6 +440,13 @@ export class TestTree extends vscode.Disposable {
         parent.children.delete(child.id)
     })
   }
+}
+
+function isTest(task: RunnerTask) {
+  if (task.type === 'suite') {
+    return false
+  }
+  return true
 }
 
 function getAPIFromFolder(folder: vscode.TestItem): VitestFolderAPI | null {

@@ -1,6 +1,8 @@
+import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import { stripVTControlCharacters } from 'node:util'
 import v8 from 'node:v8'
 import { type BirpcReturn, createBirpc } from 'birpc'
-import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import { log } from '../log'
 
 export type SerializedTestSpecification = [
   project: { name: string | undefined },
@@ -35,6 +37,8 @@ export interface ExtensionWorkerEvents {
   onCollected: (files?: RunnerTestFile[], collecting?: boolean) => void
   onWatcherStart: (files?: RunnerTestFile[], errors?: unknown[], collecting?: boolean) => void
   onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
+
+  onProcessLog: (type: 'stdout' | 'stderr', log: string) => void
 }
 
 export type VitestRPC = BirpcReturn<ExtensionWorkerTransport, ExtensionWorkerEvents>
@@ -71,6 +75,9 @@ export function createRpcOptions() {
     onCollected: handlers.onCollected.trigger,
     onWatcherRerun: handlers.onWatcherRerun.trigger,
     onWatcherStart: handlers.onWatcherStart.trigger,
+    onProcessLog(type, message) {
+      log.worker(type === 'stderr' ? 'error' : 'info', stripVTControlCharacters(message))
+    },
   }
 
   return {

@@ -47,4 +47,8 @@ export class WorkerWSEventEmitter extends WorkerEventEmitter {
   override off(event: string, listener: (...args: any[]) => void) {
     this.ws.off(event, listener)
   }
+
+  close() {
+    this.ws.close()
+  }
 }

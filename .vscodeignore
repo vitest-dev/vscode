@@ -12,7 +12,6 @@ node_modeuls/**
 samples/**
 dist/extension.js.map
 test/**
-test-e2e/**
 patches/**
 pnpm-lock.yaml
 *.vsix

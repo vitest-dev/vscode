@@ -1,19 +1,19 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
-import { spawn } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
 import type { Server } from 'node:http'
+import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
-import getPort from 'get-port'
+import { pathToFileURL } from 'node:url'
 import type WebSocket from 'ws'
+import getPort from 'get-port'
 import { WebSocketServer } from 'ws'
-import { findNode, formatPkg, showVitestError } from '../utils'
-import { createErrorLogger, log } from '../log'
+import type { ResolvedMeta } from '../api'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
-import type { ResolvedMeta } from '../api'
+import { createErrorLogger, log } from '../log'
+import { findNode, formatPkg, showVitestError } from '../utils'
+import type { ExtensionWorkerProcess } from './types'
 import type { VitestPackage } from './pkg'
 import { waitForWsConnection } from './ws'
-import type { ExtensionWorkerProcess } from './types'
 
 export async function createVitestProcess(pkg: VitestPackage) {
   const pnpLoader = pkg.loader
@@ -90,7 +90,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
     vitest.on('exit', onExit)
     vitest.on('error', onError)
 
-    waitForWsConnection(wss, pkg, false, 'child_process')
+    waitForWsConnection(wss, pkg, false, 'child_process', false)
       .then((resolved) => {
         resolved.handlers.onStdout = (callback: (data: string) => void) => {
           stdoutCallbacks.add(callback)

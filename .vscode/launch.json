@@ -56,6 +56,16 @@
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
+      "name": "Run Extension Imba Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/imba"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
       "name": "Run Extension No Config Sample",
       "type": "extensionHost",
       "request": "launch",

@@ -1,10 +1,10 @@
+import type { CoverageProvider, ResolvedCoverageOptions } from 'vitest/node'
+import type { ExtensionWorker } from './worker'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'pathe'
-import type { CoverageProvider, ResolvedCoverageOptions } from 'vitest/node'
 import { finalCoverageFileName } from '../constants'
-import type { ExtensionWorker } from './worker'
 
 export class ExtensionCoverageManager {
   private _enabled = false
@@ -13,10 +13,10 @@ export class ExtensionCoverageManager {
   private _config: ResolvedCoverageOptions
 
   constructor(
-    private vitest: ExtensionWorker,
+    private worker: ExtensionWorker,
   ) {
-    this._config = vitest.ctx.config.coverage
-    const projects = new Set([...vitest.ctx.projects, vitest.getRootTestProject()])
+    this._config = worker.vitest.config.coverage
+    const projects = new Set([...worker.vitest.projects, worker.getRootTestProject()])
     projects.forEach((project) => {
       Object.defineProperty(project.config, 'coverage', {
         get: () => {
@@ -27,7 +27,7 @@ export class ExtensionCoverageManager {
         },
       })
     })
-    Object.defineProperty(vitest.ctx, 'coverageProvider', {
+    Object.defineProperty(worker.vitest, 'coverageProvider', {
       get: () => {
         if (this.enabled)
           return this._provider
@@ -48,7 +48,7 @@ export class ExtensionCoverageManager {
   }
 
   public get enabled() {
-    return this._enabled && !this.vitest.collecting
+    return this._enabled && !this.worker.collecting
   }
 
   public get resolved() {
@@ -56,7 +56,7 @@ export class ExtensionCoverageManager {
   }
 
   public async enable() {
-    const vitest = this.vitest.ctx
+    const vitest = this.worker.vitest
     this._enabled = true
 
     const jsonReporter = this._config.reporter.find(([name]) => name === 'json')
@@ -69,16 +69,20 @@ export class ExtensionCoverageManager {
     this._config.reportOnFailure = true
     this._config.reportsDirectory = join(tmpdir(), `vitest-coverage-${randomUUID()}`)
 
-    this.vitest.ctx.logger.log('Running coverage with configuration:', this.config)
+    this.worker.vitest.logger.log('Running coverage with configuration:', this.config)
 
     if (!this._provider) {
       // @ts-expect-error private method
       await vitest.initCoverageProvider()
-      await vitest.coverageProvider?.clean(this._config.clean)
+      await this.coverageProvider?.clean(this._config.clean)
     }
     else {
       await this._provider.clean(this._config.clean)
     }
+  }
+
+  private get coverageProvider() {
+    return (this.worker.vitest as any).coverageProvider as CoverageProvider | null | undefined
   }
 
   public disable() {
@@ -88,12 +92,12 @@ export class ExtensionCoverageManager {
   async waitForReport() {
     if (!this.enabled)
       return null
-    const ctx = this.vitest.ctx
+    const ctx = this.worker.vitest
     const coverage = ctx.config.coverage
-    if (!coverage.enabled || !ctx.coverageProvider)
+    if (!coverage.enabled || !this.coverageProvider)
       return null
     ctx.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
-    await ctx.runningPromise
+    await (ctx as any).runningPromise
     if (existsSync(coverage.reportsDirectory)) {
       ctx.logger.error(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
       return coverage.reportsDirectory

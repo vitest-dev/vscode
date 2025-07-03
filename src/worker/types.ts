@@ -9,6 +9,7 @@ export interface WorkerInitMetadata {
   workspaceFile?: string
   env: Record<string, any> | undefined
   shellType: 'terminal' | 'child_process'
+  hasShellIntegration: boolean
   pnpApi?: string
   pnpLoader?: string
 }

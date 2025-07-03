@@ -9,7 +9,6 @@ export default antfu(
       '**/coverage',
       '**/*.snap',
       '**/bench.json',
-      '**/testdata',
       '**/fixtures',
       '**/samples',
       'test',

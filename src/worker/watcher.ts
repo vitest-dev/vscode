@@ -1,6 +1,6 @@
 import type { ProvidedContext } from 'vitest'
-import { relative } from 'pathe'
 import type { WorkspaceProject } from 'vitest/node'
+import { relative } from 'pathe'
 import { ExtensionWorker } from './worker'
 
 export class ExtensionWorkerWatcher {
@@ -11,11 +11,11 @@ export class ExtensionWorkerWatcher {
 
   private enabled = false
 
-  constructor(vitest: ExtensionWorker) {
+  constructor(extension: ExtensionWorker) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
-    const ctx = vitest.ctx
-    ;(vitest.getRootTestProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
+    const vitest = extension.vitest
+    ;(extension.getRootTestProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
       get continuousFiles() {
         return state.files || []
       },
@@ -28,9 +28,9 @@ export class ExtensionWorkerWatcher {
     })
 
     // @ts-expect-error modifying a private property
-    const originalScheduleRerun = ctx.scheduleRerun.bind(ctx)
+    const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
     // @ts-expect-error modifying a private property
-    ctx.scheduleRerun = async function (files: string[]) {
+    vitest.scheduleRerun = async function (files: string[]) {
       // if trigger is not a test file, remove all non-continious files from this.changedTests
       const triggerFile = files[0]
       const isTestFileTrigger = this.changedTests.has(triggerFile)
@@ -49,17 +49,17 @@ export class ExtensionWorkerWatcher {
         const astSpecs: [project: WorkspaceProject, file: string][] = []
 
         for (const [project, file] of specs) {
-          if (vitest.alwaysAstCollect || project.config.browser.enabled) {
+          if (extension.alwaysAstCollect || project.config.browser.enabled) {
             astSpecs.push([project, file])
           }
         }
 
-        ctx.configOverride.testNamePattern = new RegExp(ExtensionWorker.COLLECT_NAME_PATTERN)
-        ctx.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(ctx.config.root, f)))
+        extension.setGlobalTestNamePattern(ExtensionWorker.COLLECT_NAME_PATTERN)
+        vitest.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(vitest.config.root, f)))
 
         if (astSpecs.length) {
-          ctx.logger.log('Collecting using AST explorer...')
-          await vitest.astCollect(astSpecs, 'web')
+          vitest.logger.log('Collecting using AST explorer...')
+          await extension.astCollect(astSpecs)
           this.changedTests.clear()
           return await originalScheduleRerun.call(this, [])
         }
@@ -70,11 +70,11 @@ export class ExtensionWorkerWatcher {
       state.rerunTriggered = true
 
       const namePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
-      ctx.configOverride.testNamePattern = namePattern
+      extension.setGlobalTestNamePattern(namePattern)
       if (state.watchEveryFile) {
-        ctx.logger.log(
+        vitest.logger.log(
           'Rerunning all tests due to file changes:',
-          ...files.map(f => relative(ctx.config.root, f)),
+          ...files.map(f => relative(vitest.config.root, f)),
           namePattern ? `with pattern ${namePattern}` : '',
         )
         return await originalScheduleRerun.call(this, files)
@@ -91,9 +91,9 @@ export class ExtensionWorkerWatcher {
       }
 
       if (this.changedTests.size) {
-        ctx.logger.log(
+        vitest.logger.log(
           'Rerunning tests due to file changes:',
-          ...[...this.changedTests].map(f => relative(ctx.config.root, f)),
+          ...[...this.changedTests].map(f => relative(vitest.config.root, f)),
           namePattern ? `with pattern ${namePattern}` : '',
         )
       }

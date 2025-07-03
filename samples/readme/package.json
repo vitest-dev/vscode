@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "vitest": "^2.0.1"
+    "vitest": "catalog:"
   }
 }

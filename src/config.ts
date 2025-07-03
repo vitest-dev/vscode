@@ -1,7 +1,8 @@
+import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, resolve } from 'node:path'
-import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import * as vscode from 'vscode'
+import { configGlob } from './constants'
 
 export const extensionId = 'vitest.explorer'
 export const testControllerId = 'vitest'
@@ -41,13 +42,18 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     '{**/node_modules/**,**/.*/**,**/*.d.ts}',
   )!
 
+  const configSearchPatternInclude = get<string>(
+    'configSearchPatternInclude',
+    configGlob,
+  ) || configGlob
+
   const vitestPackagePath = get<string | undefined>('vitestPackagePath')
   const resolvedVitestPackagePath = workspaceFolder && vitestPackagePath
     ? resolve(
-      workspaceFolder.uri.fsPath,
-      // eslint-disable-next-line no-template-curly-in-string
-      vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
-    )
+        workspaceFolder.uri.fsPath,
+        // eslint-disable-next-line no-template-curly-in-string
+        vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
+      )
     : vitestPackagePath
 
   const logLevel = get<string>('logLevel', 'info')
@@ -65,6 +71,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const debugOutFiles = get<string[]>('debugOutFiles', [])
   const applyDiagnostic = get<boolean>('applyDiagnostic', true)
+  const ignoreWorkspace = get<boolean>('ignoreWorkspace', false) ?? false
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
@@ -81,7 +88,9 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     vitestPackagePath: resolvedVitestPackagePath,
     workspaceConfig: resolveConfigPath(workspaceConfig),
     rootConfig: resolveConfigPath(rootConfigFile),
+    configSearchPatternInclude,
     configSearchPatternExclude,
+    ignoreWorkspace,
     maximumConfigs: get<number>('maximumConfigs', 5),
     nodeExecutable: resolveConfigPath(nodeExecutable),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),

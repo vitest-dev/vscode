@@ -1,22 +1,22 @@
-import * as vscode from 'vscode'
-import './polyfills'
 import { normalize } from 'pathe'
+import * as vscode from 'vscode'
 import { version } from '../package.json'
-import { getConfig, testControllerId } from './config'
 import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
-import { TestRunner } from './runner'
-import { TestTree } from './testTree'
-import { configGlob, workspaceGlob } from './constants'
-import { log } from './log'
-import { debounce, showVitestError } from './utils'
 import { resolveVitestPackages } from './api/pkg'
-import { TestFile, getTestData } from './testTreeData'
-import { TagsManager } from './tagsManager'
-import { coverageContext } from './coverage'
 import { ExtensionTerminalProcess } from './api/terminal'
-import { debugTests } from './debug'
+import { getConfig, testControllerId } from './config'
+import { configGlob, workspaceGlob } from './constants'
+import { coverageContext } from './coverage'
+import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
+import { log } from './log'
+import { TestRunner } from './runner'
+import { TagsManager } from './tagsManager'
+import { TestTree } from './testTree'
+import { TestFile, getTestData } from './testTreeData'
+import { debounce, showVitestError } from './utils'
+import './polyfills'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension()
@@ -40,6 +40,7 @@ class VitestExtension {
 
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
+  private debugManager: DebugManager
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -56,6 +57,7 @@ class VitestExtension {
     this.loadingTestItem.sortText = '.0' // show it first
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
     this.tagsManager = new TagsManager(this.testTree)
+    this.debugManager = new DebugManager()
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -128,6 +130,10 @@ class VitestExtension {
           files,
         )
       }
+
+      this.testController.items.forEach((item) => {
+        item.busy = false
+      })
     }
     catch (err) {
       this.testTree.reset([])
@@ -189,6 +195,7 @@ class VitestExtension {
 
           request,
           token,
+          this.debugManager,
         )
       }
       this.runProfiles.set(`${api.id}:debug`, debugProfile)

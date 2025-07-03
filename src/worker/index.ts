@@ -1,9 +1,9 @@
+import type { WorkerRunnerOptions } from './types'
 import v8 from 'node:v8'
 import { WebSocket } from 'ws'
-import { createWorkerRPC } from './rpc'
-import type { WorkerRunnerOptions } from './types'
-import { initVitest } from './init'
 import { WorkerWSEventEmitter } from './emitter'
+import { initVitest } from './init'
+import { createWorkerRPC } from './rpc'
 import { ExtensionWorker } from './worker'
 
 // this is the file that will be executed with "node <path>"
@@ -35,7 +35,7 @@ emitter.on('message', async function onMessage(message: any) {
       )
 
       const rpc = createWorkerRPC(
-        new ExtensionWorker(vitest, data.debug, data.astCollect),
+        new ExtensionWorker(vitest, data.debug, data.astCollect, emitter),
         {
           on(listener) {
             emitter.on('message', listener)
