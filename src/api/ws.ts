@@ -39,6 +39,7 @@ export function waitForWsConnection(
           resolve({
             rpc: api,
             workspaceSource: message.workspaceSource,
+            browserDebugOptions: message.browserDebugOptions,
             handlers: {
               ...handlers,
               onStdout() {

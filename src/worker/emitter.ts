@@ -1,5 +1,5 @@
 import type WebSocket from 'ws'
-import type { WorkerEvent } from './types'
+import type { BrowserDebugOptions, WorkerEvent } from './types'
 
 abstract class WorkerEventEmitter {
   abstract name: string
@@ -8,8 +8,8 @@ abstract class WorkerEventEmitter {
   abstract on(event: string, listener: (...args: any[]) => void): void
   abstract off(event: string, listener: (...args: any[]) => void): void
 
-  ready(configs: string[], workspaceSource: string | false) {
-    this.sendWorkerEvent({ type: 'ready', configs, workspaceSource })
+  ready(configs: string[], workspaceSource: string | false, browserDebugOptions: BrowserDebugOptions[] | undefined) {
+    this.sendWorkerEvent({ type: 'ready', configs, workspaceSource, browserDebugOptions })
   }
 
   error(err: any) {

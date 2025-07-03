@@ -1,3 +1,5 @@
+import type { ResolvedBrowserOptions } from 'vitest/dist/node.js'
+
 export interface WorkerInitMetadata {
   vitestNodePath: string
   id: string
@@ -22,7 +24,10 @@ export interface EventReady {
   type: 'ready'
   configs: string[]
   workspaceSource: string | false
+  browserDebugOptions: BrowserDebugOptions[] | undefined
 }
+
+export type BrowserDebugOptions = Pick<ResolvedBrowserOptions, 'enabled' | 'provider'> & { project: string }
 
 export interface EventDebug {
   type: 'debug'

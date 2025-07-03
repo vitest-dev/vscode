@@ -85,8 +85,16 @@ export async function debugTests(
   // vitest needs to be started with the correct --inspect-brk and --browser arguments.
   // Later, after debugging session starts, a secondary debug session is started; that session attaches to the launched browser instance.
   const { browserModeProjects, isPlaywright } = await api.getBrowserModeInfo()
-  const testProjects = request.include?.filter(inc => inc.uri?.fsPath != null).flatMap(inc => getProjectsFromTests(inc, api, tree)) ?? []
+  // When filters are applied through the test explorer, the result is represented as exclusion rather than inclusion.
+  // When exclusions apply, root path is used and all but the excluded tests should be considered
+  const includedTests = request.include?.length ? request.include : [{ uri: api.workspaceFolder.uri, parent: undefined }]
+  const excludedTestIds = new Set(request?.exclude?.map(ex => ex.id) ?? [])
+  const testProjects = includedTests?.filter(inc => inc.uri?.fsPath != null).flatMap(({ uri, parent }) => getProjectsFromTests(uri!.fsPath, parent, api, tree, excludedTestIds)) ?? []
+
   const needsBrowserMode = !!browserModeProjects?.length && testProjects.some(project => browserModeProjects?.includes(project))
+  if (needsBrowserMode && !isPlaywright) {
+    log.info('Browser mode debugging support is limited to Chrome with Playwright and Chromium with webdriverio. Additional project configuration is required for webdriverio debugger integration.')
+  }
 
   vscode.debug.startDebugging(
     pkg.folder,
@@ -217,30 +225,31 @@ export async function debugTests(
   await deferredPromise.promise
 }
 
-function getTestProjectsInFolder(path: string, api: VitestFolderAPI, tree: TestTree) {
+function getTestProjectsInFolder(path: string, api: VitestFolderAPI, tree: TestTree, exclude: Set<string>) {
   const folder = tree.getOrCreateFolderTestItem(api, path)
   const items = tree.getFolderFiles(folder)
-  return items.map(item => (getTestData(item) as TestFile).project)
+  return items.map(item => (getTestData(item) as TestFile)).filter(testfile => !exclude.has(testfile.id)).map(tf => tf.project)
 }
 
-function getProjectsFromTests(item: vscode.TestItem | undefined, api: VitestFolderAPI, tree: TestTree): string[] {
-  const items = getTestProjectsInFolder(item?.uri?.fsPath ?? '', api, tree)
+function getProjectsFromTests(fsPath: string, parentItem: vscode.TestItem | undefined, api: VitestFolderAPI, tree: TestTree, excluded: Set<string>): string[] {
+  const items = getTestProjectsInFolder(fsPath, api, tree, excluded)
   if (items.length > 0) {
     return items
   }
   // Climb up tree until entry with project is found
-  if (item?.parent) {
-    return getProjectsFromTests(item.parent, api, tree)
+  const parentPath = parentItem?.uri?.fsPath
+  if (parentPath) {
+    return getProjectsFromTests(parentPath, parentItem?.parent, api, tree, excluded)
   }
   return []
 }
 
-function getBrowserModeLaunchArgs(isPlaywright: boolean, config: any): string {
-  const browser = isPlaywright ? 'chromium' : 'chrome'
+function getBrowserModeLaunchArgs(isPlaywright: boolean, config: { debuggerPort?: number; cliArguments?: string }): string {
+  const browser = !config.cliArguments?.includes('--browser') ? `--browser=${isPlaywright ? 'chromium' : 'chrome'}` : ''
   // Only playwright provider supports --inspect-brk currently
-  const inspectBrk = isPlaywright ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
+  const inspectBrk = isPlaywright && !config.cliArguments?.includes('--inspect-brk') ? `--inspect-brk=localhost:${config.debuggerPort ?? '9229'}` : ''
   // regardless of user config, some properties need to be set when debugging with browser mode enabled
-  return `vitest ${config.cliArguments ?? ''} ${inspectBrk} --browser=${browser}`
+  return `vitest ${config.cliArguments ?? ''} ${inspectBrk} ${browser}`
 }
 
 async function getRuntimeOptions(pkg: VitestPackage) {

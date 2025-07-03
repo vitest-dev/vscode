@@ -9,6 +9,7 @@ import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
 import { createVitestProcess } from './api/child_process'
 import type { ExtensionWorkerProcess } from './api/types'
+import type { BrowserDebugOptions } from './worker/types'
 
 export class VitestAPI {
   private disposing = false
@@ -205,11 +206,11 @@ export class VitestFolderAPI {
     await this.meta.rpc.unwatchTests()
   }
 
-  async getBrowserModeInfo() {
-    const resolvedBrowserOptions = await this.meta.rpc.getBrowserDebugOptions()
+  getBrowserModeInfo() {
+    const browserDebugOptions = this.meta.browserDebugOptions
     // Only playwright provider supports --inspect-brk currently
-    const isPlaywright = resolvedBrowserOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
-    const browserModeProjects = resolvedBrowserOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
+    const isPlaywright = browserDebugOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
+    const browserModeProjects = browserDebugOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
 
     return {
       browserModeProjects,
@@ -417,6 +418,7 @@ export interface ResolvedMeta {
   workspaceSource: string | false
   pkg: VitestPackage
   configs: string[]
+  browserDebugOptions: BrowserDebugOptions[] | undefined
   handlers: {
     onStdout: (listener: (log: string) => void) => void
     onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void
