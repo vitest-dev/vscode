@@ -208,8 +208,8 @@ export class VitestFolderAPI {
 
   getBrowserModeInfo() {
     const browserDebugOptions = this.meta.browserDebugOptions
-    // Only playwright provider supports --inspect-brk currently
 
+    // Only playwright is supported for debugging integration with the --inspect options
     const isPlaywright = browserDebugOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
     const browserModeProjects = browserDebugOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
 

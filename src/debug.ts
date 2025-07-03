@@ -244,7 +244,6 @@ export async function debugTests(
     else if (session.configuration.__name !== DebugSessionName) {
       return
     }
-    disposables.reverse().forEach(d => d.dispose())
     server.close()
     onDidTerminate.dispose()
     onDidWorkerTerminate.dispose()
