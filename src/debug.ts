@@ -1,22 +1,22 @@
-import { createServer } from 'node:http'
-import { pathToFileURL } from 'node:url'
-import getPort from 'get-port'
-import * as vscode from 'vscode'
-import { WebSocketServer } from 'ws'
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerProcess } from './api/types'
 import type { WsConnectionMetadata } from './api/ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { TestTree } from './testTree'
+import type { TestFile } from './testTreeData'
+import { createServer } from 'node:http'
+import { pathToFileURL } from 'node:url'
+import getPort from 'get-port'
+import * as vscode from 'vscode'
+import { WebSocketServer } from 'ws'
 import { VitestFolderAPI } from './api'
 import { onWsConnection } from './api/ws'
 import { getConfig } from './config'
 import { workerPath } from './constants'
 import { log } from './log'
 import { TestRunner } from './runner'
-import { findNode } from './utils'
-import type { TestFile } from './testTreeData'
 import { getTestData } from './testTreeData'
+import { findNode } from './utils'
 
 const DebugSessionName = 'Vitest'
 const BrowserDebugSessionName = 'Vitest_Attach'
@@ -192,8 +192,7 @@ export async function debugTests(
                 else {
                   log.error('[DEBUG] Secondary debug launch config failed')
                 }
-              }
-              ,
+              },
               (err) => {
                 log.error('[DEBUG] Secondary debug launch config failed')
                 log.error(err.toString())

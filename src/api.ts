@@ -1,15 +1,15 @@
-import { dirname, isAbsolute } from 'node:path'
-import { normalize, relative } from 'pathe'
-import * as vscode from 'vscode'
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
+import type { BrowserDebugOptions } from './worker/types'
+import { dirname, isAbsolute } from 'node:path'
+import { normalize, relative } from 'pathe'
+import * as vscode from 'vscode'
 import { createVitestProcess } from './api/child_process'
 import { createVitestTerminalProcess } from './api/terminal'
 import { getConfig } from './config'
 import { log } from './log'
 import { showVitestError } from './utils'
-import type { BrowserDebugOptions } from './worker/types'
 
 export class VitestAPI {
   private disposing = false
@@ -209,6 +209,7 @@ export class VitestFolderAPI {
   getBrowserModeInfo() {
     const browserDebugOptions = this.meta.browserDebugOptions
     // Only playwright provider supports --inspect-brk currently
+
     const isPlaywright = browserDebugOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
     const browserModeProjects = browserDebugOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
 

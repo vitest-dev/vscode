@@ -285,9 +285,9 @@ async function resolveVitestConfigs(showWarning: boolean) {
   const configs = rootConfig
     ? [vscode.Uri.file(rootConfig)]
     : await vscode.workspace.findFiles(
-      config.configSearchPatternInclude || configGlob,
-      config.configSearchPatternExclude,
-    )
+        config.configSearchPatternInclude || configGlob,
+        config.configSearchPatternExclude,
+      )
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)

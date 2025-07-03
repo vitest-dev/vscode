@@ -1,11 +1,11 @@
-import { pathToFileURL } from 'node:url'
 import type { WebSocket, WebSocketServer } from 'ws'
-import { gte } from 'semver'
 import type { ResolvedMeta } from '../api'
 import type { WorkerEvent, WorkerRunnerOptions } from '../worker/types'
+import type { VitestPackage } from './pkg'
+import { pathToFileURL } from 'node:url'
+import { gte } from 'semver'
 import { getConfig } from '../config'
 import { log } from '../log'
-import type { VitestPackage } from './pkg'
 import { createVitestRpc } from './rpc'
 
 export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {

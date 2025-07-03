@@ -1,7 +1,7 @@
+import type { VitestAPI } from './api'
 import { normalize } from 'pathe'
 import * as vscode from 'vscode'
 import { version } from '../package.json'
-import type { VitestAPI } from './api'
 import { resolveVitestAPI } from './api'
 import { resolveVitestPackages } from './api/pkg'
 import { ExtensionTerminalProcess } from './api/terminal'
@@ -14,8 +14,9 @@ import { log } from './log'
 import { TestRunner } from './runner'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
-import { TestFile, getTestData } from './testTreeData'
+import { getTestData, TestFile } from './testTreeData'
 import { debounce, showVitestError } from './utils'
+
 import './polyfills'
 
 export async function activate(context: vscode.ExtensionContext) {
