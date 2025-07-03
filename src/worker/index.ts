@@ -47,7 +47,7 @@ emitter.on('message', async function onMessage(message: any) {
           deserialize: v => v8.deserialize(Buffer.from(v) as any),
         },
       )
-      const browserDebugOptions = vitest.projects.map(proj => ({ enabled: proj.config?.browser.enabled, provider: proj.config?.browser.provider, project: proj.getName() }))
+      const browserDebugOptions = vitest.projects.map(proj => ({ enabled: proj.config?.browser.enabled, provider: proj.config?.browser.provider, project: proj.name }))
 
       reporter.initRpc(rpc)
       emitter.ready(configs, workspaceSource, browserDebugOptions)
