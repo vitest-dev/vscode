@@ -93,7 +93,7 @@ export async function debugTests(
   }
 
   // If the debug request includes any test files belonging the browser-mode projects,
-  // vitest needs to be started with the correct --inspect-brk and --browser arguments.
+  // vitest needs to be started with the correct --inspect and --browser arguments.
   // Later, after debugging session starts, a secondary debug session is started; that session attaches to the launched browser instance.
   const { browserModeProjects, isPlaywright } = await api.getBrowserModeInfo()
   // When filters are applied through the test explorer, the result is represented as exclusion rather than inclusion.
@@ -244,7 +244,6 @@ export async function debugTests(
     else if (session.configuration.__name !== DebugSessionName) {
       return
     }
-    disposables.reverse().forEach(d => d.dispose())
     server.close()
     onDidTerminate.dispose()
     onDidWorkerTerminate.dispose()
