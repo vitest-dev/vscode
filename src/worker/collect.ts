@@ -155,10 +155,19 @@ export function astParseFile(filepath: string, code: string) {
         return
       }
 
-      const isQuoted = messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral'
-      const message = isQuoted
-        ? code.slice(messageNode.start + 1, messageNode.end - 1)
-        : code.slice(messageNode.start, messageNode.end)
+      let message: string
+      if (messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral') {
+        message = code.slice(messageNode.start + 1, messageNode.end - 1)
+      }
+      else {
+        message = code.slice(messageNode.start, messageNode.end)
+      }
+
+      if (message.startsWith('0,')) {
+        message = message.slice(2)
+      }
+
+      message = message.replace(/__vite_ssr_import_\d+__\./g, '')
 
       // cannot statically analyze, so we always skip it
       if (mode === 'skipIf' || mode === 'runIf') {
