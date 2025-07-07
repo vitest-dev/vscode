@@ -95,16 +95,28 @@ export async function debugTests(
   // If the debug request includes any test files belonging the browser-mode projects,
   // vitest needs to be started with the correct --inspect and --browser arguments.
   // Later, after debugging session starts, a secondary debug session is started; that session attaches to the launched browser instance.
-  const { browserModeProjects, isPlaywright } = await api.getBrowserModeInfo()
+  const browserModeProjects = api.getEnabledBrowserModeProjects()
   // When filters are applied through the test explorer, the result is represented as exclusion rather than inclusion.
   // When exclusions apply, root path is used and all but the excluded tests should be considered
   const includedTests = request.include?.length ? request.include : [{ uri: api.workspaceFolder.uri, parent: undefined }]
   const excludedTestIds = new Set(request?.exclude?.map(ex => ex.id) ?? [])
   const testProjects = includedTests?.filter(inc => inc.uri?.fsPath != null).flatMap(({ uri, parent }) => getProjectsFromTests(uri!.fsPath, parent, api, tree, excludedTestIds)) ?? []
 
-  const needsBrowserMode = !!browserModeProjects?.length && testProjects.some(project => browserModeProjects?.includes(project))
-  if (needsBrowserMode && !isPlaywright) {
-    log.info('Browser mode debugging support is limited to Chrome with Playwright and Chromium with webdriverio. Additional project configuration is required for webdriverio debugger integration.')
+  const includedBrowserModeProjects = browserModeProjects?.filter(p => testProjects.includes(p.project))
+  const isPlaywright = !!includedBrowserModeProjects?.some(p => p.provider === 'playwright')
+  const isWebdriverio = !!includedBrowserModeProjects?.some(p => p.provider === 'webdriverio')
+
+  const needsBrowserMode = !!includedBrowserModeProjects?.length
+  if (needsBrowserMode) {
+    if (isWebdriverio && isPlaywright) {
+      vscode.window.showWarningMessage('Projects configured for both webdriverio and Playwright providers are included for debugging, but only one provider may be in use at a time. Choosing Playwright.')
+    }
+    else if (!isWebdriverio && !isPlaywright) {
+      vscode.window.showWarningMessage('Browser mode debugger integration is only supported for Playwright with Chrome and webdriverio with Chromium. No matching projects found, so browser debugging session was not started.')
+    }
+    else if (isWebdriverio) {
+      vscode.window.showInformationMessage('Browser mode debugger integration is limited to Chromium when using the webdriverio provider, and additional project configuration may be required.')
+    }
   }
 
   vscode.debug.startDebugging(
@@ -161,7 +173,7 @@ export async function debugTests(
             await metadata.rpc.close()
           })
 
-          if (needsBrowserMode) {
+          if (needsBrowserMode && (isWebdriverio || isPlaywright)) {
             const browserModeAttachConfig = {
               __name: BrowserDebugSessionName,
               request: 'attach',

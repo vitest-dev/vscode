@@ -206,17 +206,13 @@ export class VitestFolderAPI {
     await this.meta.rpc.unwatchTests()
   }
 
-  getBrowserModeInfo() {
+  getEnabledBrowserModeProjects() {
     const browserDebugOptions = this.meta.browserDebugOptions
 
-    // Only playwright is supported for debugging integration with the --inspect options
-    const isPlaywright = browserDebugOptions?.some(browserConfig => browserConfig.enabled && browserConfig.provider === 'playwright') ?? false
-    const browserModeProjects = browserDebugOptions?.filter(browserConfig => browserConfig.enabled).map(browserConfig => browserConfig.project)
+    const browserModeProjects = browserDebugOptions?.filter(browserConfig => browserConfig.enabled)
+      .map(browserConfig => ({ project: browserConfig.project, provider: browserConfig.provider }))
 
-    return {
-      browserModeProjects,
-      isPlaywright,
-    }
+    return browserModeProjects
   }
 
   onConsoleLog = this.createHandler('onConsoleLog')
