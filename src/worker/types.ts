@@ -1,4 +1,4 @@
-import type { ResolvedBrowserOptions } from 'vitest/dist/node.js'
+import type { ResolvedBrowserOptions } from 'vitest/node'
 
 export interface WorkerInitMetadata {
   vitestNodePath: string
