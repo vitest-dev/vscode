@@ -236,8 +236,8 @@ export async function debugTests(
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
-    // Child/secondary debug session should stop the main debugging session
-    if (session.parentSession?.configuration.__name === DebugSessionName) {
+    // Child/secondary debug session should stop the main debugging session when in browser mode
+    if (session?.configuration.__name === BrowserDebugSessionName) {
       vscode.debug.stopDebugging(session.parentSession)
       return
     }
