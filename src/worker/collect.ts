@@ -176,7 +176,7 @@ export function astParseFile(filepath: string, code: string) {
         // Vite SSR injects these
         .replace(/__vite_ssr_import_\d+__\./g, '')
         // Vitest module mocker injects these
-        .replace(/__vi_import_\d+__/g, '')
+        .replace(/__vi_import_\d+__\./g, '')
 
       // cannot statically analyze, so we always skip it
       if (mode === 'skipIf' || mode === 'runIf') {
