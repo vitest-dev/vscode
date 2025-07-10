@@ -64,7 +64,7 @@ describe('can discover tests', () => {
     })
   })
 
-  it.only('identifiers as names', async () => {
+  it('identifiers as names', async () => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
     const file = await astCollectTests(
