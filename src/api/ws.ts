@@ -27,6 +27,7 @@ export function waitForWsConnection(
         debug,
         shellType,
         hasShellIntegration,
+        undefined,
         meta => resolve(meta),
         err => reject(err),
       )
@@ -54,6 +55,7 @@ export function onWsConnection(
   debug: boolean,
   shellType: 'terminal' | 'child_process',
   hasShellIntegration: boolean,
+  argumentOverrides: string | undefined,
   onStart: (meta: WsConnectionMetadata) => unknown,
   onFail: (err: Error) => unknown,
 ) {
@@ -75,6 +77,7 @@ export function onWsConnection(
       onStart({
         rpc: api,
         workspaceSource: message.workspaceSource,
+        browserDebugOptions: message.browserDebugOptions,
         handlers: {
           ...handlers,
           onStdout() {
@@ -124,7 +127,7 @@ export function onWsConnection(
       env: getConfig(pkg.folder).env || undefined,
       configFile: pkg.configFile,
       cwd: pkg.cwd,
-      arguments: pkg.arguments,
+      arguments: argumentOverrides ?? pkg.arguments,
       workspaceFile: pkg.workspaceFile,
       id: pkg.id,
       pnpApi: pnp,
