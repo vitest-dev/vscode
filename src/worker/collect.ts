@@ -99,8 +99,13 @@ export function astParseFile(filepath: string, code: string) {
       ) {
         return callee.object?.name
       }
-      // direct call as `__vite_ssr_exports_0__.test()`
-      if (callee.object?.name?.startsWith('__vite_ssr_')) {
+      if (
+        // direct call as `__vite_ssr_exports_0__.test()`
+        callee.object?.name?.startsWith('__vite_ssr_')
+        // call as `__vite_ssr_exports_0__.Vitest.test`,
+        // this is a special case for using Vitest namespaces popular in Effect
+        || (callee.object?.object?.name?.startsWith('__vite_ssr_') && callee.object?.property?.name === 'Vitest')
+      ) {
         return getName(callee.property)
       }
       // call as `__vite_ssr__.test.skip()`
@@ -155,10 +160,23 @@ export function astParseFile(filepath: string, code: string) {
         return
       }
 
-      const isQuoted = messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral'
-      const message = isQuoted
-        ? code.slice(messageNode.start + 1, messageNode.end - 1)
-        : code.slice(messageNode.start, messageNode.end)
+      let message: string
+      if (messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral') {
+        message = code.slice(messageNode.start + 1, messageNode.end - 1)
+      }
+      else {
+        message = code.slice(messageNode.start, messageNode.end)
+      }
+
+      if (message.startsWith('0,')) {
+        message = message.slice(2)
+      }
+
+      message = message
+        // Vite SSR injects these
+        .replace(/__vite_ssr_import_\d+__\./g, '')
+        // Vitest module mocker injects these
+        .replace(/__vi_import_\d+__\./g, '')
 
       // cannot statically analyze, so we always skip it
       if (mode === 'skipIf' || mode === 'runIf') {

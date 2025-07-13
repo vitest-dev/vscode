@@ -1,19 +1,22 @@
 import { resolve } from 'node:path'
 import type { RunnerTestCase, RunnerTestSuite } from 'vitest'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import { createVitest } from 'vitest/node'
 import { astCollectTests } from '../../src/worker/collect'
+
+const variableFixture = 'test-from-vitest-variable.ts'
 
 describe('can discover tests', () => {
   it.for([
     'todo-import-suite.ts',
     'todo-globals-suite.ts',
+    variableFixture,
   ])('can discover todo tests inside a suite in %s', async (fixture) => {
     const vitest = await createVitest('test', { config: false })
+    onTestFinished(() => vitest.close())
     const file = await astCollectTests(
       vitest.getCoreWorkspaceProject(),
       resolve(`test/e2e/fixtures/collect/${fixture}`),
-      'web',
     )
     expect(file.filepath).toBe(resolve(`test/e2e/fixtures/collect/${fixture}`))
     expect(file.name).toBe(`test/e2e/fixtures/collect/${fixture}`)
@@ -34,7 +37,7 @@ describe('can discover tests', () => {
     expect(testTask.mode).toBe('run')
     expect(testTask.location).toMatchObject({
       line: 4,
-      column: 31, // TODO: should it be 5 instead?
+      column: variableFixture === fixture ? 38 : 31, // TODO: should it be 5 instead? since we only care about "line", ignore for now
     })
 
     expect(suiteTask.name).toBe('Drafts')
@@ -59,5 +62,17 @@ describe('can discover tests', () => {
       line: 12,
       column: 4,
     })
+  })
+
+  it('identifiers as names', async () => {
+    const vitest = await createVitest('test', { config: false })
+    onTestFinished(() => vitest.close())
+    const file = await astCollectTests(
+      vitest.getCoreWorkspaceProject(),
+      resolve(`test/e2e/fixtures/collect/method-names.ts`),
+    )
+
+    expect(file.tasks[0].name).toBe('MathClass')
+    expect((file.tasks[0] as RunnerTestSuite).tasks[0].name).toBe('MathClass.add')
   })
 })
