@@ -4,10 +4,13 @@ import { describe, expect, it, onTestFinished } from 'vitest'
 import { createVitest } from 'vitest/node'
 import { astCollectTests } from '../../src/worker/collect'
 
+const variableFixture = 'test-from-vitest-variable.ts'
+
 describe('can discover tests', () => {
   it.for([
     'todo-import-suite.ts',
     'todo-globals-suite.ts',
+    variableFixture,
   ])('can discover todo tests inside a suite in %s', async (fixture) => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
@@ -34,7 +37,7 @@ describe('can discover tests', () => {
     expect(testTask.mode).toBe('run')
     expect(testTask.location).toMatchObject({
       line: 4,
-      column: 31, // TODO: should it be 5 instead?
+      column: variableFixture === fixture ? 38 : 31, // TODO: should it be 5 instead? since we only care about "line", ignore for now
     })
 
     expect(suiteTask.name).toBe('Drafts')
@@ -61,7 +64,7 @@ describe('can discover tests', () => {
     })
   })
 
-  it.only('identifiers as names', async () => {
+  it('identifiers as names', async () => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
     const file = await astCollectTests(
