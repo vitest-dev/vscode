@@ -3,6 +3,7 @@ import type { ExtensionWorkerProcess } from './api/types'
 import type { WsConnectionMetadata } from './api/ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { TestTree } from './testTree'
+import type { TestFile } from './testTreeData'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import getPort from 'get-port'
@@ -14,18 +15,23 @@ import { getConfig } from './config'
 import { workerPath } from './constants'
 import { log } from './log'
 import { TestRunner } from './runner'
+import { getTestData } from './testTreeData'
 import { findNode } from './utils'
+
+const DebugSessionName = 'Vitest'
+const BrowserDebugSessionName = 'Vitest_Attach'
 
 export async function debugTests(
   controller: vscode.TestController,
   tree: TestTree,
-  pkg: VitestPackage,
+  api: VitestFolderAPI,
   diagnostic: ExtensionDiagnostic | undefined,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
   debugManager: DebugManager,
 ) {
+  const pkg = api.package
   const port = await getPort()
   const server = createServer().listen(port)
   const wss = new WebSocketServer({ server })
@@ -41,7 +47,7 @@ export async function debugTests(
   log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
 
   const debugConfig = {
-    __name: 'Vitest',
+    __name: DebugSessionName,
     type: config.shellType === 'terminal' ? 'node-terminal' : 'pwa-node',
     request: 'launch',
     name: 'Debug Tests',
@@ -86,6 +92,33 @@ export async function debugTests(
     })
   }
 
+  // If the debug request includes any test files belonging the browser-mode projects,
+  // vitest needs to be started with the correct --inspect and --browser arguments.
+  // Later, after debugging session starts, a secondary debug session is started; that session attaches to the launched browser instance.
+  const browserModeProjects = api.getEnabledBrowserModeProjects()
+  // When filters are applied through the test explorer, the result is represented as exclusion rather than inclusion.
+  // When exclusions apply, root path is used and all but the excluded tests should be considered
+  const includedTests = request.include?.length ? request.include : [{ uri: api.workspaceFolder.uri, parent: undefined }]
+  const excludedTestIds = new Set(request?.exclude?.map(ex => ex.id) ?? [])
+  const testProjects = includedTests?.filter(inc => inc.uri?.fsPath != null).flatMap(({ uri, parent }) => getProjectsFromTests(uri!.fsPath, parent, api, tree, excludedTestIds)) ?? []
+
+  const includedBrowserModeProjects = browserModeProjects?.filter(p => testProjects.includes(p.project))
+  const isPlaywright = !!includedBrowserModeProjects?.some(p => p.provider === 'playwright')
+  const isWebdriverio = !!includedBrowserModeProjects?.some(p => p.provider === 'webdriverio')
+
+  const needsBrowserMode = !!includedBrowserModeProjects?.length
+  if (needsBrowserMode) {
+    if (isWebdriverio && isPlaywright) {
+      vscode.window.showWarningMessage('Projects configured for both webdriverio and Playwright providers are included for debugging, but only one provider may be in use at a time. Choosing Playwright.')
+    }
+    else if (!isWebdriverio && !isPlaywright) {
+      vscode.window.showWarningMessage('Browser mode debugger integration is only supported for Playwright with Chrome and webdriverio with Chromium. No matching projects found, so browser debugging session was not started.')
+    }
+    else if (isWebdriverio) {
+      vscode.window.showInformationMessage('Browser mode debugger integration is limited to Chromium when using the webdriverio provider, and additional project configuration may be required.')
+    }
+  }
+
   vscode.debug.startDebugging(
     pkg.folder,
     debugConfig,
@@ -109,6 +142,8 @@ export async function debugTests(
 
   const disposables: vscode.Disposable[] = []
 
+  const browserModeLaunchArgs = needsBrowserMode ? getBrowserModeLaunchArgs(isPlaywright, config) : undefined
+
   wss.on(
     'connection',
     ws => onWsConnection(
@@ -117,6 +152,7 @@ export async function debugTests(
       true,
       config.shellType,
       false,
+      browserModeLaunchArgs,
       async (metadata) => {
         try {
           const api = new VitestFolderAPI(pkg, {
@@ -136,6 +172,46 @@ export async function debugTests(
           token.onCancellationRequested(async () => {
             await metadata.rpc.close()
           })
+
+          if (needsBrowserMode && (isWebdriverio || isPlaywright)) {
+            const browserModeAttachConfig = {
+              __name: BrowserDebugSessionName,
+              request: 'attach',
+              name: 'Debug Tests (Browser)',
+              port: config.debuggerPort ?? '9229',
+              skipFiles: config.debugExclude,
+              ...(
+                config.debugOutFiles?.length
+                  ? { outFiles: config.debugOutFiles }
+                  : {}
+              ),
+              smartStep: true,
+              cwd: pkg.cwd,
+              type: 'chrome',
+            }
+            // Start secondary debug config before running test
+            // Deliberately not awaiting, because attach config may depend on the test run to start (e.g. to attach)
+            const parentSession = debugManager.sessions.entries().find(s => s[0].name === DebugSessionName)?.[0]
+            vscode.debug.startDebugging(
+              pkg.folder,
+              browserModeAttachConfig,
+              { parentSession, suppressDebugView: true },
+            ).then(
+              (fulfilled) => {
+                if (fulfilled) {
+                  log.info('[DEBUG] Secondary debug launch config started')
+                }
+                else {
+                  log.error('[DEBUG] Secondary debug launch config failed')
+                }
+              },
+              (err) => {
+                log.error('[DEBUG] Secondary debug launch config failed')
+                log.error(err.toString())
+                deferredPromise.reject(new Error('Failed to start secondary launch config', { cause: err }))
+              },
+            )
+          }
 
           await runner.runTests(request, token)
 
@@ -165,21 +241,54 @@ export async function debugTests(
     const parent = session.parentSession
 
     // dispose all test runners
-    if (parent && parent.configuration.__name === 'Vitest') {
+    if (parent && parent.configuration.__name === DebugSessionName) {
       disposables.reverse().forEach(d => d.dispose())
       disposables.length = 0
     }
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
-    if (session.configuration.__name !== 'Vitest')
+    // Child/secondary debug session should stop the main debugging session when in browser mode
+    if (session?.configuration.__name === BrowserDebugSessionName) {
+      vscode.debug.stopDebugging(session.parentSession)
       return
+    }
+    else if (session.configuration.__name !== DebugSessionName) {
+      return
+    }
     server.close()
     onDidTerminate.dispose()
     onDidWorkerTerminate.dispose()
   })
 
   await deferredPromise.promise
+}
+
+function getTestProjectsInFolder(path: string, api: VitestFolderAPI, tree: TestTree, exclude: Set<string>) {
+  const folder = tree.getOrCreateFolderTestItem(api, path)
+  const items = tree.getFolderFiles(folder)
+  return items.map(item => (getTestData(item) as TestFile)).filter(testfile => !exclude.has(testfile.id)).map(tf => tf.project)
+}
+
+function getProjectsFromTests(fsPath: string, parentItem: vscode.TestItem | undefined, api: VitestFolderAPI, tree: TestTree, excluded: Set<string>): string[] {
+  const items = getTestProjectsInFolder(fsPath, api, tree, excluded)
+  if (items.length > 0) {
+    return items
+  }
+  // Climb up tree until entry with project is found
+  const parentPath = parentItem?.uri?.fsPath
+  if (parentPath) {
+    return getProjectsFromTests(parentPath, parentItem?.parent, api, tree, excluded)
+  }
+  return []
+}
+
+function getBrowserModeLaunchArgs(isPlaywright: boolean, config: { debuggerPort?: number; cliArguments?: string }): string {
+  const browser = !config.cliArguments?.includes('--browser') ? `--browser=${isPlaywright ? 'chromium' : 'chrome'}` : ''
+  // Only playwright provider supports --inspect currently
+  const inspect = isPlaywright && !config.cliArguments?.includes('--inspect') ? `--inspect=localhost:${config.debuggerPort ?? '9229'}` : ''
+  // regardless of user config, some properties need to be set when debugging with browser mode enabled
+  return `vitest ${config.cliArguments ?? ''} ${inspect} ${browser}`
 }
 
 async function getRuntimeOptions(pkg: VitestPackage) {
@@ -251,7 +360,8 @@ export class DebugManager {
 
   constructor() {
     vscode.debug.onDidStartDebugSession((session) => {
-      if (session.configuration.__name === 'Vitest') {
+      const name = session.configuration.__name
+      if (name === DebugSessionName || name === BrowserDebugSessionName) {
         this.sessions.add(session)
       }
     })
