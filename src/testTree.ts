@@ -192,8 +192,9 @@ export class TestTree extends vscode.Disposable {
     const parent = dirname(normalizedFolder);
     // If the parent is the same as the folder, we are at the root
     if (dirname(normalizedFolder) === normalizedFolder) {
-      log.workspaceError(`Attempted to get parent for root folder: ${normalizedFolder}. Fatal error, preventing infinite loop.\nDo you have a symlink in your workspace?`);
-      // this should never happen, but if it does, we just return the loader item to recover
+      log.workspaceError(
+        `Fatal error: Attempted to get parent for root folder. Aborting to prevent infinite loop.`
+      );
       return this.loaderItem;
     }
 
