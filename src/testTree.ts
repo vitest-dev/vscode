@@ -1,6 +1,6 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { VitestFolderAPI } from './api'
-import { lstatSync, readlinkSync, realpathSync } from 'node:fs'
+import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { basename, dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
@@ -83,12 +83,12 @@ export class TestTree extends vscode.Disposable {
   }
 
   getSymlinkFolder(uri: vscode.Uri) {
-    const realPath = realpathSync(uri.fsPath);
+    const realPath = realpathSync(uri.fsPath)
     if (realPath === uri.fsPath) {
       return uri
     }
 
-    return vscode.Uri.file(realPath);
+    return vscode.Uri.file(realPath)
   }
 
   // in cases where there is only a single workspace, we don't show it as a folder
@@ -189,13 +189,13 @@ export class TestTree extends vscode.Disposable {
       return cached
     }
 
-    const parent = dirname(normalizedFolder);
+    const parent = dirname(normalizedFolder)
     // If the parent is the same as the folder, we are at the root
     if (dirname(normalizedFolder) === normalizedFolder) {
       log.workspaceError(
-        `Fatal error: Attempted to get parent for root folder. Aborting to prevent infinite loop.`
-      );
-      return this.loaderItem;
+        `Fatal error: Attempted to get parent for root folder. Aborting to prevent infinite loop.`,
+      )
+      return this.loaderItem
     }
 
     const folderUri = vscode.Uri.file(normalizedFolder)
