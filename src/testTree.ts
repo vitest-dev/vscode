@@ -1,6 +1,6 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { VitestFolderAPI } from './api'
-import { lstatSync, readlinkSync } from 'node:fs'
+import { lstatSync, readlinkSync, realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { basename, dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
@@ -83,14 +83,12 @@ export class TestTree extends vscode.Disposable {
   }
 
   getSymlinkFolder(uri: vscode.Uri) {
-    const stats = lstatSync(uri.fsPath)
-    if (stats.isSymbolicLink()) {
-      const actualPath = readlinkSync(uri.fsPath)
-      const dir = dirname(uri.fsPath)
-      const id = resolve(dir, actualPath)
-      return vscode.Uri.file(id)
+    const realPath = realpathSync(uri.fsPath);
+    if (realPath === uri.fsPath) {
+      return uri
     }
-    return uri
+
+    return vscode.Uri.file(realPath);
   }
 
   // in cases where there is only a single workspace, we don't show it as a folder
@@ -191,8 +189,16 @@ export class TestTree extends vscode.Disposable {
       return cached
     }
 
+    const parent = dirname(normalizedFolder);
+    // If the parent is the same as the folder, we are at the root
+    if (dirname(normalizedFolder) === normalizedFolder) {
+      log.workspaceError(`Attempted to get parent for root folder: ${normalizedFolder}. Fatal error, preventing infinite loop.\nDo you have a symlink in your workspace?`);
+      // this should never happen, but if it does, we just return the loader item to recover
+      return this.loaderItem;
+    }
+
     const folderUri = vscode.Uri.file(normalizedFolder)
-    const parentItem = this.getOrCreateFolderTestItem(api, dirname(normalizedFolder))
+    const parentItem = this.getOrCreateFolderTestItem(api, parent)
     const folderItem = this._createFolderItem(folderUri, parentItem)
     folderItem.tags = [api.tag]
     parentItem.children.add(folderItem)
