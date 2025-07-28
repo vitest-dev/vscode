@@ -132,6 +132,18 @@ You can change the behaviour of testing view by modifying `testing.automatically
 
 This is a vscode's built-in option and will control every plugin.
 
+### The "Stop" button doesn't stop the test fast enough
+
+The stop button stops the test gracefuly in case your test needs to release resources, so Vitest always awaits until the current test is finished. Since Vitest 3.2, you can use a `signal` to stop any pending promises (like a `fetch` or `db` connection) when the test is interrupted:
+
+```ts
+test('fetch test', async ({ signal }) => {
+  // passing down a signal to fetch will make it so the fetch
+  // is rejected when the signal is aborted
+  await fetch('some-log-or-stuck-call', { signal })
+})
+```
+
 ### I am using `vitest.shellType: terminal`, but I don't see the terminal
 
 The extension uses a modified Vitest script that removes the reporter output. For this reason, the terminal is hidden by default. However, it might be useful to debug issues with the extension or Vitest itself - to open the terminal in the "Terminals" view you can use the "Vitest: Show Shell Terminal" command.
