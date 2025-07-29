@@ -192,10 +192,7 @@ export class TestTree extends vscode.Disposable {
     const parent = dirname(normalizedFolder)
     // If the parent is the same as the folder, we are at the root
     if (parent === normalizedFolder) {
-      log.workspaceError(
-        `Fatal error: Attempted to get parent for root folder. Aborting to prevent infinite loop.`,
-      )
-      return this.loaderItem
+      throw new Error(`Fatal Error: Attempted to get parent of root folder "${normalizedFolder}".`)
     }
 
     const folderUri = vscode.Uri.file(normalizedFolder)
