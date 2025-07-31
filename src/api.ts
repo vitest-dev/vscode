@@ -1,6 +1,7 @@
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
+import type { BrowserDebugOptions } from './worker/types'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
@@ -205,6 +206,15 @@ export class VitestFolderAPI {
     await this.meta.rpc.unwatchTests()
   }
 
+  getEnabledBrowserModeProjects() {
+    const browserDebugOptions = this.meta.browserDebugOptions
+
+    const browserModeProjects = browserDebugOptions?.filter(browserConfig => browserConfig.enabled)
+      .map(browserConfig => ({ project: browserConfig.project, provider: browserConfig.provider }))
+
+    return browserModeProjects
+  }
+
   onConsoleLog = this.createHandler('onConsoleLog')
   onTaskUpdate = this.createHandler('onTaskUpdate')
   onFinished = this.createHandler('onFinished')
@@ -407,6 +417,7 @@ export interface ResolvedMeta {
   workspaceSource: string | false
   pkg: VitestPackage
   configs: string[]
+  browserDebugOptions: BrowserDebugOptions[] | undefined
   handlers: {
     onStdout: (listener: (log: string) => void) => void
     onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void

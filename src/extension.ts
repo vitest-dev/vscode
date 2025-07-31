@@ -16,6 +16,7 @@ import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
 import { debounce, showVitestError } from './utils'
+
 import './polyfills'
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -190,7 +191,7 @@ class VitestExtension {
         await debugTests(
           this.testController,
           this.testTree,
-          api.package,
+          api,
           this.diagnostic,
 
           request,
