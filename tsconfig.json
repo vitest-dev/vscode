@@ -1,4 +1,4 @@
 {
   "extends": ["./tsconfig.base.json"],
-  "include": ["src", "./debug-shims.d.ts"]
+  "include": ["src", "./debug-shims.d.ts", "packages/**/*"]
 }

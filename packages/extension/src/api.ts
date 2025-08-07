@@ -1,5 +1,5 @@
 import type { VitestPackage } from './api/pkg'
-import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestRPC } from './api/rpc'
+import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestExtensionRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
@@ -207,7 +207,7 @@ export class VitestFolderAPI {
 
   onConsoleLog = this.createHandler('onConsoleLog')
   onTaskUpdate = this.createHandler('onTaskUpdate')
-  onFinished = this.createHandler('onFinished')
+  onTestRunEnd = this.createHandler('onTestRunEnd')
   onCollected = this.createHandler('onCollected')
   onWatcherStart = this.createHandler('onWatcherStart')
   onWatcherRerun = this.createHandler('onWatcherRerun')
@@ -402,7 +402,7 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
 }
 
 export interface ResolvedMeta {
-  rpc: VitestRPC
+  rpc: VitestExtensionRPC
   process: ExtensionWorkerProcess
   workspaceSource: string | false
   pkg: VitestPackage
@@ -411,7 +411,7 @@ export interface ResolvedMeta {
     onStdout: (listener: (log: string) => void) => void
     onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: ExtensionWorkerEvents['onTaskUpdate']) => void
-    onFinished: (listener: ExtensionWorkerEvents['onFinished']) => void
+    onTestRunEnd: (listener: ExtensionWorkerEvents['onTestRunEnd']) => void
     onCollected: (listener: ExtensionWorkerEvents['onCollected']) => void
     onWatcherStart: (listener: ExtensionWorkerEvents['onWatcherStart']) => void
     onWatcherRerun: (listener: ExtensionWorkerEvents['onWatcherRerun']) => void
@@ -428,6 +428,6 @@ function normalizeSpecs(specs?: string[] | SerializedTestSpecification[]) {
     if (typeof spec === 'string') {
       return normalize(spec)
     }
-    return [spec[0], normalize(spec[1])] as SerializedTestSpecification
+    return [spec[0], normalize(spec[1]), spec[2]] as SerializedTestSpecification
   }) as string[] | SerializedTestSpecification[]
 }

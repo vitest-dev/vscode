@@ -1,5 +1,6 @@
 packages:
   - ./
+  - ./packages/*
   - samples/*
   - samples/monorepo-vitest-workspace/packages/*
 

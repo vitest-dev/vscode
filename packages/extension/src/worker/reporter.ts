@@ -130,12 +130,12 @@ export class VSCodeReporter implements Reporter {
       this.vitest.logger.outputStream = outputStream
     }
     nextTick(() => {
-      this.rpc.onFinished(files || [], output, collecting)
+      this.rpc.onTestRunEnd(files || [], output, collecting)
     })
   }
 
   onCollected(files?: RunnerTestFile[]) {
-    this.rpc.onCollected(files, this.collecting)
+    files?.forEach(file => this.rpc.onCollected(file, this.collecting))
   }
 
   onWatcherStart(files?: RunnerTestFile[], errors?: unknown[]) {

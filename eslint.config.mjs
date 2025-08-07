@@ -53,17 +53,6 @@ export default antfu(
     },
   },
   {
-    files: [`packages/${GLOB_SRC}`],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: ['vitest', 'path'],
-        },
-      ],
-    },
-  },
-  {
     // these files define vitest as peer dependency
     files: [`packages/{coverage-*,ui,browser,web-worker}/${GLOB_SRC}`],
     rules: {

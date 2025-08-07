@@ -85,16 +85,12 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onCollected((files, collecting) => {
-      if (!files || !files.length) {
-        log.verbose?.('No files to collect')
-        return
-      }
-      files.forEach(file => this.tree.collectFile(this.api, file))
+    api.onCollected((file, collecting) => {
+      this.tree.collectFile(this.api, file)
       if (collecting)
         return
 
-      getTasks(files).forEach((task) => {
+      getTasks(file).forEach((task) => {
         const test = this.tree.getTestItemByTask(task)
         if (!test) {
           log.error(`Test data not found for "${task.name}"`)
@@ -125,7 +121,7 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onFinished(async (files = [], unhandledError, collecting) => {
+    api.onTestRunEnd(async (files = [], unhandledError, collecting) => {
       const testRun = this.testRun
 
       if (!testRun) {

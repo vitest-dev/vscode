@@ -1,47 +1,16 @@
-import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from 'vitest-vscode-shared'
 import { stripVTControlCharacters } from 'node:util'
 import v8 from 'node:v8'
-import { type BirpcReturn, createBirpc } from 'birpc'
+import { createBirpc } from 'birpc'
 import { log } from '../log'
 
-export type SerializedTestSpecification = [
-  project: { name: string | undefined },
-  file: string,
-]
-
-export interface ExtensionWorkerTransport {
-  getFiles: () => Promise<[project: string, file: string][]>
-  collectTests: (testFile: [project: string, filepath: string][]) => Promise<void>
-  cancelRun: () => Promise<void>
-  // accepts files with the project or folders (project doesn't matter for them)
-  runTests: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
-  updateSnapshots: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
-
-  watchTests: (files?: SerializedTestSpecification[] | string[], testNamePattern?: string) => void
-  unwatchTests: () => void
-
-  invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
-  enableCoverage: () => void
-  disableCoverage: () => void
-  waitForCoverageReport: () => Promise<string | null>
-  close: () => void
-
-  onFilesCreated: (files: string[]) => void
-  onFilesChanged: (files: string[]) => void
-}
-
-export interface ExtensionWorkerEvents {
-  onConsoleLog: (log: UserConsoleLog) => void
-  onTaskUpdate: (task: TaskResultPack[]) => void
-  onFinished: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
-  onCollected: (files?: RunnerTestFile[], collecting?: boolean) => void
-  onWatcherStart: (files?: RunnerTestFile[], errors?: unknown[], collecting?: boolean) => void
-  onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
-
-  onProcessLog: (type: 'stdout' | 'stderr', log: string) => void
-}
-
-export type VitestRPC = BirpcReturn<ExtensionWorkerTransport, ExtensionWorkerEvents>
+export type { SerializedTestSpecification } from 'vitest'
+export type {
+  ExtensionWorkerEvents,
+  ExtensionWorkerTransport,
+  VitestExtensionRPC,
+  VitestWorkerRPC,
+} from 'vitest-vscode-shared'
 
 function createHandler<T extends (...args: any) => any>() {
   const handlers: T[] = []
@@ -62,7 +31,7 @@ export function createRpcOptions() {
   const handlers = {
     onConsoleLog: createHandler<ExtensionWorkerEvents['onConsoleLog']>(),
     onTaskUpdate: createHandler<ExtensionWorkerEvents['onTaskUpdate']>(),
-    onFinished: createHandler<ExtensionWorkerEvents['onFinished']>(),
+    onFinished: createHandler<ExtensionWorkerEvents['onTestRunEnd']>(),
     onCollected: createHandler<ExtensionWorkerEvents['onCollected']>(),
     onWatcherRerun: createHandler<ExtensionWorkerEvents['onWatcherRerun']>(),
     onWatcherStart: createHandler<ExtensionWorkerEvents['onWatcherStart']>(),
@@ -70,7 +39,7 @@ export function createRpcOptions() {
 
   const events: Omit<ExtensionWorkerEvents, 'onReady' | 'onError'> = {
     onConsoleLog: handlers.onConsoleLog.trigger,
-    onFinished: handlers.onFinished.trigger,
+    onTestRunEnd: handlers.onFinished.trigger,
     onTaskUpdate: handlers.onTaskUpdate.trigger,
     onCollected: handlers.onCollected.trigger,
     onWatcherRerun: handlers.onWatcherRerun.trigger,
