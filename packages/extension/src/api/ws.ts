@@ -1,10 +1,11 @@
+import type { WorkerEvent, WorkerRunnerOptions } from 'vitest-vscode-shared'
 import type { WebSocket, WebSocketServer } from 'ws'
 import type { ResolvedMeta } from '../api'
-import type { WorkerEvent, WorkerRunnerOptions } from '../worker/types'
 import type { VitestPackage } from './pkg'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import { getConfig } from '../config'
+import { finalCoverageFileName, setupFilePath } from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 
@@ -131,6 +132,8 @@ export function onWsConnection(
       pnpLoader: pnpLoader && gte(process.version, '18.19.0')
         ? pathToFileURL(pnpLoader).toString()
         : undefined,
+      setupFilePath,
+      finalCoverageFileName
     },
     debug,
     astCollect: getConfig(pkg.folder).experimentalStaticAstCollect,

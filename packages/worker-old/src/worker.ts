@@ -1,13 +1,13 @@
 import type { ArgumentsType } from 'vitest'
+import type { ExtensionTestSpecification, ExtensionWorkerTransport } from 'vitest-vscode-shared'
 import type { Reporter, ResolvedConfig, TestSpecification, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
-import type { ExtensionWorkerTransport, SerializedTestSpecification } from '../api/rpc'
-import type { WorkerWSEventEmitter } from './emitter'
+import type { WorkerWSEventEmitter } from '../../shared/src/emitter'
 import { readFileSync } from 'node:fs'
 import mm from 'micromatch'
 import { relative } from 'pathe'
+import { assert, limitConcurrency } from '../../shared/src/utils'
 import { astCollectTests, createFailedFileTask } from './collect'
 import { ExtensionCoverageManager } from './coverage'
-import { assert, limitConcurrency } from './utils'
 import { ExtensionWorkerWatcher } from './watcher'
 
 export class ExtensionWorker implements ExtensionWorkerTransport {
@@ -21,9 +21,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     private readonly debug = false,
     public readonly alwaysAstCollect = false,
     private emitter: WorkerWSEventEmitter,
+    finalCoverageFileName: string,
   ) {
     this.watcher = new ExtensionWorkerWatcher(this)
-    this.coverage = new ExtensionCoverageManager(this)
+    this.coverage = new ExtensionCoverageManager(this, finalCoverageFileName)
   }
 
   public get collecting() {
@@ -83,8 +84,12 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       })(),
       (async () => {
         if (otherTests.length) {
-          const files = otherTests.map<SerializedTestSpecification>(
-            ([project, filepath]) => [{ name: project.getName() }, filepath],
+          const files = otherTests.map<ExtensionTestSpecification>(
+            ([project, filepath]) => [
+              { name: project.getName(), root: project.config.root },
+              filepath,
+              { pool: project.config.pool },
+            ],
           )
 
           try {
@@ -114,7 +119,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.setTestNamePattern(undefined)
   }
 
-  public async updateSnapshots(files?: SerializedTestSpecification[] | string[] | undefined, testNamePattern?: string | undefined) {
+  public async updateSnapshots(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePattern?: string | undefined) {
     this.configOverride.snapshotOptions = {
       updateSnapshot: 'all',
       // environment is resolved inside a worker thread
@@ -128,17 +133,28 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     }
   }
 
-  async resolveTestSpecs(specs: string[] | SerializedTestSpecification[] | undefined): Promise<SerializedTestSpecification[]> {
+  async resolveTestSpecs(specs: string[] | ExtensionTestSpecification[] | undefined): Promise<ExtensionTestSpecification[]> {
     if (!specs || typeof specs[0] === 'string') {
       const files = await this.globTestSpecifications(specs as string[] | undefined)
-      return files.map<SerializedTestSpecification>(([project, file]) => {
-        return [{ name: typeof project === 'string' ? project : project.getName() }, file as string]
-      })
+      return files.map<ExtensionTestSpecification | undefined>(([project, file]) => {
+        if (typeof project === 'string') {
+          return undefined
+        }
+
+        return [
+          {
+            name: project.getName(),
+            root: project.config.root,
+          },
+          file as string,
+          { pool: project.config.pool },
+        ]
+      }).filter(r => r != null)
     }
-    return (specs || []) as SerializedTestSpecification[]
+    return (specs || []) as ExtensionTestSpecification[]
   }
 
-  public async runTests(specsOrPaths: SerializedTestSpecification[] | string[] | undefined, testNamePattern?: string) {
+  public async runTests(specsOrPaths: ExtensionTestSpecification[] | string[] | undefined, testNamePattern?: string) {
     // @ts-expect-error private method in Vitest <=2.1.5
     await this.vitest.initBrowserProviders?.()
 
@@ -188,7 +204,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     })
   }
 
-  private async runTestFiles(specs: SerializedTestSpecification[], testNamePattern?: string | undefined, runAllFiles = false) {
+  private async runTestFiles(specs: ExtensionTestSpecification[], testNamePattern?: string | undefined, runAllFiles = false) {
     await (this.vitest as any).runningPromise
     this.watcher.markRerun(false)
 
@@ -205,7 +221,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.configOverride.testNamePattern = pattern ? new RegExp(pattern) : undefined
   }
 
-  private async rerunTests(specs: SerializedTestSpecification[], runAllFiles = false) {
+  private async rerunTests(specs: ExtensionTestSpecification[], runAllFiles = false) {
     const paths = specs.map(spec => spec[1])
 
     const specsToRun = specs.flatMap((spec) => {
@@ -325,7 +341,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return this.watcher.stopTracking()
   }
 
-  watchTests(files?: SerializedTestSpecification[] | string[] | undefined, testNamePatern?: string) {
+  watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
     if (files)
       this.watcher.trackTests(files.map(f => typeof f === 'string' ? f : f[1]), testNamePatern)
     else

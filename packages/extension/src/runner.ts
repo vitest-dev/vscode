@@ -1,6 +1,5 @@
 import type { ParsedStack, TaskResult, TestError } from 'vitest'
 import type { VitestFolderAPI } from './api'
-import type { SerializedTestSpecification } from './api/rpc'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { TestTree } from './testTree'
 import { rm } from 'node:fs/promises'
@@ -8,12 +7,12 @@ import path from 'node:path'
 import { inspect, stripVTControlCharacters } from 'node:util'
 import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
+import { type ExtensionTestSpecification, normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { coverageContext, readCoverageReport } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
 import { showVitestError } from './utils'
-import { normalizeDriveLetter } from './worker/utils'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -53,7 +52,7 @@ export class TestRunner extends vscode.Disposable {
       }
     })
 
-    api.onWatcherRerun((files, _trigger, collecting) => {
+    api.onTestRunStart((files, collecting) => {
       if (collecting) {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
       }
@@ -121,7 +120,7 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onTestRunEnd(async (files = [], unhandledError, collecting) => {
+    api.onTestRunEnd(async (files, unhandledError, collecting) => {
       const testRun = this.testRun
 
       if (!testRun) {
@@ -287,7 +286,7 @@ export class TestRunner extends vscode.Disposable {
       }),
     )
 
-    const runTests = (files?: SerializedTestSpecification[] | string[], testNamePatern?: string) =>
+    const runTests = (files?: ExtensionTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
         ? this.api.updateSnapshots(files, testNamePatern)
         : this.api.runFiles(files, testNamePatern)
@@ -573,7 +572,7 @@ export class TestRunner extends vscode.Disposable {
     this.markTestCase(testRun, test, result)
   }
 
-  private relative(file: string | SerializedTestSpecification) {
+  private relative(file: string | ExtensionTestSpecification) {
     return relative(this.api.workspaceFolder.uri.fsPath, typeof file === 'string' ? file : file[1])
   }
 }
@@ -709,7 +708,7 @@ function setMessageStackFramesFromErrorStacks(testMessage: vscode.TestMessage, s
   (testMessage as any).stackTrace = frames
 }
 
-function getTestFiles(tests: readonly vscode.TestItem[]): string[] | SerializedTestSpecification[] {
+function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTestSpecification[] {
   // if there is a folder, we can't limit the tests to a specific project
   const hasFolder = tests.some(test => getTestData(test) instanceof TestFolder)
   if (hasFolder) {
@@ -723,7 +722,7 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | SerializedT
       }).filter(Boolean) as string[]),
     )
   }
-  const testSpecs: SerializedTestSpecification[] = []
+  const testSpecs: ExtensionTestSpecification[] = []
   const testFiles = new Set<string>()
   for (const test of tests) {
     const fsPath = test.uri!.fsPath
@@ -738,7 +737,7 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | SerializedT
       continue
     }
     testFiles.add(key)
-    testSpecs.push([{ name: project }, fsPath])
+    testSpecs.push([project, fsPath])
   }
   return testSpecs
 }

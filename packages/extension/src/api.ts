@@ -1,5 +1,6 @@
+import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { VitestPackage } from './api/pkg'
-import type { ExtensionWorkerEvents, SerializedTestSpecification, VitestExtensionRPC } from './api/rpc'
+import type { ExtensionWorkerEvents, VitestExtensionRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
@@ -110,11 +111,11 @@ export class VitestFolderAPI {
     return this.pkg
   }
 
-  async runFiles(specs?: SerializedTestSpecification[] | string[], testNamePatern?: string) {
+  async runFiles(specs?: ExtensionTestSpecification[] | string[], testNamePatern?: string) {
     await this.meta.rpc.runTests(normalizeSpecs(specs), testNamePatern)
   }
 
-  async updateSnapshots(specs?: SerializedTestSpecification[] | string[], testNamePatern?: string) {
+  async updateSnapshots(specs?: ExtensionTestSpecification[] | string[], testNamePatern?: string) {
     await this.meta.rpc.updateSnapshots(normalizeSpecs(specs), testNamePatern)
   }
 
@@ -197,7 +198,7 @@ export class VitestFolderAPI {
     await this.meta.rpc.disableCoverage()
   }
 
-  async watchTests(files?: SerializedTestSpecification[] | string[], testNamePattern?: string) {
+  async watchTests(files?: ExtensionTestSpecification[] | string[], testNamePattern?: string) {
     await this.meta.rpc.watchTests(normalizeSpecs(files), testNamePattern)
   }
 
@@ -208,8 +209,8 @@ export class VitestFolderAPI {
   onConsoleLog = this.createHandler('onConsoleLog')
   onTaskUpdate = this.createHandler('onTaskUpdate')
   onTestRunEnd = this.createHandler('onTestRunEnd')
+  onTestRunStart = this.createHandler('onTestRunStart')
   onCollected = this.createHandler('onCollected')
-  onWatcherStart = this.createHandler('onWatcherStart')
   onWatcherRerun = this.createHandler('onWatcherRerun')
 
   clearListeners(name?: Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>) {
@@ -412,15 +413,15 @@ export interface ResolvedMeta {
     onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void
     onTaskUpdate: (listener: ExtensionWorkerEvents['onTaskUpdate']) => void
     onTestRunEnd: (listener: ExtensionWorkerEvents['onTestRunEnd']) => void
+    onTestRunStart: (listener: ExtensionWorkerEvents['onTestRunStart']) => void
     onCollected: (listener: ExtensionWorkerEvents['onCollected']) => void
-    onWatcherStart: (listener: ExtensionWorkerEvents['onWatcherStart']) => void
     onWatcherRerun: (listener: ExtensionWorkerEvents['onWatcherRerun']) => void
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
   }
 }
 
-function normalizeSpecs(specs?: string[] | SerializedTestSpecification[]) {
+function normalizeSpecs(specs?: string[] | ExtensionTestSpecification[]) {
   if (!specs) {
     return specs
   }
@@ -428,6 +429,6 @@ function normalizeSpecs(specs?: string[] | SerializedTestSpecification[]) {
     if (typeof spec === 'string') {
       return normalize(spec)
     }
-    return [spec[0], normalize(spec[1]), spec[2]] as SerializedTestSpecification
-  }) as string[] | SerializedTestSpecification[]
+    return [spec[0], normalize(spec[1])] as ExtensionTestSpecification
+  }) as string[] | ExtensionTestSpecification[]
 }

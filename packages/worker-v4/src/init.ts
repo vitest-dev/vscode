@@ -1,8 +1,11 @@
 import type { WorkerInitMetadata } from 'vitest-vscode-shared'
-import type { TestUserConfig, WorkspaceProject } from 'vitest/node'
+import type { TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
 import { Writable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
+import { join } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import { VSCodeReporter } from './reporter'
 
@@ -95,6 +98,26 @@ export async function initVitest(meta: WorkerInitMetadata, options?: TestUserCon
       plugins: [
         {
           name: 'vitest:vscode-extension',
+          config(userConfig) {
+            const testConfig = userConfig.test ?? {}
+            const coverageOptions = testConfig.coverage ?? {}
+            if (coverageOptions.provider !== 'custom') {
+              const reporters = Array.isArray(coverageOptions.reporter) ? coverageOptions.reporter : [coverageOptions.reporter]
+              const jsonReporter = reporters.find(r => r && r[0] === 'json')
+              const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
+              coverageOptions.reporter = [
+                ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
+              ]
+            }
+            return {
+              test: {
+                coverage: {
+                  reportOnFailure: true,
+                  reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
+                },
+              },
+            }
+          },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
             // because we don't need it in the extension and it messes up Vite dev command
@@ -114,16 +137,13 @@ export async function initVitest(meta: WorkerInitMetadata, options?: TestUserCon
     },
   )
   await (vitest as any).report('onInit', vitest)
-  const configs = ([
-    // @ts-expect-error -- getRootProject in Vitest 3.0
-    'getRootProject' in vitest ? vitest.getRootProject() : vitest.getCoreWorkspaceProject(),
+  const configs = [
+    vitest.getRootProject(),
     ...vitest.projects,
-  ] as WorkspaceProject[]).map(p => p.vite.config.configFile).filter(c => c != null)
-  const workspaceSource: string | false = meta.workspaceFile
-    ? meta.workspaceFile
-    : (vitest.config.projects != null)
-        ? vitest.vite.config.configFile || false
-        : false
+  ].map(p => p.vite.config.configFile).filter(c => c != null)
+  const workspaceSource: string | false = (vitest.config.projects != null)
+    ? vitest.vite.config.configFile || false
+    : false
   return {
     vitest,
     reporter,

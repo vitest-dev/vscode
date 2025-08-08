@@ -4,7 +4,6 @@ import v8 from 'node:v8'
 import { createBirpc } from 'birpc'
 import { log } from '../log'
 
-export type { SerializedTestSpecification } from 'vitest'
 export type {
   ExtensionWorkerEvents,
   ExtensionWorkerTransport,
@@ -31,19 +30,19 @@ export function createRpcOptions() {
   const handlers = {
     onConsoleLog: createHandler<ExtensionWorkerEvents['onConsoleLog']>(),
     onTaskUpdate: createHandler<ExtensionWorkerEvents['onTaskUpdate']>(),
-    onFinished: createHandler<ExtensionWorkerEvents['onTestRunEnd']>(),
     onCollected: createHandler<ExtensionWorkerEvents['onCollected']>(),
     onWatcherRerun: createHandler<ExtensionWorkerEvents['onWatcherRerun']>(),
-    onWatcherStart: createHandler<ExtensionWorkerEvents['onWatcherStart']>(),
+    onTestRunStart: createHandler<ExtensionWorkerEvents['onTestRunStart']>(),
+    onTestRunEnd: createHandler<ExtensionWorkerEvents['onTestRunEnd']>(),
   }
 
   const events: Omit<ExtensionWorkerEvents, 'onReady' | 'onError'> = {
     onConsoleLog: handlers.onConsoleLog.trigger,
-    onTestRunEnd: handlers.onFinished.trigger,
+    onTestRunEnd: handlers.onTestRunEnd.trigger,
     onTaskUpdate: handlers.onTaskUpdate.trigger,
     onCollected: handlers.onCollected.trigger,
     onWatcherRerun: handlers.onWatcherRerun.trigger,
-    onWatcherStart: handlers.onWatcherStart.trigger,
+    onTestRunStart: handlers.onTestRunStart.trigger,
     onProcessLog(type, message) {
       log.worker(type === 'stderr' ? 'error' : 'info', stripVTControlCharacters(message))
     },
@@ -54,10 +53,10 @@ export function createRpcOptions() {
     handlers: {
       onConsoleLog: handlers.onConsoleLog.register,
       onTaskUpdate: handlers.onTaskUpdate.register,
-      onFinished: handlers.onFinished.register,
+      onTestRunEnd: handlers.onTestRunEnd.register,
       onCollected: handlers.onCollected.register,
       onWatcherRerun: handlers.onWatcherRerun.register,
-      onWatcherStart: handlers.onWatcherStart.register,
+      onTestRunStart: handlers.onTestRunStart.register,
       removeListener(name: string, listener: any) {
         handlers[name as 'onCollected']?.remove(listener)
       },

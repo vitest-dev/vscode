@@ -1,0 +1,8 @@
+{
+  "name": "vitest-vscode-worker-old",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "vitest-vscode-shared": "workspace:*"
+  }
+}

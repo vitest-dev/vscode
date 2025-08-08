@@ -1,5 +1,5 @@
+import type { WorkerEvent } from 'vitest-vscode-shared'
 import type WebSocket from 'ws'
-import type { WorkerEvent } from './types'
 
 abstract class WorkerEventEmitter {
   abstract name: string

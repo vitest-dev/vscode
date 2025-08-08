@@ -4,7 +4,6 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'pathe'
-import { finalCoverageFileName } from '../constants'
 
 export class ExtensionCoverageManager {
   private _enabled = false
@@ -14,6 +13,7 @@ export class ExtensionCoverageManager {
 
   constructor(
     private worker: ExtensionWorker,
+    private finalCoverageFileName: string,
   ) {
     this._config = worker.vitest.config.coverage
     const projects = new Set([...worker.vitest.projects, worker.getRootTestProject()])
@@ -27,6 +27,7 @@ export class ExtensionCoverageManager {
         },
       })
     })
+
     Object.defineProperty(worker.vitest, 'coverageProvider', {
       get: () => {
         if (this.enabled)
@@ -63,7 +64,7 @@ export class ExtensionCoverageManager {
     this._config.reporter = [
       ['json', {
         ...jsonReporter?.[1],
-        file: finalCoverageFileName,
+        file: this.finalCoverageFileName,
       }],
     ]
     this._config.reportOnFailure = true

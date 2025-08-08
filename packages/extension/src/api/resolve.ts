@@ -1,8 +1,8 @@
 import type * as vscode from 'vscode'
 import { findUpSync } from 'find-up'
 import { dirname, resolve } from 'pathe'
+import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import { getConfig } from '../config'
-import { normalizeDriveLetter } from '../worker/utils'
 
 const _require = require
 

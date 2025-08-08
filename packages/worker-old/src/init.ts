@@ -1,13 +1,15 @@
+import type { WorkerInitMetadata } from 'vitest-vscode-shared'
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
-import type { WorkerInitMetadata } from './types'
 import { Console } from 'node:console'
 import { Writable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
+import { normalizeDriveLetter } from '../../shared/src/utils'
 import { VSCodeReporter } from './reporter'
-import { normalizeDriveLetter } from './utils'
 
 export async function initVitest(meta: WorkerInitMetadata, options?: UserConfig) {
-  const reporter = new VSCodeReporter()
+  const reporter = new VSCodeReporter({
+    setupFilePath: meta.setupFilePath,
+  })
 
   let stdout: Writable | undefined
   let stderr: Writable | undefined

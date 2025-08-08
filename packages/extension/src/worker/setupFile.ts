@@ -1,6 +1,5 @@
 import type { WorkerGlobalState } from 'vitest'
 import { inject } from 'vitest'
-import { assert } from './utils'
 
 const { watchEveryFile, continuousFiles, rerunTriggered } = inject('__vscode')
 // @ts-expect-error injected global
@@ -25,4 +24,10 @@ function testFileWatched() {
       return testFile.startsWith(file)
     return false
   })
+}
+
+function assert(condition: unknown, message: string | (() => string)): asserts condition {
+  if (!condition) {
+    throw new Error(typeof message === 'string' ? message : message())
+  }
 }

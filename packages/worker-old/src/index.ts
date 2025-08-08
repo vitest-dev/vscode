@@ -1,9 +1,8 @@
-import type { WorkerRunnerOptions } from './types'
+import type { WorkerRunnerOptions } from 'vitest-vscode-shared'
 import v8 from 'node:v8'
+import { createWorkerRPC, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import { WebSocket } from 'ws'
-import { WorkerWSEventEmitter } from './emitter'
 import { initVitest } from './init'
-import { createWorkerRPC } from './rpc'
 import { ExtensionWorker } from './worker'
 
 // this is the file that will be executed with "node <path>"
@@ -35,7 +34,13 @@ emitter.on('message', async function onMessage(message: any) {
       )
 
       const rpc = createWorkerRPC(
-        new ExtensionWorker(vitest, data.debug, data.astCollect, emitter),
+        new ExtensionWorker(
+          vitest,
+          data.debug,
+          data.astCollect,
+          emitter,
+          data.meta.finalCoverageFileName,
+        ),
         {
           on(listener) {
             emitter.on('message', listener)

@@ -1,18 +1,26 @@
 import type { BirpcReturn } from 'birpc'
 import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from 'vitest-vscode-shared'
 import type { Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { Reporter } from 'vitest/reporters'
-import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from '../api/rpc'
 import { Console } from 'node:console'
 import { nextTick } from 'node:process'
 import { Writable } from 'node:stream'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
-import { setupFilePath } from '../constants'
 import { ExtensionWorker } from './worker'
+
+interface VSCodeReporterOptions {
+  setupFilePath: string
+}
 
 export class VSCodeReporter implements Reporter {
   public rpc!: BirpcReturn<ExtensionWorkerEvents, ExtensionWorkerTransport>
   private vitest!: VitestCore
+  private setupFilePath: string
+
+  constructor(options: VSCodeReporterOptions) {
+    this.setupFilePath = options.setupFilePath
+  }
 
   private get collecting(): boolean {
     return (this.vitest as any).configOverride.testNamePattern?.toString() === `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
@@ -21,16 +29,16 @@ export class VSCodeReporter implements Reporter {
   onInit(vitest: VitestCore) {
     this.vitest = vitest
     const server = vitest.server.config.server
-    if (!server.fs.allow.includes(setupFilePath))
-      server.fs.allow.push(setupFilePath)
+    if (!server.fs.allow.includes(this.setupFilePath))
+      server.fs.allow.push(this.setupFilePath)
     vitest.projects.forEach((project) => {
       project.config.setupFiles = [
         ...project.config.setupFiles || [],
-        setupFilePath,
+        this.setupFilePath,
       ]
       const server = project.server.config.server
-      if (!server.fs.allow.includes(setupFilePath))
-        server.fs.allow.push(setupFilePath)
+      if (!server.fs.allow.includes(this.setupFilePath))
+        server.fs.allow.push(this.setupFilePath)
       // @ts-expect-error internal, Vitest 3
       if (project._initBrowserProvider) {
         this.overrideInitBrowserProvider(project, '_initBrowserProvider')
@@ -44,14 +52,15 @@ export class VSCodeReporter implements Reporter {
         return
       }
       const config = 'vite' in browser ? browser.vite.config.server : browser.config.server
-      if (!config.fs.allow.includes(setupFilePath))
-        config.fs.allow.push(setupFilePath)
+      if (!config.fs.allow.includes(this.setupFilePath))
+        config.fs.allow.push(this.setupFilePath)
     })
   }
 
   overrideInitBrowserProvider(project: WorkspaceProject, name: string) {
     // @ts-expect-error internal
     const original = project[name].bind(project)
+    const setupFilePath = this.setupFilePath
     // @ts-expect-error internal
     project[name] = async function _initBrowserProvider(this: WorkspaceProject) {
       await original()
@@ -138,12 +147,8 @@ export class VSCodeReporter implements Reporter {
     files?.forEach(file => this.rpc.onCollected(file, this.collecting))
   }
 
-  onWatcherStart(files?: RunnerTestFile[], errors?: unknown[]) {
-    this.rpc.onWatcherStart(files, errors, this.collecting)
-  }
-
-  onWatcherRerun(files: string[], trigger?: string) {
-    this.rpc.onWatcherRerun(files, trigger, this.collecting)
+  onWatcherRerun(files: string[]) {
+    this.rpc.onTestRunStart(files, this.collecting)
   }
 
   toJSON() {
