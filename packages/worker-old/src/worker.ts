@@ -390,4 +390,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   report<T extends keyof Reporter>(name: T, ...args: ArgumentsType<Reporter[T]>) {
     return (this.vitest as any).report(name, ...args)
   }
+
+  initRpc() {
+    // ignore
+  }
 }

@@ -258,7 +258,7 @@
   "scripts": {
     "vscode:prepublish": "pnpm build",
     "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
-    "build": "tsup --minify --clean",
+    "build": "tsup --clean",
     "package": "vsce package --no-dependencies",
     "dev": "EXTENSION_NODE_ENV=dev tsup --watch --sourcemap",
     "test": "vscode-test",

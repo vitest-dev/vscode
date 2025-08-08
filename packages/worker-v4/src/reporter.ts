@@ -54,7 +54,7 @@ export class VSCodeReporter implements Reporter {
 
   onTestRunStart(specifications: ReadonlyArray<TestSpecification>) {
     const files = specifications.map(spec => spec.moduleId)
-    this.rpc.onTestRunStart(Array.from(new Set(files)), this.collecting)
+    this.rpc.onTestRunStart(Array.from(new Set(files)), false)
   }
 
   onTestRunEnd(testModules: ReadonlyArray<TestModule>, unhandledErrors: ReadonlyArray<unknown>) {
@@ -65,12 +65,12 @@ export class VSCodeReporter implements Reporter {
 
     // as any because Vitest types are different between v3 and v4,
     // and shared packages uses the lowest Vitest version
-    this.rpc.onTestRunEnd(files as any, '', this.collecting)
+    this.rpc.onTestRunEnd(files as any, '', false)
   }
 
   onTestModuleCollected(testModule: TestModule) {
     // TODO: is it possible to make types happy with both V3 and V4?
-    this.rpc.onCollected(getEntityJSONTask(testModule) as any, this.collecting)
+    this.rpc.onCollected(getEntityJSONTask(testModule) as any, false)
   }
 
   // ensureSetupFileIsAllowed(config: Vite.ResolvedConfig) {

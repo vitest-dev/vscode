@@ -6,8 +6,8 @@
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@vitest/utils": "4.0.0-beta.5",
-    "vitest": "4.0.0-beta.5",
+    "@vitest/utils": "4.0.0-beta.7",
+    "vitest": "4.0.0-beta.7",
     "vitest-vscode-shared": "workspace:*"
   }
 }

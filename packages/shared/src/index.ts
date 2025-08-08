@@ -33,6 +33,8 @@ export interface ExtensionWorkerTransport {
 
   onFilesCreated: (files: string[]) => void
   onFilesChanged: (files: string[]) => void
+
+  initRpc: (rpc: VitestWorkerRPC) => void
 }
 
 export interface ExtensionWorkerEvents {

@@ -11,6 +11,8 @@ export function createWorkerRPC(vitest: ExtensionWorkerTransport, channel: Chann
       'onTaskUpdate',
       'onCollected',
       'onWatcherRerun',
+      'onTestRunStart',
+      'onTestRunEnd',
     ],
     ...channel,
   })

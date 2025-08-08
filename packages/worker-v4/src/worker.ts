@@ -1,4 +1,9 @@
-import type { ExtensionTestSpecification, ExtensionWorkerTransport, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestSpecification,
+  ExtensionWorkerTransport,
+  VitestWorkerRPC,
+  WorkerWSEventEmitter,
+} from 'vitest-vscode-shared'
 import type { TestSpecification, Vitest as VitestCore } from 'vitest/node'
 import { ExtensionCoverageManager } from './coverage'
 import { ExtensionWorkerWatcher } from './watcher'
@@ -6,6 +11,8 @@ import { ExtensionWorkerWatcher } from './watcher'
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
   private readonly coverage: ExtensionCoverageManager
+
+  private rpc!: VitestWorkerRPC
 
   constructor(
     public readonly vitest: VitestCore,
@@ -23,11 +30,17 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return specifications.map(spec => [spec.project.name, spec.moduleId])
   }
 
-  async collectTests(testFile: ExtensionTestSpecification[]): Promise<void> {
-    //
+  async collectTests(testFiles: ExtensionTestSpecification[]): Promise<void> {
+    const specifications = await this.resolveTestSpecifications(testFiles)
+    const testModules = await this.vitest.experimental_parseSpecifications(specifications)
+    const promises = testModules.map(module =>
+      // TODO: fix "as any"
+      this.rpc.onCollected((module as any).task, true),
+    )
+    await Promise.all(promises)
   }
 
-  cancelRun() {
+  cancelRun(): Promise<void> {
     return this.vitest.cancelCurrentRun('keyboard-input')
   }
 
@@ -52,9 +65,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     }
   }
 
-  async resolveTestSpecifications(filesOrDirectories: ExtensionTestSpecification[]): Promise<TestSpecification[]> {
+  async resolveTestSpecifications(files: ExtensionTestSpecification[]): Promise<TestSpecification[]> {
     const specifications: TestSpecification[] = []
-    filesOrDirectories.forEach((file) => {
+    files.forEach((file) => {
       const [projectName, filepath] = file
       const project = this.vitest.getProjectByName(projectName)
       specifications.push(project.createSpecification(filepath))
@@ -106,11 +119,15 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   onFilesChanged(files: string[]): void {
-    // TODO
+    files.forEach((file) => {
+      this.vitest.watcher.onFileChange(file)
+    })
   }
 
   onFilesCreated(files: string[]): void {
-    // TODO
+    files.forEach((file) => {
+      this.vitest.watcher.onFileCreate(file)
+    })
   }
 
   dispose() {
@@ -121,6 +138,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   close() {
     return this.dispose()
+  }
+
+  initRpc(rpc: VitestWorkerRPC) {
+    this.rpc = rpc
   }
 
   private isDirectories(filesOrDirectories: ExtensionTestSpecification[] | string[]): filesOrDirectories is string[] {
