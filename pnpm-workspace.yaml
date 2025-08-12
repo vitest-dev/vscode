@@ -12,3 +12,10 @@ catalog:
   '@vitest/utils': ^3.2.2
   vite: ^6.3.5
   vitest: ^3.2.2
+
+catalogs:
+  latest:
+    '@vitest/browser': ^4.0.0-beta.7
+    '@vitest/coverage-v8': ^4.0.0-beta.7
+    vite: ^7.1.0
+    vitest: ^4.0.0-beta.7
