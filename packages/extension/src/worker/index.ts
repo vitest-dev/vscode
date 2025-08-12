@@ -25,8 +25,9 @@ emitter.on('message', async function onMessage(message: any) {
         pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString()
       ) as typeof import('vitest/node')
 
-      const isOld = Number(vitestModule.version[1]) < 4
-      const workerPath = pathToFileURL(join(__dirname, isOld ? './workerOld.js' : './workerNew.js'))
+      const isOld = Number(vitestModule.version[0]) < 4
+      const workerName = isOld ? './workerOld.js' : './workerNew.js'
+      const workerPath = pathToFileURL(join(__dirname, workerName))
       const initModule = await import(workerPath.toString())
 
       const { createWorker, reporter, configs, workspaceSource } = await initModule.initVitest(

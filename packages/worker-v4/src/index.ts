@@ -1,6 +1,6 @@
 import type { WorkerRunnerOptions } from 'vitest-vscode-shared'
 import type { WorkerWSEventEmitter } from 'vitest-vscode-shared'
-import type { TestUserConfig } from 'vitest/dist/node.js'
+import type { CoverageIstanbulOptions, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
@@ -110,15 +110,13 @@ export async function initVitest(
           name: 'vitest:vscode-extension',
           config(userConfig) {
             const testConfig = userConfig.test ?? {}
-            const coverageOptions = testConfig.coverage ?? {}
-            if (coverageOptions.provider !== 'custom') {
-              const reporters = Array.isArray(coverageOptions.reporter) ? coverageOptions.reporter : [coverageOptions.reporter]
-              const jsonReporter = reporters.find(r => r && r[0] === 'json')
-              const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
-              coverageOptions.reporter = [
-                ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
-              ]
-            }
+            const coverageOptions = (testConfig.coverage ?? {}) as CoverageIstanbulOptions
+            const reporters = Array.isArray(coverageOptions.reporter) ? coverageOptions.reporter : [coverageOptions.reporter]
+            const jsonReporter = reporters.find(r => r && r[0] === 'json')
+            const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
+            coverageOptions.reporter = [
+              ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
+            ]
             return {
               test: {
                 coverage: {
