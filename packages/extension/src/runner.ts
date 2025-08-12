@@ -179,7 +179,7 @@ export class TestRunner extends vscode.Disposable {
 
     this.disposables.push(
       token.onCancellationRequested(() => {
-        log.verbose?.('Continuous test run for', join(request.include), 'was cancelled')
+        log.verbose?.('Continuous test run for', labelTestItems(request.include), 'was cancelled')
 
         this.continuousRequests.delete(request)
         if (!this.continuousRequests.size) {
@@ -228,7 +228,7 @@ export class TestRunner extends vscode.Disposable {
 
     this.disposables.push(
       token.onCancellationRequested(() => {
-        log.verbose?.('Coverage for', join(request.include), 'was manually stopped')
+        log.verbose?.('Coverage for', labelTestItems(request.include), 'was manually stopped')
         this.api.disableCoverage()
       }),
     )
@@ -281,7 +281,7 @@ export class TestRunner extends vscode.Disposable {
             this.nonContinuousRequest = undefined
             this.endTestRun()
           })
-          log.verbose?.('Test run was cancelled manually for', join(request.include))
+          log.verbose?.('Test run was cancelled manually for', labelTestItems(request.include))
         }
       }),
     )
@@ -759,7 +759,7 @@ function formatTestOutput(output: string) {
   return output.replace(/(?<!\r)\n/g, '\r\n')
 }
 
-function join(items: readonly vscode.TestItem[] | undefined) {
+function labelTestItems(items: readonly vscode.TestItem[] | undefined) {
   if (!items)
     return '<all tests>'
   return items.map(p => `"${p.label}"`).join(', ')
