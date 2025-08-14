@@ -60,8 +60,10 @@ export class VSCodeReporter implements Reporter {
   onTestRunEnd(testModules: ReadonlyArray<TestModule>, unhandledErrors: ReadonlyArray<unknown>) {
     const files = testModules.map(m => getEntityJSONTask(m))
 
-    // TODO: remove "as unknown[]"
-    this.vitest.logger.printUnhandledErrors(unhandledErrors as unknown[])
+    if (unhandledErrors.length) {
+      // TODO: remove "as unknown[]"
+      this.vitest.logger.printUnhandledErrors(unhandledErrors as unknown[])
+    }
 
     // as any because Vitest types are different between v3 and v4,
     // and shared packages uses the lowest Vitest version

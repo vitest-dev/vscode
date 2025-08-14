@@ -111,7 +111,9 @@ export async function initVitest(
           config(userConfig) {
             const testConfig = userConfig.test ?? {}
             const coverageOptions = (testConfig.coverage ?? {}) as CoverageIstanbulOptions
-            const reporters = Array.isArray(coverageOptions.reporter) ? coverageOptions.reporter : [coverageOptions.reporter]
+            const reporters = Array.isArray(coverageOptions.reporter)
+              ? coverageOptions.reporter
+              : [coverageOptions.reporter]
             const jsonReporter = reporters.find(r => r && r[0] === 'json')
             const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
             coverageOptions.reporter = [
@@ -124,7 +126,8 @@ export async function initVitest(
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
                 },
               },
-            }
+              // TODO: type is not augmented
+            } as any
           },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,

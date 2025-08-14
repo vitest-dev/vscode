@@ -211,7 +211,6 @@ export class VitestFolderAPI {
   onTestRunEnd = this.createHandler('onTestRunEnd')
   onTestRunStart = this.createHandler('onTestRunStart')
   onCollected = this.createHandler('onCollected')
-  onWatcherRerun = this.createHandler('onWatcherRerun')
 
   clearListeners(name?: Exclude<keyof ResolvedMeta['handlers'], 'clearListeners' | 'removeListener'>) {
     if (name)
@@ -415,7 +414,6 @@ export interface ResolvedMeta {
     onTestRunEnd: (listener: ExtensionWorkerEvents['onTestRunEnd']) => void
     onTestRunStart: (listener: ExtensionWorkerEvents['onTestRunStart']) => void
     onCollected: (listener: ExtensionWorkerEvents['onCollected']) => void
-    onWatcherRerun: (listener: ExtensionWorkerEvents['onWatcherRerun']) => void
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
   }

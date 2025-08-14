@@ -31,7 +31,6 @@ export function createRpcOptions() {
     onConsoleLog: createHandler<ExtensionWorkerEvents['onConsoleLog']>(),
     onTaskUpdate: createHandler<ExtensionWorkerEvents['onTaskUpdate']>(),
     onCollected: createHandler<ExtensionWorkerEvents['onCollected']>(),
-    onWatcherRerun: createHandler<ExtensionWorkerEvents['onWatcherRerun']>(),
     onTestRunStart: createHandler<ExtensionWorkerEvents['onTestRunStart']>(),
     onTestRunEnd: createHandler<ExtensionWorkerEvents['onTestRunEnd']>(),
   }
@@ -41,7 +40,6 @@ export function createRpcOptions() {
     onTestRunEnd: handlers.onTestRunEnd.trigger,
     onTaskUpdate: handlers.onTaskUpdate.trigger,
     onCollected: handlers.onCollected.trigger,
-    onWatcherRerun: handlers.onWatcherRerun.trigger,
     onTestRunStart: handlers.onTestRunStart.trigger,
     onProcessLog(type, message) {
       log.worker(type === 'stderr' ? 'error' : 'info', stripVTControlCharacters(message))
@@ -55,7 +53,6 @@ export function createRpcOptions() {
       onTaskUpdate: handlers.onTaskUpdate.register,
       onTestRunEnd: handlers.onTestRunEnd.register,
       onCollected: handlers.onCollected.register,
-      onWatcherRerun: handlers.onWatcherRerun.register,
       onTestRunStart: handlers.onTestRunStart.register,
       removeListener(name: string, listener: any) {
         handlers[name as 'onCollected']?.remove(listener)

@@ -49,7 +49,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       this.vitest.setGlobalTestNamePattern(testNamePattern)
     }
 
-    if (!filesOrDirectories || this.isDirectories(filesOrDirectories)) {
+    if (!filesOrDirectories || this.isOnlyDirectories(filesOrDirectories)) {
       const specifications = await this.vitest.getRelevantTestSpecifications(filesOrDirectories)
       await this.vitest.rerunTestSpecifications(specifications, true)
     }
@@ -107,11 +107,11 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   async enableCoverage(): Promise<void> {
-    await this.coverage.enable()
+    await this.coverage.enableCoverage()
   }
 
   disableCoverage(): void {
-    this.coverage.disable()
+    this.coverage.disableCoverage()
   }
 
   waitForCoverageReport(): Promise<string | null> {
@@ -119,19 +119,15 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   onFilesChanged(files: string[]): void {
-    files.forEach((file) => {
-      this.vitest.watcher.onFileChange(file)
-    })
+    files.forEach(file => this.vitest.watcher.onFileChange(file))
   }
 
   onFilesCreated(files: string[]): void {
-    files.forEach((file) => {
-      this.vitest.watcher.onFileCreate(file)
-    })
+    files.forEach(file => this.vitest.watcher.onFileCreate(file))
   }
 
   dispose() {
-    this.coverage.disable()
+    this.coverage.disableCoverage()
     this.watcher.stopTracking()
     return this.vitest.close()
   }
@@ -144,7 +140,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.rpc = rpc
   }
 
-  private isDirectories(filesOrDirectories: ExtensionTestSpecification[] | string[]): filesOrDirectories is string[] {
+  private isOnlyDirectories(filesOrDirectories: ExtensionTestSpecification[] | string[]): filesOrDirectories is string[] {
     return typeof filesOrDirectories[0] === 'string'
   }
 }

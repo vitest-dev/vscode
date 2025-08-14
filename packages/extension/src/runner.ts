@@ -53,6 +53,10 @@ export class TestRunner extends vscode.Disposable {
     })
 
     api.onTestRunStart((files, collecting) => {
+      if (!files.length) {
+        return
+      }
+
       if (collecting) {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
       }
@@ -390,6 +394,11 @@ export class TestRunner extends vscode.Disposable {
 
   private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
     const request = primaryRequest || this.nonContinuousRequest || this.createContinuousRequest()
+
+    if (!files.length) {
+      log.verbose?.('Started an empty test run. This should not happen...')
+      return
+    }
 
     if (!request) {
       log.verbose?.('No test run request found for', ...files.map(f => this.relative(f)))

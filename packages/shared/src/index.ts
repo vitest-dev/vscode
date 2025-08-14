@@ -43,8 +43,6 @@ export interface ExtensionWorkerEvents {
   onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
   onTestRunStart: (files: string[], collecting?: boolean) => void
-  /** @deprecated -- use onTestRunStart instead */
-  onWatcherRerun: (files: string[], trigger?: string, collecting?: boolean) => void
 
   onProcessLog: (type: 'stdout' | 'stderr', log: string) => void
 }
