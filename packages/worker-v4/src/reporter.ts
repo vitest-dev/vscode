@@ -49,7 +49,23 @@ export class VSCodeReporter implements Reporter {
   }
 
   onTaskUpdate(packs: RunnerTaskResultPack[]) {
-    this.rpc.onTaskUpdate(packs)
+    this.rpc.onTaskUpdate(
+      // remove the meta because it is not used,
+      // mark todo tests with a result, because
+      // it is not set if the test was skipped during collection
+      packs.map((pack) => {
+        const task = this.vitest.state.idMap.get(pack[0])
+        if (pack[1] || !task) {
+          return [pack[0], pack[1], {}]
+        }
+
+        if (task.mode === 'todo' || task.mode === 'skip') {
+          return [pack[0], { state: task.mode }, {}]
+        }
+
+        return [pack[0], pack[1], {}]
+      }),
+    )
   }
 
   onTestRunStart(specifications: ReadonlyArray<TestSpecification>) {
