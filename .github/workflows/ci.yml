@@ -37,6 +37,13 @@ jobs:
       - name: test-e2e
         run: pnpm test-e2e --retry 2
 
+      - name: vitest 3.2
+        run: node ./scripts/lower-vitest-version.js
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: test-e2e-legacy
+        run: pnpm test-e2e --retry 2
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
