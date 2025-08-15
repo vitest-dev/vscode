@@ -1,4 +1,4 @@
-import type { ParsedStack, TaskResult, TestError } from 'vitest'
+import type { ParsedStack, RunnerTaskResult, TestError } from 'vitest'
 import type { VitestFolderAPI } from './api'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { TestTree } from './testTree'
@@ -504,7 +504,7 @@ export class TestRunner extends vscode.Disposable {
   private markTestCase(
     testRun: vscode.TestRun,
     test: vscode.TestItem,
-    result: TaskResult,
+    result: RunnerTaskResult,
   ) {
     switch (result.state) {
       case 'fail': {
@@ -546,7 +546,7 @@ export class TestRunner extends vscode.Disposable {
 
   // we only change the state of test cases to keep the correct test count
   // ignoring test files, test folders and suites - these only report syntax errors
-  private markNonTestCase(test: vscode.TestItem, result?: TaskResult) {
+  private markNonTestCase(test: vscode.TestItem, result?: RunnerTaskResult) {
     if (!result) {
       log.verbose?.(`No task result for "${test.label}", ignoring`)
       return
@@ -564,7 +564,7 @@ export class TestRunner extends vscode.Disposable {
     test.error = errors.join('\n')
   }
 
-  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: TaskResult) {
+  private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: RunnerTaskResult) {
     const isTestCase = getTestData(test) instanceof TestCase
 
     if (!isTestCase) {

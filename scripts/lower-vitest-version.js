@@ -8,4 +8,4 @@ pkg.pnpm = {
     'vitest': '^3.2.4',
   },
 }
-writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
+writeFileSync('./package.json', `${JSON.stringify(pkg, null, 2)}\n`, 'utf-8')
