@@ -1,5 +1,6 @@
-import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
-import type { Vitest } from 'vitest/node'
+import type { TestSpecification, Vitest } from 'vitest/node'
+import type { ExtensionWorkerRunner } from './runner'
+import { createQueuedHandler, type ExtensionTestSpecification } from 'vitest-vscode-shared'
 
 export class ExtensionWorkerWatcher {
   private enabled = false
@@ -7,28 +8,41 @@ export class ExtensionWorkerWatcher {
   private trackedTestItems: Record<string, string[]> = {}
   private trackedDirectories: string[] = []
 
-  constructor(vitest: Vitest) {
+  constructor(vitest: Vitest, private runner: ExtensionWorkerRunner) {
     vitest.onFilterWatchedSpecification((specification) => {
-      if (!this.enabled) {
-        return false
-      }
-
-      if (this.trackingEveryFile) {
+      const shouldRun = this.shouldRunSpecification(specification)
+      if (shouldRun) {
         return true
       }
-
-      if (this.isTestFileWatched(specification.moduleId, this.trackedDirectories)) {
-        return true
-      }
-
-      const project = specification.project.name
-      const files = this.trackedTestItems[project]
-      if (!files?.length) {
-        return false
-      }
-
-      return files.includes(specification.moduleId)
+      this.scheduleAstCollection(specification)
+      return false
     })
+  }
+
+  private scheduleAstCollection = createQueuedHandler<TestSpecification>(async (specifications) => {
+    await this.runner.collectSpecifications(specifications)
+  })
+
+  private shouldRunSpecification(specification: TestSpecification) {
+    if (!this.enabled) {
+      return false
+    }
+
+    if (this.trackingEveryFile) {
+      return true
+    }
+
+    if (this.isTestFileWatched(specification.moduleId, this.trackedDirectories)) {
+      return true
+    }
+
+    const project = specification.project.name
+    const files = this.trackedTestItems[project]
+    if (!files?.length) {
+      return false
+    }
+
+    return files.includes(specification.moduleId)
   }
 
   trackTestItems(filesOrDirectories: ExtensionTestSpecification[] | string[]) {

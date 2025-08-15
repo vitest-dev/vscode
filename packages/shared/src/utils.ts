@@ -69,3 +69,25 @@ export function normalizeDriveLetter(path: string) {
     return path
   return driveLetter + path.slice(1)
 }
+
+export function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
+  const cached = new Set<T>()
+  let promise: Promise<void> | null = null
+  let timer: NodeJS.Timeout | null = null
+  return (value: T) => {
+    cached.add(value)
+    if (timer) {
+      clearTimeout(timer)
+    }
+    timer = setTimeout(() => {
+      if (promise) {
+        return
+      }
+      const values = Array.from(cached)
+      cached.clear()
+      promise = resolver(values).finally(() => {
+        promise = null
+      })
+    }, 50)
+  }
+}

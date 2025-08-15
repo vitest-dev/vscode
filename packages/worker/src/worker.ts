@@ -4,98 +4,44 @@ import type {
   VitestWorkerRPC,
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
-import type { TestSpecification, Vitest as VitestCore } from 'vitest/node'
+import type { Vitest as VitestCore } from 'vitest/node'
 import { ExtensionCoverageManager } from './coverage'
+import { ExtensionWorkerRunner } from './runner'
 import { ExtensionWorkerWatcher } from './watcher'
 
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
   private readonly coverage: ExtensionCoverageManager
-
-  private rpc!: VitestWorkerRPC
+  private readonly runner: ExtensionWorkerRunner
 
   constructor(
     public readonly vitest: VitestCore,
-    private readonly debug = false,
-    public readonly alwaysAstCollect = false,
-    private emitter: WorkerWSEventEmitter,
+    debug = false,
+    emitter: WorkerWSEventEmitter,
   ) {
-    this.watcher = new ExtensionWorkerWatcher(vitest)
+    this.runner = new ExtensionWorkerRunner(vitest, debug, emitter)
+    this.watcher = new ExtensionWorkerWatcher(vitest, this.runner)
     this.coverage = new ExtensionCoverageManager(vitest)
   }
 
   async getFiles(): Promise<ExtensionTestSpecification[]> {
-    this.vitest.clearSpecificationsCache()
-    const specifications = await this.vitest.globTestSpecifications()
-    return specifications.map(spec => [spec.project.name, spec.moduleId])
+    return this.runner.getFiles()
   }
 
   async collectTests(testFiles: ExtensionTestSpecification[]): Promise<void> {
-    const specifications = await this.resolveTestSpecifications(testFiles)
-    const testModules = await this.vitest.experimental_parseSpecifications(specifications)
-    const promises = testModules.map(module =>
-      // TODO: fix "as any"
-      this.rpc.onCollected((module as any).task, true),
-    )
-    await Promise.all(promises)
+    return this.runner.collectTests(testFiles)
   }
 
   cancelRun(): Promise<void> {
-    return this.vitest.cancelCurrentRun('keyboard-input')
+    return this.runner.cancelRun()
   }
 
   async runTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
-    const currentTestNamePattern = this.getGlobalTestNamePattern()
-    if (testNamePattern) {
-      this.vitest.setGlobalTestNamePattern(testNamePattern)
-    }
-
-    if (!filesOrDirectories || this.isOnlyDirectories(filesOrDirectories)) {
-      const specifications = await this.vitest.getRelevantTestSpecifications(filesOrDirectories)
-      await this.vitest.rerunTestSpecifications(specifications, true)
-    }
-    else {
-      const specifications = await this.resolveTestSpecifications(filesOrDirectories)
-      await this.vitest.rerunTestSpecifications(specifications, false)
-    }
-
-    // debugger never runs in watch mode
-    if (this.debug) {
-      await this.vitest.close()
-      this.emitter.close()
-    }
-
-    if (currentTestNamePattern) {
-      this.vitest.setGlobalTestNamePattern(currentTestNamePattern)
-    }
-  }
-
-  // TODO: use vitest.getGlobalTestNamePattern when merged
-  private getGlobalTestNamePattern(): RegExp | undefined {
-    if ((this.vitest as any).configOverride.testNamePattern != null) {
-      return (this.vitest as any).configOverride.testNamePattern
-    }
-    return this.vitest.config.testNamePattern
-  }
-
-  async resolveTestSpecifications(files: ExtensionTestSpecification[]): Promise<TestSpecification[]> {
-    const specifications: TestSpecification[] = []
-    files.forEach((file) => {
-      const [projectName, filepath] = file
-      const project = this.vitest.getProjectByName(projectName)
-      specifications.push(project.createSpecification(filepath))
-    })
-    return specifications
+    await this.runner.runTests(filesOrDirectories, testNamePattern)
   }
 
   async updateSnapshots(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
-    this.vitest.enableSnapshotUpdate()
-    try {
-      return await this.runTests(filesOrDirectories, testNamePattern)
-    }
-    finally {
-      this.vitest.resetSnapshotUpdate()
-    }
+    return this.runner.updateSnapshots(filesOrDirectories, testNamePattern)
   }
 
   watchTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): void {
@@ -150,10 +96,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   initRpc(rpc: VitestWorkerRPC) {
-    this.rpc = rpc
-  }
-
-  private isOnlyDirectories(filesOrDirectories: ExtensionTestSpecification[] | string[]): filesOrDirectories is string[] {
-    return typeof filesOrDirectories[0] === 'string'
+    this.runner.initRpc(rpc)
   }
 }

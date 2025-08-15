@@ -165,7 +165,6 @@ export async function initVitest(
       return new ExtensionWorker(
         vitest,
         data.debug,
-        data.astCollect,
         emitter,
       )
     },

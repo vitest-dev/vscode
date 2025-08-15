@@ -1,9 +1,9 @@
-import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerEvents, VitestExtensionRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
+import { createQueuedHandler, type ExtensionTestSpecification } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { createVitestProcess } from './api/child_process'
 import { createVitestTerminalProcess } from './api/terminal'
@@ -227,28 +227,6 @@ export class VitestFolderAPI {
     return (callback: ExtensionWorkerEvents[K]) => {
       this.handlers[name](callback as any)
     }
-  }
-}
-
-function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
-  const cached = new Set<T>()
-  let promise: Promise<void> | null = null
-  let timer: NodeJS.Timeout | null = null
-  return (value: T) => {
-    cached.add(value)
-    if (timer) {
-      clearTimeout(timer)
-    }
-    timer = setTimeout(() => {
-      if (promise) {
-        return
-      }
-      const values = Array.from(cached)
-      cached.clear()
-      promise = resolver(values).finally(() => {
-        promise = null
-      })
-    }, 50)
   }
 }
 
