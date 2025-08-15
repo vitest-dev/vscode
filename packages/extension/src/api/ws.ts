@@ -133,7 +133,7 @@ export function onWsConnection(
         ? pathToFileURL(pnpLoader).toString()
         : undefined,
       setupFilePath,
-      finalCoverageFileName
+      finalCoverageFileName,
     },
     debug,
     astCollect: getConfig(pkg.folder).experimentalStaticAstCollect,
