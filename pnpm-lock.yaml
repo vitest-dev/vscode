@@ -184,13 +184,13 @@ importers:
         specifier: 'catalog:'
         version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.0)(@vitest/browser@3.2.3)(happy-dom@15.11.7)(jiti@2.4.2)(jsdom@26.1.0)(msw@2.10.2(@types/node@24.0.0)(typescript@5.8.3))(tsx@4.19.4)(yaml@2.8.0)
 
-  packages/worker-old:
+  packages/worker-legacy:
     dependencies:
       vitest-vscode-shared:
         specifier: workspace:*
         version: link:../shared
 
-  packages/worker-v4:
+  packages/worker:
     devDependencies:
       '@vitest/utils':
         specifier: catalog:latest

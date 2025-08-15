@@ -1,5 +1,5 @@
 {
-  "name": "vitest-vscode-worker-v4",
+  "name": "vitest-vscode-worker",
   "type": "module",
   "private": true,
   "exports": {

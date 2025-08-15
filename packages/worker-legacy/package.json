@@ -1,5 +1,5 @@
 {
-  "name": "vitest-vscode-worker-old",
+  "name": "vitest-vscode-worker-legacy",
   "version": "0.0.0",
   "private": true,
   "dependencies": {

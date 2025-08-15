@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import type { RunnerTestCase, RunnerTestSuite } from 'vitest'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { createVitest } from 'vitest/node'
-import { astCollectTests } from '../../src/worker/collect'
+import { astCollectTests } from '../../packages/worker-legacy/src/collect'
 
 const variableFixture = 'test-from-vitest-variable.ts'
 

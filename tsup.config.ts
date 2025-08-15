@@ -17,8 +17,8 @@ export default defineConfig([
   },
   {
     entry: {
-      workerOld: './packages/worker-old/src/index.ts',
-      workerNew: './packages/worker-v4/src/index.ts',
+      workerLegacy: './packages/worker-legacy/src/index.ts',
+      workerNew: './packages/worker/src/index.ts',
     },
     format: 'cjs',
   },
