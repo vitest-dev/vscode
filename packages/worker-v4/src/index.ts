@@ -109,7 +109,7 @@ export async function initVitest(
         {
           name: 'vitest:vscode-extension',
           config(userConfig) {
-            const testConfig = userConfig.test ?? {}
+            const testConfig = (userConfig as any).test ?? {}
             const coverageOptions = (testConfig.coverage ?? {}) as CoverageIstanbulOptions
             const reporters = Array.isArray(coverageOptions.reporter)
               ? coverageOptions.reporter

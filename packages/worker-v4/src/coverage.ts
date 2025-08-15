@@ -1,6 +1,13 @@
 import type { Vitest } from 'vitest/node'
 import { existsSync } from 'node:fs'
 
+const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
+  ? (...args: any[]) => {
+      // eslint-disable-next-line no-console
+      console.info(...args)
+    }
+  : undefined
+
 export class ExtensionCoverageManager {
   private _enabled = false
 
@@ -21,14 +28,13 @@ export class ExtensionCoverageManager {
       return null
     const vitest = this.vitest
     const coverage = vitest.config.coverage
-    // TODO: use verbose logger instead
-    vitest.logger.error(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
+    verbose?.(`Waiting for the coverage report to generate: ${coverage.reportsDirectory}`)
     await vitest.waitForTestRunEnd()
     if (existsSync(coverage.reportsDirectory)) {
-      vitest.logger.error(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
+      verbose?.(`Coverage reports retrieved: ${coverage.reportsDirectory}`)
       return coverage.reportsDirectory
     }
-    vitest.logger.error(`Coverage reports directory not found: ${coverage.reportsDirectory}`)
+    verbose?.(`Coverage reports directory not found: ${coverage.reportsDirectory}`)
     return null
   }
 }

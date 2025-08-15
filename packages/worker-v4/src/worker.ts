@@ -45,6 +45,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   async runTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+    const currentTestNamePattern = this.getGlobalTestNamePattern()
     if (testNamePattern) {
       this.vitest.setGlobalTestNamePattern(testNamePattern)
     }
@@ -63,6 +64,18 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       await this.vitest.close()
       this.emitter.close()
     }
+
+    if (currentTestNamePattern) {
+      this.vitest.setGlobalTestNamePattern(currentTestNamePattern)
+    }
+  }
+
+  // TODO: use vitest.getGlobalTestNamePattern when merged
+  private getGlobalTestNamePattern(): RegExp | undefined {
+    if ((this.vitest as any).configOverride.testNamePattern != null) {
+      return (this.vitest as any).configOverride.testNamePattern
+    }
+    return this.vitest.config.testNamePattern
   }
 
   async resolveTestSpecifications(files: ExtensionTestSpecification[]): Promise<TestSpecification[]> {

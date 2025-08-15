@@ -4,8 +4,10 @@ import type {
   Reporter,
   RunnerTestFile,
   TestModule,
+  TestProject,
   // TestProject,
   TestSpecification,
+  Vite,
   // Vite,
   Vitest as VitestCore,
 } from 'vitest/node'
@@ -24,25 +26,21 @@ export class VSCodeReporter implements Reporter {
     this.setupFilePath = options.setupFilePath
   }
 
-  private get collecting(): boolean {
-    return (this.vitest as any).configOverride.testNamePattern?.toString() === `/$a/`
-  }
-
   onInit(vitest: VitestCore) {
     this.vitest = vitest
-    // vitest.projects.forEach((project) => {
-    //   this.ensureSetupFileIsAllowed(project.vite.config)
-    // })
+    vitest.projects.forEach((project) => {
+      this.ensureSetupFileIsAllowed(project.vite.config)
+    })
   }
 
   initRpc(rpc: VitestWorkerRPC) {
     this.rpc = rpc
   }
 
-  // onBrowserInit(project: TestProject) {
-  // const config = project.browser!.vite.config
-  // this.ensureSetupFileIsAllowed(config)
-  // }
+  onBrowserInit(project: TestProject) {
+    const config = project.browser!.vite.config
+    this.ensureSetupFileIsAllowed(config)
+  }
 
   onUserConsoleLog(log: UserConsoleLog) {
     this.rpc.onConsoleLog(log)
@@ -91,11 +89,11 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onCollected(getEntityJSONTask(testModule) as any, false)
   }
 
-  // ensureSetupFileIsAllowed(config: Vite.ResolvedConfig) {
-  //   if (!config.server.fs.allow.includes(this.setupFilePath)) {
-  //     config.server.fs.allow.push(this.setupFilePath)
-  //   }
-  // }
+  ensureSetupFileIsAllowed(config: Vite.ResolvedConfig) {
+    if (!config.server.fs.allow.includes(this.setupFilePath)) {
+      config.server.fs.allow.push(this.setupFilePath)
+    }
+  }
 
   toJSON() {
     return {}
