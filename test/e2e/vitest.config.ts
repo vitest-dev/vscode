@@ -10,10 +10,10 @@ export default defineConfig({
       VSCODE_E2E_TRACE: 'on',
     },
     setupFiles: [
-      './assertions.ts',
+      './utils/assertions.ts',
     ],
     globalSetup: [
-      './downloadSetup.ts',
+      './utils/downloadSetup.ts',
     ],
   },
 })

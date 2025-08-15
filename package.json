@@ -313,6 +313,13 @@
     "which": "^4.0.0",
     "ws": "^8.16.0"
   },
+  "pnpm": {
+    "overrides": {
+      "@vitest/browser": "^4.0.0-beta.8",
+      "@vitest/coverage": "^4.0.0-beta.8",
+      "vitest": "^4.0.0-beta.8"
+    }
+  },
   "lint-staged": {
     "*.{js,ts,tsx,vue,md}": [
       "eslint --fix"

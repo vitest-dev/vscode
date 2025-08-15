@@ -3,7 +3,6 @@ import os from 'node:os'
 import path, { resolve } from 'node:path'
 import { _electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import type { Awaitable } from 'vitest'
 import { test as baseTest, inject } from 'vitest'
 import { VSCodeTester } from './tester'
 
@@ -20,7 +19,7 @@ type LaunchFixture = (options: {
   workspacePath?: string
   trace?: 'on' | 'off'
 }) => Promise<Context & {
-  step: (name: string, fn: (context: Context) => Awaitable<void>) => Promise<void>
+  step: (name: string, fn: (context: Context) => void | Promise<void>) => Promise<void>
 }>
 
 const defaultConfig = process.env as {
@@ -78,7 +77,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
 
       const tester = new VSCodeTester(page)
 
-      async function step(name: string, fn: (context: Context) => Awaitable<void>) {
+      async function step(name: string, fn: (context: Context) => Promise<void> | void) {
         await page.reload()
         try {
           await fn({ page, tester })

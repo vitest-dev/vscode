@@ -1,8 +1,8 @@
 import { readFileSync, rmSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
-import { test } from './helper'
-import { editFile } from './tester'
+import { test } from './utils/helper'
+import { editFile } from './utils/tester'
 
 // Vitst extension doesn't work with CI flag
 beforeAll(() => {

@@ -15,7 +15,7 @@ describe('can discover tests', () => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
     const file = await astCollectTests(
-      vitest.getCoreWorkspaceProject(),
+      vitest.getRootProject(),
       resolve(`test/e2e/fixtures/collect/${fixture}`),
     )
     expect(file.filepath).toBe(resolve(`test/e2e/fixtures/collect/${fixture}`))
@@ -68,7 +68,7 @@ describe('can discover tests', () => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
     const file = await astCollectTests(
-      vitest.getCoreWorkspaceProject(),
+      vitest.getRootProject(),
       resolve(`test/e2e/fixtures/collect/method-names.ts`),
     )
 
