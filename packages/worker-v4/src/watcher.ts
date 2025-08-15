@@ -9,7 +9,7 @@ export class ExtensionWorkerWatcher {
 
   constructor(vitest: Vitest) {
     vitest.onFilterWatchedSpecification((specification) => {
-      if (this.enabled) {
+      if (!this.enabled) {
         return false
       }
 
