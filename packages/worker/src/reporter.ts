@@ -5,10 +5,8 @@ import type {
   RunnerTestFile,
   TestModule,
   TestProject,
-  // TestProject,
   TestSpecification,
   Vite,
-  // Vite,
   Vitest as VitestCore,
 } from 'vitest/node'
 

@@ -57,7 +57,7 @@ class TesterTree {
       const state = await locator.getAttribute('aria-expanded')
       if (state === 'true')
         continue
-      await locator.click()
+      await locator.click({ force: true })
     }
   }
 }
