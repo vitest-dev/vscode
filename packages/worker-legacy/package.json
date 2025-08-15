@@ -1,0 +1,9 @@
+{
+  "name": "vitest-vscode-worker-legacy",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "vitest": "$vitest",
+    "vitest-vscode-shared": "workspace:*"
+  }
+}

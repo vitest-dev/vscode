@@ -1,0 +1,13 @@
+{
+  "name": "vitest-vscode-shared",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "birpc": "2.4.0",
+    "vitest": "$vitest"
+  }
+}

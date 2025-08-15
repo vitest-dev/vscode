@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup'
 
 export default defineConfig([
   {
-    entry: ['./src/extension.ts'],
+    entry: ['./packages/extension/src/extension.ts'],
     external: ['vscode'],
     format: 'cjs',
     define: {
@@ -11,12 +11,19 @@ export default defineConfig([
   },
   {
     entry: {
-      worker: './src/worker/index.ts',
+      worker: './packages/extension/src/worker/index.ts',
     },
     format: 'cjs',
   },
   {
-    entry: ['./src/worker/setupFile.ts'],
+    entry: {
+      workerLegacy: './packages/worker-legacy/src/index.ts',
+      workerNew: './packages/worker/src/index.ts',
+    },
+    format: 'cjs',
+  },
+  {
+    entry: ['./packages/extension/src/worker/setupFile.ts'],
     external: ['vitest'],
     format: 'esm',
   },

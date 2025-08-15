@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import type { RunnerTestCase, RunnerTestSuite } from 'vitest'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { createVitest } from 'vitest/node'
-import { astCollectTests } from '../../src/worker/collect'
+import { astCollectTests } from '../../packages/worker-legacy/src/collect'
 
 const variableFixture = 'test-from-vitest-variable.ts'
 
@@ -15,7 +15,7 @@ describe('can discover tests', () => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
     const file = await astCollectTests(
-      vitest.getCoreWorkspaceProject(),
+      vitest.getRootProject(),
       resolve(`test/e2e/fixtures/collect/${fixture}`),
     )
     expect(file.filepath).toBe(resolve(`test/e2e/fixtures/collect/${fixture}`))
@@ -68,7 +68,7 @@ describe('can discover tests', () => {
     const vitest = await createVitest('test', { config: false })
     onTestFinished(() => vitest.close())
     const file = await astCollectTests(
-      vitest.getCoreWorkspaceProject(),
+      vitest.getRootProject(),
       resolve(`test/e2e/fixtures/collect/method-names.ts`),
     )
 
