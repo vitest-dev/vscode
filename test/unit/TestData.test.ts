@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from '../../src/testTreeData'
+import { TestCase, TestFile, TestFolder, TestSuite, getTestData } from '../../packages/extension/src/testTreeData'
 
 describe('TestData', () => {
   const ctrl = vscode.tests.createTestController('mocha', 'Vitest')
