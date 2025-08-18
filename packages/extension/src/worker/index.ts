@@ -25,7 +25,7 @@ emitter.on('message', async function onMessage(message: any) {
         pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString()
       ) as typeof import('vitest/node')
 
-      const isOld = Number(vitestModule.version[0]) < 4
+      const isOld = !vitestModule.version || (Number(vitestModule.version[0]) < 4)
       const workerName = isOld ? './workerLegacy.js' : './workerNew.js'
       const workerPath = pathToFileURL(join(__dirname, workerName))
       const initModule = await import(workerPath.toString())
