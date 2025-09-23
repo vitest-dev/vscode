@@ -3,6 +3,7 @@
 // Configure Vitest (https://vitest.dev/config)
 
 import { defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser/providers/playwright'
 
 export default defineConfig({
   esbuild: {
@@ -13,9 +14,11 @@ export default defineConfig({
     exclude: ['test/ignored.test.ts'],
     browser: {
       enabled: true,
-      name: 'chromium',
       headless: true,
-      provider: 'playwright'
+      provider: playwright(),
+      instances: [
+        { browser: 'chromium' },
+      ],
     }
   },
 })

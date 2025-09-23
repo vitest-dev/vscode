@@ -1,4 +1,8 @@
-import type { ExtensionTestSpecification, ExtensionWorkerTransport } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestFileSpecification,
+  ExtensionTestSpecification,
+  ExtensionWorkerTransport,
+} from 'vitest-vscode-shared'
 import type {
   Reporter,
   ResolvedConfig,
@@ -174,14 +178,26 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return this.vitest.cancelCurrentRun('keyboard-input')
   }
 
-  public async getFiles(): Promise<[project: string, file: string][]> {
+  public async getFiles(): Promise<ExtensionTestFileSpecification[]> {
     // reset cached test files list
     this.vitest.projects.forEach((project) => {
       // testFilesList is private
       (project as any).testFilesList = null
     })
     const files = await this.globTestSpecifications()
-    return files.map(spec => [spec[0].config.name || '', spec[1]])
+    return files.map(spec => [
+      spec[1],
+      {
+        project: spec[0].config.name || '',
+        pool: spec[0].config.pool,
+        browser: spec[0].config.browser
+          ? {
+              provider: spec[0].config.browser.provider || 'preview',
+              name: spec[0].config.browser.name,
+            }
+          : undefined,
+      },
+    ])
   }
 
   private async globTestSpecifications(filters?: string[]): Promise<TestSpecification[]> {
@@ -398,5 +414,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   initRpc() {
     // ignore
+  }
+
+  onBrowserDebug(fulfilled: boolean) {
+    // TODO
   }
 }

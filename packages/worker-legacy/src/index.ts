@@ -11,8 +11,9 @@ export async function initVitest(
   emitter: WorkerWSEventEmitter,
 ) {
   const meta = data.meta
+  // TODO: support browser debug in legacy via meta.setupFilePaths.browserDebug
   const reporter = new VSCodeReporter({
-    setupFilePath: meta.setupFilePath,
+    setupFilePath: meta.setupFilePaths.watcher,
   })
 
   let stdout: Writable | undefined
@@ -151,7 +152,7 @@ export async function initVitest(
     createWorker() {
       return new ExtensionWorker(
         vitest,
-        data.debug,
+        !!data.debug,
         data.astCollect,
         emitter,
         data.meta.finalCoverageFileName,

@@ -8,8 +8,8 @@ abstract class WorkerEventEmitter {
   abstract on(event: string, listener: (...args: any[]) => void): void
   abstract off(event: string, listener: (...args: any[]) => void): void
 
-  ready(configs: string[], workspaceSource: string | false) {
-    this.sendWorkerEvent({ type: 'ready', configs, workspaceSource })
+  ready(configs: string[], workspaceSource: string | false, legacy: boolean) {
+    this.sendWorkerEvent({ type: 'ready', configs, workspaceSource, legacy })
   }
 
   error(err: any) {

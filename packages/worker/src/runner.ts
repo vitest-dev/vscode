@@ -1,4 +1,4 @@
-import type { ExtensionTestSpecification, VitestWorkerRPC, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type { ExtensionTestFileSpecification, ExtensionTestSpecification, VitestWorkerRPC, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { TestSpecification, Vitest as VitestCore } from 'vitest/node'
 
 export class ExtensionWorkerRunner {
@@ -10,10 +10,24 @@ export class ExtensionWorkerRunner {
     private emitter: WorkerWSEventEmitter,
   ) {}
 
-  async getFiles(): Promise<ExtensionTestSpecification[]> {
+  async getFiles(): Promise<ExtensionTestFileSpecification[]> {
     this.vitest.clearSpecificationsCache()
     const specifications = await this.vitest.globTestSpecifications()
-    return specifications.map(spec => [spec.project.name, spec.moduleId])
+    return specifications.map((spec) => {
+      return [
+        spec.moduleId,
+        {
+          project: spec.project.name,
+          pool: spec.project.config.pool,
+          browser: spec.project.config.browser
+            ? {
+                provider: spec.project.config.browser.provider?.name || 'preview',
+                name: spec.project.config.browser.name,
+              }
+            : undefined,
+        },
+      ]
+    })
   }
 
   async collectTests(testFiles: ExtensionTestSpecification[]): Promise<void> {

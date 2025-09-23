@@ -47,17 +47,28 @@ export class TestFolder extends BaseTestData {
   }
 }
 
+export interface TestFileMetadata {
+  project: string
+  pool: string
+  browser?: {
+    provider: string
+    name: string
+  }
+}
+
 export class TestFile extends BaseTestData {
   public readonly type = 'file'
+  public readonly project: string
 
   private constructor(
     item: vscode.TestItem,
     parent: vscode.TestItem,
     public readonly filepath: string,
     public readonly api: VitestFolderAPI,
-    public readonly project: string,
+    public readonly metadata: TestFileMetadata,
   ) {
     super(item, parent)
+    this.project = metadata.project
   }
 
   public static register(
@@ -65,9 +76,9 @@ export class TestFile extends BaseTestData {
     parent: vscode.TestItem,
     filepath: string,
     api: VitestFolderAPI,
-    project: string,
+    metadata: TestFileMetadata,
   ) {
-    return addTestData(item, new TestFile(item, parent, filepath, api, project))
+    return addTestData(item, new TestFile(item, parent, filepath, api, metadata))
   }
 }
 

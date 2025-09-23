@@ -1,5 +1,7 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
+import type { ExtensionTestFileSpecification } from 'vitest-vscode-shared'
 import type { VitestFolderAPI } from './api'
+import type { TestFileMetadata } from './testTreeData'
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { basename, dirname, normalize } from 'pathe'
@@ -71,13 +73,13 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  async discoverAllTestFiles(api: VitestFolderAPI, files: [project: string, file: string][]) {
+  async discoverAllTestFiles(api: VitestFolderAPI, files: ExtensionTestFileSpecification[]) {
     const folderItem = this.folderItems.get(normalize(api.workspaceFolder.uri.fsPath))
     if (folderItem)
       folderItem.busy = false
 
-    for (const [project, file] of files)
-      this.getOrCreateFileTestItem(api, project, file)
+    for (const [file, metadata] of files)
+      this.getOrCreateFileTestItem(api, metadata, file)
 
     return files
   }
@@ -139,7 +141,8 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  getOrCreateFileTestItem(api: VitestFolderAPI, project: string, file: string) {
+  getOrCreateFileTestItem(api: VitestFolderAPI, metadata: TestFileMetadata, file: string) {
+    const project = metadata.project
     const normalizedFile = normalize(file)
     const fileId = `${normalizedFile}${project}`
     const cached = this.fileItems.get(fileId)
@@ -164,7 +167,7 @@ export class TestTree extends vscode.Disposable {
       parentItem,
       normalizedFile,
       api,
-      project,
+      metadata,
     )
     parentItem.children.add(testFileItem)
     this.fileItems.set(fileId, testFileItem)
@@ -216,7 +219,7 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: [prject: string, file: string][]) {
+  async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: ExtensionTestFileSpecification[]) {
     await this.discoverAllTestFiles(api, testFiles)
     this.watcher.watchTestFilesInWorkspace(api)
   }
@@ -298,7 +301,13 @@ export class TestTree extends vscode.Disposable {
   }
 
   collectFile(api: VitestFolderAPI, file: RunnerTestFile) {
-    const fileTestItem = this.getOrCreateFileTestItem(api, file.projectName || '', file.filepath)
+    const normalizedFile = normalize(file.filepath)
+    const fileId = `${normalizedFile}${file.projectName || ''}`
+    const fileTestItem = this.fileItems.get(fileId)
+    if (!fileTestItem) {
+      log.error(`Cannot find a file test item for ${file.filepath} in "${file.projectName || 'core'}" project.`)
+      return
+    }
     fileTestItem.error = undefined
     this.flatTestItems.set(file.id, fileTestItem)
     const data = getTestData(fileTestItem) as TestFile
