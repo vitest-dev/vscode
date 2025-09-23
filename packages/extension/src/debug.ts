@@ -129,10 +129,10 @@ export async function debugTests(
     ws => onWsConnection(
       ws,
       pkg,
-      // TODO: how to pass down to wdio?
       browserDebug
         ? {
             browser: browserDebug.browser,
+            // wdio support this only since Vitest beta-13
             port: config.debuggerPort ?? 9229,
             host: 'localhost',
           }
@@ -231,14 +231,18 @@ export async function debugTests(
     const parent = session.parentSession
 
     // dispose all test runners
-    if (parent && parent.configuration.__name === 'Vitest') {
+    if (
+      session.configuration.__name !== BrowserDebugSessionName
+      && parent
+      && parent.configuration.__name === DebugSessionName
+    ) {
       disposables.reverse().forEach(d => d.dispose())
       disposables.length = 0
     }
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
-    if (session.configuration.__name !== 'Vitest')
+    if (session.configuration.__name !== DebugSessionName)
       return
     server.close()
     onDidTerminate.dispose()
@@ -317,7 +321,7 @@ export class DebugManager {
 
   constructor() {
     vscode.debug.onDidStartDebugSession((session) => {
-      if (session.configuration.__name === 'Vitest') {
+      if (session.configuration.__name === DebugSessionName) {
         this.sessions.add(session)
       }
     })

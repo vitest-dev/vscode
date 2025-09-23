@@ -416,7 +416,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     // ignore
   }
 
-  onBrowserDebug(fulfilled: boolean) {
+  onBrowserDebug(_fulfilled: boolean) {
     // TODO
   }
 }

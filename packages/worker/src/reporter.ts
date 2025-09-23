@@ -41,17 +41,8 @@ export class VSCodeReporter implements Reporter {
     const config = project.browser!.vite.config
     this.ensureSetupFileIsAllowed(config)
 
-    const __vscode_waitForDebugger: BrowserCommand<[]> = async ({ provider, sessionId }) => {
-      if (!provider.getCDPSession) {
-        return
-      }
-      const cdp = await provider.getCDPSession(sessionId)
-      await cdp.send('Debugger.enable', {})
+    const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
       return new Promise<void>((resolve, reject) => {
-        if (!this.rpc) {
-          reject(new Error('RPC is not yet defined. This is a bug in VSCode extension.'))
-          return
-        }
         ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
           if (fullfilled) {
             resolve()

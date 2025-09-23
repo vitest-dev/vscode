@@ -183,7 +183,11 @@ export class VitestFolderAPI {
   }
 
   waitForCoverageReport() {
-    return this.meta.rpc.waitForCoverageReport()
+    if (this.process.closed)
+      return
+    return this.meta.rpc.waitForCoverageReport().catch(() => {
+      // ignore if failed -- can only fail if rpc is closed
+    })
   }
 
   async invalidateIstanbulTestModules(modules: string[] | null) {
