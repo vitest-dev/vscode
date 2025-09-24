@@ -23,7 +23,7 @@ export default defineConfig([
     format: 'cjs',
   },
   {
-    entry: ['./packages/extension/src/worker/setupFile.ts'],
+    entry: ['./packages/worker-legacy/src/setupFile.ts'],
     external: ['vitest'],
     format: 'esm',
   },
