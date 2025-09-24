@@ -19,7 +19,7 @@ export class ExtensionWorkerRunner {
         {
           project: spec.project.name,
           pool: spec.project.config.pool,
-          browser: spec.project.config.browser
+          browser: spec.project.config.browser?.enabled
             ? {
                 provider: spec.project.config.browser.provider?.name || 'preview',
                 name: spec.project.config.browser.name,
