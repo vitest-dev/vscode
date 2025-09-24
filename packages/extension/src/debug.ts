@@ -46,6 +46,7 @@ export async function debugTests(
   log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
 
   const debugId = crypto.randomUUID()
+  const browserDebug = getBrowserDebugInfo(controller, request)
 
   const skipFiles = [
     ...(config.debugExclude || []),
@@ -121,8 +122,6 @@ export async function debugTests(
   )
 
   const disposables: vscode.Disposable[] = []
-
-  const browserDebug = getBrowserDebugInfo(controller, request)
 
   wss.on(
     'connection',
@@ -348,6 +347,7 @@ function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.
       if (!options) {
         return
       }
+      // TODO: test these errors - does debug window close?
       // TODO: this can actually be supported, but should we?
       if (provider && provider !== options.provider) {
         throw new Error(`Cannot mix both "playwright" and "webdriverio" tests together.`)
