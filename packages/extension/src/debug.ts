@@ -161,6 +161,7 @@ export async function debugTests(
           if (browserDebug) {
             const browserAttachConfig = {
               __name: BrowserDebugSessionName,
+              __parentId: debugId,
               request: 'attach',
               name: `Debug Tests (${browserDebug.browser})`,
               address: 'localhost',
@@ -184,7 +185,13 @@ export async function debugTests(
             vscode.debug.startDebugging(
               pkg.folder,
               browserAttachConfig,
-              { parentSession, suppressDebugView: true },
+              {
+                parentSession,
+                // this is required for the "restart" button to work
+                // TODO: but it still doesn't work
+                lifecycleManagedByParent: true,
+                compact: true,
+              },
             ).then(
               (fullfilled) => {
                 metadata.rpc.onBrowserDebug(fullfilled).catch(() => {})
@@ -347,8 +354,7 @@ function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.
       if (!options) {
         return
       }
-      // TODO: test these errors - does debug window close?
-      // TODO: this can actually be supported, but should we?
+      // this can actually be supported, but should we?
       if (provider && provider !== options.provider) {
         throw new Error(`Cannot mix both "playwright" and "webdriverio" tests together.`)
       }

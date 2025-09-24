@@ -196,7 +196,9 @@ class VitestExtension {
           request,
           token,
           this.debugManager,
-        ).catch(error => vscode.window.showErrorMessage(error.message))
+        ).catch((error) => {
+          vscode.window.showErrorMessage(error.message)
+        })
       }
       this.runProfiles.set(`${api.id}:debug`, debugProfile)
 
