@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "@vitest/utils": "workspace:*",
+    "@vitest/utils": "catalog:*",
     "vitest": "$vitest",
     "vitest-vscode-shared": "workspace:*"
   }
