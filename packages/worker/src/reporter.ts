@@ -1,6 +1,7 @@
 import type { RunnerTaskResultPack, UserConsoleLog } from 'vitest'
-import type { VitestWorkerRPC } from 'vitest-vscode-shared'
+import type { VitestWorkerRPC, WorkerInitMetadata } from 'vitest-vscode-shared'
 import type {
+  BrowserCommand,
   Reporter,
   RunnerTestFile,
   TestModule,
@@ -9,19 +10,20 @@ import type {
   Vite,
   Vitest as VitestCore,
 } from 'vitest/node'
+import { ExtensionWorker } from './worker'
 
 interface VSCodeReporterOptions {
-  setupFilePath: string
+  setupFilePaths: WorkerInitMetadata['setupFilePaths']
 }
 
 export class VSCodeReporter implements Reporter {
   public rpc!: VitestWorkerRPC
   private vitest!: VitestCore
 
-  private setupFilePath: string
+  private setupFilePaths: WorkerInitMetadata['setupFilePaths']
 
   constructor(options: VSCodeReporterOptions) {
-    this.setupFilePath = options.setupFilePath
+    this.setupFilePaths = options.setupFilePaths
   }
 
   onInit(vitest: VitestCore) {
@@ -38,6 +40,22 @@ export class VSCodeReporter implements Reporter {
   onBrowserInit(project: TestProject) {
     const config = project.browser!.vite.config
     this.ensureSetupFileIsAllowed(config)
+
+    const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
+      return new Promise<void>((resolve, reject) => {
+        ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
+          if (fullfilled) {
+            resolve()
+          }
+          else {
+            reject(new Error(`Browser Debugger failed to connect.`))
+          }
+        })
+      })
+    }
+    // TODO: move this command init to configureVitest when Vitest 4 is out
+    // @ts-expect-error private "parent" property
+    project.browser!.parent.commands.__vscode_waitForDebugger = __vscode_waitForDebugger
   }
 
   onUserConsoleLog(log: UserConsoleLog) {
@@ -88,9 +106,11 @@ export class VSCodeReporter implements Reporter {
   }
 
   ensureSetupFileIsAllowed(config: Vite.ResolvedConfig) {
-    if (!config.server.fs.allow.includes(this.setupFilePath)) {
-      config.server.fs.allow.push(this.setupFilePath)
-    }
+    ;[this.setupFilePaths.browserDebug].forEach((filepath) => {
+      if (!config.server.fs.allow.includes(filepath)) {
+        config.server.fs.allow.push(filepath)
+      }
+    })
   }
 
   toJSON() {

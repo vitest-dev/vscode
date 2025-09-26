@@ -112,7 +112,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
     wss.once('connection', () => {
       clearTimeout(timeout)
     })
-    waitForWsConnection(wss, pkg, false, 'terminal', !!shellIntegration).then(resolve, reject)
+    waitForWsConnection(wss, pkg, 'terminal', !!shellIntegration).then(resolve, reject)
   })
 
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)

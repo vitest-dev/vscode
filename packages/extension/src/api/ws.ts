@@ -1,11 +1,11 @@
-import type { WorkerEvent, WorkerRunnerOptions } from 'vitest-vscode-shared'
+import type { WorkerEvent, WorkerRunnerDebugOptions, WorkerRunnerOptions } from 'vitest-vscode-shared'
 import type { WebSocket, WebSocketServer } from 'ws'
 import type { ResolvedMeta } from '../api'
 import type { VitestPackage } from './pkg'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import { getConfig } from '../config'
-import { finalCoverageFileName, setupFilePath } from '../constants'
+import { browserSetupFilePath, finalCoverageFileName, setupFilePath } from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 
@@ -16,7 +16,6 @@ export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
 export function waitForWsConnection(
   wss: WebSocketServer,
   pkg: VitestPackage,
-  debug: boolean,
   shellType: 'terminal' | 'child_process',
   hasShellIntegration: boolean,
 ) {
@@ -25,7 +24,7 @@ export function waitForWsConnection(
       onWsConnection(
         ws,
         pkg,
-        debug,
+        false,
         shellType,
         hasShellIntegration,
         meta => resolve(meta),
@@ -52,7 +51,7 @@ export function waitForWsConnection(
 export function onWsConnection(
   ws: WebSocket,
   pkg: VitestPackage,
-  debug: boolean,
+  debug: WorkerRunnerDebugOptions | boolean,
   shellType: 'terminal' | 'child_process',
   hasShellIntegration: boolean,
   onStart: (meta: WsConnectionMetadata) => unknown,
@@ -132,7 +131,10 @@ export function onWsConnection(
       pnpLoader: pnpLoader && gte(process.version, '18.19.0')
         ? pathToFileURL(pnpLoader).toString()
         : undefined,
-      setupFilePath,
+      setupFilePaths: {
+        watcher: setupFilePath,
+        browserDebug: browserSetupFilePath,
+      },
       finalCoverageFileName,
     },
     debug,

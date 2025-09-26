@@ -43,6 +43,8 @@ jobs:
 
       - name: test-e2e-legacy
         run: pnpm test-e2e --retry 2
+        env:
+          TEST_LEGACY: true
 
       - uses: actions/upload-artifact@v4
         if: always()

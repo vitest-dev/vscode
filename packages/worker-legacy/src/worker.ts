@@ -1,4 +1,8 @@
-import type { ExtensionTestSpecification, ExtensionWorkerTransport } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestFileSpecification,
+  ExtensionTestSpecification,
+  ExtensionWorkerTransport,
+} from 'vitest-vscode-shared'
 import type {
   Reporter,
   ResolvedConfig,
@@ -7,6 +11,7 @@ import type {
   WorkspaceProject,
 } from 'vitest/node'
 import type { WorkerWSEventEmitter } from '../../shared/src/emitter'
+import EventEmitter from 'node:events'
 import { readFileSync } from 'node:fs'
 import mm from 'micromatch'
 import { relative } from 'pathe'
@@ -20,6 +25,8 @@ type ArgumentsType<T> = T extends (...args: infer U) => any ? U : never
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
   private readonly coverage: ExtensionCoverageManager
+
+  public static emitter = new EventEmitter()
 
   public static COLLECT_NAME_PATTERN = '$a'
 
@@ -174,14 +181,29 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return this.vitest.cancelCurrentRun('keyboard-input')
   }
 
-  public async getFiles(): Promise<[project: string, file: string][]> {
+  public async getFiles(): Promise<ExtensionTestFileSpecification[]> {
     // reset cached test files list
     this.vitest.projects.forEach((project) => {
       // testFilesList is private
       (project as any).testFilesList = null
     })
     const files = await this.globTestSpecifications()
-    return files.map(spec => [spec[0].config.name || '', spec[1]])
+    return files.map((spec) => {
+      const config = spec[0].config
+      return [
+        spec[1],
+        {
+          project: config.name || '',
+          pool: config.pool,
+          browser: config.browser?.enabled
+            ? {
+                provider: config.browser.provider || 'preview',
+                name: config.browser.name,
+              }
+            : undefined,
+        },
+      ]
+    })
   }
 
   private async globTestSpecifications(filters?: string[]): Promise<TestSpecification[]> {
@@ -398,5 +420,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   initRpc() {
     // ignore
+  }
+
+  onBrowserDebug(fulfilled: boolean) {
+    ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
   }
 }

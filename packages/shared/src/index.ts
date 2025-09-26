@@ -14,8 +14,22 @@ export type ExtensionTestSpecification = [
   file: string,
 ]
 
+export interface ExtensionTestFileMetadata {
+  project: string
+  pool: string
+  browser?: {
+    provider: string
+    name: string
+  }
+}
+
+export type ExtensionTestFileSpecification = [
+  file: string,
+  ExtensionTestFileMetadata,
+]
+
 export interface ExtensionWorkerTransport {
-  getFiles: () => Promise<ExtensionTestSpecification[]>
+  getFiles: () => Promise<ExtensionTestFileSpecification[]>
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
   cancelRun: () => Promise<void>
   // accepts files with the project or folders (project doesn't matter for them)
@@ -35,6 +49,8 @@ export interface ExtensionWorkerTransport {
   onFilesChanged: (files: string[]) => void
 
   initRpc: (rpc: VitestWorkerRPC) => void
+
+  onBrowserDebug: (fulfilled: boolean) => void
 }
 
 export interface ExtensionWorkerEvents {
@@ -62,14 +78,23 @@ export interface WorkerInitMetadata {
   hasShellIntegration: boolean
   pnpApi?: string
   pnpLoader?: string
-  setupFilePath: string
+  setupFilePaths: {
+    watcher: string
+    browserDebug: string
+  }
   finalCoverageFileName: string
+}
+
+export interface WorkerRunnerDebugOptions {
+  browser: string
+  port: number
+  host: string
 }
 
 export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerInitMetadata
-  debug: boolean
+  debug?: WorkerRunnerDebugOptions | boolean
   astCollect: boolean
 }
 
@@ -77,6 +102,7 @@ export interface EventReady {
   type: 'ready'
   configs: string[]
   workspaceSource: string | false
+  legacy: boolean
 }
 
 export interface EventDebug {

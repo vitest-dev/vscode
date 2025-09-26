@@ -53,7 +53,7 @@ emitter.on('message', async function onMessage(message: any) {
       )
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
-      emitter.ready(configs, workspaceSource)
+      emitter.ready(configs, workspaceSource, isOld)
     }
     catch (err: any) {
       emitter.error(err)

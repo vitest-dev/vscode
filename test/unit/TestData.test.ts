@@ -26,7 +26,7 @@ describe('TestData', () => {
         folderItem,
         filepath,
         null as any, // not used yet
-        '',
+        { project: '', pool: 'trheads' },
       )
       const suiteItem = ctrl.createTestItem(
         `${filepath}_1`,

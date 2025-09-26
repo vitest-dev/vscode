@@ -16,13 +16,13 @@ export async function initVitest(
 ) {
   const meta = data.meta
   const reporter = new VSCodeReporter({
-    setupFilePath: meta.setupFilePath,
+    setupFilePaths: meta.setupFilePaths,
   })
 
   let stdout: Writable | undefined
   let stderr: Writable | undefined
 
-  if (meta.shellType === 'terminal' && !meta.hasShellIntegration) {
+  if ((meta.shellType === 'terminal' && !meta.hasShellIntegration) || data.debug != null) {
     stdout = new Writable({
       write(chunk, __, callback) {
         const log = chunk.toString()
@@ -70,7 +70,6 @@ export async function initVitest(
     : {}
   const cliOptions: TestUserConfig = {
     config: meta.configFile,
-    ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
     ...args,
     ...options,
     watch: true,
@@ -139,6 +138,19 @@ export async function initVitest(
               } as any,
             }
           },
+          configureVitest(context) {
+            const options = context.project.config.browser
+            if (options?.enabled && typeof data.debug === 'object') {
+              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
+              context.vitest.config.inspector = {
+                enabled: true,
+                port: data.debug.port,
+                host: data.debug.host,
+                waitForDebugger: false,
+              }
+              context.project.config.inspector = context.vitest.config.inspector
+            }
+          },
         },
       ],
     },
@@ -164,7 +176,7 @@ export async function initVitest(
     createWorker() {
       return new ExtensionWorker(
         vitest,
-        data.debug,
+        !!data.debug,
         emitter,
       )
     },

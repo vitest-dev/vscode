@@ -1,10 +1,12 @@
 import type {
+  ExtensionTestFileSpecification,
   ExtensionTestSpecification,
   ExtensionWorkerTransport,
   VitestWorkerRPC,
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
 import type { Vitest as VitestCore } from 'vitest/node'
+import EventEmitter from 'node:events'
 import { ExtensionCoverageManager } from './coverage'
 import { ExtensionWorkerRunner } from './runner'
 import { ExtensionWorkerWatcher } from './watcher'
@@ -14,17 +16,19 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly coverage: ExtensionCoverageManager
   private readonly runner: ExtensionWorkerRunner
 
+  static emitter = new EventEmitter()
+
   constructor(
     public readonly vitest: VitestCore,
     debug = false,
-    emitter: WorkerWSEventEmitter,
+    ws: WorkerWSEventEmitter,
   ) {
-    this.runner = new ExtensionWorkerRunner(vitest, debug, emitter)
+    this.runner = new ExtensionWorkerRunner(vitest, debug, ws)
     this.watcher = new ExtensionWorkerWatcher(vitest, this.runner)
     this.coverage = new ExtensionCoverageManager(vitest)
   }
 
-  async getFiles(): Promise<ExtensionTestSpecification[]> {
+  async getFiles(): Promise<ExtensionTestFileSpecification[]> {
     return this.runner.getFiles()
   }
 
@@ -97,5 +101,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   initRpc(rpc: VitestWorkerRPC) {
     this.runner.initRpc(rpc)
+  }
+
+  onBrowserDebug(fulfilled: boolean) {
+    ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
   }
 }
