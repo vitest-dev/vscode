@@ -14,15 +14,16 @@ export class ExtensionWorkerRunner {
     this.vitest.clearSpecificationsCache()
     const specifications = await this.vitest.globTestSpecifications()
     return specifications.map((spec) => {
+      const config = spec.project.config
       return [
         spec.moduleId,
         {
           project: spec.project.name,
-          pool: spec.project.config.pool,
-          browser: spec.project.config.browser?.enabled
+          pool: config.pool,
+          browser: config.browser?.enabled
             ? {
-                provider: spec.project.config.browser.provider?.name || 'preview',
-                name: spec.project.config.browser.name,
+                provider: config.browser.provider?.name || 'preview',
+                name: config.browser.name,
               }
             : undefined,
         },

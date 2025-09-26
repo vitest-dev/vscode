@@ -53,7 +53,7 @@ export class VSCodeReporter implements Reporter {
         })
       })
     }
-    // TODO: investigate WHY commands cannot be modified in `configureVitest`
+    // TODO: move this command init to configureVitest when Vitest 4 is out
     // @ts-expect-error private "parent" property
     project.browser!.parent.commands.__vscode_waitForDebugger = __vscode_waitForDebugger
   }

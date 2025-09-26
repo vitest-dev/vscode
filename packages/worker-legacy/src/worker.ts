@@ -188,19 +188,22 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       (project as any).testFilesList = null
     })
     const files = await this.globTestSpecifications()
-    return files.map(spec => [
-      spec[1],
-      {
-        project: spec[0].config.name || '',
-        pool: spec[0].config.pool,
-        browser: spec[0].config.browser && spec[0].config.browser.enabled
-          ? {
-              provider: spec[0].config.browser.provider || 'preview',
-              name: spec[0].config.browser.name,
-            }
-          : undefined,
-      },
-    ])
+    return files.map((spec) => {
+      const config = spec[0].config
+      return [
+        spec[1],
+        {
+          project: config.name || '',
+          pool: config.pool,
+          browser: config.browser?.enabled
+            ? {
+                provider: config.browser.provider || 'preview',
+                name: config.browser.name,
+              }
+            : undefined,
+        },
+      ]
+    })
   }
 
   private async globTestSpecifications(filters?: string[]): Promise<TestSpecification[]> {

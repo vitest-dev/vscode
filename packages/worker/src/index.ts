@@ -149,8 +149,6 @@ export async function initVitest(
                 waitForDebugger: false,
               }
               context.project.config.inspector = context.vitest.config.inspector
-              // TODO: investigate WHY commands cannot be modified in `configureVitest`
-              // options.commands ??= {}
             }
           },
         },
