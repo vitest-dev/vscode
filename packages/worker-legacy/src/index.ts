@@ -11,9 +11,13 @@ export async function initVitest(
   emitter: WorkerWSEventEmitter,
 ) {
   const meta = data.meta
-  // TODO: support browser debug in legacy via meta.setupFilePaths.browserDebug
   const reporter = new VSCodeReporter({
-    setupFilePath: meta.setupFilePaths.watcher,
+    setupFilePaths: [
+      typeof data.debug === 'object' && data.debug.browser
+        ? meta.setupFilePaths.browserDebug
+        : null,
+      meta.setupFilePaths.watcher,
+    ].filter(v => v != null),
   })
 
   let stdout: Writable | undefined
@@ -122,6 +126,19 @@ export async function initVitest(
                 on: () => {},
                 off: () => {},
               } as any,
+            }
+          },
+          configureVitest(context) {
+            const options = context.project.config.browser
+            if (options?.enabled && typeof data.debug === 'object') {
+              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
+              context.vitest.config.inspector = {
+                enabled: true,
+                port: data.debug.port,
+                host: data.debug.host,
+                waitForDebugger: false,
+              }
+              context.project.config.inspector = context.vitest.config.inspector
             }
           },
         },

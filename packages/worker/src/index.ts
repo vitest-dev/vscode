@@ -70,7 +70,6 @@ export async function initVitest(
     : {}
   const cliOptions: TestUserConfig = {
     config: meta.configFile,
-    ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
     ...args,
     ...options,
     watch: true,

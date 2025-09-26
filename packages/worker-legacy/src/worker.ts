@@ -11,6 +11,7 @@ import type {
   WorkspaceProject,
 } from 'vitest/node'
 import type { WorkerWSEventEmitter } from '../../shared/src/emitter'
+import EventEmitter from 'node:events'
 import { readFileSync } from 'node:fs'
 import mm from 'micromatch'
 import { relative } from 'pathe'
@@ -24,6 +25,8 @@ type ArgumentsType<T> = T extends (...args: infer U) => any ? U : never
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
   private readonly coverage: ExtensionCoverageManager
+
+  public static emitter = new EventEmitter()
 
   public static COLLECT_NAME_PATTERN = '$a'
 
@@ -190,7 +193,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       {
         project: spec[0].config.name || '',
         pool: spec[0].config.pool,
-        browser: spec[0].config.browser
+        browser: spec[0].config.browser && spec[0].config.browser.enabled
           ? {
               provider: spec[0].config.browser.provider || 'preview',
               name: spec[0].config.browser.name,
@@ -416,7 +419,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     // ignore
   }
 
-  onBrowserDebug(_fulfilled: boolean) {
-    // TODO
+  onBrowserDebug(fulfilled: boolean) {
+    ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
   }
 }
