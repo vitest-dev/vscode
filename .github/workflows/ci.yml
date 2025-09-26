@@ -42,7 +42,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
 
       - name: test-e2e-legacy
-        run: pnpm test-e2e --retry 2
+        run: TEST_LEGACY=true pnpm test-e2e --retry 2
 
       - uses: actions/upload-artifact@v4
         if: always()
