@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig(async () => {
   const provider: any = process.env.TEST_LEGACY !== 'true'
-    ? (await import('@vitest/browser/providers/playwright')).playwright()
+    ? (await import('@vitest/browser-playwright')).playwright()
     : 'playwright'
   return {
     esbuild: {

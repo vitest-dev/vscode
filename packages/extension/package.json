@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "@vitest/browser": "workspace:*",
+    "@vitest/browser-playwright": "workspace:*",
     "vitest": "$vitest",
     "vitest-vscode-shared": "workspace:*"
   }
