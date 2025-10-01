@@ -29,7 +29,7 @@ export default defineConfig([
   },
   {
     entry: ['./packages/extension/src/worker/browserSetupFile.ts'],
-    external: ['vitest', '@vitest/browser/context'],
+    external: ['vitest', 'vitest/browser'],
     format: 'esm',
   },
 ])
