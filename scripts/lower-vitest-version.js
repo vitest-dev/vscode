@@ -4,8 +4,6 @@ const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 pkg.pnpm = {
   overrides: {
     '@vitest/browser': '^3.2.4',
-    '@vitest/browser-playwright': '^3.2.4',
-    '@vitest/browser-webdriverio': '^3.2.4',
     '@vitest/coverage': '^3.2.4',
     'vitest': '^3.2.4',
   },
