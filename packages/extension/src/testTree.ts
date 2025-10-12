@@ -192,6 +192,20 @@ export class TestTree extends vscode.Disposable {
       return cached
     }
 
+    // Check if we've reached the workspace folder boundary
+    const workspaceFolderPath = normalize(api.workspaceFolder.uri.fsPath)
+    if (normalizedFolder === workspaceFolderPath) {
+      // Return the workspace folder item instead of creating a new one
+      const workspaceItem = this.folderItems.get(workspaceFolderPath)
+      if (workspaceItem) {
+        if (!workspaceItem.tags.includes(api.tag))
+          workspaceItem.tags = [...workspaceItem.tags, api.tag]
+        return workspaceItem
+      }
+      // If workspace folder item doesn't exist, throw an error
+      throw new Error(`Fatal Error: Workspace folder item not found for "${workspaceFolderPath}".`)
+    }
+
     const parent = dirname(normalizedFolder)
     // If the parent is the same as the folder, we are at the root
     if (parent === normalizedFolder) {
