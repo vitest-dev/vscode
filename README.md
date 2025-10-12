@@ -11,7 +11,7 @@
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
 - **Coverage** support (requires VS Code >= 1.88)
 - An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
-- **Inline console.log display**: Optionally show `console.log` output inline in the editor (enable via `vitest.showConsoleLogInline` setting)
+- **Inline console.log display**: Show `console.log` output inline in the editor next to the line that produced it (enabled by default, requires `printConsoleTrace: true` in Vitest config)
 
 ## Requirements
 
@@ -100,7 +100,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
 - `vitest.applyDiagnostic`: Show a squiggly line where the error was thrown. This also enables the error count in the File Tab. Default: `true`
 - `vitest.experimentalStaticAstCollect`: uses AST parses to collect tests instead of running files and collecting them at runtime. Default: `true`
-- `vitest.showConsoleLogInline`: Show `console.log` output inline in the editor next to the line that produced it. This can be useful for debugging. Default: `false`
+- `vitest.showConsoleLogInline`: Show `console.log` output inline in the editor next to the line that produced it. Note: This requires `printConsoleTrace: true` in your Vitest config to include stack trace information. Default: `true`
 
 ### Commands
 

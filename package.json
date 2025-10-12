@@ -255,7 +255,7 @@
         "vitest.showConsoleLogInline": {
           "description": "Show console.log output inline in the editor next to the line that produced it.",
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "resource"
         }
       }

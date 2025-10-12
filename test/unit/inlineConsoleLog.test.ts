@@ -3,11 +3,11 @@ import { expect } from 'chai'
 import { InlineConsoleLogManager } from '../../packages/extension/src/inlineConsoleLog'
 
 describe('InlineConsoleLogManager', () => {
-  it('correctly parses origin with file path', () => {
+  it('correctly parses stack trace with file path', () => {
     const manager = new InlineConsoleLogManager()
     const log: UserConsoleLog = {
       content: 'test message',
-      origin: '/path/to/file.ts:10:5',
+      origin: '    at Object.<anonymous> (/path/to/file.ts:10:5)',
       type: 'stdout',
       taskId: 'test-id',
       time: Date.now(),
@@ -25,6 +25,46 @@ describe('InlineConsoleLogManager', () => {
     manager.dispose()
   })
 
+  it('correctly parses stack trace with file:// protocol', () => {
+    const manager = new InlineConsoleLogManager()
+    const log: UserConsoleLog = {
+      content: 'test message',
+      origin: '    at functionName (file:///path/to/file.ts:10:5)',
+      type: 'stdout',
+      taskId: 'test-id',
+      time: Date.now(),
+      size: 12,
+    }
+
+    // @ts-expect-error accessing private method for testing
+    const result = manager.parseOrigin(log.origin)
+
+    expect(result).to.deep.equal({
+      file: '/path/to/file.ts',
+      line: 9, // 0-based
+    })
+
+    manager.dispose()
+  })
+
+  it('correctly parses multi-line stack trace', () => {
+    const manager = new InlineConsoleLogManager()
+    const stackTrace = `    at consoleLog (file:///path/to/helper.ts:5:3)
+    at test (file:///path/to/file.ts:10:5)
+    at Object.<anonymous> (file:///path/to/other.ts:20:3)`
+
+    // @ts-expect-error accessing private method for testing
+    const result = manager.parseOrigin(stackTrace)
+
+    // Should parse the first valid line
+    expect(result).to.deep.equal({
+      file: '/path/to/helper.ts',
+      line: 4, // 0-based
+    })
+
+    manager.dispose()
+  })
+
   it('returns null for invalid origin', () => {
     const manager = new InlineConsoleLogManager()
 
@@ -33,7 +73,7 @@ describe('InlineConsoleLogManager', () => {
     // @ts-expect-error accessing private method for testing
     expect(manager.parseOrigin('invalid')).to.be.null
     // @ts-expect-error accessing private method for testing
-    expect(manager.parseOrigin('/path/to/file.ts')).to.be.null
+    expect(manager.parseOrigin('no file path here')).to.be.null
 
     manager.dispose()
   })

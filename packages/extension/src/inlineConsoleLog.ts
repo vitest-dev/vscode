@@ -110,21 +110,41 @@ export class InlineConsoleLogManager extends vscode.Disposable {
       return null
     }
 
-    // Origin format is typically: file:line:column
-    // Example: /path/to/file.ts:10:5
-    const match = origin.match(/^(.+):(\d+):(\d+)$/)
-    if (!match) {
-      return null
+    // Origin is a stack trace string. We need to extract the file path and line number.
+    // Stack trace formats vary but typically look like:
+    //   at functionName (file:///path/to/file.ts:10:5)
+    //   at /path/to/file.ts:10:5
+    //   at Object.<anonymous> (/path/to/file.ts:10:5)
+    // We look for the first line that contains a file path with line:column
+
+    const lines = origin.split('\n')
+    for (const line of lines) {
+      // Match various stack trace formats
+      // Handles: (file:///path/to/file.ts:10:5) or (/path/to/file.ts:10:5) or just /path/to/file.ts:10:5
+      const match = line.match(/(?:file:\/\/)?([^():\s]+\.(?:ts|js|jsx|tsx|mjs|cjs|cts|mts)):(\d+):(\d+)/)
+      if (match) {
+        const [, file, lineStr] = match
+        const lineNum = Number.parseInt(lineStr, 10) - 1 // Convert to 0-based line number
+
+        if (!Number.isNaN(lineNum) && lineNum >= 0) {
+          // Clean up file:// protocol if present and decode URI components
+          let cleanPath = file
+          if (cleanPath.startsWith('file://')) {
+            cleanPath = cleanPath.substring(7)
+          }
+          try {
+            cleanPath = decodeURIComponent(cleanPath)
+          }
+          catch {
+            // If decoding fails, use the original path
+          }
+
+          return { file: cleanPath, line: lineNum }
+        }
+      }
     }
 
-    const [, file, lineStr] = match
-    const line = Number.parseInt(lineStr, 10) - 1 // Convert to 0-based line number
-
-    if (Number.isNaN(line)) {
-      return null
-    }
-
-    return { file, line }
+    return null
   }
 
   private updateDecorations(editor: vscode.TextEditor): void {
