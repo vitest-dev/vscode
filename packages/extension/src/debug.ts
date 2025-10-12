@@ -151,7 +151,6 @@ export async function debugTests(
             tree,
             api,
             diagnostic,
-            undefined, // No inline console log for debug sessions
           )
           disposables.push(api, runner)
 

@@ -10,7 +10,6 @@ import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
 import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
-import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
 import { TestRunner } from './runner'
 import { TagsManager } from './tagsManager'
@@ -42,7 +41,6 @@ class VitestExtension {
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
   private debugManager: DebugManager
-  private inlineConsoleLog: InlineConsoleLogManager
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -60,7 +58,6 @@ class VitestExtension {
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
     this.tagsManager = new TagsManager(this.testTree)
     this.debugManager = new DebugManager()
-    this.inlineConsoleLog = new InlineConsoleLogManager()
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -153,7 +150,6 @@ class VitestExtension {
         this.testTree,
         api,
         this.diagnostic,
-        this.inlineConsoleLog,
       )
       this.runners.push(runner)
 
@@ -432,7 +428,6 @@ class VitestExtension {
     this.api?.dispose()
     this.testTree.dispose()
     this.tagsManager.dispose()
-    this.inlineConsoleLog.dispose()
     this.testController.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
     this.runProfiles.clear()

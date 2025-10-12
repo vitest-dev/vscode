@@ -1,7 +1,6 @@
 import type { ParsedStack, RunnerTaskResult, TestError } from 'vitest'
 import type { VitestFolderAPI } from './api'
 import type { ExtensionDiagnostic } from './diagnostic'
-import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -34,7 +33,6 @@ export class TestRunner extends vscode.Disposable {
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
     private readonly diagnostic: ExtensionDiagnostic | undefined,
-    private readonly inlineConsoleLog: InlineConsoleLogManager | undefined,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
@@ -67,10 +65,6 @@ export class TestRunner extends vscode.Disposable {
           const uri = vscode.Uri.file(file)
           this.diagnostic?.deleteDiagnostic(uri)
         })
-        // Clear all inline console logs when tests start to avoid accumulation
-        if (this.inlineConsoleLog) {
-          this.inlineConsoleLog.clear()
-        }
         log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
         this.startTestRun(files)
       }
@@ -163,19 +157,22 @@ export class TestRunner extends vscode.Disposable {
       const testItem = consoleLog.taskId ? tree.getTestItemByTaskId(consoleLog.taskId) : undefined
       const testRun = this.testRun
       if (testRun) {
+        // Create location from parsed console log for inline display
+        let location: vscode.Location | undefined
+        if (consoleLog.parsedLocation) {
+          const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
+          const position = new vscode.Position(consoleLog.parsedLocation.line, consoleLog.parsedLocation.column)
+          location = new vscode.Location(uri, position)
+        }
+
         testRun.appendOutput(
           formatTestOutput(consoleLog.content),
-          undefined,
+          location,
           testItem,
         )
       }
       else {
         log.info('[TEST]', consoleLog.content)
-      }
-
-      // Add to inline console log manager
-      if (this.inlineConsoleLog) {
-        this.inlineConsoleLog.addConsoleLog(consoleLog)
       }
     })
   }
