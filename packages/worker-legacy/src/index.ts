@@ -129,6 +129,9 @@ export async function initVitest(
             }
           },
           configureVitest(context) {
+            // Enable printConsoleTrace for inline console log display
+            context.project.config.printConsoleTrace = true
+
             const options = context.project.config.browser
             if (options?.enabled && typeof data.debug === 'object') {
               context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)

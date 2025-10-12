@@ -11,6 +11,7 @@
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
 - **Coverage** support (requires VS Code >= 1.88)
 - An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
+- **Inline console.log display**: Console logs appear inline in the editor next to the code that produced them
 
 ## Requirements
 

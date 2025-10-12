@@ -153,18 +153,29 @@ export class TestRunner extends vscode.Disposable {
         this.endTestRun()
     })
 
-    api.onConsoleLog(({ content, taskId }) => {
-      const testItem = taskId ? tree.getTestItemByTaskId(taskId) : undefined
+    api.onConsoleLog((consoleLog) => {
+      const testItem = consoleLog.taskId ? tree.getTestItemByTaskId(consoleLog.taskId) : undefined
       const testRun = this.testRun
       if (testRun) {
+        // Create location from parsed console log for inline display
+        let location: vscode.Location | undefined
+        if (consoleLog.parsedLocation) {
+          const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
+          const position = new vscode.Position(
+            consoleLog.parsedLocation.line,
+            consoleLog.parsedLocation.column,
+          )
+          location = new vscode.Location(uri, position)
+        }
+
         testRun.appendOutput(
-          formatTestOutput(content),
-          undefined,
+          formatTestOutput(consoleLog.content) + (consoleLog.browser ? '\r\n' : ''),
+          location,
           testItem,
         )
       }
       else {
-        log.info('[TEST]', content)
+        log.info('[TEST]', consoleLog.content)
       }
     })
   }
@@ -765,7 +776,7 @@ function formatTestPattern(tests: readonly vscode.TestItem[]) {
 }
 
 function formatTestOutput(output: string) {
-  return output.replace(/(?<!\r)\n/g, '\r\n')
+  return stripVTControlCharacters(output.replace(/(?<!\r)\n/g, '\r\n'))
 }
 
 function labelTestItems(items: readonly vscode.TestItem[] | undefined) {
