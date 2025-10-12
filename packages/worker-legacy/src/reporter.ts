@@ -100,7 +100,27 @@ export class VSCodeReporter implements Reporter {
   }
 
   onUserConsoleLog(log: UserConsoleLog) {
-    this.rpc.onConsoleLog(log)
+    // Parse stack trace to extract file location for inline display
+    const extendedLog = log as any
+    if (log.origin) {
+      try {
+        const stacks = parseErrorStacktrace({ stack: log.origin } as any)
+        if (stacks && stacks.length > 0) {
+          const firstStack = stacks[0]
+          if (firstStack.file && firstStack.line != null && firstStack.column != null) {
+            extendedLog.parsedLocation = {
+              file: firstStack.file,
+              line: firstStack.line - 1, // Convert to 0-based
+              column: firstStack.column,
+            }
+          }
+        }
+      }
+      catch {
+        // If parsing fails, continue without parsed location
+      }
+    }
+    this.rpc.onConsoleLog(extendedLog)
   }
 
   onTaskUpdate(packs: TaskResultPack[]) {

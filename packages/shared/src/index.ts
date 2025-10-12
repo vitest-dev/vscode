@@ -28,6 +28,15 @@ export type ExtensionTestFileSpecification = [
   ExtensionTestFileMetadata,
 ]
 
+export interface ExtensionUserConsoleLog extends UserConsoleLog {
+  // Parsed location from stack trace for inline display
+  parsedLocation?: {
+    file: string
+    line: number // 0-based line number
+    column: number
+  }
+}
+
 export interface ExtensionWorkerTransport {
   getFiles: () => Promise<ExtensionTestFileSpecification[]>
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
@@ -54,7 +63,7 @@ export interface ExtensionWorkerTransport {
 }
 
 export interface ExtensionWorkerEvents {
-  onConsoleLog: (log: UserConsoleLog) => void
+  onConsoleLog: (log: ExtensionUserConsoleLog) => void
   onTaskUpdate: (task: RunnerTaskResultPack[]) => void
   onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
