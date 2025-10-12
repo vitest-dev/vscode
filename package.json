@@ -251,6 +251,12 @@
           "description": "Show a squiggly line where the error was thrown. This also enables the error count in the File Tab.",
           "type": "boolean",
           "default": true
+        },
+        "vitest.showConsoleLogInline": {
+          "description": "Show console.log output inline in the editor next to the line that produced it.",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
         }
       }
     }
