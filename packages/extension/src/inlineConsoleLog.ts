@@ -1,7 +1,6 @@
 import type { UserConsoleLog } from 'vitest'
 import * as vscode from 'vscode'
 import { getConfig } from './config'
-import { log } from './log'
 
 interface ConsoleLogEntry {
   content: string
