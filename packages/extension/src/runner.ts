@@ -161,12 +161,15 @@ export class TestRunner extends vscode.Disposable {
         let location: vscode.Location | undefined
         if (consoleLog.parsedLocation) {
           const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
-          const position = new vscode.Position(consoleLog.parsedLocation.line, consoleLog.parsedLocation.column)
+          const position = new vscode.Position(
+            consoleLog.parsedLocation.line,
+            consoleLog.parsedLocation.column,
+          )
           location = new vscode.Location(uri, position)
         }
 
         testRun.appendOutput(
-          formatTestOutput(consoleLog.content),
+          formatTestOutput(consoleLog.content) + (consoleLog.browser ? '\r\n' : ''),
           location,
           testItem,
         )
@@ -773,7 +776,7 @@ function formatTestPattern(tests: readonly vscode.TestItem[]) {
 }
 
 function formatTestOutput(output: string) {
-  return output.replace(/(?<!\r)\n/g, '\r\n')
+  return stripVTControlCharacters(output.replace(/(?<!\r)\n/g, '\r\n'))
 }
 
 function labelTestItems(items: readonly vscode.TestItem[] | undefined) {

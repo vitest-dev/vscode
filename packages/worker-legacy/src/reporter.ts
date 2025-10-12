@@ -104,7 +104,7 @@ export class VSCodeReporter implements Reporter {
     const extendedLog = log as any
     if (log.origin) {
       try {
-        const stacks = parseErrorStacktrace({ stack: log.origin } as any)
+        const stacks = this.parseStackTrace({ stack: log.origin } as any, log.taskId)
         if (stacks && stacks.length > 0) {
           const firstStack = stacks[0]
           if (firstStack.file && firstStack.line != null && firstStack.column != null) {
@@ -123,6 +123,26 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onConsoleLog(extendedLog)
   }
 
+  parseStackTrace(obj: unknown, taskId: string | undefined) {
+    const project = taskId
+      ? this.vitest.getProjectByTaskId(taskId)
+      : this.vitest.getCoreWorkspaceProject()
+
+    // the new version uses browser.parseErrorStacktrace
+    if ('getBrowserSourceMapModuleById' in project) {
+      return parseErrorStacktrace(obj as Error, {
+        getSourceMap: file => (project as any).getBrowserSourceMapModuleById(file),
+      })
+    }
+
+    const task = taskId && this.vitest.state.idMap.get(taskId)
+    const isBrowser = task && task.file?.pool === 'browser'
+
+    return isBrowser
+      ? project.browser?.parseErrorStacktrace(obj)
+      : parseErrorStacktrace(obj as Error)
+  }
+
   onTaskUpdate(packs: TaskResultPack[]) {
     packs.forEach(([taskId, result]) => {
       const project = this.vitest.getProjectByTaskId(taskId)
@@ -131,26 +151,18 @@ export class VSCodeReporter implements Reporter {
       if ('getBrowserSourceMapModuleById' in project) {
         result?.errors?.forEach((error) => {
           if (typeof error === 'object' && error) {
-            error.stacks = parseErrorStacktrace(error, {
-              getSourceMap: file => (project as any).getBrowserSourceMapModuleById(file),
-            })
+            error.stacks = this.parseStackTrace(error, taskId)
           }
         })
         return
       }
-
-      const task = this.vitest.state.idMap.get(taskId)
-      const isBrowser = task && task.file?.pool === 'browser'
 
       result?.errors?.forEach((error) => {
         if (isPrimitive(error)) {
           return
         }
 
-        const stacks = isBrowser
-          ? project.browser?.parseErrorStacktrace(error)
-          : parseErrorStacktrace(error)
-        error.stacks = stacks
+        error.stacks = this.parseStackTrace(error, taskId)
       })
     })
 

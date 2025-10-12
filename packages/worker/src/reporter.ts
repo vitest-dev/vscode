@@ -64,7 +64,14 @@ export class VSCodeReporter implements Reporter {
     const extendedLog = log as any
     if (log.origin) {
       try {
-        const stacks = parseErrorStacktrace({ stack: log.origin } as any)
+        const task = log.taskId ? this.vitest.state.idMap.get(log.taskId) : null
+        const project = task
+          ? this.vitest.state.getReportedEntity(task)!.project
+          : this.vitest.getRootProject()
+        const stacks = log.browser
+          ? project.browser?.parseErrorStacktrace({ stack: log.origin } as any)
+          : parseErrorStacktrace({ stack: log.origin } as any)
+
         if (stacks && stacks.length > 0) {
           const firstStack = stacks[0]
           if (firstStack.file && firstStack.line != null && firstStack.column != null) {
