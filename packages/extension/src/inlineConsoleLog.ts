@@ -149,8 +149,11 @@ export class InlineConsoleLogManager extends vscode.Disposable {
   }
 
   private formatContent(content: string): string {
+    // Strip ANSI control characters
+    // eslint-disable-next-line no-control-regex
+    const stripped = content.replace(/\x1B\[[0-9;]*m/g, '')
     // Remove trailing newlines and limit length
-    const cleaned = content.trim().replace(/\n/g, ' ')
+    const cleaned = stripped.trim().replace(/\n/g, ' ')
     const maxLength = 100
     if (cleaned.length > maxLength) {
       return `${cleaned.substring(0, maxLength)}...`

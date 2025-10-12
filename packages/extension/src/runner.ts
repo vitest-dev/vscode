@@ -66,11 +66,11 @@ export class TestRunner extends vscode.Disposable {
         files.forEach((file) => {
           const uri = vscode.Uri.file(file)
           this.diagnostic?.deleteDiagnostic(uri)
-          // Clear inline console logs for this file
-          if (this.inlineConsoleLog) {
-            this.inlineConsoleLog.clearFile(file)
-          }
         })
+        // Clear all inline console logs when tests start to avoid accumulation
+        if (this.inlineConsoleLog) {
+          this.inlineConsoleLog.clear()
+        }
         log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
         this.startTestRun(files)
       }
