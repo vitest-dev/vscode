@@ -40,10 +40,18 @@ export class InlineConsoleLogManager extends vscode.Disposable {
     // Update decorations when document changes
     this.disposables.push(
       vscode.workspace.onDidChangeTextDocument((event) => {
-        const editor = vscode.window.activeTextEditor
-        if (editor && event.document === editor.document) {
-          this.updateDecorations(editor)
+        // Clear console logs for files that are edited since line numbers become stale
+        const file = event.document.uri.fsPath
+        if (event.contentChanges.length > 0 && this.consoleLogsByFile.has(file)) {
+          this.consoleLogsByFile.delete(file)
         }
+
+        // Update all visible editors showing this file
+        vscode.window.visibleTextEditors.forEach((editor) => {
+          if (editor.document === event.document) {
+            this.updateDecorations(editor)
+          }
+        })
       }),
     )
 
