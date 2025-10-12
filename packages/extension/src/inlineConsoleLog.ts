@@ -1,4 +1,5 @@
 import type { ExtensionUserConsoleLog } from 'vitest-vscode-shared'
+import { stripVTControlCharacters } from 'node:util'
 import * as vscode from 'vscode'
 import { getConfig } from './config'
 
@@ -84,24 +85,28 @@ export class InlineConsoleLogManager extends vscode.Disposable {
       time: consoleLog.time,
     })
 
-    // Update decorations for active editor if it's the affected file
-    const editor = vscode.window.activeTextEditor
-    if (editor && editor.document.uri.fsPath === file) {
-      this.updateDecorations(editor)
-    }
+    // Update decorations for all visible editors showing this file
+    vscode.window.visibleTextEditors.forEach((editor) => {
+      if (editor.document.uri.fsPath === file) {
+        this.updateDecorations(editor)
+      }
+    })
   }
 
   clear(): void {
     this.consoleLogsByFile.clear()
-    this.refresh()
+    // Update all visible editors
+    vscode.window.visibleTextEditors.forEach(editor => this.updateDecorations(editor))
   }
 
   clearFile(file: string): void {
     this.consoleLogsByFile.delete(file)
-    const editor = vscode.window.activeTextEditor
-    if (editor && editor.document.uri.fsPath === file) {
-      this.updateDecorations(editor)
-    }
+    // Update all visible editors showing this file
+    vscode.window.visibleTextEditors.forEach((editor) => {
+      if (editor.document.uri.fsPath === file) {
+        this.updateDecorations(editor)
+      }
+    })
   }
 
   private updateDecorations(editor: vscode.TextEditor): void {
@@ -149,9 +154,8 @@ export class InlineConsoleLogManager extends vscode.Disposable {
   }
 
   private formatContent(content: string): string {
-    // Strip ANSI control characters
-    // eslint-disable-next-line no-control-regex
-    const stripped = content.replace(/\x1B\[[0-9;]*m/g, '')
+    // Strip ANSI control characters using Node.js util
+    const stripped = stripVTControlCharacters(content)
     // Remove trailing newlines and limit length
     const cleaned = stripped.trim().replace(/\n/g, ' ')
     const maxLength = 100
@@ -162,9 +166,7 @@ export class InlineConsoleLogManager extends vscode.Disposable {
   }
 
   private refresh(): void {
-    const editor = vscode.window.activeTextEditor
-    if (editor) {
-      this.updateDecorations(editor)
-    }
+    // Update all visible editors
+    vscode.window.visibleTextEditors.forEach(editor => this.updateDecorations(editor))
   }
 }
