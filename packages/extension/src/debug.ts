@@ -50,7 +50,8 @@ export async function debugTests(
 
   const skipFiles = [
     ...(config.debugExclude || []),
-    '**/@vitest/{runner,utils}/*',
+    '**/node_modules/@vitest/{runner,utils}/**',
+    '**/node_modules/vitest/dist/**',
   ]
 
   const debugConfig = {
