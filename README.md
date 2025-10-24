@@ -121,6 +121,18 @@ If the extension hangs, consider enabling `vitest.experimentalStaticAstCollect` 
 
 See <https://vitest.dev/guide/workspace.html> for monorepo support.
 
+### How to rerun tests when file is changed?
+
+By default, the extension doens't rerun tests when files change.
+
+Click on the "eye" icon next to the test, file or a directory to enable "continuous run" for a related item. Whenever that test, file or any file in the directory changes, Vitest will rerun that test. Note that Vitest will also rerun tests if an imported module of the file is changed.
+
+![Turn on continuous run button for a test](./img/eye-item-icon.png "Turn on continuous run button for a test")
+
+To enabled continuous run globally, click on the "eye" icon in the "Test Explorer" row.
+
+![Start continuous run button](./img/eye-global-icon.png "Start continuous run button")
+
 ### How to hide Test Results view when running tests
 
 You can change the behaviour of testing view by modifying `testing.automaticallyOpenTestResults` option:
