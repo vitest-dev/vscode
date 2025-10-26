@@ -1,12 +1,10 @@
-/// <reference types="vitest" />
-
 // Configure Vitest (https://vitest.dev/config)
 
-import { defineConfig } from 'vitest/config'
+import { defineConfig, ViteUserConfigExport } from 'vitest/config'
 
 export default defineConfig(async () => {
   const provider: any = process.env.TEST_LEGACY !== 'true'
-    ? (await import('@vitest/browser/providers/playwright')).playwright()
+    ? (await import('@vitest/browser-playwright')).playwright()
     : 'playwright'
   return {
     esbuild: {
@@ -24,5 +22,5 @@ export default defineConfig(async () => {
         ],
       }
     },
-  }
+  } satisfies ViteUserConfigExport;
 })
