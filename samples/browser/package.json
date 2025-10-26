@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "playwright": "^1.47.0",
     "vite": "catalog:",
