@@ -344,6 +344,94 @@ class VitestExtension {
         const tokenSource = new vscode.CancellationTokenSource()
         await profile.runHandler(request, tokenSource.token)
       }),
+      vscode.commands.registerCommand('vitest.copyFailingTestsOutput', async () => {
+        const failingTests = this.testTree.getFailingTests()
+
+        if (failingTests.length === 0) {
+          vscode.window.showInformationMessage('No failing tests found in the last run')
+          return
+        }
+
+        const outputParts: string[] = []
+
+        for (const { testItem, testData } of failingTests) {
+          const testPath = testItem.uri?.fsPath || 'Unknown file'
+          const testName = testItem.label
+          const result = testData.lastResult
+          const duration = result?.duration ? ` (${result.duration}ms)` : ''
+
+          const parts: string[] = [`Test: ${testName}${duration}`, `File: ${testPath}`, '']
+
+          if (result?.messages) {
+            for (const msg of result.messages) {
+              // Add the error message
+              const messageText = typeof msg.message === 'string' ? msg.message : msg.message.value
+              parts.push('Error:')
+              parts.push(messageText)
+              parts.push('')
+
+              // Add stack trace if available
+              if (msg.stackTrace && msg.stackTrace.length > 0) {
+                parts.push('Stack trace:')
+
+                for (const frame of msg.stackTrace) {
+                  if (frame.uri && frame.position) {
+                    try {
+                      const document = await vscode.workspace.openTextDocument(frame.uri)
+                      const lineNumber = frame.position.line
+                      const columnNumber = frame.position.character
+
+                      // Get context lines (2 before, the error line, 2 after)
+                      const startLine = Math.max(0, lineNumber - 2)
+                      const endLine = Math.min(document.lineCount - 1, lineNumber + 2)
+
+                      parts.push(`  at ${frame.label} (${frame.uri.fsPath}:${lineNumber + 1}:${columnNumber + 1})`)
+                      parts.push('')
+
+                      for (let i = startLine; i <= endLine; i++) {
+                        const line = document.lineAt(i)
+                        const lineNum = (i + 1).toString().padStart(4, ' ')
+
+                        if (i === lineNumber) {
+                          // This is the error line
+                          parts.push(`>${lineNum} | ${line.text}`)
+
+                          // Add pointer to the exact column
+                          const pointer = `${' '.repeat(11 + columnNumber)}^`
+                          const errorSuffix = messageText ? ` ${messageText}` : ''
+                          parts.push(`  ${pointer}${errorSuffix}`)
+                        }
+                        else {
+                          parts.push(`  ${lineNum} | ${line.text}`)
+                        }
+                      }
+
+                      parts.push('')
+                    }
+                    catch {
+                      // Fallback if we can't read the file
+                      const location = `${frame.uri.fsPath}:${frame.position.line + 1}:${frame.position.character + 1}`
+                      parts.push(`  at ${frame.label} (${location})`)
+                    }
+                  }
+                  else {
+                    parts.push(`  at ${frame.label} (unknown location)`)
+                  }
+                }
+
+                parts.push('')
+              }
+            }
+          }
+
+          outputParts.push(parts.join('\n'))
+        }
+
+        const output = outputParts.join(`${'='.repeat(80)}\n\n`)
+
+        await vscode.env.clipboard.writeText(output)
+        vscode.window.showInformationMessage(`Copied ${failingTests.length} failing test(s) to clipboard`)
+      }),
     ]
 
     // if the config changes, re-define all test profiles

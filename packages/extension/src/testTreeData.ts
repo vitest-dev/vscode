@@ -108,9 +108,17 @@ class TaskName {
   }
 }
 
+export interface TestResult {
+  status: 'passed' | 'failed' | 'skipped' | 'errored'
+  messages?: vscode.TestMessage[]
+  duration?: number
+  timestamp: Date
+}
+
 export class TestCase extends BaseTestData {
   public name: TaskName
   public readonly type = 'test'
+  public lastResult?: TestResult
 
   private constructor(
     item: vscode.TestItem,
@@ -124,6 +132,15 @@ export class TestCase extends BaseTestData {
 
   public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile, dynamic: boolean) {
     return addTestData(item, new TestCase(item, parent, file, dynamic))
+  }
+
+  public setResult(status: TestResult['status'], messages?: vscode.TestMessage[], duration?: number) {
+    this.lastResult = {
+      status,
+      messages,
+      duration,
+      timestamp: new Date(),
+    }
   }
 
   getTestNamePattern() {

@@ -25,3 +25,9 @@ tsconfig.base.json
 eslint.config.mjs
 scripts/**
 test-results/**
+.pnpm-store/**
+.devcontainer/**
+tsconfig.tsbuildinfo
+packages/**/node_modules/**
+packages/**/src/**
+packages/**/tsconfig.json
