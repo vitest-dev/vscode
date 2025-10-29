@@ -344,6 +344,48 @@ class VitestExtension {
         const tokenSource = new vscode.CancellationTokenSource()
         await profile.runHandler(request, tokenSource.token)
       }),
+      vscode.commands.registerCommand('vitest.copyFailingTestsOutput', async () => {
+        const failingTests = this.testTree.getFailingTests()
+
+        if (failingTests.length === 0) {
+          vscode.window.showInformationMessage('No failing tests found in the last run')
+          return
+        }
+
+        const output = failingTests.map(({ testItem, testData }) => {
+          const testPath = testItem.uri?.fsPath || 'Unknown file'
+          const testName = testItem.label
+          const result = testData.lastResult
+          const duration = result?.duration ? ` (${result.duration}ms)` : ''
+
+          const parts: string[] = [`Test: ${testName}${duration}`, `File: ${testPath}`, '']
+
+          result?.messages?.forEach((msg) => {
+            // Add the error message
+            parts.push('Error:')
+            const messageText = typeof msg.message === 'string' ? msg.message : msg.message.value
+            parts.push(messageText)
+            parts.push('')
+
+            // Add stack trace if available
+            if (msg.stackTrace && msg.stackTrace.length > 0) {
+              parts.push('Stack trace:')
+              msg.stackTrace.forEach((frame) => {
+                const location = frame.uri
+                  ? `${frame.uri.fsPath}:${frame.position ? frame.position.line + 1 : '?'}:${frame.position ? frame.position.character + 1 : '?'}`
+                  : 'unknown'
+                parts.push(`  at ${frame.label} (${location})`)
+              })
+              parts.push('')
+            }
+          })
+
+          return parts.join('\n')
+        }).join(`${'='.repeat(80)}\n\n`)
+
+        await vscode.env.clipboard.writeText(output)
+        vscode.window.showInformationMessage(`Copied ${failingTests.length} failing test(s) to clipboard`)
+      }),
     ]
 
     // if the config changes, re-define all test profiles

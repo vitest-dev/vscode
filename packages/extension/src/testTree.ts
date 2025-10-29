@@ -453,6 +453,21 @@ export class TestTree extends vscode.Disposable {
         parent.children.delete(child.id)
     })
   }
+
+  public getFailingTests(): Array<{ testItem: vscode.TestItem; testData: TestCase }> {
+    const failingTests: Array<{ testItem: vscode.TestItem; testData: TestCase }> = []
+
+    for (const [, testItem] of this.flatTestItems) {
+      const data = getTestData(testItem)
+      if (data instanceof TestCase && data.lastResult) {
+        if (data.lastResult.status === 'failed' || data.lastResult.status === 'errored') {
+          failingTests.push({ testItem, testData: data })
+        }
+      }
+    }
+
+    return failingTests
+  }
 }
 
 function isTest(task: RunnerTask) {

@@ -517,6 +517,8 @@ export class TestRunner extends vscode.Disposable {
     test: vscode.TestItem,
     result: RunnerTaskResult,
   ) {
+    const testData = getTestData(test)
+
     switch (result.state) {
       case 'fail': {
         const errors = result.errors?.map(err =>
@@ -529,16 +531,28 @@ export class TestRunner extends vscode.Disposable {
         if (test.uri) {
           this.diagnostic?.addDiagnostic(test.uri, errors)
         }
+        // Store result in TestCase
+        if (testData instanceof TestCase) {
+          testData.setResult('failed', errors, result.duration)
+        }
         log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         testRun.failed(test, errors, result.duration)
         break
       }
       case 'pass':
+        // Store result in TestCase
+        if (testData instanceof TestCase) {
+          testData.setResult('passed', undefined, result.duration)
+        }
         log.verbose?.(`Marking "${test.label}" as passed`)
         testRun.passed(test, result.duration)
         break
       case 'todo':
       case 'skip':
+        // Store result in TestCase
+        if (testData instanceof TestCase) {
+          testData.setResult('skipped')
+        }
         log.verbose?.(`Marking "${test.label}" as skipped`)
         testRun.skipped(test)
         break
