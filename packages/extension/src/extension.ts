@@ -394,10 +394,10 @@ class VitestExtension {
 
                         if (i === lineNumber) {
                           // This is the error line
-                          parts.push(`> ${lineNum} | ${line.text}`)
+                          parts.push(`>${lineNum} | ${line.text}`)
 
                           // Add pointer to the exact column
-                          const pointer = `${' '.repeat(8 + columnNumber)}^`
+                          const pointer = `${' '.repeat(11 + columnNumber)}^`
                           const errorSuffix = messageText ? ` ${messageText}` : ''
                           parts.push(`  ${pointer}${errorSuffix}`)
                         }
