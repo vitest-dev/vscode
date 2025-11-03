@@ -80,6 +80,11 @@
         "title": "Reveal in Test Explorer",
         "command": "vitest.revealInTestExplorer",
         "category": "Vitest"
+      },
+      {
+        "title": "Copy Failing Tests Output",
+        "command": "vitest.copyFailingTestsOutput",
+        "category": "Vitest"
       }
     ],
     "menus": {
@@ -98,6 +103,10 @@
       "testing/item/context": [
         {
           "command": "vitest.updateSnapshot",
+          "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.copyFailingTestsOutput",
           "when": "controllerId == 'vitest'"
         }
       ],
