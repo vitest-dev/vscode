@@ -13,6 +13,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/basic"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -23,6 +24,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/basic-v4"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -33,6 +35,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/browser"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -43,6 +46,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/continuous"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -53,6 +57,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/imba"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -63,6 +68,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/no-config"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -73,6 +79,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/in-source"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -83,6 +90,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/../vscode-vitest-pnp"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -93,6 +101,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/multi-root-workspace/sample.code-workspace"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -103,6 +112,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/multiple-configs"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -113,6 +123,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -123,6 +134,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo-vitest-workspace"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -133,6 +145,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/monorepo/packages/react"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -143,6 +156,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/readme"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -153,6 +167,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/samples/vue"
       ],
+      "preLaunchTask": "npm: dev",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
