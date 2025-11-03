@@ -1,11 +1,11 @@
 import { download } from '@vscode/test-electron'
-import type { GlobalSetupContext } from 'vitest/node'
+import type { Vitest } from 'vitest/node'
 
-export default async function downloadVscode({ provide }: GlobalSetupContext) {
+export default async function downloadVscode(vitest: Vitest) {
   if (process.env.VSCODE_E2E_DOWNLOAD_PATH)
-    provide('executablePath', process.env.VSCODE_E2E_DOWNLOAD_PATH)
+    vitest.provide('executablePath', process.env.VSCODE_E2E_DOWNLOAD_PATH)
   else
-    provide('executablePath', await download())
+    vitest.provide('executablePath', await download())
 }
 
 declare module 'vitest' {
