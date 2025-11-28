@@ -425,4 +425,13 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   onBrowserDebug(fulfilled: boolean) {
     ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
   }
+
+  // TODO:(?) -- if environments are supported
+  getModuleEnvironments() {
+    return []
+  }
+
+  getTransformedModule() {
+    return null
+  }
 }

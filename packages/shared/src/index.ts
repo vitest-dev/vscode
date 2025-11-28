@@ -37,6 +37,11 @@ export interface ExtensionUserConsoleLog extends UserConsoleLog {
   }
 }
 
+export interface ExtensionEnvironment {
+  name: string
+  environments: string[]
+}
+
 export interface ExtensionWorkerTransport {
   getFiles: () => Promise<ExtensionTestFileSpecification[]>
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
@@ -58,6 +63,8 @@ export interface ExtensionWorkerTransport {
   onFilesChanged: (files: string[]) => void
 
   initRpc: (rpc: VitestWorkerRPC) => void
+  getModuleEnvironments: (moduleId: string) => ExtensionEnvironment[]
+  getTransformedModule: (project: string, environment: string, moduleId: string) => string | null
 
   onBrowserDebug: (fulfilled: boolean) => void
 }

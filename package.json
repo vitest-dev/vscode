@@ -80,13 +80,24 @@
         "title": "Reveal in Test Explorer",
         "command": "vitest.revealInTestExplorer",
         "category": "Vitest"
+      },
+      {
+        "title": "Open Transformed Module",
+        "command": "vitest.openTransformedModule",
+        "category": "Vitest"
       }
     ],
     "menus": {
       "editor/title/context": [
         {
           "command": "vitest.revealInTestExplorer",
-          "when": "vitest.testFiles && resourcePath in vitest.testFiles"
+          "when": "vitest.testFiles && resourcePath in vitest.testFiles",
+          "group": "vitest"
+        },
+        {
+          "command": "vitest.openTransformedModule",
+          "when": "vitest.environmentsSupported",
+          "group": "vitest"
         }
       ],
       "commandPalette": [
