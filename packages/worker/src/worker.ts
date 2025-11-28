@@ -1,4 +1,5 @@
 import type {
+  ExtensionEnvironment,
   ExtensionTestFileSpecification,
   ExtensionTestSpecification,
   ExtensionWorkerTransport,
@@ -101,6 +102,35 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   initRpc(rpc: VitestWorkerRPC) {
     this.runner.initRpc(rpc)
+  }
+
+  getModuleEnvironments(moduleId: string): ExtensionEnvironment[] {
+    return this.vitest.projects.map((project) => {
+      const environments = new Set<string>()
+      for (const name in project.vite.environments) {
+        const environment = project.vite.environments[name]
+        const nodes = [...environment.moduleGraph.getModulesByFile(moduleId) || []]
+        if (nodes.some(n => n.transformResult)) {
+          environments.add(name)
+        }
+      }
+      return {
+        name: project.name,
+        environments: Array.from(environments),
+      }
+    })
+  }
+
+  getTransformedModule(projectName: string, environmentName: string, moduleId: string) {
+    const project = this.vitest.projects.find(p => p.name === projectName)
+    const environment = environmentName === '__browser__'
+      ? project?.browser?.vite?.environments.client
+      : project?.vite.environments[environmentName]
+    const files = environment?.moduleGraph.getModulesByFile(moduleId)
+    if (!files || !files.size) {
+      return null
+    }
+    return files.values().next().value?.transformResult?.code ?? null
   }
 
   onBrowserDebug(fulfilled: boolean) {

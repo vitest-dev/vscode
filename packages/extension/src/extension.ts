@@ -12,6 +12,7 @@ import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
 import { log } from './log'
 import { TestRunner } from './runner'
+import { SchemaProvider } from './schemaProvider'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
@@ -41,6 +42,7 @@ class VitestExtension {
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
   private debugManager: DebugManager
+  private schemaProvider: SchemaProvider
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -58,6 +60,12 @@ class VitestExtension {
     this.testTree = new TestTree(this.testController, this.loadingTestItem)
     this.tagsManager = new TagsManager(this.testTree)
     this.debugManager = new DebugManager()
+    this.schemaProvider = new SchemaProvider(
+      async (apiId, project, environment, file) => {
+        const api = this.api?.folderAPIs.find(a => a.id === apiId)
+        return api?.getTransformedModule(project, environment, file) ?? null
+      },
+    )
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -344,6 +352,51 @@ class VitestExtension {
         const tokenSource = new vscode.CancellationTokenSource()
         await profile.runHandler(request, tokenSource.token)
       }),
+      vscode.commands.registerCommand('vitest.openTransformedModule', async (uri: vscode.Uri | undefined) => {
+        const currentUri = uri || vscode.window.activeTextEditor?.document.uri
+        if (!this.api || !currentUri || currentUri.scheme === 'vitest-transform') {
+          return
+        }
+        const environments = await this.api.getModuleEnvironments(currentUri.fsPath)
+        const options = environments.map(({ api, projects }) => {
+          return projects.map((project) => {
+            return project.environments.map((environment) => {
+              let label = ''
+              if (environments.length > 1) {
+                label += `${api.prefix}: `
+              }
+              if (project.name) {
+                label += `[${project.name}] `
+              }
+              label += environment
+              return {
+                label,
+                uriParts: [api.id, project.name, environment],
+              }
+            })
+          })
+        }).flat(2)
+        if (options.length === 0) {
+          vscode.window.showWarningMessage('All module graphs are empty, nothing to show.')
+          return
+        }
+        const pick = options.length === 1 ? options[0] : await vscode.window.showQuickPick(options)
+        if (!pick) {
+          return
+        }
+        try {
+          const [apiId, projectName, environment] = pick.uriParts
+          const uri = vscode.Uri.parse(
+            `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}`,
+          )
+          const doc = await vscode.workspace.openTextDocument(uri)
+          await vscode.window.showTextDocument(doc, { preview: false })
+        }
+        catch (err) {
+          log.error(err)
+          vscode.window.showErrorMessage(`Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`)
+        }
+      }),
     ]
 
     // if the config changes, re-define all test profiles
@@ -429,6 +482,7 @@ class VitestExtension {
     this.testTree.dispose()
     this.tagsManager.dispose()
     this.testController.dispose()
+    this.schemaProvider.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())

@@ -43,6 +43,17 @@ export class VitestAPI {
     return this.api.forEach(callback)
   }
 
+  getModuleEnvironments(moduleId: string) {
+    return Promise.all(
+      this.api.map(async (api) => {
+        return {
+          api,
+          projects: await api.getModuleEnvironments(moduleId),
+        }
+      }),
+    )
+  }
+
   get folderAPIs() {
     return this.api
   }
@@ -109,6 +120,14 @@ export class VitestFolderAPI {
 
   get package() {
     return this.pkg
+  }
+
+  getTransformedModule(project: string, environment: string, moduleId: string) {
+    return this.meta.rpc.getTransformedModule(project, environment, moduleId)
+  }
+
+  async getModuleEnvironments(moduleId: string) {
+    return this.meta.rpc.getModuleEnvironments(moduleId)
   }
 
   async runFiles(specs?: ExtensionTestSpecification[] | string[], testNamePatern?: string) {
