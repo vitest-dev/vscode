@@ -25,8 +25,8 @@ emitter.on('message', async function onMessage(message: any) {
         pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString()
       ) as typeof import('vitest/node')
 
-      const isOld = !vitestModule.version || (Number(vitestModule.version[0]) < 4)
-      const workerName = isOld ? './workerLegacy.js' : './workerNew.js'
+      const isLegacy = !vitestModule.version || (Number(vitestModule.version[0]) < 4)
+      const workerName = isLegacy ? './workerLegacy.js' : './workerNew.js'
       const workerPath = pathToFileURL(join(__dirname, workerName))
       const initModule = await import(workerPath.toString())
 
@@ -53,7 +53,7 @@ emitter.on('message', async function onMessage(message: any) {
       )
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
-      emitter.ready(configs, workspaceSource, isOld)
+      emitter.ready(configs, workspaceSource, isLegacy)
     }
     catch (err: any) {
       emitter.error(err)

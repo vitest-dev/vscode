@@ -4,6 +4,7 @@ import type { ResolvedMeta } from '../api'
 import type { VitestPackage } from './pkg'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
+import vscode from 'vscode'
 import { getConfig } from '../config'
 import { browserSetupFilePath, finalCoverageFileName, setupFilePath } from '../constants'
 import { log } from '../log'
@@ -72,6 +73,13 @@ export function onWsConnection(
         log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
         api.$close()
       })
+      if (!message.legacy) {
+        vscode.commands.executeCommand(
+          'setContext',
+          'vitest.environmentsSupported',
+          true,
+        )
+      }
       onStart({
         rpc: api,
         workspaceSource: message.workspaceSource,

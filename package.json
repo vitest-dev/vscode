@@ -96,6 +96,7 @@
         },
         {
           "command": "vitest.openTransformedModule",
+          "when": "vitest.environmentsSupported",
           "group": "vitest"
         }
       ],
