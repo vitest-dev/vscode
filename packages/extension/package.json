@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "@vitest/browser": "workspace:*",
-    "vitest": "$vitest",
+    "@vitest/browser": "catalog:",
+    "vitest": "catalog:",
     "vitest-vscode-shared": "workspace:*"
   }
 }

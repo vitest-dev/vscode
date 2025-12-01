@@ -227,6 +227,7 @@ export function createFailedFileTask(ctx: WorkspaceProject, filepath: string, er
       state: 'fail',
       errors: serializeError(ctx, error),
     },
+    fullName: testFilepath,
   }
   file.file = file
   return file
@@ -281,6 +282,7 @@ export function createFileTask(
     meta: {},
     pool: 'browser',
     file: null!,
+    fullName: testFilepath,
   }
   file.file = file
   const indexMap = createIndexMap(code)
@@ -350,6 +352,7 @@ export function createFileTask(
           location,
           dynamic: definition.dynamic,
           meta: {},
+          fullName: `${latestSuite} ${definition.name}`,
         }
         definition.task = task
         latestSuite.tasks.push(task)
@@ -368,9 +371,13 @@ export function createFileTask(
         start: definition.start,
         location,
         dynamic: definition.dynamic,
+        fullName: `${latestSuite} ${definition.name}`,
         meta: {},
         timeout: 0,
         annotations: [],
+        artifacts: [],
+        // this is not correct, but it's only used in legacy and exist for type only
+        fullTestName: `${latestSuite} ${definition.name}`,
       }
       definition.task = task
       latestSuite.tasks.push(task)

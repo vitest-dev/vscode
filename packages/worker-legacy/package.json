@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
+    "@vitest/runner": "catalog:",
     "@vitest/utils": "catalog:",
-    "vitest": "$vitest",
+    "vitest": "catalog:",
     "vitest-vscode-shared": "workspace:*"
   }
 }
