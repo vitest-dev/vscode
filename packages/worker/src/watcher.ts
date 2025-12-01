@@ -1,6 +1,7 @@
+import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { TestSpecification, Vitest } from 'vitest/node'
 import type { ExtensionWorkerRunner } from './runner'
-import { createQueuedHandler, type ExtensionTestSpecification } from 'vitest-vscode-shared'
+import { createQueuedHandler } from 'vitest-vscode-shared'
 
 export class ExtensionWorkerWatcher {
   private enabled = false
