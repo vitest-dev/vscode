@@ -6,8 +6,8 @@
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@vitest/utils": "catalog:",
-    "vitest": "catalog:",
+    "@vitest/utils": "catalog:latest",
+    "vitest": "catalog:latest",
     "vitest-vscode-shared": "workspace:*"
   }
 }

@@ -11,10 +11,11 @@
     "birpc": "^0.2.2"
   },
   "devDependencies": {
-    "@vitest/browser": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/browser-playwright": "catalog:latest",
+    "@vitest/browser": "catalog:latest",
+    "@vitest/coverage-v8": "catalog:latest",
     "playwright": "^1.47.0",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite": "catalog:latest",
+    "vitest": "catalog:latest"
   }
 }

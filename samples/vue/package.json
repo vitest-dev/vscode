@@ -9,12 +9,12 @@
     "vue": "^3.4.22"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitejs/plugin-vue": "^6.0.2",
+    "@vitest/coverage-v8": "catalog:latest",
     "@vue/test-utils": "^2.4.5",
     "happy-dom": "14.7.1",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite": "catalog:latest",
+    "vitest": "catalog:latest"
   },
   "stackblitz": {
     "startCommand": "npm run test"

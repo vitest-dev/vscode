@@ -18,6 +18,11 @@ export default defineConfig([
   {
     entry: {
       workerLegacy: './packages/worker-legacy/src/index.ts',
+    },
+    format: 'cjs',
+  },
+  {
+    entry: {
       workerNew: './packages/worker/src/index.ts',
     },
     format: 'cjs',

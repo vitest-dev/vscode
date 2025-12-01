@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite": "catalog:latest",
+    "vitest": "catalog:latest"
   }
 }

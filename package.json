@@ -293,8 +293,6 @@
     "@types/vscode": "^1.77.0",
     "@types/which": "^3.0.3",
     "@types/ws": "^8.5.10",
-    "@vitest/runner": "catalog:",
-    "@vitest/utils": "catalog:",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
     "@vscode/vsce": "^3.1.0",
@@ -320,33 +318,9 @@
     "tsup": "^8.0.1",
     "tsx": "^4.7.1",
     "typescript": "^5.6.2",
-    "vitest": "catalog:",
+    "vitest": "catalog:latest",
     "which": "^4.0.0",
     "ws": "^8.16.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "@vitest/browser": "^4.0.0-beta.12",
-      "@vitest/coverage": "^4.0.0-beta.12",
-      "@vitest/runner": "^4.0.0-beta.12",
-      "@vitest/utils": "^4.0.0-beta.12",
-      "vitest": "^4.0.0-beta.12",
-      "vitest-vscode-extension>@vitest/browser": "^3.2.0",
-      "vitest-vscode-extension>@vitest/coverage": "^3.2.0",
-      "vitest-vscode-extension>@vitest/runner": "^3.2.0",
-      "vitest-vscode-extension>@vitest/utils": "^3.2.0",
-      "vitest-vscode-extension>vitest": "^3.2.0",
-      "vitest-vscode-shared>@vitest/browser": "^3.2.0",
-      "vitest-vscode-shared>@vitest/coverage": "^3.2.0",
-      "vitest-vscode-shared>@vitest/runner": "^3.2.0",
-      "vitest-vscode-shared>@vitest/utils": "^3.2.0",
-      "vitest-vscode-shared>vitest": "^3.2.0",
-      "vitest-vscode-worker-legacy>@vitest/browser": "^3.2.0",
-      "vitest-vscode-worker-legacy>@vitest/coverage": "^3.2.0",
-      "vitest-vscode-worker-legacy>@vitest/runner": "^3.2.0",
-      "vitest-vscode-worker-legacy>@vitest/utils": "^3.2.0",
-      "vitest-vscode-worker-legacy>vitest": "^3.2.0"
-    }
   },
   "lint-staged": {
     "*.{js,ts,tsx,vue,md}": [

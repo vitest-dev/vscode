@@ -2,6 +2,6 @@
   "name": "multiple-configs",
   "private": true,
   "dependencies": {
-    "vitest": "catalog:"
+    "vitest": "catalog:latest"
   }
 }

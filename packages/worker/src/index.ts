@@ -1,5 +1,4 @@
-import type { WorkerRunnerOptions } from 'vitest-vscode-shared'
-import type { WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type { WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { CoverageIstanbulOptions, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { randomUUID } from 'node:crypto'
