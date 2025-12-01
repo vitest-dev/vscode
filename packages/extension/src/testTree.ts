@@ -1,6 +1,7 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { ExtensionTestFileSpecification } from 'vitest-vscode-shared'
 import type { VitestFolderAPI } from './api'
+import type { SchemaProvider } from './schemaProvider'
 import type { TestFileMetadata } from './testTreeData'
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -30,6 +31,7 @@ export class TestTree extends vscode.Disposable {
   constructor(
     private readonly controller: vscode.TestController,
     private readonly loaderItem: vscode.TestItem,
+    schemaProvider: SchemaProvider,
   ) {
     super(() => {
       this.folderItems.clear()
@@ -38,7 +40,7 @@ export class TestTree extends vscode.Disposable {
       this.testItemsByFile.clear()
       this.watcher.dispose()
     })
-    this.watcher = new ExtensionWatcher(this)
+    this.watcher = new ExtensionWatcher(this, schemaProvider)
   }
 
   public getFileTestItems(fsPath: string) {

@@ -39,7 +39,10 @@ export interface ExtensionUserConsoleLog extends UserConsoleLog {
 
 export interface ExtensionEnvironment {
   name: string
-  environments: string[]
+  environments: {
+    name: string
+    transformTimestamp: number
+  }[]
 }
 
 export interface ExtensionWorkerTransport {

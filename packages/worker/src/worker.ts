@@ -106,17 +106,20 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   getModuleEnvironments(moduleId: string): ExtensionEnvironment[] {
     return this.vitest.projects.map((project) => {
-      const environments = new Set<string>()
+      const environments = new Map<string, { timestamp: number }>()
       for (const name in project.vite.environments) {
         const environment = project.vite.environments[name]
         const nodes = [...environment.moduleGraph.getModulesByFile(moduleId) || []]
         if (nodes.some(n => n.transformResult)) {
-          environments.add(name)
+          environments.set(name, { timestamp: nodes[0].lastInvalidationTimestamp })
         }
       }
       return {
         name: project.name,
-        environments: Array.from(environments),
+        environments: Array.from(environments).map(([name, { timestamp }]) => ({
+          name,
+          transformTimestamp: timestamp,
+        })),
       }
     })
   }

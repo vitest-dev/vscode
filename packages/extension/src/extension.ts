@@ -57,15 +57,15 @@ class VitestExtension {
     this.testController.resolveHandler = item => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
-    this.testTree = new TestTree(this.testController, this.loadingTestItem)
-    this.tagsManager = new TagsManager(this.testTree)
-    this.debugManager = new DebugManager()
     this.schemaProvider = new SchemaProvider(
       async (apiId, project, environment, file) => {
         const api = this.api?.folderAPIs.find(a => a.id === apiId)
         return api?.getTransformedModule(project, environment, file) ?? null
       },
     )
+    this.testTree = new TestTree(this.testController, this.loadingTestItem, this.schemaProvider)
+    this.tagsManager = new TagsManager(this.testTree)
+    this.debugManager = new DebugManager()
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -371,7 +371,7 @@ class VitestExtension {
               label += environment
               return {
                 label,
-                uriParts: [api.id, project.name, environment],
+                uriParts: [api.id, project.name, environment.name, environment.transformTimestamp],
               }
             })
           })
@@ -385,9 +385,9 @@ class VitestExtension {
           return
         }
         try {
-          const [apiId, projectName, environment] = pick.uriParts
+          const [apiId, projectName, environment, t] = pick.uriParts
           const uri = vscode.Uri.parse(
-            `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}`,
+            `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}&t=${t}`,
           )
           const doc = await vscode.workspace.openTextDocument(uri)
           await vscode.window.showTextDocument(doc, { preview: false })
