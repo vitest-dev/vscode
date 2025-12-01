@@ -11,6 +11,7 @@
     "birpc": "^0.2.2"
   },
   "devDependencies": {
+    "@vitest/browser-playwright": "catalog:",
     "@vitest/browser": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "playwright": "^1.47.0",
