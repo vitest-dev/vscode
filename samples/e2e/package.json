@@ -7,6 +7,6 @@
     "test": "vitest"
   },
   "devDependencies": {
-    "vitest": "catalog:"
+    "vitest": "catalog:latest"
   }
 }

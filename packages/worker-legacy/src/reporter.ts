@@ -1,5 +1,5 @@
 import type { BirpcReturn } from 'birpc'
-import type { RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import type { ErrorWithDiff, RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
 import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from 'vitest-vscode-shared'
 import type { BrowserCommand, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
 import type { Reporter } from 'vitest/reporters'
@@ -123,7 +123,7 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onConsoleLog(extendedLog)
   }
 
-  parseStackTrace(obj: unknown, taskId: string | undefined) {
+  parseStackTrace(obj: ErrorWithDiff, taskId: string | undefined) {
     const project = taskId
       ? this.vitest.getProjectByTaskId(taskId)
       : this.vitest.getCoreWorkspaceProject()

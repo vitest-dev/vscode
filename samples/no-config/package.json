@@ -9,6 +9,6 @@
     "test": "vitest run --pool=forks"
   },
   "devDependencies": {
-    "vitest": "catalog:"
+    "vitest": "catalog:latest"
   }
 }

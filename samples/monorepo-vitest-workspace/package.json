@@ -9,8 +9,8 @@
     "test": "vitest"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/coverage-v8": "catalog:latest",
     "happy-dom": "^15.7.4",
-    "vitest": "catalog:"
+    "vitest": "catalog:latest"
   }
 }

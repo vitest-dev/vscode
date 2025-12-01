@@ -8,6 +8,6 @@
   },
   "devDependencies": {
     "birpc": "2.4.0",
-    "vitest": "catalog:"
+    "vitest": "catalog:v3"
   }
 }
