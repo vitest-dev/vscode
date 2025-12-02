@@ -2,6 +2,7 @@ import type { ParsedStack, RunnerTaskResult, TestError } from 'vitest'
 import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { VitestFolderAPI } from './api'
 import type { ExtensionDiagnostic } from './diagnostic'
+import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { TestTree } from './testTree'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -34,6 +35,7 @@ export class TestRunner extends vscode.Disposable {
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
     private readonly diagnostic: ExtensionDiagnostic | undefined,
+    private readonly importsBreakdown: ImportsBreakdownProvider,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
@@ -93,6 +95,8 @@ export class TestRunner extends vscode.Disposable {
       this.tree.collectFile(this.api, file)
       if (collecting)
         return
+
+      this.importsBreakdown.refreshCurrentDecorations()
 
       getTasks(file).forEach((task) => {
         const test = this.tree.getTestItemByTask(task)

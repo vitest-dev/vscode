@@ -97,6 +97,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     debuggerPort: get<number>('debuggerPort') || undefined,
     debuggerAddress: get<string>('debuggerAddress', undefined) || undefined,
     logLevel,
+    showImportsDuration: get<boolean>('showImportsDuration', true) ?? true,
   }
 }
 

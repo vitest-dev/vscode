@@ -2,6 +2,7 @@ import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerProcess } from './api/types'
 import type { WsConnectionMetadata } from './api/ws'
 import type { ExtensionDiagnostic } from './diagnostic'
+import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { createServer } from 'node:http'
@@ -26,6 +27,7 @@ export async function debugTests(
   tree: TestTree,
   pkg: VitestPackage,
   diagnostic: ExtensionDiagnostic | undefined,
+  importsBreakdown: ImportsBreakdownProvider,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
@@ -152,6 +154,7 @@ export async function debugTests(
             tree,
             api,
             diagnostic,
+            importsBreakdown,
           )
           disposables.push(api, runner)
 

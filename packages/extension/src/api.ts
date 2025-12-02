@@ -1,4 +1,4 @@
-import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
+import type { ExtensionTestSpecification, ModuleDefinitionDurationsDiagnostic } from 'vitest-vscode-shared'
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerEvents, VitestExtensionRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
@@ -42,6 +42,45 @@ export class VitestAPI {
 
   forEach<T>(callback: (api: VitestFolderAPI, index: number) => T) {
     return this.api.forEach(callback)
+  }
+
+  async getSourceModuleDiagnostic(moduleId: string) {
+    const allDiagnostic = await Promise.all(
+      this.folderAPIs.map(api => api.getSourceModuleDiagnostic(moduleId)),
+    )
+    const modules = allDiagnostic[0]?.modules || []
+    const untrackedModules = allDiagnostic[0]?.untrackedModules || []
+
+    type TimeDiagnostic = Pick<ModuleDefinitionDurationsDiagnostic, 'selfTime' | 'totalTime' | 'transformTime' | 'resolvedId'>
+    const aggregateModules = (aggregatedModule: TimeDiagnostic, currentMod: TimeDiagnostic) => {
+      if (aggregatedModule.resolvedId === currentMod.resolvedId) {
+        aggregatedModule.selfTime += currentMod.selfTime
+        aggregatedModule.totalTime += currentMod.totalTime
+        if (aggregatedModule.transformTime != null && currentMod.transformTime != null) {
+          aggregatedModule.transformTime += currentMod.transformTime
+        }
+      }
+    }
+
+    // aggregate time from _other_ diagnostics that could've potentially imported this file
+    for (let i = 1; i < allDiagnostic.length; i++) {
+      const currentDiagnostic = allDiagnostic[i]
+      currentDiagnostic.modules.forEach((mod, index) => {
+        const aggregatedModule = modules[index]
+
+        aggregateModules(aggregatedModule, mod)
+      })
+      currentDiagnostic.untrackedModules.forEach((mod, index) => {
+        const aggregatedModule = untrackedModules[index]
+
+        aggregateModules(aggregatedModule, mod)
+      })
+    }
+
+    return {
+      modules,
+      untrackedModules,
+    }
   }
 
   getModuleEnvironments(moduleId: string) {
@@ -125,6 +164,10 @@ export class VitestFolderAPI {
 
   getTransformedModule(project: string, environment: string, moduleId: string) {
     return this.meta.rpc.getTransformedModule(project, environment, moduleId)
+  }
+
+  getSourceModuleDiagnostic(moduleId: string) {
+    return this.meta.rpc.getSourceModuleDiagnostic(moduleId)
   }
 
   async getModuleEnvironments(moduleId: string) {

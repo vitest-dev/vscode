@@ -434,4 +434,11 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   getTransformedModule() {
     return null
   }
+
+  async getSourceModuleDiagnostic(_moduleId: string) {
+    return {
+      modules: [],
+      untrackedModules: [],
+    }
+  }
 }
