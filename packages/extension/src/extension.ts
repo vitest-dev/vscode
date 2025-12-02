@@ -10,6 +10,7 @@ import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
 import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
+import { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import { log } from './log'
 import { TestRunner } from './runner'
 import { SchemaProvider } from './schemaProvider'
@@ -43,6 +44,7 @@ class VitestExtension {
   private diagnostic: ExtensionDiagnostic | undefined
   private debugManager: DebugManager
   private schemaProvider: SchemaProvider
+  private importsBreakdownProvider: ImportsBreakdownProvider
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -66,6 +68,12 @@ class VitestExtension {
     this.testTree = new TestTree(this.testController, this.loadingTestItem, this.schemaProvider)
     this.tagsManager = new TagsManager(this.testTree)
     this.debugManager = new DebugManager()
+    this.importsBreakdownProvider = new ImportsBreakdownProvider(
+      async (moduleId: string) => this.api?.getSourceModuleDiagnostic(moduleId) || {
+        modules: [],
+        untrackedModules: [],
+      },
+    )
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -158,6 +166,7 @@ class VitestExtension {
         this.testTree,
         api,
         this.diagnostic,
+        this.importsBreakdownProvider,
       )
       this.runners.push(runner)
 
@@ -200,6 +209,7 @@ class VitestExtension {
           this.testTree,
           api.package,
           this.diagnostic,
+          this.importsBreakdownProvider,
 
           request,
           token,
@@ -483,6 +493,7 @@ class VitestExtension {
     this.tagsManager.dispose()
     this.testController.dispose()
     this.schemaProvider.dispose()
+    this.importsBreakdownProvider.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())

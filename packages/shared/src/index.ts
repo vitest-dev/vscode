@@ -55,6 +55,7 @@ export interface ExtensionWorkerTransport {
 
   watchTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => void
   unwatchTests: () => void
+  getSourceModuleDiagnostic: (moduleId: string) => Promise<SourceModuleDiagnostic>
 
   invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
   enableCoverage: () => void
@@ -80,6 +81,44 @@ export interface ExtensionWorkerEvents {
   onTestRunStart: (files: string[], collecting?: boolean) => void
 
   onProcessLog: (type: 'stdout' | 'stderr', log: string) => void
+}
+
+// todo@vitest4 when supporting only vitest 4, import from vitest
+interface ModuleDefinitionLocation {
+  line: number
+  column: number
+}
+export interface ModuleDefinitionDiagnostic {
+  start: ModuleDefinitionLocation
+  end: ModuleDefinitionLocation
+  startIndex: number
+  endIndex: number
+  rawUrl: string
+  resolvedUrl: string
+  resolvedId: string
+}
+
+export interface ModuleDefinitionDurationsDiagnostic extends ModuleDefinitionDiagnostic {
+  selfTime: number
+  totalTime: number
+  transformTime?: number
+  external?: boolean
+  importer?: string
+}
+
+export interface UntrackedModuleDefinitionDiagnostic {
+  url: string
+  resolvedId: string
+  resolvedUrl: string
+  selfTime: number
+  totalTime: number
+  transformTime?: number
+  external?: boolean
+  importer?: string
+}
+export interface SourceModuleDiagnostic {
+  modules: ModuleDefinitionDurationsDiagnostic[]
+  untrackedModules: UntrackedModuleDefinitionDiagnostic[]
 }
 
 export type VitestExtensionRPC = BirpcReturn<ExtensionWorkerTransport, ExtensionWorkerEvents>

@@ -136,6 +136,16 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return files.values().next().value?.transformResult?.code ?? null
   }
 
+  async getSourceModuleDiagnostic(moduleId: string) {
+    if (!this.vitest.experimental_getSourceModuleDiagnostic) {
+      return {
+        modules: [],
+        untrackedModules: [],
+      }
+    }
+    return await this.vitest.experimental_getSourceModuleDiagnostic(moduleId)
+  }
+
   onBrowserDebug(fulfilled: boolean) {
     ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
   }

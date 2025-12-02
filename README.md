@@ -83,6 +83,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 - `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
+- `vitest.showImportsDuration`: Show how long it took to import and transform the modules. When hovering, the extension provides more diagnostics.
 
 > 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
 > The `vitest.terminalShellPath` and `vitest.terminalShellArgs` settings are used as `shellPath` and `shellArgs` when creating a new [terminal](https://code.visualstudio.com/api/references/vscode-api#Terminal)
@@ -110,6 +111,16 @@ You can reveal the current test file in the test explorer view by selecting the 
 You can also type the same command in the quick picker while the file is open.
 
 ![Reveal test in explorer](./img/reveal-in-picker.png "Reveal test in explorer")
+
+### Import Breakdown
+
+If you use Vitest 4.0.15 or higher, the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
+
+If you hover over it, you can get a more detailed diagnostic.
+
+![Import breakdown example](./img/import-breakdown.png "Import breakdown example")
+
+You can disable this feature by turning off `vitest.showImportsDuration`.
 
 ### Experimental
 

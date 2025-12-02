@@ -262,6 +262,11 @@
           "description": "Show a squiggly line where the error was thrown. This also enables the error count in the File Tab.",
           "type": "boolean",
           "default": true
+        },
+        "vitest.showImportsDuration": {
+          "description": "Show how long it took to import the module during the last test run. If multiple isolated tests imported the module, the times will be aggregated.",
+          "type": "boolean",
+          "default": true
         }
       }
     }

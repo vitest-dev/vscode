@@ -46,14 +46,6 @@ export async function initVitest(
     globalThis.console = new Console(stdout, stderr)
   }
 
-  const pnpExecArgv = meta.pnpApi && meta.pnpLoader
-    ? [
-        '--require',
-        meta.pnpApi,
-        '--experimental-loader',
-        meta.pnpLoader,
-      ]
-    : undefined
   const args = meta.arguments
     ? vitestModule.parseCLI(meta.arguments, {
       allowUnknownOptions: false,
@@ -78,22 +70,14 @@ export async function initVitest(
     reporters: [reporter],
     ui: false,
     includeTaskLocation: true,
-    poolOptions: meta.pnpApi && meta.pnpLoader
-      ? {
-          threads: {
-            execArgv: pnpExecArgv,
-          },
-          forks: {
-            execArgv: pnpExecArgv,
-          },
-          vmForks: {
-            execArgv: pnpExecArgv,
-          },
-          vmThreads: {
-            execArgv: pnpExecArgv,
-          },
-        }
-      : {},
+    execArgv: meta.pnpApi && meta.pnpLoader
+      ? [
+          '--require',
+          meta.pnpApi,
+          '--experimental-loader',
+          meta.pnpLoader,
+        ]
+      : [],
   }
   const vitest = await vitestModule.createVitest(
     'test',
@@ -150,6 +134,13 @@ export async function initVitest(
               }
               context.project.config.inspector = context.vitest.config.inspector
             }
+          },
+          api: {
+            vitest: {
+              experimental: {
+                ignoreFsModuleCache: true,
+              },
+            },
           },
         },
       ],
