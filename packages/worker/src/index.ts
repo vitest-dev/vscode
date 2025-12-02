@@ -1,5 +1,5 @@
 import type { WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
-import type { CoverageIstanbulOptions, TestUserConfig, VitestPluginContext } from 'vitest/node'
+import type { CoverageIstanbulOptions, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
@@ -122,7 +122,7 @@ export async function initVitest(
               } as any,
             }
           },
-          configureVitest(context: VitestPluginContext) {
+          configureVitest(context) {
             const options = context.project.config.browser
             if (options?.enabled && typeof data.debug === 'object') {
               context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
