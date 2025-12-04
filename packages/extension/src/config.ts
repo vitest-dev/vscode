@@ -39,7 +39,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   const configSearchPatternExclude = get<string>(
     'configSearchPatternExclude',
-    '{**/node_modules/**,**/.*/**,**/*.d.ts}',
+    '{**/node_modules/**,**/vendor/**,**/.*/**,**/*.d.ts}',
   )!
 
   const configSearchPatternInclude = get<string>(
