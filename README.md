@@ -94,6 +94,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.vitestPackagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix.
 - `vitest.nodeEnv`: Environment passed to the runner process in addition to
   `process.env`
+- `vitest.debugNodeEnv`: Environment passed to the runner process in addition to `process.env` and `vitest.nodeEnv` when debugging tests
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
   `["<node_internals>/**"]`
 - `vitest.debugOutFiles`: If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with `!` the files are excluded. If not specified, the generated code is expected in the same directory as its source. Default: `["${workspaceFolder}/**/*.(m|c|)js", "!**/node_modules/**"]`

@@ -43,6 +43,7 @@ export async function debugTests(
 
   const { runtimeArgs, runtimeExecutable } = await getRuntimeOptions(pkg)
   const env = config.env || {}
+  const debugEnv = config.debugEnv || {}
   const logLevel = config.logLevel
 
   log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
@@ -84,6 +85,7 @@ export async function debugTests(
     env: {
       ...process.env,
       ...env,
+      ...debugEnv,
       VITEST_VSCODE_LOG: env.VITEST_VSCODE_LOG ?? process.env.VITEST_VSCODE_LOG ?? logLevel,
       VITEST_VSCODE: 'true',
       VITEST_WS_ADDRESS: wsAddress,
