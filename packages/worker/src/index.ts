@@ -78,6 +78,9 @@ export async function initVitest(
           meta.pnpLoader,
         ]
       : [],
+    inspect: typeof data.debug === 'object'
+      ? `${data.debug.host}:${data.debug.port}`
+      : undefined,
   }
   const vitest = await vitestModule.createVitest(
     'test',

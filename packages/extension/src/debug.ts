@@ -198,12 +198,13 @@ export async function debugTests(
               },
             ).then(
               (fullfilled) => {
+                log.info('[DEBUG] Browser debugger started')
                 metadata.rpc.onBrowserDebug(fullfilled).catch(() => {})
                 if (fullfilled) {
-                  log.info('[DEBUG] Secondary debug launch config started')
+                  log.info('[DEBUG] Browser debugger attached')
                 }
                 else {
-                  log.error('[DEBUG] Secondary debug launch config failed')
+                  log.error('[DEBUG] Browser debugger failed to attach')
                 }
               },
               (error) => {
