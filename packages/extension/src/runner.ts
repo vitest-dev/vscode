@@ -11,6 +11,7 @@ import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
+import { getConfig } from './config'
 import { coverageContext, readCoverageReport } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
@@ -29,6 +30,8 @@ export class TestRunner extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
 
   private cancelled = false
+
+  private disableInlineConsoleLog = getConfig().disableInlineConsoleLog
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -163,8 +166,9 @@ export class TestRunner extends vscode.Disposable {
       const testRun = this.testRun
       if (testRun) {
         // Create location from parsed console log for inline display
+        // Only set location if inline console logs are not disabled
         let location: vscode.Location | undefined
-        if (consoleLog.parsedLocation) {
+        if (consoleLog.parsedLocation && !this.disableInlineConsoleLog) {
           const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
           const position = new vscode.Position(
             consoleLog.parsedLocation.line,
@@ -183,6 +187,15 @@ export class TestRunner extends vscode.Disposable {
         log.info('[TEST]', consoleLog.content)
       }
     })
+
+    // Listen to configuration changes
+    this.disposables.push(
+      vscode.workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration('vitest.disableInlineConsoleLog')) {
+          this.disableInlineConsoleLog = getConfig().disableInlineConsoleLog
+        }
+      }),
+    )
   }
 
   protected endTestRun() {

@@ -267,6 +267,11 @@
           "description": "Show how long it took to import the module during the last test run. If multiple isolated tests imported the module, the times will be aggregated.",
           "type": "boolean",
           "default": true
+        },
+        "vitest.disableInlineConsoleLog": {
+          "description": "Disable inline display of console.log messages in the editor. When enabled, console logs will still appear in the test output but not inline next to the code.",
+          "type": "boolean",
+          "default": false
         }
       }
     }
