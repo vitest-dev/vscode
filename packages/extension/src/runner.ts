@@ -31,7 +31,7 @@ export class TestRunner extends vscode.Disposable {
 
   private cancelled = false
 
-  private disableInlineConsoleLog: boolean
+  private disableInlineConsoleLog = false
 
   constructor(
     private readonly controller: vscode.TestController,
