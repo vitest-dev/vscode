@@ -31,7 +31,7 @@ export class TestRunner extends vscode.Disposable {
 
   private cancelled = false
 
-  private disableInlineConsoleLog = false
+  private showInlineConsoleLog = true
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -53,7 +53,7 @@ export class TestRunner extends vscode.Disposable {
     })
 
     // Initialize with workspace-specific config
-    this.disableInlineConsoleLog = getConfig(api.workspaceFolder).disableInlineConsoleLog
+    this.showInlineConsoleLog = getConfig(api.workspaceFolder).showInlineConsoleLog
 
     api.onStdout((content) => {
       if (this.testRun) {
@@ -169,9 +169,9 @@ export class TestRunner extends vscode.Disposable {
       const testRun = this.testRun
       if (testRun) {
         // Create location from parsed console log for inline display
-        // Only set location if inline console logs are not disabled
+        // Only set location if inline console logs are enabled
         let location: vscode.Location | undefined
-        if (consoleLog.parsedLocation && !this.disableInlineConsoleLog) {
+        if (consoleLog.parsedLocation && this.showInlineConsoleLog) {
           const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
           const position = new vscode.Position(
             consoleLog.parsedLocation.line,
@@ -194,8 +194,8 @@ export class TestRunner extends vscode.Disposable {
     // Listen to configuration changes
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('vitest.disableInlineConsoleLog', api.workspaceFolder.uri)) {
-          this.disableInlineConsoleLog = getConfig(api.workspaceFolder).disableInlineConsoleLog
+        if (event.affectsConfiguration('vitest.showInlineConsoleLog', api.workspaceFolder.uri)) {
+          this.showInlineConsoleLog = getConfig(api.workspaceFolder).showInlineConsoleLog
         }
       }),
     )

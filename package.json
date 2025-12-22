@@ -270,10 +270,10 @@
           "default": true,
           "scope": "resource"
         },
-        "vitest.disableInlineConsoleLog": {
-          "description": "Disable inline display of console.log messages in the editor. When enabled, console logs will still appear in the test output but not inline next to the code.",
+        "vitest.showInlineConsoleLog": {
+          "description": "Show inline console.log messages in the editor. When disabled, console logs will still appear in the test output but not inline next to the code.",
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "resource"
         }
       }
