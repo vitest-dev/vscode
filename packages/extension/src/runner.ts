@@ -31,7 +31,7 @@ export class TestRunner extends vscode.Disposable {
 
   private cancelled = false
 
-  private disableInlineConsoleLog = getConfig().disableInlineConsoleLog
+  private disableInlineConsoleLog: boolean
 
   constructor(
     private readonly controller: vscode.TestController,
@@ -51,6 +51,9 @@ export class TestRunner extends vscode.Disposable {
       this.disposables.forEach(d => d.dispose())
       this.disposables = []
     })
+
+    // Initialize with workspace-specific config
+    this.disableInlineConsoleLog = getConfig(api.workspaceFolder).disableInlineConsoleLog
 
     api.onStdout((content) => {
       if (this.testRun) {
@@ -191,8 +194,8 @@ export class TestRunner extends vscode.Disposable {
     // Listen to configuration changes
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('vitest.disableInlineConsoleLog')) {
-          this.disableInlineConsoleLog = getConfig().disableInlineConsoleLog
+        if (event.affectsConfiguration('vitest.disableInlineConsoleLog', api.workspaceFolder.uri)) {
+          this.disableInlineConsoleLog = getConfig(api.workspaceFolder).disableInlineConsoleLog
         }
       }),
     )
