@@ -151,11 +151,11 @@ export class VSCodeReporter implements Reporter {
     //
     // Note: This is too late to enable the inspector itself, but we can still add setup files
     //
-    const isBrowserEnabled = vitest.projects.some(project => project.config.browser?.enabled)
-
-    if (isBrowserEnabled && this.debug !== undefined && typeof this.debug === 'object') {
+    if (this.debug !== undefined && typeof this.debug === 'object') {
       vitest.projects.forEach((project) => {
-        project.config.setupFiles.push(this.setupFilePaths.browserDebug)
+        if (project.config.browser?.enabled) {
+          project.config.setupFiles.push(this.setupFilePaths.browserDebug)
+        }
       })
     }
   }
