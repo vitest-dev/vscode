@@ -16,6 +16,7 @@ export async function initVitest(
   const meta = data.meta
   const reporter = new VSCodeReporter({
     setupFilePaths: meta.setupFilePaths,
+    debug: data.debug,
   })
 
   let stdout: Writable | undefined
@@ -78,6 +79,9 @@ export async function initVitest(
           meta.pnpLoader,
         ]
       : [],
+    inspect: typeof data.debug === 'object'
+      ? `${data.debug.host}:${data.debug.port}`
+      : undefined,
   }
   const vitest = await vitestModule.createVitest(
     'test',
@@ -120,19 +124,6 @@ export async function initVitest(
                 on: () => {},
                 off: () => {},
               } as any,
-            }
-          },
-          configureVitest(context) {
-            const options = context.project.config.browser
-            if (options?.enabled && typeof data.debug === 'object') {
-              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
-              context.vitest.config.inspector = {
-                enabled: true,
-                port: data.debug.port,
-                host: data.debug.host,
-                waitForDebugger: false,
-              }
-              context.project.config.inspector = context.vitest.config.inspector
             }
           },
           api: {

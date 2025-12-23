@@ -1,5 +1,5 @@
 import type { RunnerTaskResultPack, UserConsoleLog } from 'vitest'
-import type { VitestWorkerRPC, WorkerInitMetadata } from 'vitest-vscode-shared'
+import type { VitestWorkerRPC, WorkerInitMetadata, WorkerRunnerOptions } from 'vitest-vscode-shared'
 import type {
   BrowserCommand,
   Reporter,
@@ -15,6 +15,7 @@ import { ExtensionWorker } from './worker'
 
 interface VSCodeReporterOptions {
   setupFilePaths: WorkerInitMetadata['setupFilePaths']
+  debug: WorkerRunnerOptions['debug']
 }
 
 export class VSCodeReporter implements Reporter {
@@ -22,13 +23,17 @@ export class VSCodeReporter implements Reporter {
   private vitest!: VitestCore
 
   private setupFilePaths: WorkerInitMetadata['setupFilePaths']
+  private debug: WorkerRunnerOptions['debug']
 
   constructor(options: VSCodeReporterOptions) {
     this.setupFilePaths = options.setupFilePaths
+    this.debug = options.debug
   }
 
   onInit(vitest: VitestCore) {
     this.vitest = vitest
+    this.configureBrowserDebugging(vitest)
+
     vitest.projects.forEach((project) => {
       this.ensureSetupFileIsAllowed(project.vite.config)
     })
@@ -140,6 +145,19 @@ export class VSCodeReporter implements Reporter {
         config.server.fs.allow.push(filepath)
       }
     })
+  }
+
+  configureBrowserDebugging(vitest: VitestCore) {
+    //
+    // Note: This is too late to enable the inspector itself, but we can still add setup files
+    //
+    if (this.debug !== undefined && typeof this.debug === 'object') {
+      vitest.projects.forEach((project) => {
+        if (project.config.browser?.enabled) {
+          project.config.setupFiles.push(this.setupFilePaths.browserDebug)
+        }
+      })
+    }
   }
 
   toJSON() {
