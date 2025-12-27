@@ -72,6 +72,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const debugOutFiles = get<string[]>('debugOutFiles', [])
   const applyDiagnostic = get<boolean>('applyDiagnostic', true)
   const ignoreWorkspace = get<boolean>('ignoreWorkspace', false) ?? false
+  const showInlineConsoleLog = get<boolean>('showInlineConsoleLog', true) ?? true
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
@@ -98,6 +99,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     debuggerAddress: get<string>('debuggerAddress', undefined) || undefined,
     logLevel,
     showImportsDuration: get<boolean>('showImportsDuration', true) ?? true,
+    showInlineConsoleLog,
   }
 }
 

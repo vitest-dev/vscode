@@ -261,12 +261,20 @@
         "vitest.applyDiagnostic": {
           "description": "Show a squiggly line where the error was thrown. This also enables the error count in the File Tab.",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "resource"
         },
         "vitest.showImportsDuration": {
           "description": "Show how long it took to import the module during the last test run. If multiple isolated tests imported the module, the times will be aggregated.",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "resource"
+        },
+        "vitest.showInlineConsoleLog": {
+          "description": "Show inline console.log messages in the editor. When disabled, console logs will still appear in the test output but not inline next to the code.",
+          "type": "boolean",
+          "default": true,
+          "scope": "resource"
         }
       }
     }
