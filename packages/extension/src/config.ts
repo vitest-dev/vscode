@@ -76,6 +76,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
+    debugEnv: get<null | Record<string, string>>('debugNodeEnv', null),
     debugExclude: get<string[]>('debugExclude'),
     debugOutFiles,
     filesWatcherInclude,
