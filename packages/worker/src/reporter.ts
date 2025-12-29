@@ -25,7 +25,7 @@ export class VSCodeReporter implements Reporter {
   private setupFilePaths: WorkerInitMetadata['setupFilePaths']
   private debug: WorkerRunnerOptions['debug']
 
-  private debuggerAttached: boolean = false
+  private debuggerAttached: boolean | undefined = undefined
 
   constructor(options: VSCodeReporterOptions) {
     this.setupFilePaths = options.setupFilePaths
@@ -51,16 +51,28 @@ export class VSCodeReporter implements Reporter {
 
     const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
       return new Promise<void>((resolve, reject) => {
-        //
-        // If we have already attached, resolve immediately
-        //
-        if (this.debuggerAttached) {
-          resolve()
-          return
+        if (this.debuggerAttached !== undefined) {
+          //
+          // An attachment attempt has already been made
+          //
+          if (this.debuggerAttached) {
+            //
+            // Already attached, resolve immediately
+            //
+            resolve()
+            return
+          }
+          else if (this.debuggerAttached === false) {
+            //
+            // Already failed to attach
+            //
+            reject(new Error(`Browser Debugger failed to connect.`))
+            return
+          }
         }
 
         //
-        // We haven't attached yet, wait for the event
+        // We haven't tried to attach yet, wait for the event
         //
         ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
           if (fullfilled) {
