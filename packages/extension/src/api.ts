@@ -120,6 +120,7 @@ export class VitestFolderAPI {
   readonly workspaceFolder: vscode.WorkspaceFolder
 
   private handlers: ResolvedMeta['handlers']
+  private packageCwds: string[] = []
 
   public createDate = Date.now()
 
@@ -132,6 +133,10 @@ export class VitestFolderAPI {
     this.workspaceFolder = pkg.folder
     this.handlers = meta.handlers
     this.tag = new vscode.TestTag(pkg.prefix)
+  }
+
+  setPackageCwds(cwds: string[]) {
+    this.packageCwds = cwds
   }
 
   get processId() {
@@ -183,7 +188,22 @@ export class VitestFolderAPI {
   }
 
   getFiles() {
-    return this.meta.rpc.getFiles()
+    const files = this.meta.rpc.getFiles()
+    const isWorkspace = !!this.package.workspaceFile && !this.package.configFile
+
+    if (isWorkspace && this.packageCwds.length > 0) {
+      // Filter out files that belong to packages with their own configs
+      return files.then((fileList) => {
+        return fileList.filter(([file]) => {
+          const normalizedFile = normalize(file)
+          // Keep file if it's not in any package directory
+          const isInPackageDir = this.packageCwds.some(cwd => normalizedFile.startsWith(cwd))
+          return !isInPackageDir
+        })
+      })
+    }
+
+    return files
   }
 
   onFileCreated = createQueuedHandler(async (files: string[]) => {
@@ -379,6 +399,17 @@ export async function resolveVitestAPI(workspaceConfigs: VitestPackage[], config
     log.error('There were errors during config load.')
     errors.forEach(e => log.error(e))
     showVitestError('The extension could not load some configs')
+  }
+
+  // Collect package cwds and set them on workspace APIs for filtering
+  const packageCwds = apis
+    .filter(api => !!api.package.configFile && !api.package.workspaceFile)
+    .map(api => normalize(api.package.cwd))
+
+  if (packageCwds.length > 0) {
+    apis
+      .filter(api => !!api.package.workspaceFile && !api.package.configFile)
+      .forEach(api => api.setPackageCwds(packageCwds))
   }
 
   return new VitestAPI(apis)
