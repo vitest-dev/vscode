@@ -25,6 +25,8 @@ export class VSCodeReporter implements Reporter {
   private setupFilePaths: WorkerInitMetadata['setupFilePaths']
   private debug: WorkerRunnerOptions['debug']
 
+  private debuggerAttached: boolean | undefined = undefined
+
   constructor(options: VSCodeReporterOptions) {
     this.setupFilePaths = options.setupFilePaths
     this.debug = options.debug
@@ -49,6 +51,29 @@ export class VSCodeReporter implements Reporter {
 
     const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
       return new Promise<void>((resolve, reject) => {
+        if (this.debuggerAttached !== undefined) {
+          //
+          // An attachment attempt has already been made
+          //
+          if (this.debuggerAttached) {
+            //
+            // Already attached, resolve immediately
+            //
+            resolve()
+            return
+          }
+          else if (this.debuggerAttached === false) {
+            //
+            // Already failed to attach
+            //
+            reject(new Error(`Browser Debugger failed to connect.`))
+            return
+          }
+        }
+
+        //
+        // We haven't tried to attach yet, wait for the event
+        //
         ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
           if (fullfilled) {
             resolve()
@@ -148,6 +173,13 @@ export class VSCodeReporter implements Reporter {
   }
 
   configureBrowserDebugging(vitest: VitestCore) {
+    //
+    // Listen for debugger attachment events as soon as possible to prevent a deadlock
+    //
+    ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
+      this.debuggerAttached = fullfilled
+    })
+
     //
     // Note: This is too late to enable the inspector itself, but we can still add setup files
     //
