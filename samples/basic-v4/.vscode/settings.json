@@ -5,5 +5,9 @@
   "vitest.experimentalStaticAstCollect": true,
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "vitest.debugNodeEnv": {
+    "TEST_CUSTOM_ENV": "hello new",
+    "TEST_CUSTOM_ENV_2": "world"
   }
 }

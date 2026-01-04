@@ -207,6 +207,15 @@
           "type": "array",
           "scope": "resource"
         },
+        "vitest.debugNodeEnv": {
+          "markdownDescription": "The env passed to runner process in addition to `process.env` and `vitest.nodeEnv` when debugging tests",
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "scope": "window"
+        },
         "vitest.nodeEnv": {
           "markdownDescription": "The env passed to runner process in addition to `process.env`",
           "type": [
