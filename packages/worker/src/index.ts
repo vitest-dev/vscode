@@ -105,8 +105,9 @@ export async function initVitest(
               ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
             ]
 
-            // IMPORTANT: Respect user's test reporters and add ours
-            const userReporters = testConfig.reporters || []
+            const rawReporters = testConfig.reporters
+            const userReporters = (Array.isArray(rawReporters) ? rawReporters : (rawReporters ? [rawReporters] : []))
+              .filter((r: string) => r !== 'html')
             const hasReporters = userReporters.length > 0
 
             return {
@@ -116,9 +117,10 @@ export async function initVitest(
                   reportOnFailure: true,
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
                 },
-                // Add our reporter to user's reporters (or to default if none configured)
+                // If user already has reporters, we only return ours and let Vitest merge it.
+                // This prevents duplication since Vite merges arrays by appending.
                 reporters: hasReporters
-                  ? [...userReporters, reporter]
+                  ? [reporter]
                   : ['default', reporter],
               },
               // TODO: type is not augmented
