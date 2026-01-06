@@ -797,7 +797,7 @@ function formatTestPattern(tests: readonly vscode.TestItem[]) {
 }
 
 function formatTestOutput(output: string) {
-  return stripVTControlCharacters(output.replace(/(?<!\r)\n/g, '\r\n'))
+  return output.replace(/(?<!\r)\n/g, '\r\n')
 }
 
 function labelTestItems(items: readonly vscode.TestItem[] | undefined) {
