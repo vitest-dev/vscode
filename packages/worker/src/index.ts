@@ -112,7 +112,6 @@ export async function initVitest(
 
             return {
               test: {
-                printConsoleTrace: true,
                 coverage: {
                   reportOnFailure: true,
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
