@@ -33,6 +33,7 @@ export function createRpcOptions() {
     onCollected: createHandler<ExtensionWorkerEvents['onCollected']>(),
     onTestRunStart: createHandler<ExtensionWorkerEvents['onTestRunStart']>(),
     onTestRunEnd: createHandler<ExtensionWorkerEvents['onTestRunEnd']>(),
+    onProcessLog: createHandler<ExtensionWorkerEvents['onProcessLog']>(),
   }
 
   const events: Omit<ExtensionWorkerEvents, 'onReady' | 'onError'> = {
@@ -42,6 +43,7 @@ export function createRpcOptions() {
     onCollected: handlers.onCollected.trigger,
     onTestRunStart: handlers.onTestRunStart.trigger,
     onProcessLog(type, message) {
+      handlers.onProcessLog.trigger(type, message)
       log.worker(type === 'stderr' ? 'error' : 'info', stripVTControlCharacters(message))
     },
   }
@@ -54,12 +56,18 @@ export function createRpcOptions() {
       onTestRunEnd: handlers.onTestRunEnd.register,
       onCollected: handlers.onCollected.register,
       onTestRunStart: handlers.onTestRunStart.register,
+      onProcessLog: handlers.onProcessLog.register,
       removeListener(name: string, listener: any) {
         handlers[name as 'onCollected']?.remove(listener)
       },
       clearListeners() {
-        for (const name in handlers)
-          handlers[name as 'onCollected']?.clear()
+        // Clear all handlers except onProcessLog, which needs to persist
+        // across test runs to forward stdout from Vitest to the extension
+        handlers.onConsoleLog.clear()
+        handlers.onTaskUpdate.clear()
+        handlers.onCollected.clear()
+        handlers.onTestRunStart.clear()
+        handlers.onTestRunEnd.clear()
       },
     },
   }

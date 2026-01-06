@@ -95,11 +95,14 @@ export async function createVitestProcess(pkg: VitestPackage) {
         resolved.handlers.onStdout = (callback: (data: string) => void) => {
           stdoutCallbacks.add(callback)
         }
-        const clearListeners = resolved.handlers.clearListeners
-        resolved.handlers.clearListeners = () => {
-          clearListeners()
-          stdoutCallbacks.clear()
-        }
+
+        // Forward RPC process logs to the same stdout callbacks
+        resolved.handlers.onProcessLog((type: 'stdout' | 'stderr', message: string) => {
+          if (type === 'stdout') {
+            stdoutCallbacks.forEach(cb => cb(message))
+          }
+        })
+
         resolve({
           ...resolved,
           process: new ExtensionChildProcess(vitest, server, resolved.ws),

@@ -160,36 +160,15 @@ export class TestRunner extends vscode.Disposable {
       if (unhandledError)
         testRun.appendOutput(formatTestOutput(unhandledError))
 
-      if (!collecting)
-        this.endTestRun()
-    })
-
-    api.onConsoleLog((consoleLog) => {
-      const testItem = consoleLog.taskId ? tree.getTestItemByTaskId(consoleLog.taskId) : undefined
-      const testRun = this.testRun
-      if (testRun) {
-        // Create location from parsed console log for inline display
-        // Only set location if inline console logs are enabled
-        let location: vscode.Location | undefined
-        if (consoleLog.parsedLocation && this.showInlineConsoleLog) {
-          const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
-          const position = new vscode.Position(
-            consoleLog.parsedLocation.line,
-            consoleLog.parsedLocation.column,
-          )
-          location = new vscode.Location(uri, position)
-        }
-
-        testRun.appendOutput(
-          formatTestOutput(consoleLog.content) + (consoleLog.browser ? '\r\n' : ''),
-          location,
-          testItem,
-        )
-      }
-      else {
-        log.info('[TEST]', consoleLog.content)
+      // Signal that the test run is complete, but DON'T set this.testRun to undefined yet
+      // The testRun will be properly ended in the finally block of startTestRun
+      if (!collecting) {
+        this.testRunDefer?.resolve()
       }
     })
+
+    // Skip individual console logs since DefaultReporter already includes them
+    // api.onConsoleLog((consoleLog) => { ... }
 
     // Listen to configuration changes
     this.disposables.push(
@@ -449,9 +428,26 @@ export class TestRunner extends vscode.Disposable {
     const run = this.testRun = this.controller.createTestRun(request, name)
     this.testRunRequest = request
     this.testRunDefer = Promise.withResolvers()
+
+    // Show the equivalent CLI command for debugging/reproducibility
+    const fileList = files.map(f => this.relative(f)).join(' ')
+    const pattern = formatTestPattern(request.include || [])
+    let vitestCmd = 'vitest'
+    if (fileList) {
+      vitestCmd += ` ${fileList}`
+    }
+    if (pattern) {
+      vitestCmd += ` -t "${pattern}"`
+    }
+    run.appendOutput(`\x1B[36m\x1B[1m[command]\x1B[0m ${vitestCmd}\r\n\r\n`)
+
     // run the next test when this one finished, or cancell or test runs if they were cancelled
     this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
       run.end()
+      this.testRun = undefined
+      this.testRunDefer = undefined
+      this.testRunRequest = undefined
+
       if (this.cancelled) {
         log.verbose?.('Not starting a new test run because the previous one was cancelled manually.')
         this.scheduleTestRunsQueue.forEach(item => item.resolveWithoutRunning())

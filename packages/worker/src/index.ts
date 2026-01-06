@@ -68,7 +68,6 @@ export async function initVitest(
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
-    reporters: [reporter],
     ui: false,
     includeTaskLocation: true,
     execArgv: meta.pnpApi && meta.pnpLoader
@@ -105,6 +104,11 @@ export async function initVitest(
             coverageOptions.reporter = [
               ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
             ]
+
+            // IMPORTANT: Respect user's test reporters and add ours
+            const userReporters = testConfig.reporters || []
+            const hasReporters = userReporters.length > 0
+
             return {
               test: {
                 printConsoleTrace: true,
@@ -112,6 +116,10 @@ export async function initVitest(
                   reportOnFailure: true,
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
                 },
+                // Add our reporter to user's reporters (or to default if none configured)
+                reporters: hasReporters
+                  ? [...userReporters, reporter]
+                  : ['default', reporter],
               },
               // TODO: type is not augmented
             } as any
@@ -135,10 +143,6 @@ export async function initVitest(
           },
         },
       ],
-    },
-    {
-      stderr,
-      stdout,
     },
   )
   await (vitest as any).report('onInit', vitest)
