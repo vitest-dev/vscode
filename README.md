@@ -1,5 +1,10 @@
 <p align="center">
-  <a title="Learn more about Vitest extension for Visual Studio Code" href="https://github.com/vitest-dev/vscode"><img src="./img/cover.png" alt="Vitest extension for Visual Studio Code logo" width="50%" /></a>
+  <a title="Learn more about Vitest extension for Visual Studio Code" href="https://github.com/vitest-dev/vscode">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./img/cover-light.png">
+      <source media="(prefers-color-scheme: light)" srcset="./img/cover-dark.png">
+      <img alt="Vitest extension for Visual Studio Code logo" width="50%" src="./img/cover-dark.png">
+    </picture></a>
 </p>
 
 <h1 align="center">Vitest extension for Visual Studio Code. Available on <a href="https://marketplace.visualstudio.com/items?itemName=vitest.explorer">Visual Studio Marketplace</a>.</h1>
