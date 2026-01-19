@@ -68,7 +68,6 @@ export async function initVitest(
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
-    reporters: [reporter],
     ui: false,
     includeTaskLocation: true,
     execArgv: meta.pnpApi && meta.pnpLoader
@@ -105,13 +104,23 @@ export async function initVitest(
             coverageOptions.reporter = [
               ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
             ]
+
+            const rawReporters = testConfig.reporters
+            const userReporters = (Array.isArray(rawReporters) ? rawReporters : (rawReporters ? [rawReporters] : []))
+              .filter((r: string) => r !== 'html')
+            const hasReporters = userReporters.length > 0
+
             return {
               test: {
-                printConsoleTrace: true,
                 coverage: {
                   reportOnFailure: true,
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
                 },
+                // If user already has reporters, we only return ours and let Vitest merge it.
+                // This prevents duplication since Vite merges arrays by appending.
+                reporters: hasReporters
+                  ? [reporter]
+                  : ['default', reporter],
               },
               // TODO: type is not augmented
             } as any
@@ -135,10 +144,6 @@ export async function initVitest(
           },
         },
       ],
-    },
-    {
-      stderr,
-      stdout,
     },
   )
   await (vitest as any).report('onInit', vitest)
