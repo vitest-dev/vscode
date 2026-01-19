@@ -347,7 +347,7 @@ export class DebugManager {
 function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.TestRunRequest) {
   let provider: string | undefined
   let browser: string | undefined
-  const webRootsFound: Array<string> = []
+  const webRootsFound: Set<string> = new Set()
 
   function traverse(testItem: vscode.TestItem) {
     const data = getTestData(testItem)
@@ -382,11 +382,7 @@ function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.
 
       provider = options.provider
       browser = options.name
-      if (options.webRoot !== undefined) {
-        if (!webRootsFound.includes(options.webRoot)) {
-          webRootsFound.push(options.webRoot)
-        }
-      }
+      webRootsFound.add(options.webRoot)
     }
     else if (data instanceof TestFolder) {
       testItem.children.forEach(traverse)
@@ -406,10 +402,10 @@ function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.
   }
 
   let webRoot: string | undefined
-  if (webRootsFound.length === 1) {
-    webRoot = webRootsFound[0]
+  if (webRootsFound.size === 1) {
+    [webRoot] = webRootsFound // Grab the first (and only) value
   }
-  else if (webRootsFound.length > 1) {
+  else if (webRootsFound.size > 1) {
     log.info('[DEBUG] Multiple webRoots found for browser debugging. Breakpoints in source code may not work as expected. Try debugging again by selecting specific tests or test files to debug.')
   }
 
