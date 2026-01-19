@@ -199,6 +199,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
             ? {
                 provider: config.browser.provider || 'preview',
                 name: config.browser.name,
+                webRoot: config.root,
               }
             : undefined,
         },

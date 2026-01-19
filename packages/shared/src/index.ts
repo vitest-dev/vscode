@@ -20,6 +20,7 @@ export interface ExtensionTestFileMetadata {
   browser?: {
     provider: string
     name: string
+    webRoot: string
   }
 }
 

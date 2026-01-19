@@ -24,6 +24,7 @@ export class ExtensionWorkerRunner {
             ? {
                 provider: config.browser.provider?.name || 'preview',
                 name: config.browser.name,
+                webRoot: config.root,
               }
             : undefined,
         },

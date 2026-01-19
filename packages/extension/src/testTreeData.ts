@@ -53,6 +53,7 @@ export interface TestFileMetadata {
   browser?: {
     provider: string
     name: string
+    webRoot: string
   }
 }
 
