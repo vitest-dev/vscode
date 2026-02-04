@@ -39,64 +39,6 @@ export class InlineConsoleLogManager extends vscode.Disposable {
       }),
     )
 
-    // Update decorations when document changes
-    this.disposables.push(
-      vscode.workspace.onDidChangeTextDocument((event) => {
-        const file = event.document.uri.fsPath
-        const fileMap = this.consoleLogsByFile.get(file)
-
-        if (!fileMap || fileMap.size === 0) {
-          return
-        }
-
-        // Adjust line numbers based on document changes
-        for (const change of event.contentChanges) {
-          const startLine = change.range.start.line
-          const endLine = change.range.end.line
-          const newLineCount = change.text.split('\n').length - 1
-          const oldLineCount = endLine - startLine
-
-          // Calculate the net change in line numbers
-          const lineDelta = newLineCount - oldLineCount
-
-          if (lineDelta !== 0) {
-            // Create a new map with adjusted line numbers
-            const newFileMap = new Map<number, ConsoleLogEntry[]>()
-
-            fileMap.forEach((entries, line) => {
-              let newLine = line
-
-              // If the console log is after the change, adjust its line number
-              if (line > endLine) {
-                newLine = line + lineDelta
-              }
-              // If the console log is within the changed range, keep it at the start of the change
-              else if (line >= startLine && line <= endLine) {
-                newLine = startLine + newLineCount
-              }
-
-              // Ensure line number is valid
-              if (newLine >= 0) {
-                if (!newFileMap.has(newLine)) {
-                  newFileMap.set(newLine, [])
-                }
-                newFileMap.get(newLine)!.push(...entries)
-              }
-            })
-
-            this.consoleLogsByFile.set(file, newFileMap)
-          }
-        }
-
-        // Update all visible editors showing this file
-        vscode.window.visibleTextEditors.forEach((editor) => {
-          if (editor.document === event.document) {
-            this.updateDecorations(editor)
-          }
-        })
-      }),
-    )
-
     // Update decorations when configuration changes
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((event) => {
