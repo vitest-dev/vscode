@@ -1,7 +1,7 @@
 import type { VitestAPI } from './api'
 import { normalize } from 'pathe'
 import * as vscode from 'vscode'
-import { version } from '../package.json'
+import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
 import { resolveVitestPackages } from './api/pkg'
 import { ExtensionTerminalProcess } from './api/terminal'
@@ -299,10 +299,16 @@ class VitestExtension {
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (reloadConfigNames.some(x => event.affectsConfiguration(x)))
-          this.defineTestProfiles(false)
+        const configName = reloadConfigNames.find(x => event.affectsConfiguration(x))
+        if (configName) {
+          this.defineTestProfiles(false).catch((error) => {
+            log.error('[API]', `Failed to reload Vitest after "${configName}" has changed`, error)
+          })
+        }
       }),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false).catch((error) => {
+        log.error('[API]', `Failed to reload Vitest after workspaces changed`, error)
+      })),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
       }),

@@ -55,9 +55,9 @@ export class TestRunner extends vscode.Disposable {
     // Initialize with workspace-specific config
     this.showInlineConsoleLog = getConfig(api.workspaceFolder).showInlineConsoleLog
 
-    api.onStdout((content) => {
+    log.onWorkerLog((message) => {
       if (this.testRun) {
-        this.testRun.appendOutput(formatTestOutput(content))
+        this.testRun.appendOutput(formatTestOutput(message))
       }
     })
 
@@ -164,32 +164,32 @@ export class TestRunner extends vscode.Disposable {
         this.endTestRun()
     })
 
-    api.onConsoleLog((consoleLog) => {
-      const testItem = consoleLog.taskId ? tree.getTestItemByTaskId(consoleLog.taskId) : undefined
-      const testRun = this.testRun
-      if (testRun) {
-        // Create location from parsed console log for inline display
-        // Only set location if inline console logs are enabled
-        let location: vscode.Location | undefined
-        if (consoleLog.parsedLocation && this.showInlineConsoleLog) {
-          const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
-          const position = new vscode.Position(
-            consoleLog.parsedLocation.line,
-            consoleLog.parsedLocation.column,
-          )
-          location = new vscode.Location(uri, position)
-        }
+    // api.onConsoleLog((consoleLog) => {
+    //   const testItem = consoleLog.taskId ? tree.getTestItemByTaskId(consoleLog.taskId) : undefined
+    //   const testRun = this.testRun
+    //   if (testRun) {
+    //     // Create location from parsed console log for inline display
+    //     // Only set location if inline console logs are enabled
+    //     let location: vscode.Location | undefined
+    //     if (consoleLog.parsedLocation && this.showInlineConsoleLog) {
+    //       const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
+    //       const position = new vscode.Position(
+    //         consoleLog.parsedLocation.line,
+    //         consoleLog.parsedLocation.column,
+    //       )
+    //       location = new vscode.Location(uri, position)
+    //     }
 
-        testRun.appendOutput(
-          formatTestOutput(consoleLog.content) + (consoleLog.browser ? '\r\n' : ''),
-          location,
-          testItem,
-        )
-      }
-      else {
-        log.info('[TEST]', consoleLog.content)
-      }
-    })
+    //     testRun.appendOutput(
+    //       formatTestOutput(consoleLog.content) + (consoleLog.browser ? '\r\n' : ''),
+    //       location,
+    //       testItem,
+    //     )
+    //   }
+    //   else {
+    //     log.info('[TEST]', consoleLog.content)
+    //   }
+    // })
 
     // Listen to configuration changes
     this.disposables.push(
@@ -797,7 +797,7 @@ function formatTestPattern(tests: readonly vscode.TestItem[]) {
 }
 
 function formatTestOutput(output: string) {
-  return stripVTControlCharacters(output.replace(/(?<!\r)\n/g, '\r\n'))
+  return output.replace(/(?<!\r)\n/g, '\r\n')
 }
 
 function labelTestItems(items: readonly vscode.TestItem[] | undefined) {

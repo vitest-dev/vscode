@@ -6,7 +6,6 @@ import type { ExtensionWorkerProcess } from './types'
 import type { WsConnectionMetadata } from './ws'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import { stripVTControlCharacters } from 'node:util'
 import getPort from 'get-port'
 import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
@@ -36,6 +35,8 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
     shellPath: config.terminalShellPath,
     env: {
       ...env,
+      // Mark as CI to disable TTY
+      CI: 'true',
       VITEST_VSCODE_LOG: env.VITEST_VSCODE_LOG ?? process.env.VITEST_VSCODE_LOG ?? config.logLevel,
       VITEST_WS_ADDRESS: wsAddress,
       VITEST_VSCODE: 'true',
@@ -83,11 +84,13 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
         return
       }
 
+      // TODO: terminal output is received _after_ the test run
+      // This is probably easier to fix when rewriting
       log.info('[TERMINAL] Reporting the shell output.')
       for await (const line of e.execution.read()) {
-        log.worker('info', stripVTControlCharacters(line))
-        onWriteShell.dispose()
+        log.worker('info', line)
       }
+      onWriteShell.dispose()
     })
 
     const onEndShell = vscode.window.onDidEndTerminalShellExecution((e) => {
@@ -112,7 +115,11 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
     wss.once('connection', () => {
       clearTimeout(timeout)
     })
-    waitForWsConnection(wss, pkg, 'terminal', !!shellIntegration).then(resolve, reject)
+    waitForWsConnection(wss, pkg, 'terminal').then(resolve, reject)
+  })
+
+  meta.handlers.onProcessLog((type, message) => {
+    log.worker(type === 'stderr' ? 'error' : 'info', message)
   })
 
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)

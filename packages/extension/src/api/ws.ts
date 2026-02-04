@@ -18,7 +18,6 @@ export function waitForWsConnection(
   wss: WebSocketServer,
   pkg: VitestPackage,
   shellType: 'terminal' | 'child_process',
-  hasShellIntegration: boolean,
 ) {
   return new Promise<WsConnectionMetadata>((resolve, reject) => {
     wss.once('connection', (ws) => {
@@ -27,7 +26,6 @@ export function waitForWsConnection(
         pkg,
         false,
         shellType,
-        hasShellIntegration,
         meta => resolve(meta),
         err => reject(err),
       )
@@ -54,7 +52,6 @@ export function onWsConnection(
   pkg: VitestPackage,
   debug: WorkerRunnerDebugOptions | boolean,
   shellType: 'terminal' | 'child_process',
-  hasShellIntegration: boolean,
   onStart: (meta: WsConnectionMetadata) => unknown,
   onFail: (err: Error) => unknown,
 ) {
@@ -83,12 +80,7 @@ export function onWsConnection(
       onStart({
         rpc: api,
         workspaceSource: message.workspaceSource,
-        handlers: {
-          ...handlers,
-          onStdout() {
-            // do nothing by default
-          },
-        },
+        handlers,
         configs: message.configs,
         ws,
         pkg,
@@ -127,7 +119,6 @@ export function onWsConnection(
     type: 'init',
     meta: {
       shellType,
-      hasShellIntegration,
       vitestNodePath: pkg.vitestNodePath,
       env: getConfig(pkg.folder).env || undefined,
       configFile: pkg.configFile,

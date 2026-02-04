@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Writable } from 'node:stream'
+import { toArray } from '@vitest/utils/helpers'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -22,14 +23,12 @@ export async function initVitest(
   let stdout: Writable | undefined
   let stderr: Writable | undefined
 
-  if ((meta.shellType === 'terminal' && !meta.hasShellIntegration) || data.debug != null) {
+  if (data.debug) {
     stdout = new Writable({
       write(chunk, __, callback) {
         const log = chunk.toString()
-        if (reporter.rpc) {
-          reporter.rpc.onProcessLog('stdout', log).catch(() => {})
-        }
-        process.stdout.write(log)
+        reporter.sendTerminalLog('stdout', log)
+        // process.stdout.write(log)
         callback()
       },
     })
@@ -37,10 +36,8 @@ export async function initVitest(
     stderr = new Writable({
       write(chunk, __, callback) {
         const log = chunk.toString()
-        if (reporter.rpc) {
-          reporter.rpc.onProcessLog('stderr', log).catch(() => {})
-        }
-        process.stderr.write(log)
+        reporter.sendTerminalLog('stderr', log)
+        // process.stderr.write(log)
         callback()
       },
     })
@@ -68,7 +65,6 @@ export async function initVitest(
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
-    reporters: [reporter],
     ui: false,
     includeTaskLocation: true,
     execArgv: meta.pnpApi && meta.pnpLoader
@@ -95,16 +91,26 @@ export async function initVitest(
         {
           name: 'vitest:vscode-extension',
           config(userConfig) {
-            const testConfig = (userConfig as any).test ?? {}
-            const coverageOptions = (testConfig.coverage ?? {}) as CoverageIstanbulOptions
-            const reporters = Array.isArray(coverageOptions.reporter)
+            userConfig.test ??= {}
+
+            const testConfig = userConfig.test
+            const coverageOptions = (testConfig.coverage ??= {}) as CoverageIstanbulOptions
+            const coverageReporters = coverageOptions.reporter && Array.isArray(coverageOptions.reporter)
               ? coverageOptions.reporter
               : [coverageOptions.reporter]
-            const jsonReporter = reporters.find(r => r && r[0] === 'json')
+            const jsonReporter = coverageReporters.find(r => r && r[0] === 'json')
             const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
             coverageOptions.reporter = [
               ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
             ]
+
+            const testReporters = toArray(userConfig.test.reporters)
+            if (!testReporters.length) {
+              testReporters.push(['default', { isTTY: false }])
+            }
+            testReporters.push(reporter as any)
+            userConfig.test.reporters = testReporters
+
             return {
               test: {
                 printConsoleTrace: true,
@@ -113,8 +119,7 @@ export async function initVitest(
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
                 },
               },
-              // TODO: type is not augmented
-            } as any
+            }
           },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
