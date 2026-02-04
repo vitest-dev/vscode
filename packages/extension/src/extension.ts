@@ -11,6 +11,7 @@ import { coverageContext } from './coverage'
 import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
 import { ImportsBreakdownProvider } from './importsBreakdownProvider'
+import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
 import { TestRunner } from './runner'
 import { SchemaProvider } from './schemaProvider'
@@ -45,6 +46,7 @@ class VitestExtension {
   private debugManager: DebugManager
   private schemaProvider: SchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
+  private inlineConsoleLog: InlineConsoleLogManager
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -74,6 +76,7 @@ class VitestExtension {
         untrackedModules: [],
       },
     )
+    this.inlineConsoleLog = new InlineConsoleLogManager(this.testTree)
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -88,6 +91,8 @@ class VitestExtension {
   }
 
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
+    this.importsBreakdownProvider.clear()
+    this.inlineConsoleLog.clear()
     this.testTree.reset([])
     this.runners.forEach(runner => runner.dispose())
     this.runners = []
@@ -167,6 +172,7 @@ class VitestExtension {
         api,
         this.diagnostic,
         this.importsBreakdownProvider,
+        this.inlineConsoleLog,
       )
       this.runners.push(runner)
 
@@ -500,6 +506,7 @@ class VitestExtension {
     this.testController.dispose()
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
+    this.inlineConsoleLog.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())

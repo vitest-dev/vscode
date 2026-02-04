@@ -3,6 +3,7 @@ import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { VitestFolderAPI } from './api'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
+import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -11,7 +12,6 @@ import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
-import { getConfig } from './config'
 import { coverageContext, readCoverageReport } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
@@ -31,14 +31,13 @@ export class TestRunner extends vscode.Disposable {
 
   private cancelled = false
 
-  private showInlineConsoleLog = true
-
   constructor(
     private readonly controller: vscode.TestController,
     private readonly tree: TestTree,
     private readonly api: VitestFolderAPI,
     private readonly diagnostic: ExtensionDiagnostic | undefined,
     private readonly importsBreakdown: ImportsBreakdownProvider,
+    private readonly inlineConsoleLog: InlineConsoleLogManager,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
@@ -51,9 +50,6 @@ export class TestRunner extends vscode.Disposable {
       this.disposables.forEach(d => d.dispose())
       this.disposables = []
     })
-
-    // Initialize with workspace-specific config
-    this.showInlineConsoleLog = getConfig(api.workspaceFolder).showInlineConsoleLog
 
     log.onWorkerLog((message) => {
       if (this.testRun) {
@@ -74,6 +70,7 @@ export class TestRunner extends vscode.Disposable {
           const uri = vscode.Uri.file(file)
           this.diagnostic?.deleteDiagnostic(uri)
         })
+        this.inlineConsoleLog.clear()
         log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
         this.startTestRun(files)
       }
@@ -164,41 +161,9 @@ export class TestRunner extends vscode.Disposable {
         this.endTestRun()
     })
 
-    // api.onConsoleLog((consoleLog) => {
-    //   const testItem = consoleLog.taskId ? tree.getTestItemByTaskId(consoleLog.taskId) : undefined
-    //   const testRun = this.testRun
-    //   if (testRun) {
-    //     // Create location from parsed console log for inline display
-    //     // Only set location if inline console logs are enabled
-    //     let location: vscode.Location | undefined
-    //     if (consoleLog.parsedLocation && this.showInlineConsoleLog) {
-    //       const uri = vscode.Uri.file(consoleLog.parsedLocation.file)
-    //       const position = new vscode.Position(
-    //         consoleLog.parsedLocation.line,
-    //         consoleLog.parsedLocation.column,
-    //       )
-    //       location = new vscode.Location(uri, position)
-    //     }
-
-    //     testRun.appendOutput(
-    //       formatTestOutput(consoleLog.content) + (consoleLog.browser ? '\r\n' : ''),
-    //       location,
-    //       testItem,
-    //     )
-    //   }
-    //   else {
-    //     log.info('[TEST]', consoleLog.content)
-    //   }
-    // })
-
-    // Listen to configuration changes
-    this.disposables.push(
-      vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('vitest.showInlineConsoleLog', api.workspaceFolder.uri)) {
-          this.showInlineConsoleLog = getConfig(api.workspaceFolder).showInlineConsoleLog
-        }
-      }),
-    )
+    api.onConsoleLog((cosoleLog) => {
+      inlineConsoleLog.addConsoleLog(cosoleLog)
+    })
   }
 
   protected endTestRun() {

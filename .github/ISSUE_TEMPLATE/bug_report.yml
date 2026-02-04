@@ -15,6 +15,14 @@ body:
     validations:
       required: true
   - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What do you expect to happen?
+      placeholder: Expected behavior
+    validations:
+      required: true
+  - type: textarea
     id: reproduction
     attributes:
       label: Reproduction
