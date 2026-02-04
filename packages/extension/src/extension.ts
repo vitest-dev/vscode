@@ -216,6 +216,7 @@ class VitestExtension {
           api.package,
           this.diagnostic,
           this.importsBreakdownProvider,
+          this.inlineConsoleLog,
 
           request,
           token,

@@ -3,6 +3,7 @@ import type { ExtensionWorkerProcess } from './api/types'
 import type { WsConnectionMetadata } from './api/ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
+import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { createServer } from 'node:http'
@@ -28,6 +29,7 @@ export async function debugTests(
   pkg: VitestPackage,
   diagnostic: ExtensionDiagnostic | undefined,
   importsBreakdown: ImportsBreakdownProvider,
+  inlineConsoleLog: InlineConsoleLogManager,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
@@ -160,6 +162,7 @@ export async function debugTests(
             api,
             diagnostic,
             importsBreakdown,
+            inlineConsoleLog,
           )
           disposables.push(api, runner)
 
