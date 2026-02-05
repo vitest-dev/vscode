@@ -1,11 +1,14 @@
+import type { TestError } from 'vitest'
 import type { VitestPackage } from './api/pkg'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
+import { inspect, stripVTControlCharacters } from 'node:util'
 import { dirname, relative } from 'pathe'
 import * as vscode from 'vscode'
 import which from 'which'
 import { getConfig } from './config'
 import { log } from './log'
+import { getTestData, TestFile } from './testTreeData'
 
 export function noop() {}
 
@@ -129,4 +132,86 @@ async function findNodeViaShell(cwd: string): Promise<string | null> {
       resolve(null)
     }
   })
+}
+
+export function getErrorMessage(error: TestError) {
+  let message = ''
+  if (error.name) {
+    message += `${error.name}: `
+  }
+  message += stripVTControlCharacters(error.message ?? '')
+  if (typeof error.frame === 'string') {
+    message += `\n${error.frame}`
+  }
+  else {
+    const errorProperties = getErrorProperties(error)
+    if (Object.keys(errorProperties).length) {
+      const errorsInspect = inspect(errorProperties, {
+        showHidden: false,
+        colors: false,
+      })
+      message += `\nSerialized Error: ${errorsInspect.slice('[Object: null prototype] '.length)}`
+    }
+  }
+
+  if (typeof error.cause === 'object' && error.cause && 'name' in error.cause) {
+    if (!error.cause.name?.includes('Caused by')) {
+      error.cause.name = `Caused by: ${error.cause.name}`
+    }
+    message += `\n${getErrorMessage(error.cause)}`
+  }
+
+  return message
+}
+
+const skipErrorProperties = new Set([
+  'nameStr',
+  'stack',
+  'cause',
+  'stacks',
+  'stackStr',
+  'type',
+  'showDiff',
+  'ok',
+  '__vscode_id',
+  'operator',
+  'diff',
+  'codeFrame',
+  'actual',
+  'expected',
+  'diffOptions',
+  'sourceURL',
+  'column',
+  'line',
+  'VITEST_TEST_NAME',
+  'VITEST_TEST_PATH',
+  'VITEST_AFTER_ENV_TEARDOWN',
+  ...Object.getOwnPropertyNames(Error.prototype),
+  ...Object.getOwnPropertyNames(Object.prototype),
+])
+
+function getErrorProperties(e: TestError) {
+  const errorObject = Object.create(null)
+  if (e.name === 'AssertionError') {
+    return errorObject
+  }
+
+  for (const key of Object.getOwnPropertyNames(e)) {
+    if (!skipErrorProperties.has(key)) {
+      errorObject[key] = e[key as keyof TestError]
+    }
+  }
+
+  return errorObject
+}
+
+export function createTestLabel(testItem: vscode.TestItem, label = testItem.label) {
+  const data = getTestData(testItem)
+  if (data instanceof TestFile) {
+    return label
+  }
+  if (testItem.parent) {
+    return createTestLabel(testItem.parent, `${testItem.parent.label} > ${label}`)
+  }
+  return label
 }

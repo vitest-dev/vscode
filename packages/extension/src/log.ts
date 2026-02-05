@@ -24,9 +24,9 @@ export const log = {
   },
   worker: (type: 'info' | 'error', ...args: any[]) => {
     const message = args.join(' ')
-    if (process.env.EXTENSION_NODE_ENV === 'dev') {
-      console[type](...args)
-    }
+    // if (process.env.EXTENSION_NODE_ENV === 'dev') {
+    //   console[type](...args)
+    // }
     if (logFile) {
       appendFile(message)
     }

@@ -5,6 +5,7 @@ import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
 import { resolveVitestPackages } from './api/pkg'
 import { ExtensionTerminalProcess } from './api/terminal'
+import { copyErrorOutput, copyTestItemErrors } from './commands/copyErrors'
 import { getConfig, testControllerId } from './config'
 import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
@@ -420,6 +421,8 @@ class VitestExtension {
           vscode.window.showErrorMessage(`Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`)
         }
       }),
+      vscode.commands.registerCommand('vitest.copyTestItemErrors', testItem => copyTestItemErrors(this.testController, testItem)),
+      vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
     ]
 
     // if the config changes, re-define all test profiles

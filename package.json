@@ -85,9 +85,35 @@
         "title": "Open Transformed Module",
         "command": "vitest.openTransformedModule",
         "category": "Vitest"
+      },
+      {
+        "title": "Copy Error",
+        "command": "vitest.copyErrorOutput",
+        "shortTitle": "Copy",
+        "category": "Vitest"
+      },
+      {
+        "title": "Copy Test Errors",
+        "command": "vitest.copyTestItemErrors",
+        "category": "Vitest"
       }
     ],
     "menus": {
+      "testing/item/result": [
+        {
+          "command": "vitest.copyTestItemErrors"
+        }
+      ],
+      "testing/message/content": [
+        {
+          "command": "vitest.copyErrorOutput"
+        }
+      ],
+      "testing/message/context": [
+        {
+          "command": "vitest.copyErrorOutput"
+        }
+      ],
       "editor/title/context": [
         {
           "command": "vitest.revealInTestExplorer",
@@ -104,17 +130,29 @@
         {
           "command": "vitest.updateSnapshot",
           "when": "false"
+        },
+        {
+          "command": "vitest.copyErrorOutput",
+          "when": "false"
         }
       ],
       "testing/item/context": [
         {
           "command": "vitest.updateSnapshot",
           "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.copyTestItemErrors",
+          "when": "controllerId == 'vitest'"
         }
       ],
       "testing/item/gutter": [
         {
           "command": "vitest.updateSnapshot",
+          "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.copyTestItemErrors",
           "when": "controllerId == 'vitest'"
         }
       ]
