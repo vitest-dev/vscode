@@ -468,8 +468,6 @@ class VitestExtension {
 
     try {
       await this.defineTestProfiles(true)
-
-      this.tagsManager.activate(this.testTree)
     }
     catch (err) {
       showVitestError('There was an error during Vitest startup', err)
@@ -511,7 +509,6 @@ class VitestExtension {
   async dispose() {
     this.api?.dispose()
     this.testTree.dispose()
-    this.tagsManager.dispose()
     this.testController.dispose()
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
