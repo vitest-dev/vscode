@@ -78,6 +78,13 @@ export async function initVitest(
     inspect: typeof data.debug === 'object'
       ? `${data.debug.host}:${data.debug.port}`
       : undefined,
+    experimental: {
+      importDurations: {
+        limit: Infinity,
+        failOnDanger: false,
+        print: false,
+      },
+    },
   }
   const vitest = await vitestModule.createVitest(
     'test',
