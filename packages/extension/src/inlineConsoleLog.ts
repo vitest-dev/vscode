@@ -130,10 +130,11 @@ export class InlineConsoleLogManager extends vscode.Disposable {
         return
       }
 
+      const noAnsi = entries.map(e => stripVTControlCharacters(e.content))
       // Combine multiple console logs on the same line
-      const content = entries.map(e => this.formatContent(e.content)).join(' ')
+      const content = noAnsi.map(e => this.formatContent(e)).join(' ')
 
-      const hoverMessage = entries.map((e) => {
+      const hoverMessage = entries.map((e, index) => {
         const md = new vscode.MarkdownString()
         if (e.testItem) {
           md.supportHtml = true
@@ -141,7 +142,7 @@ export class InlineConsoleLogManager extends vscode.Disposable {
           md.appendMarkdown(`<sub>[${createTestLabel(e.testItem)}](${e.testItem.uri?.with({ fragment: `L${line}` })})</sub>`)
           md.appendText('\n')
         }
-        return md.appendText(e.content)
+        return md.appendText(noAnsi[index])
       })
 
       const lineRange = editor.document.lineAt(line).range
@@ -163,9 +164,7 @@ export class InlineConsoleLogManager extends vscode.Disposable {
     editor.setDecorations(this.decorationType, decorations)
   }
 
-  private formatContent(content: string): string {
-    // Strip ANSI control characters using Node.js util
-    const stripped = stripVTControlCharacters(content)
+  private formatContent(stripped: string): string {
     // Remove trailing newlines and limit length
     const cleaned = stripped.trim().replace(/\n/g, ' ')
     const maxLength = 100
