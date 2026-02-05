@@ -3,20 +3,18 @@ import * as vscode from 'vscode'
 import { getTestData, TestCase } from '../testTreeData'
 import { createTestLabel, getErrorMessage, showVitestError } from '../utils'
 
-export async function copyTestItemErrors(testItem: vscode.TestItem | undefined) {
-  if (!testItem) {
-    return
-  }
-  const data = getTestData(testItem)
+export async function copyTestItemErrors(testController: vscode.TestController, testItem: vscode.TestItem | undefined) {
+  const errors: string[] = []
+
+  const data = testItem && getTestData(testItem)
   if (data instanceof TestCase) {
-    const copyText = createTestItemErrors(testItem, data)
+    const copyText = createTestItemErrors(testItem!, data)
     if (copyText != null) {
       await vscode.env.clipboard.writeText(copyText)
     }
     return
   }
 
-  const errors: string[] = []
   const walk = (item: vscode.TestItem) => {
     const data = getTestData(item)
     if (data instanceof TestCase) {
@@ -29,9 +27,14 @@ export async function copyTestItemErrors(testItem: vscode.TestItem | undefined) 
       item.children.forEach(item => walk(item))
     }
   }
-  testItem.children.forEach(item => walk(item))
+  if (testItem) {
+    testItem.children.forEach(item => walk(item))
+  }
+  else {
+    testController.items.forEach(item => walk(item))
+  }
   if (errors.length) {
-    await vscode.env.clipboard.writeText(errors.join(`${'='.repeat(80)}\n\n`))
+    await vscode.env.clipboard.writeText(errors.join(`\n${'='.repeat(50)}\n\n`))
   }
 }
 
@@ -39,7 +42,7 @@ function createTestItemErrors(item: vscode.TestItem, test: TestCase) {
   const errors = test.errors?.map(error => createTestErrorMessage(getErrorMessage(error), error))
   if (errors?.length) {
     const errorLabel = createTestItemLabel(item)
-    return errorLabel + errors.join(`${'='.repeat(50)}\n\n`)
+    return errorLabel + errors.join(`\n${'='.repeat(50)}\n\n`)
   }
 }
 
@@ -93,6 +96,7 @@ function createTestErrorMessage(message: string, error: TestError) {
       parts.push(`  at ${location}`)
     }
   }
+  parts.push('')
 
   return parts.join('\n')
 }

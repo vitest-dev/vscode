@@ -421,7 +421,7 @@ class VitestExtension {
           vscode.window.showErrorMessage(`Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`)
         }
       }),
-      vscode.commands.registerCommand('vitest.copyTestItemErrors', copyTestItemErrors),
+      vscode.commands.registerCommand('vitest.copyTestItemErrors', testItem => copyTestItemErrors(this.testController, testItem)),
       vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
     ]
 
