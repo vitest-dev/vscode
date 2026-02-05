@@ -1,8 +1,6 @@
 import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from 'vitest-vscode-shared'
-import { stripVTControlCharacters } from 'node:util'
 import v8 from 'node:v8'
 import { createBirpc } from 'birpc'
-import { log } from '../log'
 
 export type {
   ExtensionWorkerEvents,
@@ -33,6 +31,7 @@ export function createRpcOptions() {
     onCollected: createHandler<ExtensionWorkerEvents['onCollected']>(),
     onTestRunStart: createHandler<ExtensionWorkerEvents['onTestRunStart']>(),
     onTestRunEnd: createHandler<ExtensionWorkerEvents['onTestRunEnd']>(),
+    onProcessLog: createHandler<ExtensionWorkerEvents['onProcessLog']>(),
   }
 
   const events: Omit<ExtensionWorkerEvents, 'onReady' | 'onError'> = {
@@ -41,14 +40,13 @@ export function createRpcOptions() {
     onTaskUpdate: handlers.onTaskUpdate.trigger,
     onCollected: handlers.onCollected.trigger,
     onTestRunStart: handlers.onTestRunStart.trigger,
-    onProcessLog(type, message) {
-      log.worker(type === 'stderr' ? 'error' : 'info', stripVTControlCharacters(message))
-    },
+    onProcessLog: handlers.onProcessLog.trigger,
   }
 
   return {
     events,
     handlers: {
+      onProcessLog: handlers.onProcessLog.register,
       onConsoleLog: handlers.onConsoleLog.register,
       onTaskUpdate: handlers.onTaskUpdate.register,
       onTestRunEnd: handlers.onTestRunEnd.register,

@@ -56,25 +56,17 @@ export async function createVitestProcess(pkg: VitestPackage) {
     cwd: pkg.cwd,
   })
 
-  const stdoutCallbacks = new Set<(data: string) => void>()
-
   vitest.stdout?.on('data', (d) => {
     const content = d.toString()
-    stdoutCallbacks.forEach(cb => cb(content))
     log.worker('info', content)
   })
   vitest.stderr?.on('data', (chunk) => {
     const string = chunk.toString()
     log.worker('error', string)
-    stdoutCallbacks.forEach(cb => cb(string))
     if (string.startsWith(' MISSING DEPENDENCY')) {
       const error = string.split(/\r?\n/, 1)[0].slice(' MISSING DEPENDENCY'.length)
       showVitestError(error)
     }
-  })
-
-  vitest.on('exit', () => {
-    stdoutCallbacks.clear()
   })
 
   return new Promise<ResolvedMeta>((resolve, reject) => {
@@ -90,16 +82,8 @@ export async function createVitestProcess(pkg: VitestPackage) {
     vitest.on('exit', onExit)
     vitest.on('error', onError)
 
-    waitForWsConnection(wss, pkg, 'child_process', false)
+    waitForWsConnection(wss, pkg, 'child_process')
       .then((resolved) => {
-        resolved.handlers.onStdout = (callback: (data: string) => void) => {
-          stdoutCallbacks.add(callback)
-        }
-        const clearListeners = resolved.handlers.clearListeners
-        resolved.handlers.clearListeners = () => {
-          clearListeners()
-          stdoutCallbacks.clear()
-        }
         resolve({
           ...resolved,
           process: new ExtensionChildProcess(vitest, server, resolved.ws),

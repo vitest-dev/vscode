@@ -59,6 +59,12 @@ export class ImportsBreakdownProvider {
     }
   }
 
+  public clear() {
+    this._decorations.clear()
+    const editor = vscode.window.activeTextEditor
+    editor?.setDecorations(this.decorationType, [])
+  }
+
   public refreshCurrentDecorations() {
     log.info('[DECOR] Reset all decorations.')
     this._decorations.clear()
@@ -92,12 +98,7 @@ export class ImportsBreakdownProvider {
 
     // TODO: untracked modules somehow?
     diagnostic.modules.forEach((diagnostic) => {
-      const range = new vscode.Range(
-        diagnostic.start.line - 1,
-        diagnostic.start.column,
-        diagnostic.end.line - 1,
-        diagnostic.end.column,
-      )
+      const lineRange = editor.document.lineAt(diagnostic.start.line - 1).range
 
       const overallTime = diagnostic.totalTime + (diagnostic.transformTime || 0)
       let color: string | undefined
@@ -126,7 +127,7 @@ export class ImportsBreakdownProvider {
       ms.isTrusted = true
 
       decorations.push({
-        range,
+        range: lineRange,
         hoverMessage: ms,
         renderOptions: {
           after: {

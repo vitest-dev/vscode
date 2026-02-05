@@ -3,6 +3,7 @@ import type { ExtensionWorkerProcess } from './api/types'
 import type { WsConnectionMetadata } from './api/ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
+import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { createServer } from 'node:http'
@@ -28,6 +29,7 @@ export async function debugTests(
   pkg: VitestPackage,
   diagnostic: ExtensionDiagnostic | undefined,
   importsBreakdown: ImportsBreakdownProvider,
+  inlineConsoleLog: InlineConsoleLogManager,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
@@ -136,14 +138,17 @@ export async function debugTests(
       browserDebug
         ? {
             browser: browserDebug.browser,
-            // wdio support this only since Vitest beta-13
+            // wdio support this only since Vitest 4.beta-13
             port: config.debuggerPort ?? 9229,
             host: 'localhost',
           }
         : true,
       config.shellType,
-      false,
       async (metadata) => {
+        metadata.handlers.onProcessLog((type, message) => {
+          log.worker(type === 'stderr' ? 'error' : 'info', message)
+        })
+
         try {
           const api = new VitestFolderAPI(pkg, {
             ...metadata,
@@ -157,6 +162,7 @@ export async function debugTests(
             api,
             diagnostic,
             importsBreakdown,
+            inlineConsoleLog,
           )
           disposables.push(api, runner)
 

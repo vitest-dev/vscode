@@ -1,7 +1,7 @@
 import type { VitestAPI } from './api'
 import { normalize } from 'pathe'
 import * as vscode from 'vscode'
-import { version } from '../package.json'
+import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
 import { resolveVitestPackages } from './api/pkg'
 import { ExtensionTerminalProcess } from './api/terminal'
@@ -11,6 +11,7 @@ import { coverageContext } from './coverage'
 import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
 import { ImportsBreakdownProvider } from './importsBreakdownProvider'
+import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
 import { TestRunner } from './runner'
 import { SchemaProvider } from './schemaProvider'
@@ -45,6 +46,7 @@ class VitestExtension {
   private debugManager: DebugManager
   private schemaProvider: SchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
+  private inlineConsoleLog: InlineConsoleLogManager
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -74,6 +76,7 @@ class VitestExtension {
         untrackedModules: [],
       },
     )
+    this.inlineConsoleLog = new InlineConsoleLogManager(this.testTree)
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -88,6 +91,8 @@ class VitestExtension {
   }
 
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
+    this.importsBreakdownProvider.clear()
+    this.inlineConsoleLog.clear()
     this.testTree.reset([])
     this.runners.forEach(runner => runner.dispose())
     this.runners = []
@@ -167,6 +172,7 @@ class VitestExtension {
         api,
         this.diagnostic,
         this.importsBreakdownProvider,
+        this.inlineConsoleLog,
       )
       this.runners.push(runner)
 
@@ -210,6 +216,7 @@ class VitestExtension {
           api.package,
           this.diagnostic,
           this.importsBreakdownProvider,
+          this.inlineConsoleLog,
 
           request,
           token,
@@ -299,10 +306,16 @@ class VitestExtension {
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (reloadConfigNames.some(x => event.affectsConfiguration(x)))
-          this.defineTestProfiles(false)
+        const configName = reloadConfigNames.find(x => event.affectsConfiguration(x))
+        if (configName) {
+          this.defineTestProfiles(false).catch((error) => {
+            log.error('[API]', `Failed to reload Vitest after "${configName}" has changed`, error)
+          })
+        }
       }),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false)),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false).catch((error) => {
+        log.error('[API]', `Failed to reload Vitest after workspaces changed`, error)
+      })),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
       }),
@@ -494,6 +507,7 @@ class VitestExtension {
     this.testController.dispose()
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
+    this.inlineConsoleLog.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())

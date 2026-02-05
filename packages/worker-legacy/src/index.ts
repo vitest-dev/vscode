@@ -1,7 +1,5 @@
 import type { WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { UserConfig, WorkspaceProject } from 'vitest/node'
-import { Console } from 'node:console'
-import { Writable } from 'node:stream'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -19,34 +17,6 @@ export async function initVitest(
       meta.setupFilePaths.watcher,
     ].filter(v => v != null),
   })
-
-  let stdout: Writable | undefined
-  let stderr: Writable | undefined
-
-  if (meta.shellType === 'terminal' && !meta.hasShellIntegration) {
-    stdout = new Writable({
-      write(chunk, __, callback) {
-        const log = chunk.toString()
-        if (reporter.rpc) {
-          reporter.rpc.onProcessLog('stdout', log).catch(() => {})
-        }
-        process.stdout.write(log)
-        callback()
-      },
-    })
-
-    stderr = new Writable({
-      write(chunk, __, callback) {
-        const log = chunk.toString()
-        if (reporter.rpc) {
-          reporter.rpc.onProcessLog('stderr', log).catch(() => {})
-        }
-        process.stderr.write(log)
-        callback()
-      },
-    })
-    globalThis.console = new Console(stdout, stderr)
-  }
 
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
@@ -146,10 +116,6 @@ export async function initVitest(
           },
         },
       ],
-    },
-    {
-      stderr,
-      stdout,
     },
   )
   await (vitest as any).report('onInit', vitest)

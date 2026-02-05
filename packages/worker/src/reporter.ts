@@ -52,28 +52,16 @@ export class VSCodeReporter implements Reporter {
     const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
       return new Promise<void>((resolve, reject) => {
         if (this.debuggerAttached !== undefined) {
-          //
-          // An attachment attempt has already been made
-          //
           if (this.debuggerAttached) {
-            //
-            // Already attached, resolve immediately
-            //
             resolve()
             return
           }
           else if (this.debuggerAttached === false) {
-            //
-            // Already failed to attach
-            //
             reject(new Error(`Browser Debugger failed to connect.`))
             return
           }
         }
 
-        //
-        // We haven't tried to attach yet, wait for the event
-        //
         ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
           if (fullfilled) {
             resolve()
@@ -146,12 +134,13 @@ export class VSCodeReporter implements Reporter {
     this.vitest.state.filesMap.clear()
   }
 
-  onTestRunEnd(testModules: ReadonlyArray<TestModule>, unhandledErrors: ReadonlyArray<unknown>) {
+  async onTestRunEnd(testModules: ReadonlyArray<TestModule>) {
     const files = testModules.map(m => getEntityJSONTask(m))
 
-    if (unhandledErrors.length) {
-      // TODO: remove "as unknown[]"
-      this.vitest.logger.printUnhandledErrors(unhandledErrors as unknown[])
+    // Make sure we rendered everything before ending the test run
+    // If test run is no active, the log will be lost
+    if (this.logPromises.size) {
+      await Promise.all([...this.logPromises])
     }
 
     // as any because Vitest types are different between v3 and v4,
@@ -173,16 +162,10 @@ export class VSCodeReporter implements Reporter {
   }
 
   configureBrowserDebugging(vitest: VitestCore) {
-    //
-    // Listen for debugger attachment events as soon as possible to prevent a deadlock
-    //
     ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
       this.debuggerAttached = fullfilled
     })
 
-    //
-    // Note: This is too late to enable the inspector itself, but we can still add setup files
-    //
     if (this.debug !== undefined && typeof this.debug === 'object') {
       vitest.projects.forEach((project) => {
         if (project.config.browser?.enabled) {
@@ -194,6 +177,19 @@ export class VSCodeReporter implements Reporter {
 
   toJSON() {
     return {}
+  }
+
+  private logPromises = new Set<Promise<void>>()
+  sendTerminalLog(type: 'stderr' | 'stdout', message: string) {
+    if (!this.rpc) {
+      return
+    }
+
+    const promise = this.rpc.onProcessLog(type, message).catch(() => {}).finally(() => {
+      this.logPromises.delete(promise)
+    })
+
+    this.logPromises.add(promise)
   }
 }
 

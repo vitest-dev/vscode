@@ -23,19 +23,14 @@ export const log = {
     callbacks.delete(callback)
   },
   worker: (type: 'info' | 'error', ...args: any[]) => {
-    if (typeof args.at(-1) === 'string' && args.at(-1).endsWith('\n'))
-      args[args.length - 1] = args.at(-1).slice(0, process.platform === 'win32' ? -2 : -1)
-
-    const time = new Date().toLocaleTimeString()
+    const message = args.join(' ')
     if (process.env.EXTENSION_NODE_ENV === 'dev') {
-      console[type](`[INFO ${time}]`, '[Worker]', ...args)
+      console[type](...args)
     }
-    const message = `[INFO ${time}] [Worker] ${args.join(' ')}`
     if (logFile) {
       appendFile(message)
     }
     logToCallbacks(message)
-    channel.appendLine(message)
   },
   info: (...args: any[]) => {
     if (process.env.EXTENSION_NODE_ENV === 'dev') {
