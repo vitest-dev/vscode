@@ -12,8 +12,8 @@
     "birpc": "^0.2.2"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "catalog:latest",
-    "vite": "catalog:latest",
-    "vitest": "catalog:latest"
+    "@vitest/coverage-v8": "catalog:v3",
+    "vite": "catalog:v3",
+    "vitest": "catalog:v3"
   }
 }
