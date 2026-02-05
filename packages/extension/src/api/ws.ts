@@ -81,7 +81,7 @@ export function onWsConnection(
         rpc: api,
         workspaceSource: message.workspaceSource,
         handlers,
-        configs: message.configs,
+        projects: message.projects,
         ws,
         pkg,
       })

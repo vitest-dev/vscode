@@ -1,4 +1,4 @@
-import type { WorkerEvent } from 'vitest-vscode-shared'
+import type { SerializedProject, WorkerEvent } from 'vitest-vscode-shared'
 import type WebSocket from 'ws'
 
 abstract class WorkerEventEmitter {
@@ -8,8 +8,8 @@ abstract class WorkerEventEmitter {
   abstract on(event: string, listener: (...args: any[]) => void): void
   abstract off(event: string, listener: (...args: any[]) => void): void
 
-  ready(configs: string[], workspaceSource: string | false, legacy: boolean) {
-    this.sendWorkerEvent({ type: 'ready', configs, workspaceSource, legacy })
+  ready(projects: SerializedProject[], workspaceSource: string | false, legacy: boolean) {
+    this.sendWorkerEvent({ type: 'ready', projects, workspaceSource, legacy })
   }
 
   error(err: any) {

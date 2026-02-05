@@ -30,7 +30,7 @@ emitter.on('message', async function onMessage(message: any) {
       const workerPath = pathToFileURL(join(__dirname, workerName))
       const initModule = await import(workerPath.toString())
 
-      const { createWorker, reporter, configs, workspaceSource } = await initModule.initVitest(
+      const { createWorker, reporter, projects, workspaceSource } = await initModule.initVitest(
         vitestModule,
         data,
         emitter,
@@ -53,7 +53,7 @@ emitter.on('message', async function onMessage(message: any) {
       )
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
-      emitter.ready(configs, workspaceSource, isLegacy)
+      emitter.ready(projects, workspaceSource, isLegacy)
     }
     catch (err: any) {
       emitter.error(err)

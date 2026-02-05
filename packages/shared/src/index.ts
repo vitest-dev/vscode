@@ -156,9 +156,25 @@ export interface WorkerRunnerOptions {
   astCollect: boolean
 }
 
+export interface SerializedProject {
+  config: string | undefined
+  root: string
+  pool: string
+  name: string
+  dir?: string
+  include: string[]
+  exclude: string[]
+  includeSource: string[]
+  browser?: {
+    provider: string
+    name: string
+    webRoot: string
+  }
+}
+
 export interface EventReady {
   type: 'ready'
-  configs: string[]
+  projects: SerializedProject[]
   workspaceSource: string | false
   legacy: boolean
 }

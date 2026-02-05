@@ -1,9 +1,12 @@
-import type { ExtensionTestSpecification, ModuleDefinitionDurationsDiagnostic } from 'vitest-vscode-shared'
+import type { ExtensionTestSpecification, ModuleDefinitionDurationsDiagnostic, SerializedProject } from 'vitest-vscode-shared'
 import type { VitestPackage } from './api/pkg'
 import type { ExtensionWorkerEvents, VitestExtensionRPC } from './api/rpc'
 import type { ExtensionWorkerProcess } from './api/types'
+import type { TestFileMetadata } from './testTreeData'
+import { readFileSync } from 'node:fs'
 import { dirname, isAbsolute } from 'node:path'
 import { normalize, relative } from 'pathe'
+import pm from 'picomatch'
 import { createQueuedHandler } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { createVitestProcess } from './api/child_process'
@@ -147,7 +150,7 @@ export class VitestFolderAPI {
   }
 
   get configs() {
-    return this.meta.configs
+    return this.meta.projects.map(p => p.config).filter(n => n != null)
   }
 
   get workspaceSource() {
@@ -184,6 +187,41 @@ export class VitestFolderAPI {
 
   getFiles() {
     return this.meta.rpc.getFiles()
+  }
+
+  getPotentialTestFileMetadata(file: string): TestFileMetadata[] {
+    const metadata: TestFileMetadata[] = []
+    let fileContent: string
+    for (const project of this.meta.projects) {
+      if (this.matchesTestGlob(project, file, () => (fileContent ??= readFileSync(file, 'utf-8')))) {
+        metadata.push({
+          pool: project.pool,
+          project: project.name,
+          browser: project.browser,
+        })
+      }
+    }
+    return metadata
+  }
+
+  matchesTestGlob(project: SerializedProject, moduleId: string, source: () => string) {
+    const relativeId = relative(project.dir || project.root, moduleId)
+    if (pm.isMatch(relativeId, project.exclude)) {
+      return false
+    }
+    if (pm.isMatch(relativeId, project.include)) {
+      return true
+    }
+    if (
+      project.includeSource?.length
+      && pm.isMatch(relativeId, project.includeSource)
+    ) {
+      const code = source()
+      if (code.includes('import.meta.vitest')) {
+        return true
+      }
+    }
+    return false
   }
 
   onFileCreated = createQueuedHandler(async (files: string[]) => {
@@ -436,8 +474,10 @@ async function createVitestFolderAPI(usedConfigs: Set<string>, pkg: VitestPackag
   const vitest = config.shellType === 'terminal'
     ? await createVitestTerminalProcess(pkg)
     : await createVitestProcess(pkg)
-  vitest.configs.forEach((config) => {
-    usedConfigs.add(config)
+  vitest.projects.forEach((project) => {
+    if (project.config) {
+      usedConfigs.add(project.config)
+    }
   })
   return new VitestFolderAPI(pkg, vitest)
 }
@@ -447,7 +487,7 @@ export interface ResolvedMeta {
   process: ExtensionWorkerProcess
   workspaceSource: string | false
   pkg: VitestPackage
-  configs: string[]
+  projects: SerializedProject[]
   handlers: {
     onProcessLog: (listener: ExtensionWorkerEvents['onProcessLog']) => void
     onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void

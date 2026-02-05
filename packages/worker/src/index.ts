@@ -1,4 +1,4 @@
-import type { WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { CoverageIstanbulOptions, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { randomUUID } from 'node:crypto'
@@ -147,10 +147,28 @@ export async function initVitest(
     },
   )
   await (vitest as any).report('onInit', vitest)
-  const configs = [
-    vitest.getRootProject(),
-    ...vitest.projects,
-  ].map(p => p.vite.config.configFile).filter(c => c != null)
+
+  const projects: SerializedProject[] = vitest.projects.map((project) => {
+    const config = project.config
+    return {
+      config: project.vite.config.configFile,
+      root: config.root,
+      dir: config.dir,
+      include: config.include,
+      exclude: config.exclude,
+      includeSource: config.includeSource,
+      pool: project.isBrowserEnabled() ? 'browser' : config.pool,
+      name: project.name,
+      browser: project.isBrowserEnabled()
+        ? {
+            provider: config.browser.provider?.name || 'preview',
+            name: config.browser.name,
+            webRoot: config.root,
+          }
+        : undefined,
+    }
+  })
+
   const workspaceSource: string | false = (vitest.config.projects != null)
     ? vitest.vite.config.configFile || false
     : false
@@ -158,7 +176,7 @@ export async function initVitest(
     vitest,
     reporter,
     workspaceSource,
-    configs: Array.from(new Set(configs)),
+    projects,
     meta,
     createWorker() {
       return new ExtensionWorker(
