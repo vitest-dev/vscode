@@ -9,8 +9,6 @@
 
 <h1 align="center">Vitest extension for Visual Studio Code. Available on <a href="https://marketplace.visualstudio.com/items?itemName=vitest.explorer">Visual Studio Marketplace</a>.</h1>
 
-![](https://i.ibb.co/bJCbCf2/202203292020.gif)
-
 ## Features
 
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
