@@ -8,7 +8,6 @@ import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
-import { inspect, stripVTControlCharacters } from 'node:util'
 import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
@@ -16,7 +15,7 @@ import * as vscode from 'vscode'
 import { coverageContext, readCoverageReport } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
-import { showVitestError } from './utils'
+import { getErrorMessage, showVitestError } from './utils'
 
 export class TestRunner extends vscode.Disposable {
   private continuousRequests = new Set<vscode.TestRunRequest>()
@@ -614,74 +613,6 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
   error.__vscode_id = errorId
   testMessage.contextValue = errorId
   return testMessage
-}
-
-function getErrorMessage(error: TestError) {
-  let message = ''
-  if (error.name) {
-    message += `${error.name}: `
-  }
-  message += stripVTControlCharacters(error.message ?? '')
-  if (typeof error.frame === 'string') {
-    message += `\n${error.frame}`
-  }
-  else {
-    const errorProperties = getErrorProperties(error)
-    if (Object.keys(errorProperties).length) {
-      const errorsInspect = inspect(errorProperties, {
-        showHidden: false,
-        colors: false,
-      })
-      message += `\nSerialized Error: ${errorsInspect.slice('[Object: null prototype] '.length)}`
-    }
-  }
-
-  if (typeof error.cause === 'object' && error.cause && 'name' in error.cause) {
-    (error.cause as any).name = `Caused by: ${(error.cause as any).name}`
-    message += `\n${getErrorMessage(error.cause)}`
-  }
-
-  return message
-}
-
-const skipErrorProperties = new Set([
-  'nameStr',
-  'stack',
-  'cause',
-  'stacks',
-  'stackStr',
-  'type',
-  'showDiff',
-  'ok',
-  'operator',
-  'diff',
-  'codeFrame',
-  'actual',
-  'expected',
-  'diffOptions',
-  'sourceURL',
-  'column',
-  'line',
-  'VITEST_TEST_NAME',
-  'VITEST_TEST_PATH',
-  'VITEST_AFTER_ENV_TEARDOWN',
-  ...Object.getOwnPropertyNames(Error.prototype),
-  ...Object.getOwnPropertyNames(Object.prototype),
-])
-
-function getErrorProperties(e: TestError) {
-  const errorObject = Object.create(null)
-  if (e.name === 'AssertionError') {
-    return errorObject
-  }
-
-  for (const key of Object.getOwnPropertyNames(e)) {
-    if (!skipErrorProperties.has(key)) {
-      errorObject[key] = e[key as keyof TestError]
-    }
-  }
-
-  return errorObject
 }
 
 export interface DebuggerLocation {

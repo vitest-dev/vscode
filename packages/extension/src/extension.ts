@@ -5,6 +5,7 @@ import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
 import { resolveVitestPackages } from './api/pkg'
 import { ExtensionTerminalProcess } from './api/terminal'
+import { copyErrorOutput, copyTestItemErrors } from './commands/copyErrors'
 import { getConfig, testControllerId } from './config'
 import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
@@ -17,7 +18,7 @@ import { TestRunner } from './runner'
 import { SchemaProvider } from './schemaProvider'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
-import { getTestData, TestCase, TestFile } from './testTreeData'
+import { getTestData, TestFile } from './testTreeData'
 import { debounce, showVitestError } from './utils'
 import './polyfills'
 
@@ -420,45 +421,8 @@ class VitestExtension {
           vscode.window.showErrorMessage(`Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`)
         }
       }),
-      vscode.commands.registerCommand('vitest.copyErrorOutput', async (arg1: { test: vscode.TestItem; message: vscode.TestMessage } | undefined) => {
-        if (!arg1) {
-          return
-        }
-        // The "message" is a different instance from the one the extension creates
-        // And it doesn't have stackTraces and other properties assigned to it
-        const { test, message } = arg1
-        const data = getTestData(test)
-        if (!(data instanceof TestCase)) {
-          return
-        }
-
-        const parts: string[] = []
-        parts.push(
-          `Test: ${test.label}`,
-          `File: ${test.uri}`,
-          '',
-          message.message.toString(),
-        )
-        const error = data.errors?.find(e => e.__vscode_id === message.contextValue)
-        if (!error) {
-          showVitestError('Cannot copy the error output. Please, open an issue with reproduction')
-          return
-        }
-
-        for (const frame of error.stacks || []) {
-          const location = `${frame.file}:${frame.line}:${frame.column}`
-          if (frame.method) {
-            parts.push(`  at ${frame.method} (${location})`)
-          }
-          else {
-            parts.push(`  at ${location}`)
-          }
-        }
-
-        const errorMessage = parts.join('\n')
-
-        await vscode.env.clipboard.writeText(errorMessage)
-      }),
+      vscode.commands.registerCommand('vitest.copyTestItemErrors', copyTestItemErrors),
+      vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
     ]
 
     // if the config changes, re-define all test profiles

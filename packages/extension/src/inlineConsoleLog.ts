@@ -3,6 +3,7 @@ import type { TestTree } from './testTree'
 import { stripVTControlCharacters } from 'node:util'
 import * as vscode from 'vscode'
 import { getConfig } from './config'
+import { createTestLabel } from './utils'
 
 interface ConsoleLogEntry {
   content: string
@@ -178,11 +179,4 @@ export class InlineConsoleLogManager extends vscode.Disposable {
     // Update all visible editors
     vscode.window.visibleTextEditors.forEach(editor => this.updateDecorations(editor))
   }
-}
-
-function createTestLabel(testItem: vscode.TestItem, label = testItem.label) {
-  if (testItem.parent) {
-    return createTestLabel(testItem.parent, `${testItem.parent.label} > ${label}`)
-  }
-  return label
 }

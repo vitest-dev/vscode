@@ -91,9 +91,19 @@
         "command": "vitest.copyErrorOutput",
         "shortTitle": "Copy",
         "category": "Vitest"
+      },
+      {
+        "title": "Copy Test Errors",
+        "command": "vitest.copyTestItemErrors",
+        "category": "Vitest"
       }
     ],
     "menus": {
+      "testing/item/result": [
+        {
+          "command": "vitest.copyTestItemErrors"
+        }
+      ],
       "testing/message/content": [
         {
           "command": "vitest.copyErrorOutput"
@@ -130,11 +140,19 @@
         {
           "command": "vitest.updateSnapshot",
           "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.copyTestItemErrors",
+          "when": "controllerId == 'vitest'"
         }
       ],
       "testing/item/gutter": [
         {
           "command": "vitest.updateSnapshot",
+          "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.copyTestItemErrors",
           "when": "controllerId == 'vitest'"
         }
       ]
