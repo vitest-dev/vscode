@@ -2,6 +2,7 @@ import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { ExtensionTestFileSpecification } from 'vitest-vscode-shared'
 import type { VitestFolderAPI } from './api'
 import type { SchemaProvider } from './schemaProvider'
+import type { TagsManager } from './tagsManager'
 import type { TestFileMetadata } from './testTreeData'
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -31,6 +32,7 @@ export class TestTree extends vscode.Disposable {
   constructor(
     private readonly controller: vscode.TestController,
     private readonly loaderItem: vscode.TestItem,
+    private readonly tagsManager: TagsManager,
     schemaProvider: SchemaProvider,
   ) {
     super(() => {
@@ -445,8 +447,14 @@ export class TestTree extends vscode.Disposable {
         testItem.error = error
       }
 
-      if ('tasks' in task)
+      if ('tasks' in task) {
         this.collectTasks(tag, fileData, task.tasks, testItem)
+      }
+      // only tests have tags, and 'tasks' in task narrows it down
+      else if ('tags' in task) {
+        const tags = (task.tags as string[]).map(tag => this.tagsManager.getTestTag(tag))
+        testItem.tags = [...testItem.tags, ...tags]
+      }
     }
 
     // remove tasks that are no longer present

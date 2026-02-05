@@ -5,28 +5,27 @@ export class TagsManager extends vscode.Disposable {
   private disposables: vscode.Disposable[] = []
 
   private openTestTag = new vscode.TestTag('open')
+  private userTags = new Map<string, vscode.TestTag>()
 
-  constructor(
-    private testTree: TestTree,
-  ) {
+  constructor() {
     super(() => {
       this.disposables.forEach(d => d.dispose())
       this.disposables = []
     })
   }
 
-  activate() {
+  activate(testTree: TestTree) {
     this.disposables.push(
       vscode.workspace.onDidOpenTextDocument((doc) => {
-        this.addFileTag(doc.uri, this.openTestTag)
+        this.addFileTag(testTree, doc.uri, this.openTestTag)
       }),
       vscode.workspace.onDidCloseTextDocument((doc) => {
-        this.removeFileTag(doc.uri, this.openTestTag)
+        this.removeFileTag(testTree, doc.uri, this.openTestTag)
       }),
     )
 
     vscode.window.visibleTextEditors.forEach(({ document }) => {
-      this.addFileTag(document.uri, this.openTestTag)
+      this.addFileTag(testTree, document.uri, this.openTestTag)
     })
   }
 
@@ -45,8 +44,8 @@ export class TagsManager extends vscode.Disposable {
     })
   }
 
-  removeFileTag(uri: vscode.Uri, tag: vscode.TestTag) {
-    const fileItems = this.testTree.getFileTestItems(uri.fsPath)
+  removeFileTag(testTree: TestTree, uri: vscode.Uri, tag: vscode.TestTag) {
+    const fileItems = testTree.getFileTestItems(uri.fsPath)
     if (!fileItems)
       return
     fileItems.forEach((item) => {
@@ -54,12 +53,19 @@ export class TagsManager extends vscode.Disposable {
     })
   }
 
-  addFileTag(uri: vscode.Uri, tag: vscode.TestTag) {
-    const fileItems = this.testTree.getFileTestItems(uri.fsPath)
+  addFileTag(testTree: TestTree, uri: vscode.Uri, tag: vscode.TestTag) {
+    const fileItems = testTree.getFileTestItems(uri.fsPath)
     if (!fileItems)
       return
     fileItems.forEach((item) => {
       this.addItemTag(item, tag)
     })
+  }
+
+  getTestTag(name: string) {
+    if (!this.userTags.has(name)) {
+      this.userTags.set(name, new vscode.TestTag(name))
+    }
+    return this.userTags.get(name)!
   }
 }

@@ -68,8 +68,13 @@ class VitestExtension {
         return api?.getTransformedModule(project, environment, file) ?? null
       },
     )
-    this.testTree = new TestTree(this.testController, this.loadingTestItem, this.schemaProvider)
-    this.tagsManager = new TagsManager(this.testTree)
+    this.tagsManager = new TagsManager()
+    this.testTree = new TestTree(
+      this.testController,
+      this.loadingTestItem,
+      this.tagsManager,
+      this.schemaProvider,
+    )
     this.debugManager = new DebugManager()
     this.importsBreakdownProvider = new ImportsBreakdownProvider(
       async (moduleId: string) => this.api?.getSourceModuleDiagnostic(moduleId) || {
@@ -464,7 +469,7 @@ class VitestExtension {
     try {
       await this.defineTestProfiles(true)
 
-      this.tagsManager.activate()
+      this.tagsManager.activate(this.testTree)
     }
     catch (err) {
       showVitestError('There was an error during Vitest startup', err)
