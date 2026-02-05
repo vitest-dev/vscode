@@ -1,5 +1,5 @@
-import type { WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
-import type { UserConfig, WorkspaceProject } from 'vitest/node'
+import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type { UserConfig } from 'vitest/node'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -119,11 +119,28 @@ export async function initVitest(
     },
   )
   await (vitest as any).report('onInit', vitest)
-  const configs = ([
-    // @ts-expect-error -- getRootProject in Vitest 3.0
-    'getRootProject' in vitest ? vitest.getRootProject() : vitest.getCoreWorkspaceProject(),
-    ...vitest.projects,
-  ] as WorkspaceProject[]).map(p => p.server.config.configFile).filter(c => c != null)
+
+  const projects: SerializedProject[] = vitest.projects.map((project) => {
+    const config = project.config
+    return {
+      config: project.vite.config.configFile,
+      root: config.root,
+      dir: config.dir,
+      include: config.include,
+      exclude: config.exclude,
+      includeSource: config.includeSource,
+      pool: project.config.browser?.enabled ? 'browser' : config.pool,
+      name: project.name,
+      browser: project.config.browser?.enabled
+        ? {
+            provider: config.browser.provider || 'preview',
+            name: config.browser.name,
+            webRoot: config.root,
+          }
+        : undefined,
+    }
+  })
+
   const workspaceSource: string | false = meta.workspaceFile
     ? meta.workspaceFile
     : (vitest.config.workspace != null || vitest.config.projects != null)
@@ -133,7 +150,7 @@ export async function initVitest(
     vitest,
     reporter,
     workspaceSource,
-    configs: Array.from(new Set(configs)),
+    projects,
     meta,
     createWorker() {
       return new ExtensionWorker(

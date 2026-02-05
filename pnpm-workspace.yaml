@@ -6,12 +6,14 @@ packages:
 
 catalogs:
   latest:
+    '@types/picomatch': ^4.0.2
     '@vitest/browser': ^4.0.15
     '@vitest/browser-playwright': ^4.0.15
     '@vitest/coverage-istanbul': ^4.0.15
     '@vitest/coverage-v8': ^4.0.15
     '@vitest/runner': ^4.0.15
     '@vitest/utils': ^4.0.15
+    picomatch: ^4.0.3
     vite: ^7.2.6
     vitest: ^4.0.15
 
@@ -21,4 +23,5 @@ catalogs:
     '@vitest/coverage-v8': ^3.2.4
     '@vitest/runner': ^3.2.4
     '@vitest/utils': ^3.2.4
+    vite: ^7.2.6
     vitest: ^3.2.4
