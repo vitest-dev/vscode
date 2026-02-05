@@ -5,6 +5,7 @@ import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
+import crypto from 'node:crypto'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { inspect, stripVTControlCharacters } from 'node:util'
@@ -503,6 +504,8 @@ export class TestRunner extends vscode.Disposable {
     test: vscode.TestItem,
     result: RunnerTaskResult,
   ) {
+    setTestErrors(test, result.errors as TestError[])
+
     switch (result.state) {
       case 'fail': {
         const errors = result.errors?.map(err =>
@@ -583,6 +586,13 @@ export class TestRunner extends vscode.Disposable {
   }
 }
 
+function setTestErrors(test: vscode.TestItem, errors: TestError[] | undefined) {
+  const data = getTestData(test)
+  if (data instanceof TestCase) {
+    data.setErrors(errors)
+  }
+}
+
 function testMessageForTestError(testItem: vscode.TestItem, error: TestError | undefined): vscode.TestMessage {
   if (!error)
     return new vscode.TestMessage('Unknown error')
@@ -600,11 +610,18 @@ function testMessageForTestError(testItem: vscode.TestItem, error: TestError | u
     const position = new vscode.Position(location.line - 1, location.column - 1)
     testMessage.location = new vscode.Location(vscode.Uri.file(location.path), position)
   }
+  const errorId = crypto.randomUUID()
+  error.__vscode_id = errorId
+  testMessage.contextValue = errorId
   return testMessage
 }
 
 function getErrorMessage(error: TestError) {
-  let message = stripVTControlCharacters(error.message ?? '')
+  let message = ''
+  if (error.name) {
+    message += `${error.name}: `
+  }
+  message += stripVTControlCharacters(error.message ?? '')
   if (typeof error.frame === 'string') {
     message += `\n${error.frame}`
   }
@@ -618,6 +635,12 @@ function getErrorMessage(error: TestError) {
       message += `\nSerialized Error: ${errorsInspect.slice('[Object: null prototype] '.length)}`
     }
   }
+
+  if (typeof error.cause === 'object' && error.cause && 'name' in error.cause) {
+    (error.cause as any).name = `Caused by: ${(error.cause as any).name}`
+    message += `\n${getErrorMessage(error.cause)}`
+  }
+
   return message
 }
 
@@ -703,15 +726,15 @@ function setMessageStackFramesFromErrorStacks(testMessage: vscode.TestMessage, s
   if (!stacks || stacks.length === 0)
     return
 
-  const TestMessageStackFrame = (vscode as any).TestMessageStackFrame
+  const TestMessageStackFrame = vscode.TestMessageStackFrame
 
   const frames = stacks.map((stack) => {
     const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
     const sourceUri = sourceFilepath ? vscode.Uri.file(sourceFilepath) : undefined
     return new TestMessageStackFrame(stack.method, sourceUri, new vscode.Position(line - 1, column - 1))
-  });
+  })
 
-  (testMessage as any).stackTrace = frames
+  testMessage.stackTrace = frames
 }
 
 function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTestSpecification[] {

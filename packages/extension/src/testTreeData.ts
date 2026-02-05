@@ -1,3 +1,4 @@
+import type { TestError } from 'vitest'
 import type * as vscode from 'vscode'
 import type { VitestFolderAPI } from './api'
 
@@ -112,6 +113,7 @@ class TaskName {
 export class TestCase extends BaseTestData {
   public name: TaskName
   public readonly type = 'test'
+  public errors: TestError[] | undefined
 
   private constructor(
     item: vscode.TestItem,
@@ -125,6 +127,10 @@ export class TestCase extends BaseTestData {
 
   public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile, dynamic: boolean) {
     return addTestData(item, new TestCase(item, parent, file, dynamic))
+  }
+
+  setErrors(errors: TestError[] | undefined) {
+    this.errors = errors
   }
 
   getTestNamePattern() {

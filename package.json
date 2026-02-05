@@ -85,9 +85,25 @@
         "title": "Open Transformed Module",
         "command": "vitest.openTransformedModule",
         "category": "Vitest"
+      },
+      {
+        "title": "Copy Error",
+        "command": "vitest.copyErrorOutput",
+        "shortTitle": "Copy",
+        "category": "Vitest"
       }
     ],
     "menus": {
+      "testing/message/content": [
+        {
+          "command": "vitest.copyErrorOutput"
+        }
+      ],
+      "testing/message/context": [
+        {
+          "command": "vitest.copyErrorOutput"
+        }
+      ],
       "editor/title/context": [
         {
           "command": "vitest.revealInTestExplorer",
@@ -103,6 +119,10 @@
       "commandPalette": [
         {
           "command": "vitest.updateSnapshot",
+          "when": "false"
+        },
+        {
+          "command": "vitest.copyErrorOutput",
           "when": "false"
         }
       ],
