@@ -22,22 +22,13 @@ export class ImportsBreakdownProvider {
         color: '#808080',
         margin: '0 0 0 0.5em',
       },
+      rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
     })
 
     // Update decorations when the active editor changes
     this.disposables.push(
       vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (editor) {
-          this.updateDecorations(editor)
-        }
-      }),
-    )
-
-    // Update decorations when the document changes
-    this.disposables.push(
-      vscode.workspace.onDidChangeTextDocument((event) => {
-        const editor = vscode.window.activeTextEditor
-        if (editor && event.document === editor.document) {
           this.updateDecorations(editor)
         }
       }),
