@@ -7,8 +7,6 @@ import { configGlob, minimumVersion, workspaceGlob } from '../constants'
 import { log } from '../log'
 import { resolveVitestPackage } from './resolve'
 
-const _require = require
-
 function nonNullable<T>(value: T | null | undefined): value is T {
   return value != null
 }
@@ -32,8 +30,8 @@ export interface VitestPackage {
 function isVitestInPackageJson(root: string) {
   const pkgJson = resolve(dirname(root), 'package.json')
   if (existsSync(pkgJson)) {
-    const pkg = JSON.parse(readFileSync(pkgJson, 'utf-8'))
-    return pkg.dependencies?.vitest || pkg.devDependencies?.vitest
+    const pkg = readPkgJson(pkgJson)
+    return pkg?.dependencies?.vitest || pkg?.devDependencies?.vitest
   }
   return false
 }
@@ -85,8 +83,8 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
     }
   }
 
-  const pkg = _require(vitest.vitestPackageJsonPath)
-  if (!validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg))
+  const pkg = readPkgJson(vitest.vitestPackageJsonPath)
+  if (!pkg || !validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg))
     return null
 
   return {
@@ -123,7 +121,7 @@ function validateVitestPkg(showWarning: boolean, pkgJsonPath: string, pkg: any) 
 export async function resolveVitestPackages(showWarning: boolean): Promise<{ configs: VitestPackage[]; workspaces: VitestPackage[] }> {
   // TODO: update "warned" logic
   const [workspaceConfigs, configs] = await Promise.all([
-    resolveVitestWorkspaceConfigs(showWarning),
+    resolveVitestWorkspaceConfigs(),
     resolveVitestConfigs(showWarning),
   ])
   if (!workspaceConfigs.meta.length && !configs.meta.length) {
@@ -147,8 +145,8 @@ function resolveVitestWorkspacePackages(showWarning: boolean) {
     if (!vitest)
       return
 
-    const pkg = _require(vitest.vitestPackageJsonPath)
-    if (!validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg)) {
+    const pkg = readPkgJson(vitest.vitestPackageJsonPath)
+    if (!pkg || !validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg)) {
       warned = true
       return
     }
@@ -181,7 +179,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
   let warned = false
   const meta: VitestPackage[] = []
   packages.forEach((pkgPath) => {
-    const scripts = Object.entries(_require(pkgPath.fsPath).scripts || {}).filter(([, script]) => {
+    const scripts = Object.entries(readPkgJson(pkgPath.fsPath)?.scripts || {}).filter(([, script]) => {
       return typeof script === 'string' && script.startsWith('vitest ')
     }) as [string, string][]
 
@@ -196,8 +194,8 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
     if (!vitest)
       return
 
-    const pkg = _require(vitest.vitestPackageJsonPath)
-    if (!validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg)) {
+    const pkg = readPkgJson(vitest.vitestPackageJsonPath)
+    if (!pkg || !validateVitestPkg(showWarning, vitest.vitestPackageJsonPath, pkg)) {
       warned = true
       return
     }
@@ -230,7 +228,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
   }
 }
 
-async function resolveVitestWorkspaceConfigs(showWarning: boolean) {
+async function resolveVitestWorkspaceConfigs() {
   const config = getConfig()
   const userWorkspace = config.workspaceConfig
   const rootConfig = config.rootConfig
@@ -246,13 +244,15 @@ async function resolveVitestWorkspaceConfigs(showWarning: boolean) {
     ? [vscode.Uri.file(userWorkspace)]
     : await vscode.workspace.findFiles(workspaceGlob, config.configSearchPatternExclude)
 
-  let warned = false
   if (vitestWorkspaces.length) {
     // if there is a workspace config, use it as root
     const meta = resolvePackagUniquePrefixes(vitestWorkspaces.map((config) => {
-      const vitest = resolveVitestConfig(showWarning, config)
+      const vitest = resolveVitestConfig(/* don't show warnings for workspaces because they have limited support */ false, config)
       if (!vitest) {
-        warned = true
+        return null
+      }
+      // Version 4 doesn't support workspace files
+      if (gte(vitest.version, '4.0.0')) {
         return null
       }
       return {
@@ -264,12 +264,12 @@ async function resolveVitestWorkspaceConfigs(showWarning: boolean) {
 
     return {
       meta,
-      warned,
+      warned: false,
     }
   }
   return {
     meta: [],
-    warned,
+    warned: false,
   }
 }
 
@@ -385,4 +385,18 @@ function resolvePackagUniquePrefixes(packages: VitestPackage[]) {
   }
 
   return packages
+}
+
+function readPkgJson(path: string): null | {
+  version: string
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+  scripts?: Record<string, string>
+} {
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'))
+  }
+  catch {
+    return null
+  }
 }
