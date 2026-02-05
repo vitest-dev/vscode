@@ -11,6 +11,14 @@ const emitter = new WorkerWSEventEmitter(
   new WebSocket(process.env.VITEST_WS_ADDRESS!),
 )
 
+if (process.platform === 'win32') {
+  const cwd = process.cwd()
+  const correctCwd = cwd.slice(0, 1).toUpperCase() + cwd.slice(1)
+  if (correctCwd !== cwd) {
+    process.chdir(correctCwd)
+  }
+}
+
 emitter.on('message', async function onMessage(message: any) {
   if (emitter.name === 'ws') {
     message = JSON.parse(message.toString())
