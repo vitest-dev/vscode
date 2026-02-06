@@ -158,7 +158,7 @@ export function getErrorMessage(error: TestError) {
     if (!error.cause.name?.includes('Caused by')) {
       error.cause.name = `Caused by: ${error.cause.name}`
     }
-    message += `\n${getErrorMessage(error.cause)}`
+    message += `\n\n${getErrorMessage(error.cause)}`
   }
 
   return message
