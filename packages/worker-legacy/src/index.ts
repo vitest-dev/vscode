@@ -123,7 +123,7 @@ export async function initVitest(
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config
     return {
-      config: project.vite.config.configFile,
+      config: project.server.config.configFile,
       root: config.root,
       dir: config.dir,
       include: config.include,
