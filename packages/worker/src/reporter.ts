@@ -3,6 +3,7 @@ import type { VitestWorkerRPC, WorkerInitMetadata, WorkerRunnerOptions } from 'v
 import type {
   BrowserCommand,
   Reporter,
+  ResolvedConfig,
   RunnerTestFile,
   TestModule,
   TestProject,
@@ -13,23 +14,27 @@ import type {
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import { ExtensionWorker } from './worker'
 
-interface VSCodeReporterOptions {
-  setupFilePaths: WorkerInitMetadata['setupFilePaths']
-  debug: WorkerRunnerOptions['debug']
-}
-
 export class VSCodeReporter implements Reporter {
   public rpc!: VitestWorkerRPC
   private vitest!: VitestCore
 
   private setupFilePaths: WorkerInitMetadata['setupFilePaths']
   private debug: WorkerRunnerOptions['debug']
+  private execArgv: string[] = []
 
   private debuggerAttached: boolean | undefined = undefined
 
-  constructor(options: VSCodeReporterOptions) {
-    this.setupFilePaths = options.setupFilePaths
-    this.debug = options.debug
+  constructor(meta: WorkerInitMetadata, debug: WorkerRunnerOptions['debug']) {
+    this.setupFilePaths = meta.setupFilePaths
+    this.debug = debug
+    if (meta.pnpApi && meta.pnpLoader) {
+      this.execArgv.push(
+        '--require',
+        meta.pnpApi,
+        '--experimental-loader',
+        meta.pnpLoader,
+      )
+    }
   }
 
   onInit(vitest: VitestCore) {
@@ -38,6 +43,7 @@ export class VSCodeReporter implements Reporter {
 
     vitest.projects.forEach((project) => {
       this.ensureSetupFileIsAllowed(project.vite.config)
+      this.ensurePnpSuported(project.config)
     })
   }
 
@@ -159,6 +165,10 @@ export class VSCodeReporter implements Reporter {
         config.server.fs.allow.push(filepath)
       }
     })
+  }
+
+  ensurePnpSuported(config: ResolvedConfig) {
+    config.execArgv.push(...this.execArgv)
   }
 
   configureBrowserDebugging(vitest: VitestCore) {
