@@ -15,10 +15,7 @@ export async function initVitest(
   emitter: WorkerWSEventEmitter,
 ) {
   const meta = data.meta
-  const reporter = new VSCodeReporter({
-    setupFilePaths: meta.setupFilePaths,
-    debug: data.debug,
-  })
+  const reporter = new VSCodeReporter(meta, data.debug)
 
   let stdout: Writable | undefined
   let stderr: Writable | undefined
@@ -67,14 +64,6 @@ export async function initVitest(
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,
-    execArgv: meta.pnpApi && meta.pnpLoader
-      ? [
-          '--require',
-          meta.pnpApi,
-          '--experimental-loader',
-          meta.pnpLoader,
-        ]
-      : [],
     inspect: typeof data.debug === 'object'
       ? `${data.debug.host}:${data.debug.port}`
       : undefined,
