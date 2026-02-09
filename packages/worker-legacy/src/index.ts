@@ -1,5 +1,6 @@
 import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { UserConfig } from 'vitest/node'
+import { toArray } from '@vitest/utils/helpers'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -48,7 +49,6 @@ export async function initVitest(
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
-    reporters: [reporter],
     ui: false,
     includeTaskLocation: true,
     poolOptions: meta.pnpApi && meta.pnpLoader
@@ -87,6 +87,15 @@ export async function initVitest(
           name: 'vitest:vscode-extension',
           configureServer(server) {
             server.watcher.close()
+          },
+          config(userConfig) {
+            const test = (userConfig.test ??= {})
+            const testReporters = toArray(test.reporters)
+            if (!testReporters.length) {
+              testReporters.push(['default', { isTTY: false }])
+            }
+            testReporters.push(reporter as any)
+            test.reporters = testReporters
           },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
