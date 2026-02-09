@@ -59,29 +59,37 @@ jobs:
           path: 'test-results/${{ matrix.os }}'
 
   test-legacy:
-    - uses: actions/checkout@v3
-    - uses: pnpm/action-setup@v3
+    runs-on: ${{ matrix.os }}
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: pnpm
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        node-version: [22.x]
 
-    - name: vitest 3.2
-      run: node ./scripts/lower-vitest-version.js
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
 
-    - name: test
-      run: pnpm test
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
 
-    - name: test-e2e-legacy
-      run: pnpm test-e2e:legacy
+      - name: vitest 3.2
+        run: node ./scripts/lower-vitest-version.js
 
-    - name: test-e2e-legacy
-      run: pnpm test-e2e:legacy
+      - name: test
+        run: pnpm test
 
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: 'test-results-legacy-${{ matrix.os }}'
-        path: 'test-results-legacy/${{ matrix.os }}'
+      - name: test-e2e-legacy
+        run: pnpm test-e2e:legacy
+
+      - name: test-e2e-legacy
+        run: pnpm test-e2e:legacy
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 'test-results-legacy-${{ matrix.os }}'
+          path: 'test-results-legacy/${{ matrix.os }}'
