@@ -368,8 +368,14 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return this.coverage.disable()
   }
 
-  enableCoverage() {
-    return this.coverage.enable()
+  async enableCoverage() {
+    try {
+      return await this.coverage.enable()
+    }
+    catch (error) {
+      this.disableCoverage()
+      throw error
+    }
   }
 
   waitForCoverageReport() {

@@ -316,6 +316,12 @@
           "type": "boolean",
           "default": true,
           "scope": "resource"
+        },
+        "vitest.forceCancelTimeout": {
+          "markdownDescription": "When the 'Stop' button is clicked, the extension tries to stop tests gracefully so they don't keep any hanging processes. By default, if tests didn't finish in 1 second, the extension will kill any Vitest process which may keep your test's 'child_process' alive. You can configure the timeout with this option, but consider using [`signal`](https://vitest.dev/guide/test-context#signal) API inside of your tests instead.",
+          "type": "number",
+          "default": 1000,
+          "scope": "resource"
         }
       }
     }

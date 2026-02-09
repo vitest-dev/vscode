@@ -12,6 +12,7 @@ import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
+import { getConfig } from './config'
 import { coverageContext, readCoverageReport } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
@@ -278,7 +279,11 @@ export class TestRunner extends vscode.Disposable {
       token.onCancellationRequested(() => {
         if (request === this.nonContinuousRequest) {
           this.cancelled = true
+          const timeout = setTimeout(() => {
+            this.api.cancelRun() // cancel the second time for good
+          }, getConfig(this.api.workspaceFolder).forceCancelTimeout)
           this.api.cancelRun().then(() => {
+            clearTimeout(timeout)
             this.nonContinuousRequest = undefined
             this.endTestRun()
           })
@@ -533,7 +538,7 @@ export class TestRunner extends vscode.Disposable {
       case 'only':
       case 'run':
       case 'queued':
-        log.verbose?.(`Marking "${test.label}" as running`)
+        log.verbose?.(`Marking "${test.label}" as running (state is ${result.state})`)
         testRun.started(test)
         break
       default: {
