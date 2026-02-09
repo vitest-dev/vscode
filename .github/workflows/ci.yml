@@ -7,7 +7,25 @@ on:
     branches: [main]
 
 jobs:
-  ci:
+  lint:
+    runs-on: macos-latest
+
+  steps:
+    - uses: actions/checkout@v3
+    - uses: pnpm/action-setup@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: pnpm
+
+    - run: pnpm install --filter="vitest-vscode-*" --frozen-lockfile
+    - run: pnpm build
+    - run: pnpm typecheck
+    - run: pnpm lint
+
+  test:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -27,27 +45,43 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm lint
 
       - name: test
-        run: |
-          pnpm test
+        run: pnpm test
 
       - name: test-e2e
-        run: pnpm test-e2e --retry 2
-
-      - name: vitest 3.2
-        run: node ./scripts/lower-vitest-version.js
-      - run: pnpm install --no-frozen-lockfile
-
-      - name: test-e2e-legacy
-        run: pnpm test-e2e --retry 2
-        env:
-          TEST_LEGACY: true
+        run: pnpm test-e2e
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 'test-results-${{ matrix.os }}'
           path: 'test-results/${{ matrix.os }}'
+
+  test-legacy:
+    - uses: actions/checkout@v3
+    - uses: pnpm/action-setup@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: pnpm
+
+    - name: vitest 3.2
+      run: node ./scripts/lower-vitest-version.js
+
+    - name: test
+      run: pnpm test
+
+    - name: test-e2e-legacy
+      run: pnpm test-e2e:legacy
+
+    - name: test-e2e-legacy
+      run: pnpm test-e2e:legacy
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: 'test-results-legacy-${{ matrix.os }}'
+        path: 'test-results-legacy/${{ matrix.os }}'

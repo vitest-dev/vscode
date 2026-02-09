@@ -15,5 +15,6 @@ export default defineConfig({
     globalSetup: [
       './utils/downloadSetup.ts',
     ],
+    retry: process.env.CI ? 2 : 0,
   },
 })
