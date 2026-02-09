@@ -52,6 +52,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
       VITEST_WS_ADDRESS: wsAddress,
       VITEST: 'true',
       NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
+      FORCE_COLOR: '1',
     },
     cwd: pkg.cwd,
   })
