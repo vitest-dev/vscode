@@ -105,6 +105,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
 - `vitest.applyDiagnostic`: Show a squiggly line where the error was thrown. This also enables the error count in the File Tab. Default: `true`
 - `vitest.showInlineConsoleLog`: Show console.log messages inline in the editor next to the code that produced them. When disabled, console logs will still appear in the test output but not inline. Default: `true`
+- `vitest.forceCancelTimeout`: When the 'Stop' button is clicked, the extension tries to stop tests gracefully so they don't keep any hanging processes. By default, if tests didn't finish in 1 second, the extension will kill any Vitest process which may keep your test's 'child_process' alive. You can configure the timeout with this option, but consider using [`signal`](https://vitest.dev/guide/test-context#signal) API inside of your tests instead.
 
 ### Commands
 
@@ -166,6 +167,8 @@ test('fetch test', async ({ signal }) => {
   await fetch('some-log-or-stuck-call', { signal })
 })
 ```
+
+Since 1.44.1, Vitest extension will forcefully stop any Vitest process after 1s without waiting for a gracefull exit which may leave hanging processes in the background. Consider using a `signal` API or raising the `vitest.forceCancelTimeout` option.
 
 ### I am using `vitest.shellType: terminal`, but I don't see the terminal
 

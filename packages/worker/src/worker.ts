@@ -71,7 +71,13 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   async enableCoverage(): Promise<void> {
-    await this.coverage.enableCoverage()
+    try {
+      await this.coverage.enableCoverage()
+    }
+    catch (error) {
+      this.disableCoverage()
+      throw error
+    }
   }
 
   disableCoverage(): void {

@@ -71,6 +71,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const applyDiagnostic = get<boolean>('applyDiagnostic', true)
   const ignoreWorkspace = get<boolean>('ignoreWorkspace', false) ?? false
   const showInlineConsoleLog = get<boolean>('showInlineConsoleLog', true) ?? true
+  const forceCancelTimeout = get<number>('forceCancelTimeout', 1000) ?? 1000
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
@@ -78,6 +79,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     debugExclude: get<string[]>('debugExclude'),
     debugOutFiles,
     filesWatcherInclude,
+    forceCancelTimeout,
     terminalShellArgs,
     terminalShellPath,
     shellType,
