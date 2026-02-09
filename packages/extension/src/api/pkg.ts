@@ -63,7 +63,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
         vscode.window.showWarningMessage(message.join(''))
       }
     }
-    log.error('[API]', `Vitest not found for ${configOrWorkspaceFile}.`)
+    log.error('[API]', `Vitest not found for ${configOrWorkspaceFile.fsPath}.`)
     return null
   }
 
