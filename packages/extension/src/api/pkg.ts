@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, normalize, resolve } from 'pathe'
 import { gte } from 'semver'
+import { getSuggestedInstallCommand } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { getConfig } from '../config'
 import { configGlob, minimumVersion, workspaceGlob } from '../constants'
@@ -51,7 +52,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
       if (isVitestConfig || isInPkgJson) {
         const message = [
           `Vitest not found in "${basename(dirname(configOrWorkspaceFile.fsPath))}" folder. `,
-          `Please run \`npm i --save-dev vitest\` to install Vitest. `,
+          `Please run \`${getSuggestedInstallCommand(cwd)}\` to install Vitest. `,
         ]
         if (isVitestConfig) {
           message.push('You are seeing this message because the extension found a Vitest config in this folder.')
