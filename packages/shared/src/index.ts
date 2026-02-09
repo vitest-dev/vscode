@@ -7,7 +7,13 @@ import type {
 
 export { WorkerWSEventEmitter } from './emitter'
 export { createWorkerRPC } from './rpc'
-export { assert, createQueuedHandler, limitConcurrency, normalizeDriveLetter } from './utils'
+export {
+  assert,
+  createQueuedHandler,
+  getSuggestedInstallCommand,
+  limitConcurrency,
+  normalizeDriveLetter,
+} from './utils'
 
 export type ExtensionTestSpecification = [
   project: string,

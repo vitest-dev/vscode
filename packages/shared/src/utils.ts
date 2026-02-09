@@ -1,3 +1,5 @@
+import { detectPackageManager } from './pkgManager'
+
 // A compact (code-wise, probably not memory-wise) singly linked list node.
 type QueueNode<T> = [value: T, next?: QueueNode<T>]
 
@@ -59,6 +61,18 @@ export function limitConcurrency(concurrency = Number.POSITIVE_INFINITY): <Args 
 export function assert(condition: unknown, message: string | (() => string)): asserts condition {
   if (!condition) {
     throw new Error(typeof message === 'string' ? message : message())
+  }
+}
+
+export function getSuggestedInstallCommand(cwd: string) {
+  const pkgManager = detectPackageManager(cwd)
+  switch (pkgManager?.name) {
+    case 'bun': return 'bun install --dev vitest'
+    case 'yarn': return 'yarn add -D vitest'
+    case 'pnpm': return 'pnpm add -D vitest'
+    case 'npm':
+    default:
+      return 'npm i --save-dev vitest'
   }
 }
 
