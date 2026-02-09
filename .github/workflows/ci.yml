@@ -79,13 +79,13 @@ jobs:
       - name: vitest 3.2
         run: node ./scripts/lower-vitest-version.js
 
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
       - name: test
         run: pnpm test
 
-      - name: test-e2e-legacy
-        run: pnpm test-e2e:legacy
-
-      - name: test-e2e-legacy
+      - name: test-e2e
         run: pnpm test-e2e:legacy
 
       - uses: actions/upload-artifact@v4
