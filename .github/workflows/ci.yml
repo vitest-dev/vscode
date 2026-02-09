@@ -79,7 +79,7 @@ jobs:
       - name: vitest 3.2
         run: node ./scripts/lower-vitest-version.js
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --prefer-offline
       - run: pnpm build
 
       - name: test
