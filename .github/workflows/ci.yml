@@ -92,4 +92,4 @@ jobs:
         if: always()
         with:
           name: 'test-results-legacy-${{ matrix.os }}'
-          path: 'test-results-legacy/${{ matrix.os }}'
+          path: 'test-results/${{ matrix.os }}'

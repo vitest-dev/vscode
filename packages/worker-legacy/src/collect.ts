@@ -60,6 +60,14 @@ const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
     }
   : undefined
 
+function isTestFunctionName(name: string) {
+  return name === 'it' || name === 'test' || name.startsWith('test') || name.endsWith('Test')
+}
+
+function isVitestFunctionName(name: string) {
+  return name === 'describe' || name === 'suite' || isTestFunctionName(name)
+}
+
 export function astParseFile(filepath: string, code: string) {
   const ast = parse(code, {
     ecmaVersion: 'latest',
@@ -95,7 +103,7 @@ export function astParseFile(filepath: string, code: string) {
     if (callee.type === 'MemberExpression') {
       if (
         callee.object?.type === 'Identifier'
-        && ['it', 'test', 'describe', 'suite'].includes(callee.object.name)
+        && isVitestFunctionName(callee.object.name)
       ) {
         return callee.object?.name
       }
@@ -128,14 +136,14 @@ export function astParseFile(filepath: string, code: string) {
       if (!name) {
         return
       }
-      if (!['it', 'test', 'describe', 'suite'].includes(name)) {
+      if (!isVitestFunctionName(name)) {
         verbose?.(`Skipping ${name} (unknown call)`)
         return
       }
       const property = callee?.property?.name
       let mode = !property || property === name ? 'run' : property
       // they will be picked up in the next iteration
-      if (['each', 'for', 'skipIf', 'runIf'].includes(mode)) {
+      if (['each', 'for', 'skipIf', 'runIf', 'extend', 'scoped'].includes(mode)) {
         return
       }
 
@@ -173,8 +181,10 @@ export function astParseFile(filepath: string, code: string) {
       }
 
       message = message
-        // Vite SSR injects these
-        .replace(/__vite_ssr_import_\d+__\./g, '')
+        // vite 7+
+        .replace(/\(0\s?,\s?__vite_ssr_import_\d+__.(\w+)\)/g, '$1')
+        // vite <7
+        .replace(/__(vite_ssr_import|vi_import)_\d+__\./g, '')
         // Vitest module mocker injects these
         .replace(/__vi_import_\d+__\./g, '')
 
@@ -195,7 +205,7 @@ export function astParseFile(filepath: string, code: string) {
         start,
         end,
         name: message,
-        type: name === 'it' || name === 'test' ? 'test' : 'suite',
+        type: isTestFunctionName(name) ? 'test' : 'suite',
         mode,
         task: null as any,
         dynamic: isDynamicEach,
