@@ -294,12 +294,6 @@
           "type": "array",
           "scope": "resource"
         },
-        "vitest.experimentalStaticAstCollect": {
-          "markdownDescription": "Enable static AST analysis for faster test discovery. This feature is experimental and may not work with all projects.",
-          "type": "boolean",
-          "default": true,
-          "scope": "resource"
-        },
         "vitest.cliArguments": {
           "markdownDescription": "Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
           "type": "string",
@@ -335,6 +329,7 @@
     "test": "vscode-test",
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
     "test-e2e": "vitest --root test/e2e",
+    "test-e2e:legacy": "TEST_LEGACY=true vitest --root test/e2e",
     "ecosystem-ci:build": "pnpm build",
     "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
     "typecheck": "tsc -b ./ --noEmit",

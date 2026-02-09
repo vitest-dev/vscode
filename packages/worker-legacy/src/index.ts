@@ -15,7 +15,6 @@ export async function initVitest(
       typeof data.debug === 'object' && data.debug.browser
         ? meta.setupFilePaths.browserDebug
         : null,
-      meta.setupFilePaths.watcher,
     ].filter(v => v != null),
   })
 
@@ -165,7 +164,6 @@ export async function initVitest(
       return new ExtensionWorker(
         vitest,
         !!data.debug,
-        data.astCollect,
         emitter,
         data.meta.finalCoverageFileName,
       )

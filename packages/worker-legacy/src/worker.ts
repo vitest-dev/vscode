@@ -33,7 +33,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   constructor(
     public readonly vitest: VitestCore,
     private readonly debug = false,
-    public readonly alwaysAstCollect = false,
     private emitter: WorkerWSEventEmitter,
     finalCoverageFileName: string,
   ) {
@@ -76,44 +75,17 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   public async collectTests(files: [projectName: string, filepath: string][]) {
-    const astCollect: [project: WorkspaceProject, filepath: string][] = []
-    const otherTests: [project: WorkspaceProject, filepath: string][] = []
+    const specifications: [project: WorkspaceProject, filepath: string][] = []
 
     for (const [projectName, filepath] of files) {
       const project = this.vitest.projects.find(project => project.getName() === projectName)
       assert(project, `Project ${projectName} not found for file ${filepath}`)
-      if (this.alwaysAstCollect || project.config.browser.enabled) {
-        astCollect.push([project, filepath])
-      }
-      else {
-        otherTests.push([project, filepath])
-      }
+      specifications.push([project, filepath])
     }
 
-    await Promise.all([
-      (async () => {
-        if (astCollect.length) {
-          await this.astCollect(astCollect)
-        }
-      })(),
-      (async () => {
-        if (otherTests.length) {
-          const files = otherTests.map<ExtensionTestSpecification>(
-            ([project, filepath]) => [
-              project.getName(),
-              filepath,
-            ] as const,
-          )
-
-          try {
-            await this.runTestFiles(files, ExtensionWorker.COLLECT_NAME_PATTERN)
-          }
-          finally {
-            this.setTestNamePattern(undefined)
-          }
-        }
-      })(),
-    ])
+    if (specifications.length) {
+      await this.astCollect(specifications)
+    }
   }
 
   public async astCollect(specs: [project: WorkspaceProject, file: string][]) {
@@ -230,7 +202,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   private async runTestFiles(specs: ExtensionTestSpecification[], testNamePattern?: string | undefined, runAllFiles = false) {
     await (this.vitest as any).runningPromise
-    this.watcher.markRerun(false)
 
     this.setTestNamePattern(testNamePattern)
 

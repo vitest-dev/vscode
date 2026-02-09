@@ -306,7 +306,6 @@ class VitestExtension {
       'vitest.terminalShellArgs',
       'vitest.terminalShellPath',
       'vitest.filesWatcherInclude',
-      'vitest.experimentalStaticAstCollect',
       'vitest.cliArguments',
     ]
 

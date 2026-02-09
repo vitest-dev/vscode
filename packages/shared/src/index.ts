@@ -143,7 +143,6 @@ export interface WorkerInitMetadata {
   pnpApi?: string
   pnpLoader?: string
   setupFilePaths: {
-    watcher: string
     browserDebug: string
   }
   finalCoverageFileName: string
@@ -159,7 +158,6 @@ export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerInitMetadata
   debug?: WorkerRunnerDebugOptions | boolean
-  astCollect: boolean
 }
 
 export interface SerializedProject {

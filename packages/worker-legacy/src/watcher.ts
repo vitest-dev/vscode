@@ -1,4 +1,3 @@
-import type { ProvidedContext } from 'vitest'
 import type { WorkspaceProject } from 'vitest/node'
 import { relative } from 'pathe'
 import { ExtensionWorker } from './worker'
@@ -7,7 +6,6 @@ export class ExtensionWorkerWatcher {
   private files: string[] = []
   private testNamePattern: string | undefined
   private watchEveryFile = false
-  private rerunTriggered = false
 
   private enabled = false
 
@@ -15,17 +13,6 @@ export class ExtensionWorkerWatcher {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
     const vitest = worker.vitest
-    ;(worker.getRootTestProject().provide as <T extends keyof ProvidedContext>(key: T, value: ProvidedContext[T]) => void)('__vscode', {
-      get continuousFiles() {
-        return state.files || []
-      },
-      get watchEveryFile() {
-        return state.watchEveryFile ?? true
-      },
-      get rerunTriggered() {
-        return state.rerunTriggered ?? false
-      },
-    })
 
     // @ts-expect-error modifying a private property
     const originalScheduleRerun = vitest.scheduleRerun.bind(vitest)
@@ -41,7 +28,7 @@ export class ExtensionWorkerWatcher {
         if (!isTestFileTrigger) {
           this.changedTests.clear()
           this.invalidates.clear()
-          return await originalScheduleRerun.call(this, files)
+          return await originalScheduleRerun.call(this, [])
         }
 
         const tests = Array.from(this.changedTests)
@@ -49,9 +36,7 @@ export class ExtensionWorkerWatcher {
         const astSpecs: [project: WorkspaceProject, file: string][] = []
 
         for (const [project, file] of specs) {
-          if (worker.alwaysAstCollect || project.config.browser.enabled) {
-            astSpecs.push([project, file])
-          }
+          astSpecs.push([project, file])
         }
 
         worker.setGlobalTestNamePattern(ExtensionWorker.COLLECT_NAME_PATTERN)
@@ -63,11 +48,8 @@ export class ExtensionWorkerWatcher {
           this.changedTests.clear()
           return await originalScheduleRerun.call(this, [])
         }
-
-        return await originalScheduleRerun.call(this, files)
+        return await originalScheduleRerun.call(this, [])
       }
-
-      state.rerunTriggered = true
 
       const namePattern = state.testNamePattern ? new RegExp(state.testNamePattern) : undefined
       worker.setGlobalTestNamePattern(namePattern)
@@ -115,16 +97,11 @@ export class ExtensionWorkerWatcher {
     })
   }
 
-  markRerun(rerun: boolean) {
-    this.rerunTriggered = rerun
-  }
-
   trackTests(files: string[], testNamePatern: string | undefined) {
     this.enabled = true
     this.files = files
     this.watchEveryFile = false
     this.testNamePattern = testNamePatern
-    this.rerunTriggered = false
   }
 
   trackEveryFile() {
@@ -132,7 +109,6 @@ export class ExtensionWorkerWatcher {
     this.watchEveryFile = true
     this.files = []
     this.testNamePattern = undefined
-    this.rerunTriggered = false
   }
 
   stopTracking() {
