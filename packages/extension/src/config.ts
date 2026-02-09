@@ -65,8 +65,6 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const shellType = get<'child_process' | 'terminal'>('shellType', 'child_process')!
   const nodeExecArgs = get<string[] | undefined>('nodeExecArgs')
 
-  const experimentalStaticAstCollect = get<boolean>('experimentalStaticAstCollect', false)!
-
   const cliArguments = get<string | undefined>('cliArguments')
 
   const debugOutFiles = get<string[]>('debugOutFiles', [])
@@ -86,7 +84,6 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     applyDiagnostic,
     cliArguments,
     nodeExecArgs,
-    experimentalStaticAstCollect,
     vitestPackagePath: resolvedVitestPackagePath,
     workspaceConfig: resolveConfigPath(workspaceConfig),
     rootConfig: resolveConfigPath(rootConfigFile),

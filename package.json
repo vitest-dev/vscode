@@ -294,12 +294,6 @@
           "type": "array",
           "scope": "resource"
         },
-        "vitest.experimentalStaticAstCollect": {
-          "markdownDescription": "Enable static AST analysis for faster test discovery. This feature is experimental and may not work with all projects.",
-          "type": "boolean",
-          "default": true,
-          "scope": "resource"
-        },
         "vitest.cliArguments": {
           "markdownDescription": "Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`.",
           "type": "string",

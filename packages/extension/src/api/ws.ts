@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import vscode from 'vscode'
 import { getConfig } from '../config'
-import { browserSetupFilePath, finalCoverageFileName, setupFilePath } from '../constants'
+import { browserSetupFilePath, finalCoverageFileName } from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 
@@ -131,13 +131,11 @@ export function onWsConnection(
         ? pathToFileURL(pnpLoader).toString()
         : undefined,
       setupFilePaths: {
-        watcher: setupFilePath,
         browserDebug: browserSetupFilePath,
       },
       finalCoverageFileName,
     },
     debug,
-    astCollect: getConfig(pkg.folder).experimentalStaticAstCollect,
   }
 
   ws.send(JSON.stringify(runnerOptions))
