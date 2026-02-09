@@ -168,6 +168,8 @@ test('fetch test', async ({ signal }) => {
 })
 ```
 
+Since 1.44.1, Vitest extension will forcefully stop any Vitest process after 1s without waiting for a gracefull exit which may leave hanging processes in the background. Consider using a `signal` API or raising the `vitest.forceCancelTimeout` option.
+
 ### I am using `vitest.shellType: terminal`, but I don't see the terminal
 
 The extension uses a modified Vitest script that removes the reporter output. For this reason, the terminal is hidden by default. However, it might be useful to debug issues with the extension or Vitest itself - to open the terminal in the "Terminals" view you can use the "Vitest: Show Shell Terminal" command.
