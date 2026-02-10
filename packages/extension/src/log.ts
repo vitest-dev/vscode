@@ -2,6 +2,7 @@
 
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { inspect } from 'node:util'
 import { window } from 'vscode'
 import { getConfig } from './config'
 
@@ -13,6 +14,13 @@ function logToCallbacks(message: string) {
   for (const callback of callbacks) {
     callback(message)
   }
+}
+
+function inspectValue(val: unknown) {
+  if (typeof val === 'object') {
+    return inspect(val)
+  }
+  return val
 }
 
 export const log = {
@@ -37,7 +45,7 @@ export const log = {
       console.log(...args)
     }
     const time = new Date().toLocaleTimeString()
-    const message = `[INFO ${time}] ${args.join(' ')}`
+    const message = `[INFO ${time}] ${args.map(inspectValue).join(' ')}`
     if (logFile) {
       appendFile(message)
     }
@@ -54,7 +62,7 @@ export const log = {
         args[i] = `[Error ${err.name}] ${err.message}\n${err.stack}`
       }
     }
-    const message = `[Error ${time}] ${args.join(' ')}`
+    const message = `[Error ${time}] ${args.map(inspectValue).join(' ')}`
     if (logFile) {
       appendFile(message)
     }
@@ -66,7 +74,7 @@ export const log = {
         if (process.env.EXTENSION_NODE_ENV === 'dev') {
           console.log(`[${time}]`, ...args)
         }
-        const message = `[${time}] ${args.join(' ')}`
+        const message = `[${time}] ${args.map(inspectValue).join(' ')}`
         if (logFile) {
           appendFile(message)
         }
