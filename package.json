@@ -325,6 +325,18 @@
           "scope": "resource"
         }
       }
+    },
+    "_views": {
+      "test": [
+        {
+          "type": "webview",
+          "id": "vitest.webviewSettings",
+          "contextualTitle": "Vitest",
+          "visibility": "collapsed",
+          "icon": "$(test-view-icon)",
+          "name": "Vitest"
+        }
+      ]
     }
   },
   "scripts": {

@@ -16,6 +16,7 @@ import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
 import { TestRunner } from './runner'
 import { SchemaProvider } from './schemaProvider'
+import { SettingsWebview } from './settingsWebview'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
@@ -23,7 +24,7 @@ import { debounce, showVitestError } from './utils'
 import './polyfills'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const extension = new VitestExtension()
+  const extension = new VitestExtension(context)
   context.subscriptions.push(extension)
   await extension.activate()
 }
@@ -48,11 +49,12 @@ class VitestExtension {
   private schemaProvider: SchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
   private inlineConsoleLog: InlineConsoleLogManager
+  private settingsWebview: SettingsWebview
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
     log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
@@ -83,6 +85,7 @@ class VitestExtension {
       },
     )
     this.inlineConsoleLog = new InlineConsoleLogManager(this.testTree)
+    this.settingsWebview = new SettingsWebview(context.extensionUri)
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -512,6 +515,7 @@ class VitestExtension {
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
     this.inlineConsoleLog.dispose()
+    this.settingsWebview.dispose()
     this.runProfiles.forEach(profile => profile.dispose())
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())
