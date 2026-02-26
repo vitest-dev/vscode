@@ -30,12 +30,18 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
     }
   }
 
-  const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
+  const pnpCwd = folder?.uri.fsPath || cwd
+  const pnp = resolvePnp(pnpCwd)
   if (!pnp)
     return null
+  const vitestNodePath
+    = resolvePnpPackagePath(pnp.pnpApi, 'vitest/node', pnpCwd)
+      || resolvePnpPackagePath(pnp.pnpApi, 'vite-plus/test/node', pnpCwd)
+  if (!vitestNodePath)
+    return null
   return {
-    vitestNodePath: pnp.vitestNodePath,
-    vitestPackageJsonPath: 'vitest/package.json',
+    vitestNodePath,
+    vitestPackageJsonPath: '', // we don't read pkg.json for pnp
     pnp: {
       loaderPath: pnp.pnpLoader,
       pnpPath: pnp.pnpPath,
@@ -74,21 +80,30 @@ export function resolveVitePlusPackagePath(cwd: string) {
   }
 }
 
-export function resolveVitestPnpPackagePath(cwd: string) {
+export function resolvePnp(cwd: string) {
   try {
     const pnpPath = findUpSync(['.pnp.js', '.pnp.cjs'], { cwd })
     if (pnpPath == null) {
       return null
     }
     const pnpApi = _require(pnpPath)
-    const vitestNodePath = pnpApi.resolveRequest('vitest/node', cwd)
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
         paths: [dirname(pnpPath)],
       }),
       pnpPath,
-      vitestNodePath,
+      pnpApi,
     }
+  }
+  catch {
+    return null
+  }
+}
+
+export function resolvePnpPackagePath(pnpApi: any, pkg: 'vitest/node' | 'vite-plus/test/node', cwd: string): string | null {
+  try {
+    const vitestNodePath = pnpApi.resolveRequest(pkg, cwd)
+    return vitestNodePath
   }
   catch {
     return null
