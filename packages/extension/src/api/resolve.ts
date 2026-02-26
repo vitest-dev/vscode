@@ -22,13 +22,26 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
       vitestPackageJsonPath,
     }
   }
+  const vitePlus = resolveVitePlusPackagePath(cwd)
+  if (vitePlus) {
+    return {
+      vitestNodePath: resolveViePlusVitestNodePath(vitePlus),
+      vitestPackageJsonPath: vitePlus,
+    }
+  }
 
-  const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
+  const pnpCwd = folder?.uri.fsPath || cwd
+  const pnp = resolvePnp(pnpCwd)
   if (!pnp)
     return null
+  const vitestNodePath
+    = resolvePnpPackagePath(pnp.pnpApi, 'vitest/node', pnpCwd)
+      || resolvePnpPackagePath(pnp.pnpApi, 'vite-plus/test/node', pnpCwd)
+  if (!vitestNodePath)
+    return null
   return {
-    vitestNodePath: pnp.vitestNodePath,
-    vitestPackageJsonPath: 'vitest/package.json',
+    vitestNodePath,
+    vitestPackageJsonPath: '', // we don't read pkg.json for pnp
     pnp: {
       loaderPath: pnp.pnpLoader,
       pnpPath: pnp.pnpPath,
@@ -53,25 +66,52 @@ export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFo
   }
 }
 
-export function resolveVitestPnpPackagePath(cwd: string) {
+export function resolveVitePlusPackagePath(cwd: string) {
+  try {
+    const result = require.resolve('vite-plus/package.json', {
+      paths: [cwd],
+    })
+    delete require.cache['vite-plus/package.json']
+    delete require.cache[result]
+    return result
+  }
+  catch {
+    return null
+  }
+}
+
+export function resolvePnp(cwd: string) {
   try {
     const pnpPath = findUpSync(['.pnp.js', '.pnp.cjs'], { cwd })
     if (pnpPath == null) {
       return null
     }
     const pnpApi = _require(pnpPath)
-    const vitestNodePath = pnpApi.resolveRequest('vitest/node', cwd)
     return {
       pnpLoader: require.resolve('./.pnp.loader.mjs', {
         paths: [dirname(pnpPath)],
       }),
       pnpPath,
-      vitestNodePath,
+      pnpApi,
     }
   }
   catch {
     return null
   }
+}
+
+export function resolvePnpPackagePath(pnpApi: any, pkg: 'vitest/node' | 'vite-plus/test/node', cwd: string): string | null {
+  try {
+    const vitestNodePath = pnpApi.resolveRequest(pkg, cwd)
+    return vitestNodePath
+  }
+  catch {
+    return null
+  }
+}
+
+export function resolveViePlusVitestNodePath(vitePlusPkgPath: string) {
+  return resolve(dirname(vitePlusPkgPath), './dist/test/node.js')
 }
 
 export function resolveVitestNodePath(vitestPkgPath: string) {
