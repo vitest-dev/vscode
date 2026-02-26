@@ -100,6 +100,9 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 }
 
 function validateVitestPkg(showWarning: boolean, pkgJsonPath: string, pkg: any) {
+  if (pkg.name === 'vite-plus') {
+    return true
+  }
   if (pkg.name !== 'vitest') {
     vscode.window.showErrorMessage(
       `Package was resolved to "${pkg.name}" instead of "vitest". If you are using "vitest.vitestPackagePath", make sure it points to a "vitest" package.`,

@@ -22,6 +22,13 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
       vitestPackageJsonPath,
     }
   }
+  const vitePlus = resolveVitePlusPackagePath(cwd)
+  if (vitePlus) {
+    return {
+      vitestNodePath: resolveViePlusVitestNodePath(vitePlus),
+      vitestPackageJsonPath: vitePlus,
+    }
+  }
 
   const pnp = resolveVitestPnpPackagePath(folder?.uri.fsPath || cwd)
   if (!pnp)
@@ -53,6 +60,20 @@ export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFo
   }
 }
 
+export function resolveVitePlusPackagePath(cwd: string) {
+  try {
+    const result = require.resolve('vite-plus/package.json', {
+      paths: [cwd],
+    })
+    delete require.cache['vite-plus/package.json']
+    delete require.cache[result]
+    return result
+  }
+  catch {
+    return null
+  }
+}
+
 export function resolveVitestPnpPackagePath(cwd: string) {
   try {
     const pnpPath = findUpSync(['.pnp.js', '.pnp.cjs'], { cwd })
@@ -72,6 +93,10 @@ export function resolveVitestPnpPackagePath(cwd: string) {
   catch {
     return null
   }
+}
+
+export function resolveViePlusVitestNodePath(vitePlusPkgPath: string) {
+  return resolve(dirname(vitePlusPkgPath), './dist/test/node.js')
 }
 
 export function resolveVitestNodePath(vitestPkgPath: string) {
