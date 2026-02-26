@@ -3,7 +3,7 @@
   "name": "explorer",
   "displayName": "Vitest",
   "type": "commonjs",
-  "version": "1.44.0",
+  "version": "1.44.1",
   "packageManager": "pnpm@10.11.1",
   "description": "A Vite-native testing framework. It's fast!",
   "author": "Vitest Team",
