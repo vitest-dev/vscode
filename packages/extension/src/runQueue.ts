@@ -9,12 +9,16 @@ import { log } from './log'
 import { ContinuousTestRunner, TestRunner } from './runner'
 
 /**
- * Per-folder run queue. Ensures only one test run is active at a time per folder API.
+ * Per-process run queue. Ensures only one test run is active at a time per process API.
  * Creates a fresh TestRunner + process for each run, like the debug flow does.
  */
 export class RunQueue {
   private currentRun: Promise<void> | undefined
-  private pendingQueue: { run: () => Promise<void>; resolve: () => void }[] = []
+  private pendingQueue: {
+    runTests: () => Promise<void>
+    resolveWithoutRunning: () => void
+  }[] = []
+
   private disposed = false
 
   private continuousHandle: ContinuousHandle | undefined
@@ -42,15 +46,18 @@ export class RunQueue {
     log.verbose?.('Queueing a new test run to execute when the current one is finished.')
     return new Promise<void>((resolve) => {
       this.pendingQueue.push({
-        run: () => this.executeRun(request, token, coverage),
-        resolve,
+        runTests: () => this.executeRun(request, token, coverage),
+        resolveWithoutRunning: resolve,
       })
     })
   }
 
   private async executeRun(request: vscode.TestRunRequest, token: vscode.CancellationToken, coverage: boolean) {
     this.currentRun = (async () => {
+      // Each "run" click creates a new process to run tests
+      // We don't reuse the established process because it's harder to track
       const api = new VitestProcessAPI(this.api.config)
+      // TODO: pass down profile instead of creating a new one, same for coverage/runner - or just disable coverage continuous?
       const handle = await api.spawnForRun({ coverage })
       const runner = this.createRunner(handle)
       try {
@@ -77,14 +84,14 @@ export class RunQueue {
 
   private drainQueue() {
     if (this.disposed) {
-      this.pendingQueue.forEach(p => p.resolve())
+      this.pendingQueue.forEach(p => p.resolveWithoutRunning())
       this.pendingQueue.length = 0
       return
     }
     const next = this.pendingQueue.shift()
     if (next) {
       log.verbose?.(`Running next tests in the queue`)
-      next.run().then(next.resolve, next.resolve)
+      next.runTests().then(next.resolveWithoutRunning, next.resolveWithoutRunning)
     }
   }
 
@@ -96,11 +103,15 @@ export class RunQueue {
     token.onCancellationRequested(() => {
       this.continuousRequests.delete(request)
 
-      if (this.continuousTimer || this.continuousRequests.size) {
+      if (this.continuousRequests.size) {
         const handle = this.continuousHandle
-        handle?.runner.watchTests().catch((error) => {
+        handle?.runner.syncWatcher().catch((error) => {
           log.error('Failed to update the watcher state', error)
         })
+        return
+      }
+
+      if (this.continuousTimer) {
         return
       }
 
@@ -117,7 +128,7 @@ export class RunQueue {
 
     // it's possible that request was cancelled before we spawn the process
     if (this.continuousRequests.size) {
-      await handle.runner.watchTests()
+      await handle.runner.syncWatcher()
     }
     else {
       log.verbose?.('Closing the continues process because requests were cancelled.')
@@ -136,6 +147,7 @@ export class RunQueue {
     this.continuousPromise = (async () => {
       const handle = await this.api.spawnForRun({ coverage })
       const runner = this.createContinuousRunner(handle)
+
       handle.process.onExit(() => {
         // Unexpected exit, make sure we cleanup the state
         if (this.continuousHandle) {
@@ -143,6 +155,7 @@ export class RunQueue {
           this.continuousHandle = undefined
         }
       })
+
       this.continuousHandle = {
         runner,
         close: async () => {
@@ -155,6 +168,7 @@ export class RunQueue {
       }
       return this.continuousHandle
     })().finally(() => (this.continuousPromise = undefined))
+
     return this.continuousPromise
   }
 
@@ -186,7 +200,7 @@ export class RunQueue {
 
   dispose() {
     this.disposed = true
-    this.pendingQueue.forEach(p => p.resolve())
+    this.pendingQueue.forEach(p => p.resolveWithoutRunning())
     this.pendingQueue.length = 0
     this.api.cancelRun()
   }

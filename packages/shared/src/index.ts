@@ -63,6 +63,7 @@ export interface ExtensionWorkerTransport {
   watchTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
   getSourceModuleDiagnostic: (moduleId: string) => Promise<SourceModuleDiagnostic>
 
+  // TODO: call was removed by claude :( -- fix
   invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
   close: () => void
 

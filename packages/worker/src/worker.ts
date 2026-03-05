@@ -86,9 +86,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     files.forEach(file => this.vitest.watcher.onFileCreate(file))
   }
 
-  dispose() {
+  async dispose() {
     this.watcher.stopTracking()
-    return this.vitest.close()
+    await this.vitest.close()
   }
 
   close() {

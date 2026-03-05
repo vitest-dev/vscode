@@ -132,15 +132,11 @@ export class VitestProcessAPI {
     return this.config.workspaceSource
   }
 
-  get version() {
-    return this.config.version
-  }
-
   get package() {
     return this.config.package
   }
 
-  getPersistentMeta() {
+  getPersistentProcessMeta() {
     return this.currentMeta
   }
 
@@ -170,7 +166,7 @@ export class VitestProcessAPI {
     const root = this.workspaceFolder.uri.fsPath
     log.info('[API]', `Collecting tests: ${tests.map(t => `${relative(root, t[1])}${t[0] ? ` [${t[0]}]` : ''}`).join(', ')}`)
     try {
-      await withProcess(this.config.pkg, {}, async (meta) => {
+      await withProcess(this.config.pkg, async (meta) => {
         meta.handlers.onCollected((file, collecting) => {
           for (const listener of this.collectionListeners) {
             listener(file, collecting)
@@ -210,12 +206,9 @@ export class VitestProcessAPI {
       process: meta.process,
       handlers: meta.handlers,
       async close() {
-        try {
-          await meta.rpc.close()
-        }
-        catch (err) {
+        await meta.rpc.close().catch((err) => {
           log.error('[API]', 'Failed to close Vitest RPC', err)
-        }
+        })
         await meta.process.close().catch((err) => {
           log.error('[API]', 'Failed to close Vitest process', err)
         })
@@ -327,11 +320,10 @@ export function spawnVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOpt
 
 export async function withProcess<T>(
   pkg: VitestPackage,
-  options: ProcessSpawnOptions,
   fn: (meta: ResolvedMeta) => Promise<T>,
 ): Promise<T> {
   log.info('[API]', 'Spawning on-demand process...')
-  const meta = await spawnVitestProcess(pkg, options)
+  const meta = await spawnVitestProcess(pkg)
   log.info('[API]', 'Process spawned, running callback')
   try {
     return await fn(meta)

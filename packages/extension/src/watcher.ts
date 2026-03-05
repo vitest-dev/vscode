@@ -1,5 +1,5 @@
 import type { VitestProcessAPI } from './apiProcess'
-import type { SchemaProvider } from './schemaProvider'
+import type { TransformSchemaProvider } from './schemaProvider'
 import type { TestTree } from './testTree'
 import { relative } from 'node:path'
 import { normalize } from 'pathe'
@@ -13,7 +13,7 @@ export class ExtensionWatcher extends vscode.Disposable {
 
   constructor(
     private readonly testTree: TestTree,
-    private readonly schemaProvider: SchemaProvider,
+    private readonly transformSchemaProvider: TransformSchemaProvider,
   ) {
     super(() => {
       this.reset()
@@ -46,11 +46,11 @@ export class ExtensionWatcher extends vscode.Disposable {
     watcher.onDidDelete((uri) => {
       log.verbose?.('[VSCODE] File deleted:', this.relative(api, uri))
       this.testTree.removeFile(normalize(uri.fsPath))
-      this.schemaProvider.emitChange(uri)
+      this.transformSchemaProvider.emitChange(uri)
     })
 
     watcher.onDidChange(async (uri) => {
-      this.schemaProvider.emitChange(uri)
+      this.transformSchemaProvider.emitChange(uri)
       const path = normalize(uri.fsPath)
       if (await this.shouldIgnoreFile(api, path, uri)) {
         return

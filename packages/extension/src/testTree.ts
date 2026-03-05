@@ -1,7 +1,7 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { ExtensionTestFileSpecification } from 'vitest-vscode-shared'
 import type { VitestProcessAPI } from './apiProcess'
-import type { SchemaProvider } from './schemaProvider'
+import type { TransformSchemaProvider } from './schemaProvider'
 import type { TagsManager } from './tagsManager'
 import type { TestFileMetadata } from './testTreeData'
 import { realpathSync } from 'node:fs'
@@ -25,6 +25,7 @@ export class TestTree extends vscode.Disposable {
   // file test items have the project name in their id, so we need a separate map
   // to store all of them
   private testItemsByFile = new Map<string, vscode.TestItem[]>()
+  // this is used by the "when" clause in commands
   private testFiles = new Set<string>()
 
   private watcher: ExtensionWatcher
@@ -33,7 +34,7 @@ export class TestTree extends vscode.Disposable {
     private readonly controller: vscode.TestController,
     private readonly loaderItem: vscode.TestItem,
     private readonly tagsManager: TagsManager,
-    schemaProvider: SchemaProvider,
+    transformSchemaProvider: TransformSchemaProvider,
   ) {
     super(() => {
       this.folderItems.clear()
@@ -42,7 +43,7 @@ export class TestTree extends vscode.Disposable {
       this.testItemsByFile.clear()
       this.watcher.dispose()
     })
-    this.watcher = new ExtensionWatcher(this, schemaProvider)
+    this.watcher = new ExtensionWatcher(this, transformSchemaProvider)
   }
 
   public getFileTestItems(fsPath: string) {

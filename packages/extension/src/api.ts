@@ -1,4 +1,4 @@
-import type { ExtensionTestSpecification, ModuleDefinitionDurationsDiagnostic } from 'vitest-vscode-shared'
+import type { ExtensionTestFileSpecification, ExtensionTestSpecification, ModuleDefinitionDurationsDiagnostic } from 'vitest-vscode-shared'
 import type * as vscode from 'vscode'
 import type { VitestPackage } from './spawn/pkg'
 import { dirname, isAbsolute } from 'node:path'
@@ -82,10 +82,10 @@ export async function resolveVitestAPI(
 
   const resolvedApisPromises = await Promise.allSettled(workspacePromises)
   const errors: unknown[] = []
-  const results: DiscoveryResult[] = []
+  const apis: VitestProcessAPI[] = []
   for (const result of resolvedApisPromises) {
     if (result.status === 'fulfilled') {
-      results.push(result.value)
+      apis.push(result.value.api)
       onResolved?.(result.value)
     }
     else {
@@ -101,8 +101,8 @@ export async function resolveVitestAPI(
     return depthA - depthB
   })
 
-  const workspaceRoots: string[] = results
-    .map(r => r.api.workspaceSource ? dirname(r.api.workspaceSource) : null)
+  const workspaceRoots: string[] = apis
+    .map(r => r.workspaceSource ? dirname(r.workspaceSource) : null)
     .filter(r => r != null)
 
   if (configsToResolve.length) {
@@ -125,7 +125,7 @@ export async function resolveVitestAPI(
 
     try {
       const result = await createVitestProcessAPI(usedConfigs, pkg)
-      results.push(result)
+      apis.push(result.api)
       onResolved?.(result)
       if (result.api.workspaceSource) {
         workspaceRoots.push(dirname(result.api.workspaceSource))
@@ -140,7 +140,7 @@ export async function resolveVitestAPI(
     }
   }
 
-  if (!results.length) {
+  if (!apis.length) {
     log.error('There were errors during config load.')
     errors.forEach(e => log.error(e))
     throw new Error('The extension could not load any config.')
@@ -151,7 +151,7 @@ export async function resolveVitestAPI(
     showVitestError('The extension could not load some configs')
   }
 
-  return new VitestAPI(results.map(r => r.api))
+  return new VitestAPI(apis)
 }
 
 function isCoveredByWorkspace(workspacesRoots: string[], currentConfig: string): boolean {
@@ -161,13 +161,13 @@ function isCoveredByWorkspace(workspacesRoots: string[], currentConfig: string):
   })
 }
 
-export interface DiscoveryResult {
+interface DiscoveryResult {
   api: VitestProcessAPI
-  files: import('vitest-vscode-shared').ExtensionTestFileSpecification[]
+  files: ExtensionTestFileSpecification[]
 }
 
 async function createVitestProcessAPI(usedConfigs: Set<string>, pkg: VitestPackage): Promise<DiscoveryResult> {
-  return withProcess(pkg, {}, async (meta) => {
+  return withProcess(pkg, async (meta) => {
     meta.projects.forEach((project) => {
       if (project.config) {
         usedConfigs.add(project.config)

@@ -105,7 +105,7 @@ class ExtensionChildProcess implements ExtensionWorkerProcess {
   constructor(
     private child: ChildProcessWithoutNullStreams,
     server: Server,
-    ws: WebSocket,
+    private ws: WebSocket,
   ) {
     // the execution process cannot be created without a pid
     this.id = child.pid!
@@ -125,11 +125,12 @@ class ExtensionChildProcess implements ExtensionWorkerProcess {
   }
 
   get closed(): boolean {
-    return this.child.killed
+    return this.child.exitCode != null
   }
 
   close() {
     this.child.kill()
+    this.ws.close()
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error('The extension child process did not exit in time.'))

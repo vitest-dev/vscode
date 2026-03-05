@@ -5,7 +5,6 @@
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
-  "vitest.shellType": "terminal",
   "vitest.debugNodeEnv": {
     "TEST_CUSTOM_ENV": "hello new",
     "TEST_CUSTOM_ENV_2": "world"

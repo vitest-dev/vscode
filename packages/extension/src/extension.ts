@@ -14,7 +14,7 @@ import { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
 import { RunQueue } from './runQueue'
-import { SchemaProvider } from './schemaProvider'
+import { TransformSchemaProvider } from './schemaProvider'
 import { resolveVitestPackages } from './spawn/pkg'
 import { ExtensionTerminalProcess } from './spawn/terminal'
 import { TagsManager } from './tagsManager'
@@ -46,7 +46,7 @@ class VitestExtension {
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
   private debugManager: DebugManager
-  private schemaProvider: SchemaProvider
+  private schemaProvider: TransformSchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
   private inlineConsoleLog: InlineConsoleLogManager
 
@@ -63,7 +63,7 @@ class VitestExtension {
     this.testController.resolveHandler = item => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
-    this.schemaProvider = new SchemaProvider(
+    this.schemaProvider = new TransformSchemaProvider(
       async (apiId, project, environment, file) => {
         const api = this.api?.processes.find(a => a.id === apiId)
         return api?.getTransformedModule(project, environment, file) ?? null
@@ -335,21 +335,21 @@ class VitestExtension {
       }),
       vscode.commands.registerCommand('vitest.showShellTerminal', async () => {
         const apis = this.api?.processes
-          .filter(api => api.getPersistentMeta()?.process instanceof ExtensionTerminalProcess)
+          .filter(api => api.getPersistentProcessMeta()?.process instanceof ExtensionTerminalProcess)
         if (!apis?.length) {
           vscode.window.showInformationMessage('No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration? Do you have any continuous runs active?')
           return
         }
         if (apis.length === 1) {
           log.info('Showing the only available shell terminal');
-          (apis[0].getPersistentMeta()?.process as ExtensionTerminalProcess).show()
+          (apis[0].getPersistentProcessMeta()?.process as ExtensionTerminalProcess).show()
           return
         }
         const pick = await vscode.window.showQuickPick(
           apis.map((api) => {
             return {
               label: api.prefix,
-              process: api.getPersistentMeta()?.process as ExtensionTerminalProcess,
+              process: api.getPersistentProcessMeta()?.process as ExtensionTerminalProcess,
             }
           }),
         )
@@ -519,3 +519,5 @@ class VitestExtension {
 }
 
 // TODO: have command to filter configs
+// TODO(bug): when _reloading, the continues state stays and can't be removed
+// TODO: terminal results are not shown

@@ -48,6 +48,9 @@ export class TestRunner extends vscode.Disposable {
       if (this.testRun) {
         this.testRun.appendOutput(formatTestOutput(message))
       }
+      else if (message) {
+        log.verbose?.('[WORKER]', message)
+      }
     })
 
     handle.handlers.onTestRunStart((files, collecting) => {
@@ -129,6 +132,7 @@ export class TestRunner extends vscode.Disposable {
         log.verbose?.('No test run to finish for', files.map(f => this.relative(f.filepath)).join(', '))
         if (unhandledError)
           log.error(unhandledError)
+        this.endTestRun()
         return
       }
 
@@ -153,10 +157,9 @@ export class TestRunner extends vscode.Disposable {
   protected endTestRun() {
     log.verbose?.('Ending test run', this.testRun ? this.testRun.name || '' : '<none>')
     this.testRun?.end()
-    // this.testRunDefer?.resolve()
     this.testRun = undefined
-    // this.testRunDefer = undefined
     this.testRunRequest = undefined
+    this.scheduledRequest = undefined
   }
 
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
@@ -167,10 +170,12 @@ export class TestRunner extends vscode.Disposable {
         const timeout = setTimeout(() => {
           this.api.cancelRun()
         }, getConfig(this.api.workspaceFolder).forceCancelTimeout)
+
         this.api.cancelRun().then(() => {
           clearTimeout(timeout)
           this.endTestRun()
         })
+
         log.verbose?.('Test run was cancelled manually for', labelTestItems(request.include))
       }),
     )
@@ -182,29 +187,19 @@ export class TestRunner extends vscode.Disposable {
 
     const tests = request.include || []
 
-    try {
-      if (!tests.length) {
-        const root = this.api.workspaceFolder.uri.fsPath
-        log.info(`Running all tests in ${basename(root)}`)
-        await runTests()
-      }
-      else {
-        const testNamePatern = formatTestPattern(tests)
-        const files = getTestFiles(tests)
-        if (testNamePatern)
-          log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
-        else
-          log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
-        await runTests(files, testNamePatern)
-      }
+    if (!tests.length) {
+      const root = this.api.workspaceFolder.uri.fsPath
+      log.info(`Running all tests in ${basename(root)}`)
+      await runTests()
     }
-    catch (err: any) {
-      if (!err.message.startsWith('[birpc] rpc is closed'))
-        log.error('Failed to run tests', err)
-      this.endTestRun()
-    }
-    finally {
-      this.scheduledRequest = undefined
+    else {
+      const testNamePatern = formatTestPattern(tests)
+      const files = getTestFiles(tests)
+      if (testNamePatern)
+        log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
+      else
+        log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
+      await runTests(files, testNamePatern)
     }
   }
 
@@ -441,7 +436,11 @@ export class ContinuousTestRunner extends TestRunner {
     super(handle, controller, tree, api, diagnostic, importsBreakdown, inlineConsoleLog)
   }
 
-  public async watchTests() {
+  public async syncWatcher() {
+    if (!this.continuousRequests.size) {
+      return
+    }
+
     const include = [...this.continuousRequests].map(r => r.include || []).flat()
 
     if (!include.length) {

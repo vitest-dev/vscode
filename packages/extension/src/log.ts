@@ -108,7 +108,7 @@ export function createErrorLogger(prefix: string) {
       log.error(prefix, error)
     }
     else {
-      log.verbose?.('Closing the process')
+      log.verbose?.('The process was closed')
     }
   }
 }

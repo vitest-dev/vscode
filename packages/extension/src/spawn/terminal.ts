@@ -61,7 +61,6 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
   log.info('[TERMINAL]', `Initiated ws connection via ${wsAddress}`)
   log.info('[TERMINAL]', `Starting ${formatPkg(pkg)} in the terminal: ${command}`)
 
-  log.info('[TERMINAL] Shell integration is not initiated, fallback to `terminal.sendText`.')
   terminal.sendText(command, true)
 
   const meta = await new Promise<WsConnectionMetadata>((resolve, reject) => {
