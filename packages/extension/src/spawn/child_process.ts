@@ -1,9 +1,10 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import type { Server } from 'node:http'
 import type WebSocket from 'ws'
-import type { ResolvedMeta } from '../api'
+import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
+import type { ProcessSpawnOptions } from './ws'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
@@ -15,7 +16,7 @@ import { createErrorLogger, log } from '../log'
 import { findNode, formatPkg, showVitestError } from '../utils'
 import { waitForWsConnection } from './ws'
 
-export async function createVitestProcess(pkg: VitestPackage) {
+export async function createVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions) {
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
   if (pnpLoader && !pnp)
@@ -83,7 +84,7 @@ export async function createVitestProcess(pkg: VitestPackage) {
     vitest.on('exit', onExit)
     vitest.on('error', onError)
 
-    waitForWsConnection(wss, pkg, 'child_process')
+    waitForWsConnection(wss, pkg, 'child_process', options)
       .then((resolved) => {
         resolve({
           ...resolved,

@@ -110,8 +110,4 @@ export class ExtensionWorkerWatcher {
     this.files = []
     this.testNamePattern = undefined
   }
-
-  stopTracking() {
-    this.enabled = false
-  }
 }

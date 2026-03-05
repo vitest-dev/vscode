@@ -82,24 +82,39 @@ export function normalizeDriveLetter(path: string) {
   return path[0].toUpperCase() + path.slice(1)
 }
 
-export function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>) {
+export function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>, timeout = 50) {
   const cached = new Set<T>()
   let promise: Promise<void> | null = null
-  let timer: NodeJS.Timeout | null = null
-  return (value: T) => {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let pendingResolvers: Array<() => void> = []
+
+  function flush() {
+    if (promise)
+      return
+    const values = Array.from(cached)
+    cached.clear()
+    const resolvers = pendingResolvers
+    pendingResolvers = []
+    promise = resolver(values).finally(() => {
+      promise = null
+      resolvers.forEach(fn => fn())
+      // If more items were queued while resolving, flush them
+      if (cached.size)
+        flush()
+    })
+  }
+
+  return (value: T): Promise<void> => {
     cached.add(value)
     if (timer) {
       clearTimeout(timer)
     }
     timer = setTimeout(() => {
-      if (promise) {
-        return
-      }
-      const values = Array.from(cached)
-      cached.clear()
-      promise = resolver(values).finally(() => {
-        promise = null
-      })
-    }, 50)
+      timer = null
+      flush()
+    }, timeout)
+    return new Promise<void>((resolve) => {
+      pendingResolvers.push(resolve)
+    })
   }
 }

@@ -1,6 +1,6 @@
 import type { WorkerEvent, WorkerRunnerDebugOptions, WorkerRunnerOptions } from 'vitest-vscode-shared'
 import type { WebSocket, WebSocketServer } from 'ws'
-import type { ResolvedMeta } from '../api'
+import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
@@ -14,10 +14,15 @@ export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
   ws: WebSocket
 }
 
+export interface ProcessSpawnOptions {
+  coverage?: boolean
+}
+
 export function waitForWsConnection(
   wss: WebSocketServer,
   pkg: VitestPackage,
   shellType: 'terminal' | 'child_process',
+  options?: ProcessSpawnOptions,
 ) {
   return new Promise<WsConnectionMetadata>((resolve, reject) => {
     wss.once('connection', (ws) => {
@@ -28,6 +33,7 @@ export function waitForWsConnection(
         shellType,
         meta => resolve(meta),
         err => reject(err),
+        options,
       )
 
       wss.off('error', onUnexpectedError)
@@ -54,6 +60,7 @@ export function onWsConnection(
   shellType: 'terminal' | 'child_process',
   onStart: (meta: WsConnectionMetadata) => unknown,
   onFail: (err: Error) => unknown,
+  options?: ProcessSpawnOptions,
 ) {
   function onMessage(_message: any) {
     const message = JSON.parse(_message.toString()) as WorkerEvent
@@ -136,6 +143,7 @@ export function onWsConnection(
       finalCoverageFileName,
     },
     debug,
+    coverage: options?.coverage,
   }
 
   ws.send(JSON.stringify(runnerOptions))

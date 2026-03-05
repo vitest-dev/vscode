@@ -1,9 +1,6 @@
 import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
-import type { CoverageIstanbulOptions, TestUserConfig } from 'vitest/node'
+import type { TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
-import { randomUUID } from 'node:crypto'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
 import { VSCodeReporter } from './reporter'
@@ -89,17 +86,6 @@ export async function initVitest(
           config(userConfig) {
             userConfig.test ??= {}
 
-            const testConfig = userConfig.test
-            const coverageOptions = (testConfig.coverage ??= {}) as CoverageIstanbulOptions
-            const coverageReporters = coverageOptions.reporter && Array.isArray(coverageOptions.reporter)
-              ? coverageOptions.reporter
-              : [coverageOptions.reporter]
-            const jsonReporter = coverageReporters.find(r => r && r[0] === 'json')
-            const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
-            coverageOptions.reporter = [
-              ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
-            ]
-
             const testReporters = toArray(userConfig.test.reporters)
             if (!testReporters.length) {
               testReporters.push(['default', { isTTY: false }])
@@ -111,8 +97,11 @@ export async function initVitest(
               test: {
                 printConsoleTrace: true,
                 coverage: {
+                  enabled: !!data.coverage,
                   reportOnFailure: true,
-                  reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
+                  reporter: [
+                    ['json', { file: meta.finalCoverageFileName }],
+                  ],
                 },
               },
             }
@@ -142,7 +131,6 @@ export async function initVitest(
       stdout,
     },
   )
-  await (vitest as any).report('onInit', vitest)
 
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config

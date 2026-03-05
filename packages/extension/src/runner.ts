@@ -1,53 +1,45 @@
 import type { ParsedStack, RunnerTaskResult, TestError } from 'vitest'
 import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
-import type { VitestFolderAPI } from './api'
+import type { RunHandle, VitestProcessAPI } from './apiProcess'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
-import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { getConfig } from './config'
-import { coverageContext, readCoverageReport } from './coverage'
+import { coverageContext } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
 import { getErrorMessage, showVitestError } from './utils'
 
 export class TestRunner extends vscode.Disposable {
-  private continuousRequests = new Set<vscode.TestRunRequest>()
-  private nonContinuousRequest: vscode.TestRunRequest | undefined
+  protected testRun: vscode.TestRun | undefined
+  // protected testRunDefer: PromiseWithResolvers<void> | undefined
+  // Request that was used to schedule the test run
+  // This can be different from testRunRequest in continuous test runs
+  protected scheduledRequest: vscode.TestRunRequest | undefined
+  // The request tied to the testRun
+  protected testRunRequest: vscode.TestRunRequest | undefined
 
-  private _onRequestsExhausted = new vscode.EventEmitter<void>()
-
-  private testRun: vscode.TestRun | undefined
-  private testRunDefer: PromiseWithResolvers<void> | undefined
-  private testRunRequest: vscode.TestRunRequest | undefined
-
-  private disposables: vscode.Disposable[] = []
-
-  private cancelled = false
+  protected disposables: vscode.Disposable[] = []
 
   constructor(
-    private readonly controller: vscode.TestController,
-    private readonly tree: TestTree,
-    private readonly api: VitestFolderAPI,
-    private readonly diagnostic: ExtensionDiagnostic | undefined,
-    private readonly importsBreakdown: ImportsBreakdownProvider,
-    private readonly inlineConsoleLog: InlineConsoleLogManager,
+    protected readonly handle: RunHandle,
+    protected readonly controller: vscode.TestController,
+    protected readonly tree: TestTree,
+    protected readonly api: VitestProcessAPI,
+    protected readonly diagnostic: ExtensionDiagnostic | undefined,
+    protected readonly importsBreakdown: ImportsBreakdownProvider,
+    protected readonly inlineConsoleLog: InlineConsoleLogManager,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
-      api.clearListeners()
       this.endTestRun()
-      this.nonContinuousRequest = undefined
-      this.continuousRequests.clear()
-      this.api.cancelRun()
-      this._onRequestsExhausted.dispose()
       this.disposables.forEach(d => d.dispose())
       this.disposables = []
     })
@@ -58,10 +50,9 @@ export class TestRunner extends vscode.Disposable {
       }
     })
 
-    api.onTestRunStart((files, collecting) => {
-      if (!files.length) {
+    handle.handlers.onTestRunStart((files, collecting) => {
+      if (!files.length)
         return
-      }
 
       if (collecting) {
         log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
@@ -77,7 +68,7 @@ export class TestRunner extends vscode.Disposable {
       }
     })
 
-    api.onTaskUpdate((packs) => {
+    handle.handlers.onTaskUpdate((packs) => {
       packs.forEach(([testId, result]) => {
         const test = this.tree.getTestItemByTaskId(testId)
         if (!test) {
@@ -90,12 +81,11 @@ export class TestRunner extends vscode.Disposable {
           log.verbose?.(`There is no test run for "${test.label}"`)
           return
         }
-
         this.markResult(testRun, test, result)
       })
     })
 
-    api.onCollected((file, collecting) => {
+    handle.handlers.onCollected((file, collecting) => {
       this.tree.collectFile(this.api, file)
       if (collecting)
         return
@@ -109,9 +99,8 @@ export class TestRunner extends vscode.Disposable {
           return
         }
         const testRun = this.testRun
-        if (!testRun) {
+        if (!testRun)
           return
-        }
 
         if (task.mode === 'skip' || task.mode === 'todo') {
           const include = this.testRunRequest?.include
@@ -133,26 +122,20 @@ export class TestRunner extends vscode.Disposable {
       })
     })
 
-    api.onTestRunEnd(async (files, unhandledError, collecting) => {
+    handle.handlers.onTestRunEnd(async (files, unhandledError, collecting, coverage) => {
       const testRun = this.testRun
 
       if (!testRun) {
         log.verbose?.('No test run to finish for', files.map(f => this.relative(f.filepath)).join(', '))
-        if (!files.length) {
-          log.verbose?.('No files to finish')
-        }
-        if (unhandledError) {
+        if (unhandledError)
           log.error(unhandledError)
-        }
         return
       }
 
-      try {
-        if (!collecting)
-          await this.reportCoverage()
-      }
-      catch (err: any) {
-        showVitestError(`Failed to report coverage. ${err.message}`, err)
+      if (coverage) {
+        await this.reportCoverage(coverage).catch((err) => {
+          showVitestError(`Failed to report coverage. ${err.message}`, err)
+        })
       }
 
       if (unhandledError)
@@ -162,178 +145,66 @@ export class TestRunner extends vscode.Disposable {
         this.endTestRun()
     })
 
-    api.onConsoleLog((cosoleLog) => {
-      inlineConsoleLog.addConsoleLog(cosoleLog)
+    handle.handlers.onConsoleLog((consoleLog) => {
+      this.inlineConsoleLog.addConsoleLog(consoleLog)
     })
   }
 
   protected endTestRun() {
     log.verbose?.('Ending test run', this.testRun ? this.testRun.name || '' : '<none>')
     this.testRun?.end()
-    this.testRunDefer?.resolve()
+    // this.testRunDefer?.resolve()
     this.testRun = undefined
-    this.testRunDefer = undefined
+    // this.testRunDefer = undefined
     this.testRunRequest = undefined
   }
 
-  private async watchContinuousTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    this.continuousRequests.add(request)
-
-    this.disposables.push(
-      token.onCancellationRequested(() => {
-        log.verbose?.('Continuous test run for', labelTestItems(request.include), 'was cancelled')
-
-        this.continuousRequests.delete(request)
-        if (!this.continuousRequests.size) {
-          log.verbose?.('Stopped watching test files')
-          this._onRequestsExhausted.fire()
-          this.api.unwatchTests()
-          this.endTestRun()
-        }
-      }),
-    )
-
-    if (!request.include?.length) {
-      log.info('[RUNNER]', 'Watching all test files')
-      await this.api.watchTests()
-    }
-    else {
-      const include = [...this.continuousRequests].map(r => r.include || []).flat()
-      const files = getTestFiles(include)
-      const testNamePatern = formatTestPattern(include)
-      log.info(
-        '[RUNNER]',
-        'Watching test files:',
-        files.map(f => this.relative(f)).join(', '),
-        testNamePatern ? `with pattern ${testNamePatern}` : '',
-      )
-      await this.api.watchTests(files, testNamePatern)
-    }
-  }
-
-  public async runCoverage(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    try {
-      await this.api.enableCoverage()
-    }
-    catch (err: any) {
-      showVitestError(`Failed to enable coverage. ${err.message}`, err)
-      return
-    }
-
-    const { dispose } = this._onRequestsExhausted.event(() => {
-      if (!this.continuousRequests.size && !this.nonContinuousRequest) {
-        log.verbose?.('Coverage was disabled due to all requests being exhausted')
-        this.api.disableCoverage()
-        dispose()
-      }
-    })
-
-    this.disposables.push(
-      token.onCancellationRequested(() => {
-        log.verbose?.('Coverage for', labelTestItems(request.include), 'was manually stopped')
-        this.api.disableCoverage()
-      }),
-    )
-
-    const modules = !request.include
-      ? null
-      : getTestFiles(request.include).map((f) => {
-          if (typeof f === 'string') {
-            return f
-          }
-          return f[1]
-        })
-
-    await this.api.invalidateIstanbulTestModules(modules)
-    await this.runTests(request, token)
-  }
-
   public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    // if request is continuous, we just mark it and wait for the changes to files
-    // users can also click on "run" button to trigger the run
-    if (request.continuous)
-      return await this.watchContinuousTests(request, token)
-
-    try {
-      await this.scheduleTestItems(request, token)
-    }
-    catch (err: any) {
-      // the rpc can be closed during the test run by clicking on reload
-      if (!err.message.startsWith('[birpc] rpc is closed')) {
-        log.error('Failed to run tests', err)
-      }
-      this.endTestRun()
-    }
-  }
-
-  protected scheduleTestRunsQueue: {
-    runTests: () => Promise<void>
-    resolveWithoutRunning: () => void
-  }[] = []
-
-  private async runTestItems(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    this.cancelled = false
-    this.nonContinuousRequest = request
+    this.scheduledRequest = request
 
     this.disposables.push(
       token.onCancellationRequested(() => {
-        if (request === this.nonContinuousRequest) {
-          this.cancelled = true
-          const timeout = setTimeout(() => {
-            this.api.cancelRun() // cancel the second time for good
-          }, getConfig(this.api.workspaceFolder).forceCancelTimeout)
-          this.api.cancelRun().then(() => {
-            clearTimeout(timeout)
-            this.nonContinuousRequest = undefined
-            this.endTestRun()
-          })
-          log.verbose?.('Test run was cancelled manually for', labelTestItems(request.include))
-        }
+        const timeout = setTimeout(() => {
+          this.api.cancelRun()
+        }, getConfig(this.api.workspaceFolder).forceCancelTimeout)
+        this.api.cancelRun().then(() => {
+          clearTimeout(timeout)
+          this.endTestRun()
+        })
+        log.verbose?.('Test run was cancelled manually for', labelTestItems(request.include))
       }),
     )
 
     const runTests = (files?: ExtensionTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
-        ? this.api.updateSnapshots(files, testNamePatern)
-        : this.api.runFiles(files, testNamePatern)
+        ? this.handle.rpc.updateSnapshots(files, testNamePatern)
+        : this.handle.rpc.runTests(files, testNamePatern)
 
     const tests = request.include || []
-    if (!tests.length) {
-      const root = this.api.workspaceFolder.uri.fsPath
-      log.info(`Running all tests in ${basename(root)}`)
-      await runTests()
-    }
-    else {
-      const testNamePatern = formatTestPattern(tests)
-      const files = getTestFiles(tests)
-      if (testNamePatern)
-        log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
-      else
-        log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
-      await runTests(files, testNamePatern)
-    }
 
-    if (request === this.nonContinuousRequest) {
-      this.nonContinuousRequest = undefined
-      this._onRequestsExhausted.fire()
+    try {
+      if (!tests.length) {
+        const root = this.api.workspaceFolder.uri.fsPath
+        log.info(`Running all tests in ${basename(root)}`)
+        await runTests()
+      }
+      else {
+        const testNamePatern = formatTestPattern(tests)
+        const files = getTestFiles(tests)
+        if (testNamePatern)
+          log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
+        else
+          log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
+        await runTests(files, testNamePatern)
+      }
     }
-  }
-
-  protected async scheduleTestItems(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    if (!this.testRunDefer) {
-      await this.runTestItems(request, token)
+    catch (err: any) {
+      if (!err.message.startsWith('[birpc] rpc is closed'))
+        log.error('Failed to run tests', err)
+      this.endTestRun()
     }
-    else {
-      log.verbose?.('Queueing a new test run to execute when the current one is finished.')
-      return new Promise<void>((resolve, reject) => {
-        this.scheduleTestRunsQueue.push({
-          runTests: () => {
-            log.verbose?.('Scheduled test run is starting now.')
-            return this.runTestItems(request, token).then(resolve, reject)
-          },
-          resolveWithoutRunning: resolve,
-        })
-      })
+    finally {
+      this.scheduledRequest = undefined
     }
   }
 
@@ -376,26 +247,12 @@ export class TestRunner extends vscode.Disposable {
     )
   }
 
-  private createContinuousRequest() {
-    if (!this.continuousRequests.size)
-      return null
-    const include = []
-    let primaryRequest: vscode.TestRunRequest | null = null
-    for (const request of this.continuousRequests) {
-      if (!primaryRequest)
-        primaryRequest = request
-      include.push(...request.include || [])
-    }
-    return new vscode.TestRunRequest(
-      include.length ? include : undefined,
-      undefined,
-      primaryRequest?.profile,
-      true,
-    )
+  protected getScheduledRequest() {
+    return this.scheduledRequest
   }
 
   private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
-    const request = primaryRequest || this.nonContinuousRequest || this.createContinuousRequest()
+    const request = primaryRequest || this.getScheduledRequest()
 
     if (!files.length) {
       log.verbose?.('Started an empty test run. This should not happen...')
@@ -409,7 +266,7 @@ export class TestRunner extends vscode.Disposable {
 
     if (this.testRun) {
       log.verbose?.('Waiting for the previous test run to finish')
-      await this.testRunDefer?.promise
+      // await this.testRunDefer?.promise
     }
 
     const name = files.length > 1
@@ -418,21 +275,11 @@ export class TestRunner extends vscode.Disposable {
 
     const run = this.testRun = this.controller.createTestRun(request, name)
     this.testRunRequest = request
-    this.testRunDefer = Promise.withResolvers()
-    // run the next test when this one finished, or cancell or test runs if they were cancelled
-    this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
-      run.end()
-      if (this.cancelled) {
-        log.verbose?.('Not starting a new test run because the previous one was cancelled manually.')
-        this.scheduleTestRunsQueue.forEach(item => item.resolveWithoutRunning())
-        this.scheduleTestRunsQueue.length = 0
-        this.cancelled = false
-      }
-      else {
-        log.verbose?.(`Test run promise is finished, the queue is ${this.scheduleTestRunsQueue.length}`)
-        this.scheduleTestRunsQueue.shift()?.runTests()
-      }
-    })
+    // this.testRunDefer = Promise.withResolvers()
+    // // run the next test when this one finished, or cancell or test runs if they were cancelled
+    // this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
+    //   run.end()
+    // })
 
     for (const file of files) {
       if (file[file.length - 1] === '/') {
@@ -449,7 +296,7 @@ export class TestRunner extends vscode.Disposable {
       function enqueue(test: vscode.TestItem) {
         const testData = getTestData(test)
         // we only change the state of test cases to keep the correct test count
-        if (testData instanceof TestCase && !testData.dynamic) {
+        if (testData instanceof TestCase && !testData.dynamic && files.includes(testData.file.filepath)) {
           log.verbose?.(`Enqueuing "${test.label}"`)
           run.enqueued(test)
         }
@@ -465,42 +312,32 @@ export class TestRunner extends vscode.Disposable {
     }
   }
 
-  public async reportCoverage() {
-    if (!('FileCoverage' in vscode))
-      return
-
-    const reportsDirectory = await this.api.waitForCoverageReport()
+  public async reportCoverage(coverage: any) {
     const testRun = this.testRun
-    if (!reportsDirectory || !testRun)
+    if (!testRun)
       return
 
-    const coverage = readCoverageReport(reportsDirectory)
     // TODO: quick patch, coverage shouldn't report negative columns
     function ensureLoc(loc: any) {
-      if (!loc) {
+      if (!loc)
         return
-      }
-      if (loc.start?.column && loc.start.column < 0) {
+      if (loc.start?.column && loc.start.column < 0)
         loc.start.column = 0
-      }
-      if (loc.end?.column && loc.end.column < 0) {
+      if (loc.end?.column && loc.end.column < 0)
         loc.end.column = 0
-      }
     }
     for (const file in coverage) {
-      for (const key in coverage[file].branchMap) {
-        const branch = coverage[file].branchMap[key]
+      coverage[file] = coverage[file].data
+
+      const fileCoverage = coverage[file]
+      for (const key in fileCoverage.branchMap) {
+        const branch = fileCoverage.branchMap[key]
         ensureLoc(branch.loc)
         branch.locations?.forEach((loc: any) => ensureLoc(loc))
       }
     }
-    await coverageContext.applyJson(testRun, coverage)
 
-    rm(reportsDirectory, { recursive: true, force: true }).then(() => {
-      log.info('Removed coverage reports', reportsDirectory)
-    }).catch(() => {
-      log.error('Failed to remove coverage reports', reportsDirectory)
-    })
+    await coverageContext.applyJson(testRun, coverage)
   }
 
   private markTestCase(
@@ -519,9 +356,8 @@ export class TestRunner extends vscode.Disposable {
           log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
           return
         }
-        if (test.uri) {
+        if (test.uri)
           this.diagnostic?.addDiagnostic(test.uri, errors)
-        }
         log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         testRun.failed(test, errors, result.duration)
         break
@@ -585,8 +421,65 @@ export class TestRunner extends vscode.Disposable {
     this.markTestCase(testRun, test, result)
   }
 
-  private relative(file: string | ExtensionTestSpecification) {
+  protected relative(file: string | ExtensionTestSpecification) {
     return relative(this.api.workspaceFolder.uri.fsPath, typeof file === 'string' ? file : file[1])
+  }
+}
+
+export class ContinuousTestRunner extends TestRunner {
+  constructor(
+    handle: RunHandle,
+    controller: vscode.TestController,
+    tree: TestTree,
+    api: VitestProcessAPI,
+    diagnostic: ExtensionDiagnostic | undefined,
+    importsBreakdown: ImportsBreakdownProvider,
+    inlineConsoleLog: InlineConsoleLogManager,
+    private readonly testRunProfile: vscode.TestRunProfile,
+    private readonly continuousRequests: Set<vscode.TestRunRequest>,
+  ) {
+    super(handle, controller, tree, api, diagnostic, importsBreakdown, inlineConsoleLog)
+  }
+
+  public async watchTests() {
+    const include = [...this.continuousRequests].map(r => r.include || []).flat()
+
+    if (!include.length) {
+      log.info('[RUNNER]', 'Watching all test files')
+      await this.handle.rpc.watchTests()
+    }
+    else {
+      const files = getTestFiles(include)
+      const testNamePatern = formatTestPattern(include)
+      log.info(
+        '[RUNNER]',
+        'Watching test files:',
+        files.map(f => this.relative(f)).join(', '),
+        testNamePatern ? `with pattern ${testNamePatern}` : '',
+      )
+      await this.handle.rpc.watchTests(files, testNamePatern)
+    }
+  }
+
+  protected getScheduledRequest() {
+    return this.createContinuousRequest()
+  }
+
+  // It is important to create new requests every time the file is changed,
+  // Otherwise it becomes stale.
+  private createContinuousRequest() {
+    if (!this.continuousRequests.size)
+      return undefined
+    const include = []
+    for (const request of this.continuousRequests) {
+      include.push(...request.include || [])
+    }
+    return new vscode.TestRunRequest(
+      include.length ? include : undefined,
+      undefined,
+      this.testRunProfile,
+      true,
+    )
   }
 }
 
@@ -693,26 +586,26 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTe
     const fsPath = test.uri!.fsPath
     const data = getTestData(test)
     // just to type guard, actually not possible to have
-    if (data instanceof TestFolder) {
+    if (data instanceof TestFolder)
       continue
-    }
     const project = data instanceof TestFile ? data.project : data.file.project
     const key = `${project}\0${fsPath}`
-    if (testFiles.has(key)) {
+    if (testFiles.has(key))
       continue
-    }
     testFiles.add(key)
     testSpecs.push([project, fsPath])
   }
   return testSpecs
 }
 
-function formatTestPattern(tests: readonly vscode.TestItem[]) {
-  const patterns: string[] = []
+function formatTestPattern(tests: readonly vscode.TestItem[], patterns: string[] = []) {
   for (const test of tests) {
     const data = getTestData(test)!
-    if (!('getTestNamePattern' in data))
+    // file or a folder, try to include every test in there
+    if (!('getTestNamePattern' in data)) {
+      formatTestPattern([...test.children].map(t => t[1]), patterns)
       continue
+    }
     patterns.push(data.getTestNamePattern())
   }
   if (!patterns.length)

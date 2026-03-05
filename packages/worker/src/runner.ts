@@ -54,10 +54,17 @@ export class ExtensionWorkerRunner {
     return this.vitest.cancelCurrentRun('keyboard-input')
   }
 
-  async runTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+  async runTests(
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ): Promise<void> {
     const currentTestNamePattern = this.getGlobalTestNamePattern()
     if (testNamePattern) {
       this.vitest.setGlobalTestNamePattern(testNamePattern)
+    }
+
+    if (this.vitest.config.coverage.enabled) {
+      await this.vitest.enableCoverage()
     }
 
     if (!filesOrDirectories || this.isOnlyDirectories(filesOrDirectories)) {

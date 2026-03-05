@@ -1,9 +1,9 @@
-import type { VitestPackage } from './api/pkg'
-import type { ExtensionWorkerProcess } from './api/types'
-import type { WsConnectionMetadata } from './api/ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { InlineConsoleLogManager } from './inlineConsoleLog'
+import type { VitestPackage } from './spawn/pkg'
+import type { ExtensionWorkerProcess } from './spawn/types'
+import type { WsConnectionMetadata } from './spawn/ws'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { createServer } from 'node:http'
@@ -11,12 +11,12 @@ import { pathToFileURL } from 'node:url'
 import getPort from 'get-port'
 import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
-import { VitestFolderAPI } from './api'
-import { onWsConnection } from './api/ws'
+import { VitestProcessAPI } from './apiProcess'
 import { getConfig } from './config'
 import { workerPath } from './constants'
 import { log } from './log'
 import { TestRunner } from './runner'
+import { onWsConnection } from './spawn/ws'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { findNode } from './utils'
 
@@ -150,13 +150,15 @@ export async function debugTests(
         })
 
         try {
-          const api = new VitestFolderAPI(pkg, {
+          const api = VitestProcessAPI.forDebug(pkg, {
             ...metadata,
             process: new ExtensionDebugProcess(
               metadata,
             ),
           })
+          const handle = await api.spawnForRun()
           const runner = new TestRunner(
+            handle,
             controller,
             tree,
             api,

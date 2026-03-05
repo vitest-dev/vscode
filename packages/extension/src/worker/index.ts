@@ -62,6 +62,8 @@ emitter.on('message', async function onMessage(message: any) {
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
       emitter.ready(projects, workspaceSource, isLegacy)
+
+      await worker.vitest.report('onInit', worker.vitest)
     }
     catch (err: any) {
       emitter.error(err)

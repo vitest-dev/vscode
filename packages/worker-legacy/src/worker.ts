@@ -17,14 +17,12 @@ import mm from 'micromatch'
 import { relative } from 'pathe'
 import { assert, limitConcurrency } from '../../shared/src/utils'
 import { astCollectTests, createFailedFileTask } from './collect'
-import { ExtensionCoverageManager } from './coverage'
 import { ExtensionWorkerWatcher } from './watcher'
 
 type ArgumentsType<T> = T extends (...args: infer U) => any ? U : never
 
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
-  private readonly coverage: ExtensionCoverageManager
 
   public static emitter = new EventEmitter()
 
@@ -34,10 +32,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     public readonly vitest: VitestCore,
     private readonly debug = false,
     private emitter: WorkerWSEventEmitter,
-    finalCoverageFileName: string,
   ) {
     this.watcher = new ExtensionWorkerWatcher(this)
-    this.coverage = new ExtensionCoverageManager(this, finalCoverageFileName)
   }
 
   public get collecting() {
@@ -336,11 +332,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return false
   }
 
-  unwatchTests() {
-    return this.watcher.stopTracking()
-  }
-
-  watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
+  async watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
     if (files)
       this.watcher.trackTests(files.map(f => typeof f === 'string' ? f : f[1]), testNamePatern)
     else
@@ -349,7 +341,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   // we need to invalidate the modules because Vitest caches the code injected by istanbul
   async invalidateIstanbulTestModules(modules: string[] | null) {
-    if (!this.coverage.enabled || this.coverage.config.provider !== 'istanbul') {
+    const coverageProvider = this.vitest.config.coverage.provider
+    if (!this.vitest.config.coverage.enabled || (coverageProvider !== 'istanbul' && coverageProvider !== undefined)) {
       return
     }
     if (!modules) {
@@ -364,27 +357,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     })
   }
 
-  disableCoverage() {
-    return this.coverage.disable()
-  }
-
-  async enableCoverage() {
-    try {
-      return await this.coverage.enable()
-    }
-    catch (error) {
-      this.disableCoverage()
-      throw error
-    }
-  }
-
-  waitForCoverageReport() {
-    return this.coverage.waitForReport()
-  }
-
   dispose() {
-    this.coverage.disable()
-    this.watcher.stopTracking()
     return this.vitest.close()
   }
 

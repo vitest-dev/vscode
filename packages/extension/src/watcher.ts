@@ -1,4 +1,4 @@
-import type { VitestFolderAPI } from './api'
+import type { VitestProcessAPI } from './apiProcess'
 import type { SchemaProvider } from './schemaProvider'
 import type { TestTree } from './testTree'
 import { relative } from 'node:path'
@@ -9,7 +9,7 @@ import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
-  private apisByFolder = new WeakMap<vscode.WorkspaceFolder, VitestFolderAPI[]>()
+  private apisByFolder = new WeakMap<vscode.WorkspaceFolder, VitestProcessAPI[]>()
 
   constructor(
     private readonly testTree: TestTree,
@@ -26,7 +26,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     this.watcherByFolder.clear()
   }
 
-  watchTestFilesInWorkspace(api: VitestFolderAPI) {
+  watchTestFilesInWorkspace(api: VitestProcessAPI) {
     const folder = api.workspaceFolder
     const apis = this.apisByFolder.get(folder) ?? []
     if (!apis.includes(api)) {
@@ -72,16 +72,15 @@ export class ExtensionWatcher extends vscode.Disposable {
         metadata.forEach((meta) => {
           this.testTree.getOrCreateFileTestItem(api, meta, path)
         })
-        api.onFileCreated(path)
       })
     })
   }
 
-  private relative(api: VitestFolderAPI, uri: vscode.Uri) {
+  private relative(api: VitestProcessAPI, uri: vscode.Uri) {
     return relative(api.workspaceFolder.uri.fsPath, uri.fsPath)
   }
 
-  private async shouldIgnoreFile(api: VitestFolderAPI, path: string, uri: vscode.Uri) {
+  private async shouldIgnoreFile(api: VitestProcessAPI, path: string, uri: vscode.Uri) {
     if (
       path.includes('/node_modules/')
       || path.includes('/.git/')

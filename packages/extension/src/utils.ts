@@ -1,5 +1,5 @@
 import type { TestError } from 'vitest'
-import type { VitestPackage } from './api/pkg'
+import type { VitestPackage } from './spawn/pkg'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import { inspect, stripVTControlCharacters } from 'node:util'
