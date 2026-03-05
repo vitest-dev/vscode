@@ -100,7 +100,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 }
 
 function validateVitestPkg(showWarning: boolean, pkgJsonPath: string, pkg: any) {
-  if (pkg.name === 'vite-plus') {
+  if (pkg.name === 'vite-plus' || pkg.name === '@voidzero-dev/vite-plus-test') {
     return true
   }
   if (pkg.name !== 'vitest') {
