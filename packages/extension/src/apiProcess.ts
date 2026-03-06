@@ -205,7 +205,8 @@ export class VitestProcessAPI {
       rpc: meta.rpc,
       process: meta.process,
       handlers: meta.handlers,
-      async close() {
+      close: async () => {
+        this.currentMeta = undefined
         await meta.rpc.close().catch((err) => {
           log.error('[API]', 'Failed to close Vitest RPC', err)
         })
@@ -245,10 +246,8 @@ export class VitestProcessAPI {
 
   onFileChanged = createQueuedHandler(async (files: string[]) => {
     if (!this.currentMeta || this.currentMeta.process.closed) {
-      log.info('[API]', 'onFileChanged: no active process, ignoring', files)
       return
     }
-    log.info('[API]', 'onFileChanged: forwarding to vitest', files)
     return this.currentMeta.rpc.onFilesChanged(files).catch((err) => {
       log.error('[API]', 'Failed to notify Vitest about file change', err)
     })
