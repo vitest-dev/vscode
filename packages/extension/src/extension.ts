@@ -1,6 +1,6 @@
 import type { VitestAPI } from './api'
 import type { VitestProcessAPI } from './apiProcess'
-import { normalize } from 'pathe'
+import { normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
@@ -42,6 +42,7 @@ class VitestExtension {
   private api: VitestAPI | undefined
 
   private runQueues = new Set<RunQueue>()
+  private disabledConfigs = new Set<string>()
 
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
@@ -132,6 +133,12 @@ class VitestExtension {
       }
 
       this.api = await resolveVitestAPI(workspaces, configs, cancelToken, ({ api: vitest, files }) => {
+        if (this.disabledConfigs.size) {
+          if (this.disabledConfigs.has(vitest.id)) {
+            return
+          }
+        }
+
         this.testTree.watchTestFilesInWorkspace(vitest, files)
         this.setupProcessAPI(vitest, previousRunProfiles)
 
@@ -424,6 +431,34 @@ class VitestExtension {
       }),
       vscode.commands.registerCommand('vitest.copyTestItemErrors', testItem => copyTestItemErrors(this.testController, testItem)),
       vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
+      vscode.commands.registerCommand('vitest.toggleConfigs', async () => {
+        if (!this.api) {
+          return
+        }
+
+        const items: (vscode.QuickPickItem & { key: string })[] = []
+        for (const api of this.api.processes) {
+          items.push({
+            label: relative(api.workspaceFolder.uri.fsPath, api.id),
+            picked: !this.disabledConfigs.has(api.id),
+            key: api.id,
+          })
+        }
+
+        const result = await vscode.window.showQuickPick(items, {
+          canPickMany: true,
+          title: 'Toggle Vitest Configs',
+        })
+
+        if (!result) {
+          return
+        }
+
+        const enabledKeys = new Set(result.map(i => i.key))
+        this.disabledConfigs = new Set(items.filter(i => !enabledKeys.has(i.key)).map(i => i.key))
+
+        await this.defineTestProfiles(false)
+      }),
     ]
 
     // if the config changes, re-define all test profiles

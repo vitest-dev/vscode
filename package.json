@@ -98,6 +98,11 @@
         "title": "Copy Test Errors",
         "command": "vitest.copyTestItemErrors",
         "category": "Vitest"
+      },
+      {
+        "title": "Toggle Configs",
+        "command": "vitest.toggleConfigs",
+        "category": "Vitest"
       }
     ],
     "menus": {
