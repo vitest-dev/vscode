@@ -132,6 +132,10 @@ class VitestExtension {
         return
       }
 
+      for (const [_, profile] of previousRunProfiles) {
+        profile.dispose()
+      }
+
       this.api = await resolveVitestAPI(workspaces, configs, cancelToken, ({ api: vitest, files }) => {
         if (this.disabledConfigs.size) {
           if (this.disabledConfigs.has(vitest.id)) {
@@ -140,7 +144,7 @@ class VitestExtension {
         }
 
         this.testTree.watchTestFilesInWorkspace(vitest, files)
-        this.setupProcessAPI(vitest, previousRunProfiles)
+        this.setupProcessAPI(vitest)
 
         this.testController.items.forEach((item) => {
           if (item.children.size) {
@@ -156,11 +160,6 @@ class VitestExtension {
     }
     finally {
       this.testController.items.delete(this.loadingTestItem.id)
-    }
-
-    for (const [id, profile] of previousRunProfiles) {
-      if (!this.runProfiles.has(id))
-        profile.dispose()
     }
 
     // collect tests inside a test file
@@ -179,7 +178,7 @@ class VitestExtension {
     })
   }
 
-  private setupProcessAPI(vitest: VitestProcessAPI, runProfiles: Map<string, vscode.TestRunProfile>) {
+  private setupProcessAPI(vitest: VitestProcessAPI) {
     // Register collection listener so test tree gets notified when tests are collected
     vitest.onCollected((file) => {
       this.testTree.collectFile(vitest, file)
@@ -187,7 +186,7 @@ class VitestExtension {
 
     const prefix = vitest.prefix
 
-    let runProfile = runProfiles.get(`${vitest.id}:run`)
+    let runProfile = this.runProfiles.get(`${vitest.id}:run`)
     if (!runProfile) {
       runProfile = this.testController.createRunProfile(
         prefix,
@@ -216,7 +215,7 @@ class VitestExtension {
     runProfile.runHandler = (request, token) => runQueue.enqueue(request, token, false)
     this.runProfiles.set(`${vitest.id}:run`, runProfile)
 
-    let debugProfile = runProfiles.get(`${vitest.id}:debug`)
+    let debugProfile = this.runProfiles.get(`${vitest.id}:debug`)
     if (!debugProfile) {
       debugProfile = this.testController.createRunProfile(
         prefix,
@@ -250,7 +249,7 @@ class VitestExtension {
     }
     this.runProfiles.set(`${vitest.id}:debug`, debugProfile)
 
-    let coverageProfile = runProfiles.get(`${vitest.id}:coverage`)
+    let coverageProfile = this.runProfiles.get(`${vitest.id}:coverage`)
     if (!coverageProfile) {
       coverageProfile = this.testController.createRunProfile(
         prefix,
@@ -556,3 +555,5 @@ class VitestExtension {
 // TODO: have command to filter configs
 // TODO(bug): when _reloading, the continues state stays and can't be removed
 // TODO: terminal results are not shown
+
+// TODO: optimize `--projects` when running tests in big workspaces

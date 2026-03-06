@@ -65,7 +65,7 @@ export class RunQueue {
       }
       finally {
         runner.dispose()
-        await handle.close()
+        await handle.dispose()
       }
     })()
 
@@ -102,8 +102,10 @@ export class RunQueue {
 
     token.onCancellationRequested(() => {
       this.continuousRequests.delete(request)
+      log.verbose?.('Continuous request was cancelled')
 
       if (this.continuousRequests.size) {
+        clearTimeout(this.continuousTimer)
         const handle = this.continuousHandle
         handle?.runner.syncWatcher().catch((error) => {
           log.error('Failed to update the watcher state', error)
@@ -118,10 +120,10 @@ export class RunQueue {
       this.continuousTimer = setTimeout(() => {
         if (!this.continuousRequests.size && this.continuousHandle) {
           log.verbose?.('Stopping the continuous process because there are no more requests.')
-          this.continuousHandle.close()
+          this.continuousHandle.dispose()
         }
         this.continuousTimer = undefined
-      }, 500)
+      }, 1000)
     })
 
     const handle = await this.spawnForContinuesRun(coverage)
@@ -132,7 +134,7 @@ export class RunQueue {
     }
     else {
       log.verbose?.('Closing the continues process because requests were cancelled.')
-      await handle.close()
+      await handle.dispose()
     }
   }
 
@@ -158,13 +160,11 @@ export class RunQueue {
 
       this.continuousHandle = {
         runner,
-        close: async () => {
+        dispose: async () => {
           offExit()
           this.continuousHandle = undefined
           runner.dispose()
-          await handle.close().catch((error) => {
-            log.error('Failed to close the continuous runner', error)
-          })
+          await handle.dispose()
         },
       }
       return this.continuousHandle
@@ -209,5 +209,5 @@ export class RunQueue {
 
 interface ContinuousHandle {
   runner: ContinuousTestRunner
-  close: () => Promise<void>
+  dispose: () => Promise<void>
 }

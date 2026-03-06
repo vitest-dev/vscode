@@ -194,7 +194,7 @@ export class VitestProcessAPI {
         rpc: meta.rpc,
         process: meta.process,
         handlers: meta.handlers,
-        async close() {
+        async dispose() {
           // Debug process lifecycle is managed by the debug session, not by us
         },
       }
@@ -205,7 +205,7 @@ export class VitestProcessAPI {
       rpc: meta.rpc,
       process: meta.process,
       handlers: meta.handlers,
-      close: async () => {
+      dispose: async () => {
         this.currentMeta = undefined
         await meta.dispose().catch((err) => {
           log.error('[API]', 'Failed to close Vitest process', err)
@@ -269,7 +269,7 @@ export interface RunHandle {
   rpc: VitestExtensionRPC
   process: ExtensionWorkerProcess
   handlers: ResolvedMeta['handlers']
-  close: () => Promise<void>
+  dispose: () => Promise<void>
 }
 
 export interface RunHandlers {
@@ -316,14 +316,14 @@ export async function withProcess<T>(
   pkg: VitestPackage,
   fn: (meta: ResolvedMeta) => Promise<T>,
 ): Promise<T> {
-  log.info('[API]', 'Spawning on-demand process...')
+  log.verbose?.('[API]', 'Spawning on-demand process...')
   const meta = await spawnVitestProcess(pkg)
-  log.info('[API]', 'Process spawned, running callback')
+  log.verbose?.('[API]', 'Process spawned, running callback')
   try {
     return await fn(meta)
   }
   finally {
-    log.info('[API]', 'Callback done, closing process')
+    log.verbose?.('[API]', 'Callback done, closing process')
     await meta.dispose().catch((err) => {
       log.error('[API]', 'Failed to close Vitest process', err)
     })
