@@ -166,6 +166,7 @@ export class VitestProcessAPI {
     const root = this.workspaceFolder.uri.fsPath
     log.info('[API]', `Collecting tests: ${tests.map(t => `${relative(root, t[1])}${t[0] ? ` [${t[0]}]` : ''}`).join(', ')}`)
     try {
+      // TODO make sure errors are reported during collection (throw error in the config, for example)
       await withProcess(this.config.pkg, async (meta) => {
         meta.handlers.onCollected((file, collecting) => {
           for (const listener of this.collectionListeners) {
@@ -317,15 +318,16 @@ export async function withProcess<T>(
   fn: (meta: ResolvedMeta) => Promise<T>,
 ): Promise<T> {
   log.verbose?.('[API]', 'Spawning on-demand process...')
+  const start = performance.now()
   const meta = await spawnVitestProcess(pkg)
-  log.verbose?.('[API]', 'Process spawned, running callback')
   try {
     return await fn(meta)
   }
   finally {
-    log.verbose?.('[API]', 'Callback done, closing process')
     await meta.dispose().catch((err) => {
       log.error('[API]', 'Failed to close Vitest process', err)
     })
+    const duration = Math.round(performance.now() - start)
+    log.verbose?.('[API]', `On-demand process finished in ${duration}ms`)
   }
 }

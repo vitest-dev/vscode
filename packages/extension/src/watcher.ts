@@ -59,6 +59,15 @@ export class ExtensionWatcher extends vscode.Disposable {
       log.verbose?.('[VSCODE] File changed:', this.relative(api, uri))
       const apis = this.apisByFolder.get(folder) || []
       apis.forEach(api => api.onFileChanged(path))
+      apis.forEach((api) => {
+        if (api.getPersistentProcessMeta()) {
+          return
+        }
+        const metadata = api.getPotentialTestFileMetadata(path)
+        metadata.forEach((meta) => {
+          api.collectTests(meta.project, path)
+        })
+      })
     })
 
     watcher.onDidCreate(async (uri) => {
@@ -72,6 +81,9 @@ export class ExtensionWatcher extends vscode.Disposable {
         const metadata = api.getPotentialTestFileMetadata(path)
         metadata.forEach((meta) => {
           this.testTree.getOrCreateFileTestItem(api, meta, path)
+          if (!api.getPersistentProcessMeta()) {
+            api.collectTests(meta.project, path)
+          }
         })
       })
     })
