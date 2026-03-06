@@ -24,6 +24,7 @@ export class ExtensionWatcher extends vscode.Disposable {
   reset() {
     this.watcherByFolder.forEach(x => x.dispose())
     this.watcherByFolder.clear()
+    this.apisByFolder = new WeakMap()
   }
 
   watchTestFilesInWorkspace(api: VitestProcessAPI) {
