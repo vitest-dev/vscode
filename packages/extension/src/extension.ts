@@ -17,6 +17,7 @@ import { RunQueue } from './runQueue'
 import { TransformSchemaProvider } from './schemaProvider'
 import { resolveVitestPackages } from './spawn/pkg'
 import { ExtensionTerminalProcess } from './spawn/terminal'
+import { ExtensionState } from './state'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
@@ -24,7 +25,7 @@ import { debounce, showVitestError } from './utils'
 import './polyfills'
 
 export async function activate(context: vscode.ExtensionContext) {
-  const extension = new VitestExtension()
+  const extension = new VitestExtension(context)
   context.subscriptions.push(extension)
   await extension.activate()
 }
@@ -42,7 +43,7 @@ class VitestExtension {
   private api: VitestAPI | undefined
 
   private runQueues = new Set<RunQueue>()
-  private disabledConfigs = new Set<string>()
+  private state: ExtensionState
 
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
@@ -54,9 +55,10 @@ class VitestExtension {
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
     log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
 
+    this.state = new ExtensionState(context)
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
     this.testController.refreshHandler = cancelToken => this.defineTestProfiles(true, cancelToken).catch((err) => {
       showVitestError('Failed to refresh Vitest', err)
@@ -137,8 +139,8 @@ class VitestExtension {
       }
 
       this.api = await resolveVitestAPI(workspaces, configs, cancelToken, ({ api: vitest, files }) => {
-        if (this.disabledConfigs.size) {
-          if (this.disabledConfigs.has(vitest.id)) {
+        if (this.state.hasDisabledConfigs()) {
+          if (this.state.isConfigDisabled(vitest.id)) {
             return
           }
         }
@@ -439,7 +441,7 @@ class VitestExtension {
         for (const api of this.api.processes) {
           items.push({
             label: relative(api.workspaceFolder.uri.fsPath, api.id),
-            picked: !this.disabledConfigs.has(api.id),
+            picked: !this.state.isConfigDisabled(api.id),
             key: api.id,
           })
         }
@@ -454,7 +456,7 @@ class VitestExtension {
         }
 
         const enabledKeys = new Set(result.map(i => i.key))
-        this.disabledConfigs = new Set(items.filter(i => !enabledKeys.has(i.key)).map(i => i.key))
+        await this.state.setDisabledConfigs(new Set(items.filter(i => !enabledKeys.has(i.key)).map(i => i.key)))
 
         await this.defineTestProfiles(false)
       }),
