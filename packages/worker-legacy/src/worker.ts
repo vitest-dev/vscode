@@ -140,8 +140,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
     // debugger never runs in watch mode
     if (this.debug) {
-      await this.vitest.close()
-      this.ws.close()
+      await this.exit()
     }
   }
 

@@ -114,24 +114,19 @@ function getExitReason(reason: vscode.TerminalExitReason) {
 export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
   private _onDidExit = new vscode.EventEmitter<number | null>()
 
-  private stopped: Promise<void>
-
   constructor(
     private readonly terminal: vscode.Terminal,
     server: Server,
     ws: WebSocket,
   ) {
-    this.stopped = new Promise((resolve) => {
-      const disposer = vscode.window.onDidCloseTerminal(async (e) => {
-        if (e === terminal) {
-          const exitCode = e.exitStatus?.code
-          this._onDidExit.fire(exitCode ?? null)
-          this._onDidExit.dispose()
-          server.close(createErrorLogger('Failed to close server'))
-          disposer.dispose()
-          resolve()
-        }
-      })
+    const disposer = vscode.window.onDidCloseTerminal(async (e) => {
+      if (e === terminal) {
+        const exitCode = e.exitStatus?.code
+        this._onDidExit.fire(exitCode ?? null)
+        this._onDidExit.dispose()
+        server.close(createErrorLogger('Failed to close server'))
+        disposer.dispose()
+      }
     })
     ws.on('close', () => {
       this.close()
@@ -146,7 +141,7 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
     return this.terminal.exitStatus !== undefined
   }
 
-  private async close() {
+  private close() {
     if (this.closed) {
       return
     }
@@ -154,7 +149,6 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
     this.terminal.sendText('\x03')
     // and then destroy it on the next event loop tick
     setTimeout(() => this.terminal.dispose(), 1)
-    return this.stopped
   }
 
   onExit(listener: (code: number | null) => void) {
