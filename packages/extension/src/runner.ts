@@ -42,16 +42,10 @@ export class TestRunner extends vscode.Disposable {
       this.endTestRun()
       this.disposables.forEach(d => d.dispose())
       this.disposables = []
+      log.offWorkerLog(this.onWorkerLog)
     })
 
-    log.onWorkerLog((message) => {
-      if (this.testRun) {
-        this.testRun.appendOutput(formatTestOutput(message))
-      }
-      else if (message) {
-        log.verbose?.('[WORKER]', message)
-      }
-    })
+    log.onWorkerLog(this.onWorkerLog)
 
     handle.handlers.onTestRunStart((files, collecting) => {
       if (!files.length)
@@ -152,6 +146,15 @@ export class TestRunner extends vscode.Disposable {
     handle.handlers.onConsoleLog((consoleLog) => {
       this.inlineConsoleLog.addConsoleLog(consoleLog)
     })
+  }
+
+  private onWorkerLog = (message: string) => {
+    if (this.testRun) {
+      this.testRun.appendOutput(formatTestOutput(message))
+    }
+    else if (message) {
+      log.verbose?.('[WORKER]', message)
+    }
   }
 
   protected endTestRun() {
