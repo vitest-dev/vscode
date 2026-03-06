@@ -60,7 +60,7 @@ export class ExtensionWatcher extends vscode.Disposable {
       const apis = this.apisByFolder.get(folder) || []
       apis.forEach(api => api.onFileChanged(path))
       apis.forEach((api) => {
-        if (api.getPersistentProcessMeta()) {
+        if (api.getPersistentProcessMeta() || api.isSpawningPersistentProcess) {
           return
         }
         const metadata = api.getPotentialTestFileMetadata(path)
@@ -81,7 +81,7 @@ export class ExtensionWatcher extends vscode.Disposable {
         const metadata = api.getPotentialTestFileMetadata(path)
         metadata.forEach((meta) => {
           this.testTree.getOrCreateFileTestItem(api, meta, path)
-          if (!api.getPersistentProcessMeta()) {
+          if (!api.getPersistentProcessMeta() && !api.isSpawningPersistentProcess) {
             api.collectTests(meta.project, path)
           }
         })

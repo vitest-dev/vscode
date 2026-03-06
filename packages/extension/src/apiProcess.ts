@@ -89,6 +89,8 @@ export class VitestProcessAPI {
 
   // Currently active process (for cancellation, continuous run)
   private currentMeta: ResolvedMeta | undefined
+  private _spawningPersistentProcess = false
+  private _pendingFileChanges: string[] = []
 
   constructor(config: VitestProjectConfig) {
     this.config = config
@@ -138,6 +140,10 @@ export class VitestProcessAPI {
 
   getPersistentProcessMeta() {
     return this.currentMeta
+  }
+
+  get isSpawningPersistentProcess() {
+    return this._spawningPersistentProcess
   }
 
   getPotentialTestFileMetadata(file: string): TestFileMetadata[] {
@@ -200,8 +206,18 @@ export class VitestProcessAPI {
         },
       }
     }
-    const meta = await spawnVitestProcess(this.config.pkg, options)
+    this._spawningPersistentProcess = true
+    const meta = await spawnVitestProcess(this.config.pkg, options).finally(() => {
+      this._spawningPersistentProcess = false
+    })
     this.currentMeta = meta
+    if (this._pendingFileChanges.length) {
+      const pending = this._pendingFileChanges
+      this._pendingFileChanges = []
+      meta.rpc.onFilesChanged(pending).catch((err) => {
+        log.error('[API]', 'Failed to notify Vitest about pending file changes', err)
+      })
+    }
     return {
       rpc: meta.rpc,
       process: meta.process,
@@ -243,6 +259,10 @@ export class VitestProcessAPI {
   }
 
   onFileChanged = createQueuedHandler(async (files: string[]) => {
+    if (this._spawningPersistentProcess) {
+      this._pendingFileChanges.push(...files)
+      return
+    }
     if (!this.currentMeta || this.currentMeta.process.closed) {
       return
     }
