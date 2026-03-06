@@ -447,19 +447,19 @@ export class ContinuousTestRunner extends TestRunner {
     const include = [...this.continuousRequests].map(r => r.include || []).flat()
 
     if (!include.length) {
-      log.info('[RUNNER]', 'Watching all test files')
       await this.handle.rpc.watchTests()
+      log.info('[RUNNER]', 'Watching all test files')
     }
     else {
       const files = getTestFiles(include)
       const testNamePatern = formatTestPattern(include)
+      await this.handle.rpc.watchTests(files, testNamePatern)
       log.info(
         '[RUNNER]',
         'Watching test files:',
         files.map(f => this.relative(f)).join(', '),
         testNamePatern ? `with pattern ${testNamePatern}` : '',
       )
-      await this.handle.rpc.watchTests(files, testNamePatern)
     }
   }
 
