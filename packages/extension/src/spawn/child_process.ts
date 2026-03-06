@@ -85,10 +85,11 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
     vitest.on('error', onError)
 
     waitForWsConnection(wss, pkg, 'child_process', options)
-      .then((resolved) => {
+      .then((meta) => {
+        const process = new ExtensionChildProcess(vitest, server, meta.ws)
         resolve({
-          ...resolved,
-          process: new ExtensionChildProcess(vitest, server, resolved.ws),
+          ...meta,
+          process,
         })
       }, reject)
       .finally(() => {
@@ -99,22 +100,13 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
 }
 
 class ExtensionChildProcess implements ExtensionWorkerProcess {
-  public id: number
-  private stopped: Promise<void>
-
   constructor(
     private child: ChildProcessWithoutNullStreams,
     server: Server,
-    private ws: WebSocket,
+    ws: WebSocket,
   ) {
-    // the execution process cannot be created without a pid
-    this.id = child.pid!
-    this.stopped = new Promise<void>((resolve, reject) => {
-      child.on('exit', () => {
-        server.close(createErrorLogger('Failed to close server'))
-        resolve()
-      })
-      child.on('error', reject)
+    child.on('exit', () => {
+      server.close(createErrorLogger('Failed to close server'))
     })
     // stop the process if websocket connection was somehow closed
     ws.on('close', () => {
@@ -126,27 +118,6 @@ class ExtensionChildProcess implements ExtensionWorkerProcess {
 
   get closed(): boolean {
     return this.child.exitCode != null
-  }
-
-  close() {
-    this.child.kill()
-    this.ws.close()
-    return new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error('The extension child process did not exit in time.'))
-      }, 5_000)
-      this.stopped
-        .finally(() => clearTimeout(timer))
-        .then(resolve, reject)
-    })
-  }
-
-  onError(listener: (error: Error) => void, options?: { once?: boolean }) {
-    const method = options?.once ? 'once' : 'on'
-    this.child[method]('error', listener)
-    return () => {
-      this.child.off('error', listener)
-    }
   }
 
   onExit(listener: (code: number | null) => void, options?: { once?: boolean }) {

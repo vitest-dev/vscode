@@ -80,7 +80,6 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
 
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)
   const vitestProcess = new ExtensionTerminalProcess(
-    processId ?? Math.random(),
     terminal,
     server,
     meta.ws,
@@ -92,6 +91,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
     workspaceSource: meta.workspaceSource,
     process: vitestProcess,
     projects: meta.projects,
+    dispose: meta.dispose,
   }
 }
 
@@ -117,7 +117,6 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
   private stopped: Promise<void>
 
   constructor(
-    public readonly id: number,
     private readonly terminal: vscode.Terminal,
     server: Server,
     ws: WebSocket,
@@ -147,29 +146,15 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
     return this.terminal.exitStatus !== undefined
   }
 
-  close() {
+  private async close() {
     if (this.closed) {
-      return Promise.resolve()
+      return
     }
     // send ctrl+c to sigint any running processs (vscode/#108289)
     this.terminal.sendText('\x03')
     // and then destroy it on the next event loop tick
     setTimeout(() => this.terminal.dispose(), 1)
-    return new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error('The extension terminal process did not exit in time.'))
-      }, 5_000)
-      this.stopped
-        .finally(() => clearTimeout(timer))
-        .then(resolve, reject)
-    })
-  }
-
-  onError() {
-    // do nothing
-    return () => {
-      // do nothing
-    }
+    return this.stopped
   }
 
   onExit(listener: (code: number | null) => void) {

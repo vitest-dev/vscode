@@ -31,7 +31,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   constructor(
     public readonly vitest: VitestCore,
     private readonly debug = false,
-    private emitter: WorkerWSEventEmitter,
+    private ws: WorkerWSEventEmitter,
   ) {
     this.watcher = new ExtensionWorkerWatcher(this)
   }
@@ -141,7 +141,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     // debugger never runs in watch mode
     if (this.debug) {
       await this.vitest.close()
-      this.emitter.close()
+      this.ws.close()
     }
   }
 
@@ -357,12 +357,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     })
   }
 
-  dispose() {
-    return this.vitest.close()
-  }
-
-  close() {
-    return this.dispose()
+  async exit() {
+    await this.vitest.exit()
+    this.ws.close()
   }
 
   report<T extends keyof Reporter>(name: T, ...args: ArgumentsType<Reporter[T]>) {

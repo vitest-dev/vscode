@@ -20,7 +20,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   constructor(
     public readonly vitest: VitestCore,
     debug = false,
-    ws: WorkerWSEventEmitter,
+    private ws: WorkerWSEventEmitter,
   ) {
     this.runner = new ExtensionWorkerRunner(vitest, debug, ws)
     this.watcher = new ExtensionWorkerWatcher(vitest, this.runner)
@@ -86,13 +86,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     files.forEach(file => this.vitest.watcher.onFileCreate(file))
   }
 
-  async dispose() {
-    this.watcher.stopTracking()
-    await this.vitest.close()
-  }
-
-  close() {
-    return this.dispose()
+  async exit() {
+    await this.vitest.exit()
+    this.ws.close()
   }
 
   initRpc(rpc: VitestWorkerRPC) {

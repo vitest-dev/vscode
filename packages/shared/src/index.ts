@@ -65,7 +65,7 @@ export interface ExtensionWorkerTransport {
 
   // TODO: call was removed by claude :( -- fix
   invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
-  close: () => void
+  exit: () => void
 
   onFilesCreated: (files: string[]) => void
   onFilesChanged: (files: string[]) => void

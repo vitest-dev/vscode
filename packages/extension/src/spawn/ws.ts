@@ -91,6 +91,17 @@ export function onWsConnection(
         projects: message.projects,
         ws,
         pkg,
+        async dispose() {
+          if (!api.$closed) {
+            // Closing the process will also automatically close the WS server
+            // This is done in the server itself to catch unexpected close events too
+            await api.exit().catch((error) => {
+              if (!error.message.startsWith('[birpc] rpc is closed')) {
+                log.error('Failed to close the process', error)
+              }
+            })
+          }
+        },
       })
     }
 

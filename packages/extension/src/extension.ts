@@ -260,7 +260,7 @@ class VitestExtension {
         },
         false,
         undefined,
-        true,
+        false, // continues run with coverage is not supported because we want to keep a single running process per API
       )
     }
 

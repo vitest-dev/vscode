@@ -207,10 +207,7 @@ export class VitestProcessAPI {
       handlers: meta.handlers,
       close: async () => {
         this.currentMeta = undefined
-        await meta.rpc.close().catch((err) => {
-          log.error('[API]', 'Failed to close Vitest RPC', err)
-        })
-        await meta.process.close().catch((err) => {
+        await meta.dispose().catch((err) => {
           log.error('[API]', 'Failed to close Vitest process', err)
         })
       },
@@ -259,13 +256,7 @@ export class VitestProcessAPI {
     delete require.cache[this.config.pkg.vitestPackageJsonPath]
     delete require.cache[this.config.pkg.vitestNodePath]
     if (this.currentMeta && !this.currentMeta.process.closed) {
-      try {
-        await this.currentMeta.rpc.close()
-      }
-      catch (err) {
-        log.error('[API]', 'Failed to close Vitest RPC', err)
-      }
-      await this.currentMeta.process.close().catch((err) => {
+      await this.currentMeta.dispose().catch((err) => {
         log.error('[API]', 'Failed to close Vitest process', err)
       })
     }
@@ -305,6 +296,10 @@ export interface ResolvedMeta {
     clearListeners: () => void
     removeListener: (name: string, listener: any) => void
   }
+  /**
+   * Closes vitest process, will force exit with timeout, stops the WS server.
+   */
+  dispose: () => Promise<void>
 }
 
 export function spawnVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions): Promise<ResolvedMeta> {
@@ -329,13 +324,7 @@ export async function withProcess<T>(
   }
   finally {
     log.info('[API]', 'Callback done, closing process')
-    try {
-      await meta.rpc.close()
-    }
-    catch (err) {
-      log.error('[API]', 'Failed to close Vitest RPC', err)
-    }
-    await meta.process.close().catch((err) => {
+    await meta.dispose().catch((err) => {
       log.error('[API]', 'Failed to close Vitest process', err)
     })
   }

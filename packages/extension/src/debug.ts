@@ -1,9 +1,9 @@
+import type { WebSocket } from 'ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { VitestPackage } from './spawn/pkg'
 import type { ExtensionWorkerProcess } from './spawn/types'
-import type { WsConnectionMetadata } from './spawn/ws'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { createServer } from 'node:http'
@@ -153,7 +153,7 @@ export async function debugTests(
           const api = VitestProcessAPI.forDebug(pkg, {
             ...metadata,
             process: new ExtensionDebugProcess(
-              metadata,
+              metadata.ws,
             ),
           })
           const handle = await api.spawnForRun()
@@ -169,7 +169,7 @@ export async function debugTests(
           disposables.push(api, runner)
 
           token.onCancellationRequested(async () => {
-            await metadata.rpc.close()
+            await metadata.dispose()
           })
 
           if (browserDebug) {
@@ -303,31 +303,18 @@ async function getRuntimeOptions(pkg: VitestPackage) {
 }
 
 class ExtensionDebugProcess implements ExtensionWorkerProcess {
-  public id: number = Math.random()
   public closed = false
 
   private _onDidExit = new vscode.EventEmitter<void>()
 
-  constructor(private metadata: WsConnectionMetadata) {
+  constructor(ws: WebSocket) {
     // if websocket connection stopped working, close the debug session
     // otherwise it might hang indefinitely
-    metadata.ws.on('close', () => {
+    ws.on('close', () => {
       this.closed = true
       this._onDidExit.fire()
       this._onDidExit.dispose()
     })
-  }
-
-  async close() {
-    if (this.metadata.rpc.$closed) {
-      return
-    }
-    await this.metadata.rpc.close()
-  }
-
-  onError() {
-    // do nothing
-    return () => {}
   }
 
   onExit(listener: (code: number | null) => void) {

@@ -148,7 +148,7 @@ export class RunQueue {
       const handle = await this.api.spawnForRun({ coverage })
       const runner = this.createContinuousRunner(handle)
 
-      handle.process.onExit(() => {
+      const offExit = handle.process.onExit(() => {
         // Unexpected exit, make sure we cleanup the state
         if (this.continuousHandle) {
           runner.dispose()
@@ -159,6 +159,7 @@ export class RunQueue {
       this.continuousHandle = {
         runner,
         close: async () => {
+          offExit()
           this.continuousHandle = undefined
           runner.dispose()
           await handle.close().catch((error) => {

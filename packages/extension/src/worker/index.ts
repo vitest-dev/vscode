@@ -11,6 +11,8 @@ const emitter = new WorkerWSEventEmitter(
   new WebSocket(process.env.VITEST_WS_ADDRESS!),
 )
 
+process.title = 'vitest-vscode'
+
 if (process.platform === 'win32') {
   const cwd = process.cwd()
   const correctCwd = cwd.slice(0, 1).toUpperCase() + cwd.slice(1)
