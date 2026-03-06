@@ -339,24 +339,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       this.watcher.trackEveryFile()
   }
 
-  // we need to invalidate the modules because Vitest caches the code injected by istanbul
-  async invalidateIstanbulTestModules(modules: string[] | null) {
-    const coverageProvider = this.vitest.config.coverage.provider
-    if (!this.vitest.config.coverage.enabled || (coverageProvider !== 'istanbul' && coverageProvider !== undefined)) {
-      return
-    }
-    if (!modules) {
-      this.vitest.server.moduleGraph.invalidateAll()
-      return
-    }
-    modules.forEach((moduleId) => {
-      const mod = this.vitest.server.moduleGraph.getModuleById(moduleId)
-      if (mod) {
-        this.invalidateTree(mod)
-      }
-    })
-  }
-
   async exit() {
     await this.vitest.exit()
     this.ws.close()

@@ -74,10 +74,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.watcher.stopTracking()
   }
 
-  async invalidateIstanbulTestModules(): Promise<void> {
-    // do nothing, because Vitest 4 supports this out of the box
-  }
-
   onFilesChanged(files: string[]): void {
     files.forEach(file => this.vitest.watcher.onFileChange(file))
   }
