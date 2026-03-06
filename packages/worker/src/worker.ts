@@ -8,13 +8,11 @@ import type {
 } from 'vitest-vscode-shared'
 import type { Vitest as VitestCore } from 'vitest/node'
 import EventEmitter from 'node:events'
-import { ExtensionCoverageManager } from './coverage'
 import { ExtensionWorkerRunner } from './runner'
 import { ExtensionWorkerWatcher } from './watcher'
 
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
-  private readonly coverage: ExtensionCoverageManager
   private readonly runner: ExtensionWorkerRunner
 
   static emitter = new EventEmitter()
@@ -22,11 +20,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   constructor(
     public readonly vitest: VitestCore,
     debug = false,
-    ws: WorkerWSEventEmitter,
+    private ws: WorkerWSEventEmitter,
   ) {
     this.runner = new ExtensionWorkerRunner(vitest, debug, ws)
     this.watcher = new ExtensionWorkerWatcher(vitest, this.runner)
-    this.coverage = new ExtensionCoverageManager(vitest)
   }
 
   async getFiles(): Promise<ExtensionTestFileSpecification[]> {
@@ -49,10 +46,21 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return this.runner.updateSnapshots(filesOrDirectories, testNamePattern)
   }
 
-  watchTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): void {
+  async watchTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+    // Reset previous tracking state so re-clicking continuous run
+    // picks up the new files/pattern instead of appending to old ones
+    this.watcher.stopTracking()
+
     if (testNamePattern) {
       this.vitest.setGlobalTestNamePattern(testNamePattern)
     }
+    else {
+      this.vitest.resetGlobalTestNamePattern()
+    }
+
+    // Ensure test files are globbed so vitest's watcher can recognize them
+    // on file change (fresh process hasn't run globTestSpecifications yet)
+    await this.vitest.globTestSpecifications()
 
     if (!filesOrDirectories) {
       this.watcher.trackEveryFile()
@@ -66,28 +74,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.watcher.stopTracking()
   }
 
-  async invalidateIstanbulTestModules(): Promise<void> {
-    // do nothing, because Vitest 4 supports this out of the box
-  }
-
-  async enableCoverage(): Promise<void> {
-    try {
-      await this.coverage.enableCoverage()
-    }
-    catch (error) {
-      this.disableCoverage()
-      throw error
-    }
-  }
-
-  disableCoverage(): void {
-    this.coverage.disableCoverage()
-  }
-
-  waitForCoverageReport(): Promise<string | null> {
-    return this.coverage.waitForReport()
-  }
-
   onFilesChanged(files: string[]): void {
     files.forEach(file => this.vitest.watcher.onFileChange(file))
   }
@@ -96,14 +82,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     files.forEach(file => this.vitest.watcher.onFileCreate(file))
   }
 
-  dispose() {
-    this.coverage.disableCoverage()
-    this.watcher.stopTracking()
-    return this.vitest.close()
-  }
-
-  close() {
-    return this.dispose()
+  async exit() {
+    await this.vitest.exit()
+    this.ws.close()
   }
 
   initRpc(rpc: VitestWorkerRPC) {

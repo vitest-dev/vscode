@@ -75,7 +75,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
       }
       teardowns.push(teardown)
 
-      const tester = new VSCodeTester(page)
+      const tester = new VSCodeTester(page, logPath)
 
       async function step(name: string, fn: (context: Context) => Promise<void> | void) {
         await page.reload()

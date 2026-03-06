@@ -1,5 +1,5 @@
-import type { VitestFolderAPI } from './api'
-import type { SchemaProvider } from './schemaProvider'
+import type { VitestProcessAPI } from './apiProcess'
+import type { TransformSchemaProvider } from './schemaProvider'
 import type { TestTree } from './testTree'
 import { relative } from 'node:path'
 import { normalize } from 'pathe'
@@ -9,11 +9,11 @@ import { log } from './log'
 
 export class ExtensionWatcher extends vscode.Disposable {
   private watcherByFolder = new Map<vscode.WorkspaceFolder, vscode.FileSystemWatcher>()
-  private apisByFolder = new WeakMap<vscode.WorkspaceFolder, VitestFolderAPI[]>()
+  private apisByFolder = new WeakMap<vscode.WorkspaceFolder, VitestProcessAPI[]>()
 
   constructor(
     private readonly testTree: TestTree,
-    private readonly schemaProvider: SchemaProvider,
+    private readonly transformSchemaProvider: TransformSchemaProvider,
   ) {
     super(() => {
       this.reset()
@@ -24,9 +24,10 @@ export class ExtensionWatcher extends vscode.Disposable {
   reset() {
     this.watcherByFolder.forEach(x => x.dispose())
     this.watcherByFolder.clear()
+    this.apisByFolder = new WeakMap()
   }
 
-  watchTestFilesInWorkspace(api: VitestFolderAPI) {
+  watchTestFilesInWorkspace(api: VitestProcessAPI) {
     const folder = api.workspaceFolder
     const apis = this.apisByFolder.get(folder) ?? []
     if (!apis.includes(api)) {
@@ -46,11 +47,11 @@ export class ExtensionWatcher extends vscode.Disposable {
     watcher.onDidDelete((uri) => {
       log.verbose?.('[VSCODE] File deleted:', this.relative(api, uri))
       this.testTree.removeFile(normalize(uri.fsPath))
-      this.schemaProvider.emitChange(uri)
+      this.transformSchemaProvider.emitChange(uri)
     })
 
     watcher.onDidChange(async (uri) => {
-      this.schemaProvider.emitChange(uri)
+      this.transformSchemaProvider.emitChange(uri)
       const path = normalize(uri.fsPath)
       if (await this.shouldIgnoreFile(api, path, uri)) {
         return
@@ -58,6 +59,15 @@ export class ExtensionWatcher extends vscode.Disposable {
       log.verbose?.('[VSCODE] File changed:', this.relative(api, uri))
       const apis = this.apisByFolder.get(folder) || []
       apis.forEach(api => api.onFileChanged(path))
+      apis.forEach((api) => {
+        if (api.getPersistentProcessMeta() || api.isSpawningPersistentProcess) {
+          return
+        }
+        const metadata = api.getPotentialTestFileMetadata(path)
+        metadata.forEach((meta) => {
+          api.collectTests(meta.project, path)
+        })
+      })
     })
 
     watcher.onDidCreate(async (uri) => {
@@ -71,17 +81,19 @@ export class ExtensionWatcher extends vscode.Disposable {
         const metadata = api.getPotentialTestFileMetadata(path)
         metadata.forEach((meta) => {
           this.testTree.getOrCreateFileTestItem(api, meta, path)
+          if (!api.getPersistentProcessMeta() && !api.isSpawningPersistentProcess) {
+            api.collectTests(meta.project, path)
+          }
         })
-        api.onFileCreated(path)
       })
     })
   }
 
-  private relative(api: VitestFolderAPI, uri: vscode.Uri) {
+  private relative(api: VitestProcessAPI, uri: vscode.Uri) {
     return relative(api.workspaceFolder.uri.fsPath, uri.fsPath)
   }
 
-  private async shouldIgnoreFile(api: VitestFolderAPI, path: string, uri: vscode.Uri) {
+  private async shouldIgnoreFile(api: VitestProcessAPI, path: string, uri: vscode.Uri) {
     if (
       path.includes('/node_modules/')
       || path.includes('/.git/')

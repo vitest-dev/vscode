@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 
-export class SchemaProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
+export class TransformSchemaProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
   private disposables: vscode.Disposable[] = []
 
   private _onDidChangeEvents = new vscode.EventEmitter<vscode.Uri>()

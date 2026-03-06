@@ -60,15 +60,10 @@ export interface ExtensionWorkerTransport {
   runTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
   updateSnapshots: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
 
-  watchTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => void
-  unwatchTests: () => void
+  watchTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
   getSourceModuleDiagnostic: (moduleId: string) => Promise<SourceModuleDiagnostic>
 
-  invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
-  enableCoverage: () => void
-  disableCoverage: () => void
-  waitForCoverageReport: () => Promise<string | null>
-  close: () => void
+  exit: () => void
 
   onFilesCreated: (files: string[]) => void
   onFilesChanged: (files: string[]) => void
@@ -83,7 +78,7 @@ export interface ExtensionWorkerTransport {
 export interface ExtensionWorkerEvents {
   onConsoleLog: (log: ExtensionUserConsoleLog) => void
   onTaskUpdate: (task: RunnerTaskResultPack[]) => void
-  onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
+  onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean, coverage?: unknown) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
   onTestRunStart: (files: string[], collecting?: boolean) => void
 
@@ -158,6 +153,7 @@ export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerInitMetadata
   debug?: WorkerRunnerDebugOptions | boolean
+  coverage?: boolean
 }
 
 export interface SerializedProject {

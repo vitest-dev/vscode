@@ -1,6 +1,9 @@
 import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { UserConfig } from 'vitest/node'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
 import { toArray } from '@vitest/utils/helpers'
+import { join } from 'pathe'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -95,6 +98,18 @@ export async function initVitest(
             }
             testReporters.push(reporter as any)
             test.reporters = testReporters
+            return {
+              test: {
+                coverage: {
+                  enabled: !!data.coverage,
+                  reportOnFailure: true,
+                  reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
+                  reporter: [
+                    ['json', { file: meta.finalCoverageFileName }],
+                  ],
+                },
+              },
+            }
           },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
@@ -126,7 +141,6 @@ export async function initVitest(
       ],
     },
   )
-  await (vitest as any).report('onInit', vitest)
 
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config
@@ -165,7 +179,6 @@ export async function initVitest(
         vitest,
         !!data.debug,
         emitter,
-        data.meta.finalCoverageFileName,
       )
     },
   }

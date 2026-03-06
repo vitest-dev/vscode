@@ -11,5 +11,8 @@ export default defineConfig({
   test: {
     include: ['src/should_included_test.ts', 'test/**/*.test.ts'],
     exclude: ['test/ignored.test.ts'],
+    coverage: {
+      provider: 'istanbul'
+    }
   },
 })

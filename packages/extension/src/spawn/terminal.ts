@@ -1,9 +1,9 @@
 import type { Server } from 'node:http'
 import type { WebSocket } from 'ws'
-import type { ResolvedMeta } from '../api'
+import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
-import type { WsConnectionMetadata } from './ws'
+import type { ProcessSpawnOptions, WsConnectionMetadata } from './ws'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import getPort from 'get-port'
@@ -15,7 +15,7 @@ import { createErrorLogger, log } from '../log'
 import { formatPkg } from '../utils'
 import { waitForWsConnection } from './ws'
 
-export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<ResolvedMeta> {
+export async function createVitestTerminalProcess(pkg: VitestPackage, options?: ProcessSpawnOptions): Promise<ResolvedMeta> {
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
   if (pnpLoader && !pnp)
@@ -47,21 +47,6 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   })
   // TODO: make sure it is desposed even if it throws, the same for child_process
 
-  const shellIntegration = await new Promise<vscode.TerminalShellIntegration | undefined>((resolve) => {
-    const disposable = vscode.window.onDidChangeTerminalShellIntegration((e) => {
-      const timeout = setTimeout(() => {
-        disposable.dispose()
-        resolve(undefined)
-      }, 3_000)
-
-      if (e.terminal === terminal) {
-        disposable.dispose()
-        clearTimeout(timeout)
-        resolve(e.shellIntegration)
-      }
-    })
-  })
-
   const processId = await terminal.processId
   if (terminal.exitStatus && terminal.exitStatus.code != null) {
     throw new Error(`Terminal was ${getExitReason(terminal.exitStatus.reason)} with code ${terminal.exitStatus.code}`)
@@ -76,46 +61,17 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
   log.info('[TERMINAL]', `Initiated ws connection via ${wsAddress}`)
   log.info('[TERMINAL]', `Starting ${formatPkg(pkg)} in the terminal: ${command}`)
 
-  if (shellIntegration) {
-    log.info('[TERMINAL] Shell integration is initiated.')
-    let execution: vscode.TerminalShellExecution
-    const onWriteShell = vscode.window.onDidStartTerminalShellExecution(async (e) => {
-      if (e.execution !== execution) {
-        return
-      }
-
-      // TODO: terminal output is received _after_ the test run
-      // This is probably easier to fix when rewriting
-      log.info('[TERMINAL] Reporting the shell output.')
-      for await (const line of e.execution.read()) {
-        log.worker('info', line)
-      }
-      onWriteShell.dispose()
-    })
-
-    const onEndShell = vscode.window.onDidEndTerminalShellExecution((e) => {
-      if (e.execution === execution) {
-        log.info('[TERMINAL] The shell execution was finished.')
-        onWriteShell.dispose()
-        onEndShell.dispose()
-      }
-    })
-    execution = shellIntegration.executeCommand(command)
-  }
-  else {
-    log.info('[TERMINAL] Shell integration is not initiated, fallback to `terminal.sendText`.')
-    terminal.sendText(command, true)
-  }
+  terminal.sendText(command, true)
 
   const meta = await new Promise<WsConnectionMetadata>((resolve, reject) => {
     const timeout = setTimeout(() => {
       terminal.show(false)
-      reject(new Error(`The extension could not connect to the terminal in 5 seconds. See the "vitest" terminal output for more details.`))
-    }, 5_000)
+      reject(new Error(`The extension could not connect to the terminal in 30 seconds. See the "vitest" terminal output for more details.`))
+    }, 30_000)
     wss.once('connection', () => {
       clearTimeout(timeout)
     })
-    waitForWsConnection(wss, pkg, 'terminal').then(resolve, reject)
+    waitForWsConnection(wss, pkg, 'terminal', options).then(resolve, reject)
   })
 
   meta.handlers.onProcessLog((type, message) => {
@@ -124,7 +80,6 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
 
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)
   const vitestProcess = new ExtensionTerminalProcess(
-    processId ?? Math.random(),
     terminal,
     server,
     meta.ws,
@@ -136,6 +91,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage): Promise<R
     workspaceSource: meta.workspaceSource,
     process: vitestProcess,
     projects: meta.projects,
+    dispose: meta.dispose,
   }
 }
 
@@ -161,7 +117,6 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
   private stopped: Promise<void>
 
   constructor(
-    public readonly id: number,
     private readonly terminal: vscode.Terminal,
     server: Server,
     ws: WebSocket,
@@ -191,29 +146,15 @@ export class ExtensionTerminalProcess implements ExtensionWorkerProcess {
     return this.terminal.exitStatus !== undefined
   }
 
-  close() {
+  private async close() {
     if (this.closed) {
-      return Promise.resolve()
+      return
     }
     // send ctrl+c to sigint any running processs (vscode/#108289)
     this.terminal.sendText('\x03')
     // and then destroy it on the next event loop tick
     setTimeout(() => this.terminal.dispose(), 1)
-    return new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error('The extension terminal process did not exit in time.'))
-      }, 5_000)
-      this.stopped
-        .finally(() => clearTimeout(timer))
-        .then(resolve, reject)
-    })
-  }
-
-  onError() {
-    // do nothing
-    return () => {
-      // do nothing
-    }
+    return this.stopped
   }
 
   onExit(listener: (code: number | null) => void) {

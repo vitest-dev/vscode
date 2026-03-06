@@ -11,6 +11,8 @@ const emitter = new WorkerWSEventEmitter(
   new WebSocket(process.env.VITEST_WS_ADDRESS!),
 )
 
+process.title = 'vitest-vscode'
+
 if (process.platform === 'win32') {
   const cwd = process.cwd()
   const correctCwd = cwd.slice(0, 1).toUpperCase() + cwd.slice(1)
@@ -62,6 +64,8 @@ emitter.on('message', async function onMessage(message: any) {
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
       emitter.ready(projects, workspaceSource, isLegacy)
+
+      await worker.vitest.report('onInit', worker.vitest)
     }
     catch (err: any) {
       emitter.error(err)

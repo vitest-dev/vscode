@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { findFirstUniqueFolderNames } from '../../packages/extension/src/api/pkg'
+import { findFirstUniqueFolderNames } from '../../packages/extension/src/spawn/pkg'
 
 it('correctly makes prefixes unique', () => {
   expect(findFirstUniqueFolderNames([
