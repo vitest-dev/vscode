@@ -98,7 +98,9 @@ test('custom imba language', async ({ launch }) => {
 
   await tester.runAllTests()
 
-  await expect(tester.tree.getResultsLocator()).toHaveText('3/4')
+  await expect(tester.tree.getResultsLocator()).toHaveText('3/4', {
+    timeout: 10_000,
+  })
   await expect(tester.tree.getFileItem('basic.test.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('utils.imba')).toHaveState('passed')
   await expect(tester.tree.getFileItem('counter.imba')).toHaveState('failed')

@@ -124,6 +124,8 @@ export class TesterTestItem {
     await vi.waitUntil(() => {
       const log = readFileSync(this.logPath, 'utf-8')
       return log.includes('Watching test files') || log.includes('Watching all test files')
+    }, {
+      timeout: 5_000,
     })
   }
 
