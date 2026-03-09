@@ -1,7 +1,9 @@
 import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { UserConfig } from 'vitest/node'
+import { Console } from 'node:console'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
+import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
 import { join } from 'pathe'
 import { VSCodeReporter } from './reporter'
@@ -21,7 +23,27 @@ export async function initVitest(
     ].filter(v => v != null),
   })
 
-  // TODO: sendLog(?)
+  let stdout: Writable | undefined
+  let stderr: Writable | undefined
+
+  if (data.sendLog) {
+    stdout = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        reporter.sendTerminalLog('stdout', log)
+        callback()
+      },
+    })
+
+    stderr = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        reporter.sendTerminalLog('stderr', log)
+        callback()
+      },
+    })
+    globalThis.console = new Console(stdout, stderr)
+  }
 
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
@@ -142,6 +164,10 @@ export async function initVitest(
           },
         },
       ],
+    },
+    {
+      stderr,
+      stdout,
     },
   )
 

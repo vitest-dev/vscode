@@ -201,8 +201,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.setTestNamePattern(testNamePattern)
 
     // populate cache so it can find test files
-    if (this.debug)
-      await this.globTestSpecifications(specs.map(f => f[1]))
+    await this.globTestSpecifications(specs.map(f => f[1]))
 
     await this.rerunTests(specs, runAllFiles)
   }
@@ -332,6 +331,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   async watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
+    await this.globTestSpecifications(files?.map(f => typeof f === 'string' ? f : f[1]))
+
     if (files)
       this.watcher.trackTests(files.map(f => typeof f === 'string' ? f : f[1]), testNamePatern)
     else

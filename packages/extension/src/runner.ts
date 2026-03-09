@@ -112,7 +112,6 @@ export class TestRunner extends vscode.Disposable {
       const testRun = this.testRun
 
       if (!testRun) {
-        log.verbose?.('No test run to finish for', files.map(f => this.relative(f.filepath)).join(', '))
         if (unhandledError)
           log.error(unhandledError)
         this.endTestRun()
@@ -148,9 +147,11 @@ export class TestRunner extends vscode.Disposable {
   }
 
   protected endTestRun() {
-    log.verbose?.('Ending test run', this.testRun ? this.testRun.name || '' : '<none>')
-    this.testRun?.end()
-    this.testRun = undefined
+    if (this.testRun) {
+      log.verbose?.('Ending test run', this.testRun.name || '')
+      this.testRun?.end()
+      this.testRun = undefined
+    }
     this.testRunRequest = undefined
   }
 
@@ -173,8 +174,9 @@ export class TestRunner extends vscode.Disposable {
     const tests = request.include || []
     const files = getTestFiles(tests)
 
-    const testRunName = files.length === 1
-      ? this.relative(files[0][1])
+    const testFiles = files.filter(f => !(typeof f === 'string' ? f : f[1]).endsWith('/'))
+    const testRunName = testFiles.length === 1
+      ? this.relative(testFiles[0])
       : undefined
     const run = this.testRun = this.createCancellableTestRun(request, testRunName)
     this.testRunRequest = request
