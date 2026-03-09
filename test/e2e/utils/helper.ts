@@ -30,7 +30,7 @@ const defaultConfig = process.env as {
 
 export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; logPath: string }>({
   taskName: async ({ task }, use) => use(`${task.name}-${task.id}`),
-  logPath: async ({ taskName }, use) => use(resolve(`./test-results/tests-logs-${taskName}.txt`)),
+  logPath: async ({ taskName }, use) => use(resolve(`./test-results/${process.env.OS_NAME + '/' || ''}tests-logs-${taskName}.txt`)),
   launch: async ({ taskName, logPath }, use) => {
     const teardowns: (() => Promise<void>)[] = []
 
@@ -68,7 +68,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
 
       const teardown = async () => {
         if (trace) {
-          await page.context().tracing.stop({ path: `test-results/${taskName}/basic.zip` })
+          await page.context().tracing.stop({ path: `test-results/${process.env.OS_NAME + '/' || ''}${taskName}/basic.zip` })
         }
         await app.close()
         await fs.promises.rm(tempDir, { recursive: true, force: true })

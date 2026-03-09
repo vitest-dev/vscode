@@ -100,7 +100,7 @@ export class TestRunner extends vscode.Disposable {
           }
         }
         else if (!task.result && task.type !== 'suite') {
-          log.verbose?.(`Enqueuing "${test.label}" because it was just collected`)
+          log.verbose?.(`Enqueuing "${test.label}"`)
           testRun.enqueued(test)
         }
         else {

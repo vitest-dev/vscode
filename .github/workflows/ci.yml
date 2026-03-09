@@ -28,6 +28,9 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
 
+    env:
+      OS_NAME: ${{ matrix.os }}
+
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
