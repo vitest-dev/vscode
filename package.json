@@ -329,6 +329,12 @@
           "type": "number",
           "default": 1000,
           "scope": "resource"
+        },
+        "vitest.runtime": {
+          "description": "Which runtime to use by default.",
+          "type": "string",
+          "default": "node",
+          "enum": ["node", "deno"]
         }
       }
     }

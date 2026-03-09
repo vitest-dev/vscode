@@ -52,9 +52,12 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
     throw new Error(`Terminal was ${getExitReason(terminal.exitStatus.reason)} with code ${terminal.exitStatus.code}`)
   }
 
-  let command = 'node'
+  let command = config.runtime
   if (pnpLoader && pnp) {
     command += ` --require ${pnp} --experimental-loader ${pathToFileURL(pnpLoader).toString()}`
+  }
+  if (config.runtime === 'deno') {
+    command += ' -A'
   }
   command += ` ${workerPath};`
 

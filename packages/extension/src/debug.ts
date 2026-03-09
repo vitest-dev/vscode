@@ -18,7 +18,7 @@ import { log } from './log'
 import { TestRunner } from './runner'
 import { onWsConnection } from './spawn/ws'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
-import { findNode } from './utils'
+import { findRuntime } from './utils'
 
 const DebugSessionName = 'Vitest'
 const BrowserDebugSessionName = 'Vitest_Browser'
@@ -292,14 +292,14 @@ async function getRuntimeOptions(pkg: VitestPackage) {
       ]
     : runtimeArgs
   if (config.shellType === 'child_process') {
-    const executable = await findNode(pkg.cwd)
+    const executable = await findRuntime(pkg.cwd)
     return {
       runtimeExecutable: executable,
       runtimeArgs: execArgv,
     }
   }
   return {
-    runtimeExecutable: 'node',
+    runtimeExecutable: config.runtime,
     runtimeArgs: execArgv,
   }
 }
