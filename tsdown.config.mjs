@@ -20,8 +20,11 @@ export default defineConfig([
     },
   },
   {
-    entry: ['./packages/extension/src/worker/browserSetupFile.ts'],
-    external: ['vitest', '@vitest/browser/context'],
+    entry: [
+      './packages/extension/src/worker/browserSetupFile.ts',
+      './packages/extension/src/worker/browserSetupFileLegacy.ts',
+    ],
+    external: ['vitest', '@vitest/browser/context', 'vitest/browser'],
     fixedExtension: false,
     inlineOnly: false,
     platform: 'node',

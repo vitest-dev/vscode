@@ -1,9 +1,9 @@
-import type { VitestPackage } from './api/pkg'
-import type { ExtensionWorkerProcess } from './api/types'
-import type { WsConnectionMetadata } from './api/ws'
+import type { WebSocket } from 'ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { InlineConsoleLogManager } from './inlineConsoleLog'
+import type { VitestPackage } from './spawn/pkg'
+import type { ExtensionWorkerProcess } from './spawn/types'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import { createServer } from 'node:http'
@@ -11,12 +11,12 @@ import { pathToFileURL } from 'node:url'
 import getPort from 'get-port'
 import * as vscode from 'vscode'
 import { WebSocketServer } from 'ws'
-import { VitestFolderAPI } from './api'
-import { onWsConnection } from './api/ws'
+import { VitestProcessAPI } from './apiProcess'
 import { getConfig } from './config'
 import { workerPath } from './constants'
 import { log } from './log'
 import { TestRunner } from './runner'
+import { onWsConnection } from './spawn/ws'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { findNode } from './utils'
 
@@ -96,6 +96,7 @@ export async function debugTests(
       TEST: 'true',
       VITEST: 'true',
       NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV ?? 'test',
+      FORCE_COLOR: '1',
     },
   }
 
@@ -150,13 +151,15 @@ export async function debugTests(
         })
 
         try {
-          const api = new VitestFolderAPI(pkg, {
+          const api = VitestProcessAPI.forDebug(pkg, {
             ...metadata,
             process: new ExtensionDebugProcess(
-              metadata,
+              metadata.ws,
             ),
           })
+          const handle = await api.spawnForRun()
           const runner = new TestRunner(
+            handle,
             controller,
             tree,
             api,
@@ -167,7 +170,7 @@ export async function debugTests(
           disposables.push(api, runner)
 
           token.onCancellationRequested(async () => {
-            await metadata.rpc.close()
+            await metadata.dispose()
           })
 
           if (browserDebug) {
@@ -223,7 +226,7 @@ export async function debugTests(
             )
           }
 
-          await runner.runTests(request, token)
+          await runner.runTests(request)
 
           deferredPromise.resolve()
         }
@@ -244,6 +247,7 @@ export async function debugTests(
 
         deferredPromise.reject(err)
       },
+      { sendLog: true },
     ),
   )
 
@@ -301,31 +305,18 @@ async function getRuntimeOptions(pkg: VitestPackage) {
 }
 
 class ExtensionDebugProcess implements ExtensionWorkerProcess {
-  public id: number = Math.random()
   public closed = false
 
   private _onDidExit = new vscode.EventEmitter<void>()
 
-  constructor(private metadata: WsConnectionMetadata) {
+  constructor(ws: WebSocket) {
     // if websocket connection stopped working, close the debug session
     // otherwise it might hang indefinitely
-    metadata.ws.on('close', () => {
+    ws.on('close', () => {
       this.closed = true
       this._onDidExit.fire()
       this._onDidExit.dispose()
     })
-  }
-
-  async close() {
-    if (this.metadata.rpc.$closed) {
-      return
-    }
-    await this.metadata.rpc.close()
-  }
-
-  onError() {
-    // do nothing
-    return () => {}
   }
 
   onExit(listener: (code: number | null) => void) {

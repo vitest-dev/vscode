@@ -9,7 +9,7 @@ export class ExtensionWorkerWatcher {
 
   private enabled = false
 
-  constructor(worker: ExtensionWorker) {
+  constructor(private worker: ExtensionWorker) {
     // eslint-disable-next-line ts/no-this-alias
     const state = this
     const vitest = worker.vitest
@@ -31,23 +31,7 @@ export class ExtensionWorkerWatcher {
           return await originalScheduleRerun.call(this, [])
         }
 
-        const tests = Array.from(this.changedTests)
-        const specs = tests.flatMap(file => this.getProjectsByTestFile(file))
-        const astSpecs: [project: WorkspaceProject, file: string][] = []
-
-        for (const [project, file] of specs) {
-          astSpecs.push([project, file])
-        }
-
-        worker.setGlobalTestNamePattern(ExtensionWorker.COLLECT_NAME_PATTERN)
-        vitest.logger.log('Collecting tests due to file changes:', ...files.map(f => relative(vitest.config.root, f)))
-
-        if (astSpecs.length) {
-          vitest.logger.log('Collecting using AST explorer...')
-          await worker.astCollect(astSpecs)
-          this.changedTests.clear()
-          return await originalScheduleRerun.call(this, [])
-        }
+        await state.collectTests(files, Array.from(this.changedTests))
         return await originalScheduleRerun.call(this, [])
       }
 
@@ -62,6 +46,8 @@ export class ExtensionWorkerWatcher {
         return await originalScheduleRerun.call(this, files)
       }
 
+      const changedFiles = Array.from(this.changedTests)
+
       if (!isTestFileTrigger) {
         // if souce code is changed and related tests are not continious, remove them from changedTests
         const currentChanged = Array.from(this.changedTests)
@@ -71,6 +57,10 @@ export class ExtensionWorkerWatcher {
             this.changedTests.add(file)
         }
       }
+      // the other test file was edited, ignore it
+      else if (!state.isTestFileWatched(triggerFile)) {
+        this.changedTests.clear()
+      }
 
       if (this.changedTests.size) {
         vitest.logger.log(
@@ -79,8 +69,30 @@ export class ExtensionWorkerWatcher {
           namePattern ? `with pattern ${namePattern}` : '',
         )
       }
+      else {
+        await state.collectTests(files, changedFiles)
+      }
 
       return await originalScheduleRerun.call(this, files)
+    }
+  }
+
+  private async collectTests(trigger: string[], tests: string[]) {
+    const vitest = this.worker.vitest
+    const specs = tests.flatMap(file => vitest.getProjectsByTestFile(file))
+    const astSpecs: [project: WorkspaceProject, file: string][] = []
+
+    for (const [project, file] of specs) {
+      astSpecs.push([project, file])
+    }
+
+    this.worker.setGlobalTestNamePattern(ExtensionWorker.COLLECT_NAME_PATTERN)
+    vitest.logger.log('Collecting tests due to file changes:', ...trigger.map(f => relative(vitest.config.root, f)))
+
+    if (astSpecs.length) {
+      vitest.logger.log('Collecting using AST explorer...')
+      await this.worker.astCollect(astSpecs)
+      vitest.changedTests.clear()
     }
   }
 
@@ -109,9 +121,5 @@ export class ExtensionWorkerWatcher {
     this.watchEveryFile = true
     this.files = []
     this.testNamePattern = undefined
-  }
-
-  stopTracking() {
-    this.enabled = false
   }
 }

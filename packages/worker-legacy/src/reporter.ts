@@ -123,6 +123,19 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onConsoleLog(extendedLog)
   }
 
+  private logPromises = new Set<Promise<void>>()
+  sendTerminalLog(type: 'stderr' | 'stdout', message: string) {
+    if (!this.rpc) {
+      return
+    }
+
+    const promise = this.rpc.onProcessLog(type, message).catch(() => {}).finally(() => {
+      this.logPromises.delete(promise)
+    })
+
+    this.logPromises.add(promise)
+  }
+
   parseStackTrace(obj: ErrorWithDiff, taskId: string | undefined) {
     const project = taskId
       ? this.vitest.getProjectByTaskId(taskId)
@@ -169,7 +182,7 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onTaskUpdate(packs)
   }
 
-  async onFinished(files?: RunnerTestFile[], errors: unknown[] = this.vitest.state.getUnhandledErrors()) {
+  async onFinished(files?: RunnerTestFile[], errors: unknown[] = this.vitest.state.getUnhandledErrors(), coverage?: unknown) {
     const collecting = this.collecting
 
     let output = ''
@@ -191,8 +204,15 @@ export class VSCodeReporter implements Reporter {
       this.vitest.logger.errorStream = errorStream
       this.vitest.logger.outputStream = outputStream
     }
+
+    // Make sure we rendered everything before ending the test run
+    // If test run is no active, the log will be lost
+    if (this.logPromises.size) {
+      await Promise.all([...this.logPromises])
+    }
+
     nextTick(() => {
-      this.rpc.onTestRunEnd(files || [], output, collecting)
+      this.rpc.onTestRunEnd(files || [], output, collecting, coverage)
     })
   }
 
@@ -201,7 +221,7 @@ export class VSCodeReporter implements Reporter {
   }
 
   onWatcherRerun(files: string[]) {
-    this.rpc.onTestRunStart(files, this.collecting)
+    this.rpc.onTestRunStart(files)
   }
 
   toJSON() {

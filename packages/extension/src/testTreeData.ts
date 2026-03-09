@@ -1,6 +1,6 @@
 import type { TestError } from 'vitest'
 import type * as vscode from 'vscode'
-import type { VitestFolderAPI } from './api'
+import type { VitestProcessAPI } from './apiProcess'
 
 export type TestData = TestFolder | TestFile | TestCase | TestSuite
 
@@ -66,7 +66,7 @@ export class TestFile extends BaseTestData {
     item: vscode.TestItem,
     parent: vscode.TestItem,
     public readonly filepath: string,
-    public readonly api: VitestFolderAPI,
+    public readonly api: VitestProcessAPI,
     public readonly metadata: TestFileMetadata,
   ) {
     super(item, parent)
@@ -77,7 +77,7 @@ export class TestFile extends BaseTestData {
     item: vscode.TestItem,
     parent: vscode.TestItem,
     filepath: string,
-    api: VitestFolderAPI,
+    api: VitestProcessAPI,
     metadata: TestFileMetadata,
   ) {
     return addTestData(item, new TestFile(item, parent, filepath, api, metadata))

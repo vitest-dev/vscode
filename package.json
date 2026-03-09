@@ -31,7 +31,7 @@
   "icon": "img/icon.png",
   "pricing": "Free",
   "engines": {
-    "vscode": "^1.77.0"
+    "vscode": "^1.88.0"
   },
   "activationEvents": [
     "workspaceContains:**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}",
@@ -97,6 +97,11 @@
       {
         "title": "Copy Test Errors",
         "command": "vitest.copyTestItemErrors",
+        "category": "Vitest"
+      },
+      {
+        "title": "Toggle Configs",
+        "command": "vitest.toggleConfigs",
         "category": "Vitest"
       }
     ],

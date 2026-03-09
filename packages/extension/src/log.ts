@@ -103,7 +103,9 @@ function appendFile(log: string) {
 }
 
 export function createErrorLogger(prefix: string) {
-  return (...args: any[]) => {
-    log.error(prefix, ...args)
+  return (error?: Error) => {
+    if (error) {
+      log.error(prefix, error)
+    }
   }
 }

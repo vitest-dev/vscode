@@ -23,6 +23,7 @@ export class VSCodeReporter implements Reporter {
   private execArgv: string[] = []
 
   private debuggerAttached: boolean | undefined = undefined
+  private coverageData: Record<string, unknown> | undefined = undefined
 
   constructor(meta: WorkerInitMetadata, debug: WorkerRunnerOptions['debug']) {
     this.setupFilePaths = meta.setupFilePaths
@@ -136,8 +137,12 @@ export class VSCodeReporter implements Reporter {
 
   onTestRunStart(specifications: ReadonlyArray<TestSpecification>) {
     const files = specifications.map(spec => spec.moduleId)
-    this.rpc.onTestRunStart(Array.from(new Set(files)), false)
+    this.rpc.onTestRunStart(Array.from(new Set(files)))
     this.vitest.state.filesMap.clear()
+  }
+
+  onCoverage(coverage: unknown) {
+    this.coverageData = (coverage as any).toJSON()
   }
 
   async onTestRunEnd(testModules: ReadonlyArray<TestModule>) {
@@ -149,9 +154,12 @@ export class VSCodeReporter implements Reporter {
       await Promise.all([...this.logPromises])
     }
 
+    const coverage = this.coverageData
+    this.coverageData = undefined
+
     // as any because Vitest types are different between v3 and v4,
     // and shared packages uses the lowest Vitest version
-    this.rpc.onTestRunEnd(files as any, '', false)
+    this.rpc.onTestRunEnd(files as any, '', false, coverage)
   }
 
   onTestModuleCollected(testModule: TestModule) {

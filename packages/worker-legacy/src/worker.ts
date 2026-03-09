@@ -17,14 +17,12 @@ import mm from 'micromatch'
 import { relative } from 'pathe'
 import { assert, limitConcurrency } from '../../shared/src/utils'
 import { astCollectTests, createFailedFileTask } from './collect'
-import { ExtensionCoverageManager } from './coverage'
 import { ExtensionWorkerWatcher } from './watcher'
 
 type ArgumentsType<T> = T extends (...args: infer U) => any ? U : never
 
 export class ExtensionWorker implements ExtensionWorkerTransport {
   private readonly watcher: ExtensionWorkerWatcher
-  private readonly coverage: ExtensionCoverageManager
 
   public static emitter = new EventEmitter()
 
@@ -33,11 +31,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   constructor(
     public readonly vitest: VitestCore,
     private readonly debug = false,
-    private emitter: WorkerWSEventEmitter,
-    finalCoverageFileName: string,
+    private ws: WorkerWSEventEmitter,
   ) {
     this.watcher = new ExtensionWorkerWatcher(this)
-    this.coverage = new ExtensionCoverageManager(this, finalCoverageFileName)
   }
 
   public get collecting() {
@@ -144,8 +140,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
     // debugger never runs in watch mode
     if (this.debug) {
-      await this.vitest.close()
-      this.emitter.close()
+      await this.exit()
     }
   }
 
@@ -206,8 +201,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.setTestNamePattern(testNamePattern)
 
     // populate cache so it can find test files
-    if (this.debug)
-      await this.globTestSpecifications(specs.map(f => f[1]))
+    await this.globTestSpecifications(specs.map(f => f[1]))
 
     await this.rerunTests(specs, runAllFiles)
   }
@@ -336,60 +330,18 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return false
   }
 
-  unwatchTests() {
-    return this.watcher.stopTracking()
-  }
+  async watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
+    await this.globTestSpecifications(files?.map(f => typeof f === 'string' ? f : f[1]))
 
-  watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
     if (files)
       this.watcher.trackTests(files.map(f => typeof f === 'string' ? f : f[1]), testNamePatern)
     else
       this.watcher.trackEveryFile()
   }
 
-  // we need to invalidate the modules because Vitest caches the code injected by istanbul
-  async invalidateIstanbulTestModules(modules: string[] | null) {
-    if (!this.coverage.enabled || this.coverage.config.provider !== 'istanbul') {
-      return
-    }
-    if (!modules) {
-      this.vitest.server.moduleGraph.invalidateAll()
-      return
-    }
-    modules.forEach((moduleId) => {
-      const mod = this.vitest.server.moduleGraph.getModuleById(moduleId)
-      if (mod) {
-        this.invalidateTree(mod)
-      }
-    })
-  }
-
-  disableCoverage() {
-    return this.coverage.disable()
-  }
-
-  async enableCoverage() {
-    try {
-      return await this.coverage.enable()
-    }
-    catch (error) {
-      this.disableCoverage()
-      throw error
-    }
-  }
-
-  waitForCoverageReport() {
-    return this.coverage.waitForReport()
-  }
-
-  dispose() {
-    this.coverage.disable()
-    this.watcher.stopTracking()
-    return this.vitest.close()
-  }
-
-  close() {
-    return this.dispose()
+  async exit() {
+    await this.vitest.exit()
+    this.ws.close()
   }
 
   report<T extends keyof Reporter>(name: T, ...args: ArgumentsType<Reporter[T]>) {

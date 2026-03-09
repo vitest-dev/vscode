@@ -1,7 +1,7 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { ExtensionTestFileSpecification } from 'vitest-vscode-shared'
-import type { VitestFolderAPI } from './api'
-import type { SchemaProvider } from './schemaProvider'
+import type { VitestProcessAPI } from './apiProcess'
+import type { TransformSchemaProvider } from './schemaProvider'
 import type { TagsManager } from './tagsManager'
 import type { TestFileMetadata } from './testTreeData'
 import { realpathSync } from 'node:fs'
@@ -25,6 +25,7 @@ export class TestTree extends vscode.Disposable {
   // file test items have the project name in their id, so we need a separate map
   // to store all of them
   private testItemsByFile = new Map<string, vscode.TestItem[]>()
+  // this is used by the "when" clause in commands
   private testFiles = new Set<string>()
 
   private watcher: ExtensionWatcher
@@ -33,7 +34,7 @@ export class TestTree extends vscode.Disposable {
     private readonly controller: vscode.TestController,
     private readonly loaderItem: vscode.TestItem,
     private readonly tagsManager: TagsManager,
-    schemaProvider: SchemaProvider,
+    transformSchemaProvider: TransformSchemaProvider,
   ) {
     super(() => {
       this.folderItems.clear()
@@ -42,7 +43,7 @@ export class TestTree extends vscode.Disposable {
       this.testItemsByFile.clear()
       this.watcher.dispose()
     })
-    this.watcher = new ExtensionWatcher(this, schemaProvider)
+    this.watcher = new ExtensionWatcher(this, transformSchemaProvider)
   }
 
   public getFileTestItems(fsPath: string) {
@@ -77,7 +78,7 @@ export class TestTree extends vscode.Disposable {
     }
   }
 
-  async discoverAllTestFiles(api: VitestFolderAPI, files: ExtensionTestFileSpecification[]) {
+  discoverAllTestFiles(api: VitestProcessAPI, files: ExtensionTestFileSpecification[]) {
     const folderItem = this.folderItems.get(normalize(api.workspaceFolder.uri.fsPath))
     if (folderItem)
       folderItem.busy = false
@@ -145,7 +146,7 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  getOrCreateFileTestItem(api: VitestFolderAPI, metadata: TestFileMetadata, file: string) {
+  getOrCreateFileTestItem(api: VitestProcessAPI, metadata: TestFileMetadata, file: string) {
     const project = metadata.project
     const normalizedFile = normalize(file)
     const fileId = `${normalizedFile}${project}`
@@ -188,7 +189,7 @@ export class TestTree extends vscode.Disposable {
     return testFileItem
   }
 
-  getOrCreateFolderTestItem(api: VitestFolderAPI, normalizedFolder: string) {
+  getOrCreateFolderTestItem(api: VitestProcessAPI, normalizedFolder: string) {
     const cached = this.folderItems.get(normalizedFolder)
     if (cached) {
       if (!cached.tags.includes(api.tag))
@@ -223,8 +224,8 @@ export class TestTree extends vscode.Disposable {
     return folderItem
   }
 
-  async watchTestFilesInWorkspace(api: VitestFolderAPI, testFiles: ExtensionTestFileSpecification[]) {
-    await this.discoverAllTestFiles(api, testFiles)
+  watchTestFilesInWorkspace(api: VitestProcessAPI, testFiles: ExtensionTestFileSpecification[]) {
+    this.discoverAllTestFiles(api, testFiles)
     this.watcher.watchTestFilesInWorkspace(api)
   }
 
@@ -255,7 +256,7 @@ export class TestTree extends vscode.Disposable {
     return getAPIFromTestItem(testItem)
   }
 
-  async discoverFileTests(testItem: vscode.TestItem) {
+  async discoverTestsInFile(testItem: vscode.TestItem) {
     const data = getTestData(testItem)
     if (!(data instanceof TestFile))
       return
@@ -304,7 +305,7 @@ export class TestTree extends vscode.Disposable {
     return files
   }
 
-  collectFile(api: VitestFolderAPI, file: RunnerTestFile) {
+  collectFile(api: VitestProcessAPI, file: RunnerTestFile) {
     const normalizedFile = normalize(file.filepath)
     const fileId = `${normalizedFile}${file.projectName || ''}`
     const fileTestItem = this.fileItems.get(fileId)
@@ -472,7 +473,7 @@ function isTest(task: RunnerTask) {
   return true
 }
 
-function getAPIFromFolder(folder: vscode.TestItem): VitestFolderAPI | null {
+function getAPIFromFolder(folder: vscode.TestItem): VitestProcessAPI | null {
   const data = getTestData(folder)
   if (data instanceof TestFile)
     return data.api
@@ -486,7 +487,7 @@ function getAPIFromFolder(folder: vscode.TestItem): VitestFolderAPI | null {
   return null
 }
 
-function getAPIFromTestItem(testItem: vscode.TestItem): VitestFolderAPI | null {
+function getAPIFromTestItem(testItem: vscode.TestItem): VitestProcessAPI | null {
   const data = getTestData(testItem)
   // API is stored in test files - if this is a folder, try to find a file inside,
   // otherwise go up until we find a file, this should never be a folder

@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
-import fs from 'node:fs'
+import fs, { readFileSync } from 'node:fs'
 import type { Locator, Page } from '@playwright/test'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 
 export class VSCodeTester {
   public tree: TesterTree
@@ -9,8 +9,9 @@ export class VSCodeTester {
 
   constructor(
     private page: Page,
+    private logPath: string,
   ) {
-    this.tree = new TesterTree(page)
+    this.tree = new TesterTree(page, logPath)
     this.errors = new TesterErrorOutput(page)
   }
 
@@ -33,6 +34,7 @@ export class VSCodeTester {
 class TesterTree {
   constructor(
     private page: Page,
+    private logPath: string,
   ) {}
 
   getResultsLocator() {
@@ -42,7 +44,13 @@ class TesterTree {
   getFileItem(file: string, project?: string) {
     const name = basename(file)
     const label = project ? `${name} [${project}]` : name
-    return new TesterTestItem(name, this.page.locator(`[aria-label*="${label} ("]`), this.page, project)
+    return new TesterTestItem(
+      name,
+      this.page.locator(`[aria-label*="${label} ("]`),
+      this.page,
+      project,
+      this.logPath
+    )
   }
 
   async expand(path: string) {
@@ -92,6 +100,7 @@ export class TesterTestItem {
     public locator: Locator,
     public page: Page,
     public project: string | undefined,
+    private logPath: string,
   ) {}
 
   async run() {
@@ -112,6 +121,12 @@ export class TesterTestItem {
   async toggleContinuousRun() {
     await this.locator.hover()
     await this.locator.getByLabel(/Turn (on|off) Continuous Run/).click()
+    await vi.waitUntil(() => {
+      const log = readFileSync(this.logPath, 'utf-8')
+      return log.includes('Watching test files') || log.includes('Watching all test files')
+    }, {
+      timeout: 5_000,
+    })
   }
 
   async navigate() {

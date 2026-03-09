@@ -1,6 +1,11 @@
 import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import type { UserConfig } from 'vitest/node'
+import { Console } from 'node:console'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
+import { join } from 'pathe'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -13,10 +18,32 @@ export async function initVitest(
   const reporter = new VSCodeReporter({
     setupFilePaths: [
       typeof data.debug === 'object' && data.debug.browser
-        ? meta.setupFilePaths.browserDebug
+        ? meta.setupFilePaths.browserDebugLegacy
         : null,
     ].filter(v => v != null),
   })
+
+  let stdout: Writable | undefined
+  let stderr: Writable | undefined
+
+  if (data.sendLog) {
+    stdout = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        reporter.sendTerminalLog('stdout', log)
+        callback()
+      },
+    })
+
+    stderr = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        reporter.sendTerminalLog('stderr', log)
+        callback()
+      },
+    })
+    globalThis.console = new Console(stdout, stderr)
+  }
 
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
@@ -44,6 +71,7 @@ export async function initVitest(
     ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
     ...args,
     ...options,
+    project: meta.projectFilter ?? args.project,
     watch: true,
     api: false,
     // @ts-expect-error private property
@@ -95,6 +123,18 @@ export async function initVitest(
             }
             testReporters.push(reporter as any)
             test.reporters = testReporters
+            return {
+              test: {
+                coverage: {
+                  enabled: !!data.coverage,
+                  reportOnFailure: true,
+                  reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
+                  reporter: [
+                    ['json', { file: meta.finalCoverageFileName }],
+                  ],
+                },
+              },
+            }
           },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
@@ -112,7 +152,7 @@ export async function initVitest(
 
             const options = context.project.config.browser
             if (options?.enabled && typeof data.debug === 'object') {
-              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
+              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
               context.vitest.config.inspector = {
                 enabled: true,
                 port: data.debug.port,
@@ -125,8 +165,11 @@ export async function initVitest(
         },
       ],
     },
+    {
+      stderr,
+      stdout,
+    },
   )
-  await (vitest as any).report('onInit', vitest)
 
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config
@@ -165,7 +208,6 @@ export async function initVitest(
         vitest,
         !!data.debug,
         emitter,
-        data.meta.finalCoverageFileName,
       )
     },
   }
