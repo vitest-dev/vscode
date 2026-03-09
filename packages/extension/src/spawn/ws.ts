@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import vscode from 'vscode'
 import { getConfig } from '../config'
-import { browserSetupFilePath, finalCoverageFileName } from '../constants'
+import { browserSetupFilePath, browserSetupFilePathLegacy, finalCoverageFileName } from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 
@@ -152,6 +152,7 @@ export function onWsConnection(
         : undefined,
       setupFilePaths: {
         browserDebug: browserSetupFilePath,
+        browserDebugLegacy: browserSetupFilePathLegacy,
       },
       finalCoverageFileName,
       projectFilter: options?.projects,

@@ -139,6 +139,7 @@ export interface WorkerInitMetadata {
   pnpLoader?: string
   setupFilePaths: {
     browserDebug: string
+    browserDebugLegacy: string
   }
   finalCoverageFileName: string
   projectFilter?: string[]

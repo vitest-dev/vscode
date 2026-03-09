@@ -18,7 +18,7 @@ export async function initVitest(
   const reporter = new VSCodeReporter({
     setupFilePaths: [
       typeof data.debug === 'object' && data.debug.browser
-        ? meta.setupFilePaths.browserDebug
+        ? meta.setupFilePaths.browserDebugLegacy
         : null,
     ].filter(v => v != null),
   })
@@ -152,7 +152,7 @@ export async function initVitest(
 
             const options = context.project.config.browser
             if (options?.enabled && typeof data.debug === 'object') {
-              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
+              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
               context.vitest.config.inspector = {
                 enabled: true,
                 port: data.debug.port,

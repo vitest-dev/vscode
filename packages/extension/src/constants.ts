@@ -6,6 +6,7 @@ export const minimumNodeVersion = '18.0.0'
 
 export const distDir = __dirname
 export const workerPath = resolve(__dirname, 'worker.js')
+export const browserSetupFilePathLegacy = resolve(__dirname, 'browserSetupFileLegacy.mjs')
 export const browserSetupFilePath = resolve(__dirname, 'browserSetupFile.mjs')
 
 export const configGlob = '**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}'
