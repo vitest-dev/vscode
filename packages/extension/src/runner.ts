@@ -591,7 +591,7 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTe
   const testSpecs: ExtensionTestSpecification[] = []
   const testFiles = new Set<string>()
   for (const test of tests) {
-    const fsPath = test.uri!.fsPath
+    const fsPath = normalize(test.uri!.fsPath)
     const data = getTestData(test)
     // just to type guard, actually not possible to have
     if (data instanceof TestFolder)
