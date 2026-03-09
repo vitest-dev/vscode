@@ -53,6 +53,7 @@ export async function initVitest(
     config: meta.configFile,
     ...args,
     ...options,
+    project: meta.projectFilter ?? args.project,
     watch: true,
     api: false,
     // @ts-expect-error private property

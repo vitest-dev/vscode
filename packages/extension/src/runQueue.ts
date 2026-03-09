@@ -7,6 +7,7 @@ import type { TestTree } from './testTree'
 import { VitestProcessAPI } from './apiProcess'
 import { log } from './log'
 import { ContinuousTestRunner, TestRunner } from './runner'
+import { getTestData, TestFile, TestFolder } from './testTreeData'
 
 /**
  * Per-process run queue. Ensures only one test run is active at a time per process API.
@@ -58,7 +59,11 @@ export class RunQueue {
       // We don't reuse the established process because it's harder to track
       const api = new VitestProcessAPI(this.api.config)
       // TODO: pass down profile instead of creating a new one, same for coverage/runner - or just disable coverage continuous?
-      const handle = await api.spawnForRun({ coverage })
+      const handle = await api.spawnForRun({
+        coverage,
+        // performance optimization to avoid creating unused projects
+        projects: getProjectsFromRequest(request),
+      })
       const runner = this.createRunner(handle)
       try {
         await runner.runTests(request, token)
@@ -210,4 +215,19 @@ export class RunQueue {
 interface ContinuousHandle {
   runner: ContinuousTestRunner
   dispose: () => Promise<void>
+}
+
+function getProjectsFromRequest(request: vscode.TestRunRequest): string[] | undefined {
+  const include = request.include
+  if (!include?.length)
+    return undefined
+  const projects = new Set<string>()
+  for (const test of include) {
+    const data = getTestData(test)
+    if (data instanceof TestFolder)
+      return undefined
+    const project = data instanceof TestFile ? data.project : data.file.project
+    projects.add(project)
+  }
+  return [...projects]
 }

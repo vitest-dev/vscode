@@ -17,6 +17,7 @@ export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
 export interface ProcessSpawnOptions {
   coverage?: boolean
   sendLog?: boolean
+  projects?: string[]
 }
 
 export function waitForWsConnection(
@@ -153,6 +154,7 @@ export function onWsConnection(
         browserDebug: browserSetupFilePath,
       },
       finalCoverageFileName,
+      projectFilter: options?.projects,
     },
     debug,
     coverage: options?.coverage,

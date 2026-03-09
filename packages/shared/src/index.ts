@@ -141,6 +141,7 @@ export interface WorkerInitMetadata {
     browserDebug: string
   }
   finalCoverageFileName: string
+  projectFilter?: string[]
 }
 
 export interface WorkerRunnerDebugOptions {

@@ -21,6 +21,8 @@ export async function initVitest(
     ].filter(v => v != null),
   })
 
+  // TODO: sendLog(?)
+
   const pnpExecArgv = meta.pnpApi && meta.pnpLoader
     ? [
         '--require',
@@ -47,6 +49,7 @@ export async function initVitest(
     ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
     ...args,
     ...options,
+    project: meta.projectFilter ?? args.project,
     watch: true,
     api: false,
     // @ts-expect-error private property

@@ -171,6 +171,7 @@ export class VitestProcessAPI {
     })
     const root = this.workspaceFolder.uri.fsPath
     log.info('[API]', `Collecting tests: ${tests.map(t => `${relative(root, t[1])}${t[0] ? ` [${t[0]}]` : ''}`).join(', ')}`)
+    const projects = [...new Set(tests.map(([projectName]) => projectName))]
     try {
       // TODO make sure errors are reported during collection (throw error in the config, for example)
       await withProcess(this.config.pkg, async (meta) => {
@@ -180,7 +181,7 @@ export class VitestProcessAPI {
           }
         })
         await meta.rpc.collectTests(tests)
-      })
+      }, { projects })
     }
     catch (err) {
       log.error('[API]', 'Collection failed:', err)
@@ -328,6 +329,9 @@ export function spawnVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOpt
   if (config.cliArguments && !pkg.arguments) {
     pkg.arguments = `vitest ${config.cliArguments}`
   }
+  if (options?.projects?.length) {
+    log.verbose?.('[API]', `Filtering projects: ${options.projects.join(', ')}`)
+  }
   return config.shellType === 'terminal'
     ? createVitestTerminalProcess(pkg, options)
     : createVitestProcess(pkg, options)
@@ -336,10 +340,11 @@ export function spawnVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOpt
 export async function withProcess<T>(
   pkg: VitestPackage,
   fn: (meta: ResolvedMeta) => Promise<T>,
+  options?: ProcessSpawnOptions,
 ): Promise<T> {
   log.verbose?.('[API]', 'Spawning on-demand process...')
   const start = performance.now()
-  const meta = await spawnVitestProcess(pkg)
+  const meta = await spawnVitestProcess(pkg, options)
   try {
     return await fn(meta)
   }
