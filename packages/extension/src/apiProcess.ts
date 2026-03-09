@@ -243,20 +243,20 @@ export class VitestProcessAPI {
   async getSourceModuleDiagnostic(moduleId: string) {
     if (!this.currentMeta || this.currentMeta.process.closed)
       return { modules: [], untrackedModules: [] }
-    return this.currentMeta.rpc.getSourceModuleDiagnostic(moduleId)
+    return this.currentMeta.rpc.getSourceModuleDiagnostic(normalize(moduleId))
   }
 
   async getModuleEnvironments(moduleId: string) {
     if (!this.currentMeta || this.currentMeta.process.closed)
       return []
-    return this.currentMeta.rpc.getModuleEnvironments(moduleId)
+    return this.currentMeta.rpc.getModuleEnvironments(normalize(moduleId))
   }
 
   async getTransformedModule(project: string, environment: string, moduleId: string) {
     if (!this.currentMeta || this.currentMeta.process.closed) {
       return null
     }
-    return this.currentMeta.rpc.getTransformedModule(project, environment, moduleId)
+    return this.currentMeta.rpc.getTransformedModule(project, environment, normalize(moduleId))
   }
 
   onFileChanged = createQueuedHandler(async (files: string[]) => {
@@ -267,7 +267,7 @@ export class VitestProcessAPI {
     if (!this.currentMeta || this.currentMeta.process.closed) {
       return
     }
-    return this.currentMeta.rpc.onFilesChanged(files).catch((err) => {
+    return this.currentMeta.rpc.onFilesChanged(files.map(f => normalize(f))).catch((err) => {
       log.error('[API]', 'Failed to notify Vitest about file change', err)
     })
   })
