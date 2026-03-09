@@ -202,7 +202,7 @@ export class VSCodeReporter implements Reporter {
   }
 
   onWatcherRerun(files: string[]) {
-    this.rpc.onTestRunStart(files, this.collecting)
+    this.rpc.onTestRunStart(files)
   }
 
   toJSON() {

@@ -19,10 +19,6 @@ import { getErrorMessage, showVitestError } from './utils'
 
 export class TestRunner extends vscode.Disposable {
   protected testRun: vscode.TestRun | undefined
-  // protected testRunDefer: PromiseWithResolvers<void> | undefined
-  // Request that was used to schedule the test run
-  // This can be different from testRunRequest in continuous test runs
-  protected scheduledRequest: vscode.TestRunRequest | undefined
   // The request tied to the testRun
   protected testRunRequest: vscode.TestRunRequest | undefined
 
@@ -47,22 +43,15 @@ export class TestRunner extends vscode.Disposable {
 
     log.onWorkerLog(this.onWorkerLog)
 
-    handle.handlers.onTestRunStart((files, collecting) => {
+    handle.handlers.onTestRunStart((files) => {
       if (!files.length)
         return
 
-      if (collecting) {
-        log.verbose?.('Not starting the runner because tests are being collected for', ...files.map(f => this.relative(f)))
-      }
-      else {
-        files.forEach((file) => {
-          const uri = vscode.Uri.file(file)
-          this.diagnostic?.deleteDiagnostic(uri)
-        })
-        this.inlineConsoleLog.clear()
-        log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
-        this.startTestRun(files)
-      }
+      files.forEach((file) => {
+        const uri = vscode.Uri.file(file)
+        this.diagnostic?.deleteDiagnostic(uri)
+      })
+      this.inlineConsoleLog.clear()
     })
 
     handle.handlers.onTaskUpdate((packs) => {
@@ -153,6 +142,7 @@ export class TestRunner extends vscode.Disposable {
       this.testRun.appendOutput(formatTestOutput(message))
     }
     else if (message) {
+      // So we don't lose the log. Ideally, we should start runner sooner
       log.verbose?.('[WORKER]', message)
     }
   }
@@ -162,7 +152,6 @@ export class TestRunner extends vscode.Disposable {
     this.testRun?.end()
     this.testRun = undefined
     this.testRunRequest = undefined
-    this.scheduledRequest = undefined
   }
 
   private triggerCancel(request?: vscode.TestRunRequest) {
@@ -181,14 +170,31 @@ export class TestRunner extends vscode.Disposable {
   }
 
   public async runTests(request: vscode.TestRunRequest) {
-    this.scheduledRequest = request
+    const tests = request.include || []
+    const files = getTestFiles(tests)
+
+    const testRunName = files.length === 1
+      ? this.relative(files[0][1])
+      : undefined
+    const run = this.testRun = this.createCancellableTestRun(request, testRunName)
+    this.testRunRequest = request
+
+    const testItems = request.include || this.controller.items
+    function enqueue(test: vscode.TestItem) {
+      const testData = getTestData(test)
+      // we only change the state of test cases to keep the correct test count
+      if (testData instanceof TestCase && !testData.dynamic) {
+        log.verbose?.(`Enqueuing "${test.label}"`)
+        run.enqueued(test)
+      }
+      test.children.forEach(enqueue)
+    }
+    testItems.forEach(test => enqueue(test))
 
     const runTests = (files?: ExtensionTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
         ? this.handle.rpc.updateSnapshots(files, testNamePatern)
         : this.handle.rpc.runTests(files, testNamePatern)
-
-    const tests = request.include || []
 
     if (!tests.length) {
       const root = this.api.workspaceFolder.uri.fsPath
@@ -197,7 +203,6 @@ export class TestRunner extends vscode.Disposable {
     }
     else {
       const testNamePatern = formatTestPattern(tests)
-      const files = getTestFiles(tests)
       if (testNamePatern)
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
@@ -217,102 +222,14 @@ export class TestRunner extends vscode.Disposable {
     return false
   }
 
-  private isFileIncluded(file: string, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
-    for (const _item of include) {
-      const item = 'id' in _item ? _item : _item[1]
-      const data = getTestData(item)
-      if (data instanceof TestFile) {
-        if (data.filepath === file)
-          return true
-      }
-      else if (data instanceof TestFolder) {
-        if (this.isFileIncluded(file, item.children))
-          return true
-      }
-      else {
-        if (data.file.filepath === file)
-          return true
-      }
-    }
-    return false
-  }
-
-  private getTestFilesInFolder(path: string) {
-    const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
-    const items = this.tree.getFolderFiles(folder)
-    return Array.from(
-      new Set(items.map(item => (getTestData(item) as TestFile).filepath)),
-    )
-  }
-
-  protected getScheduledRequest() {
-    return this.scheduledRequest
-  }
-
-  protected async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
-    const request = primaryRequest || this.getScheduledRequest()
-
-    if (!files.length) {
-      log.verbose?.('Started an empty test run. This should not happen...')
-      return
-    }
-
-    if (!request) {
-      log.verbose?.('No test run request found for', ...files.map(f => this.relative(f)))
-      return
-    }
-
-    if (this.testRun) {
-      log.verbose?.('Waiting for the previous test run to finish')
-      // await this.testRunDefer?.promise
-    }
-
-    const name = files.length > 1
-      ? undefined
-      : this.relative(files[0])
-
+  protected createCancellableTestRun(request: vscode.TestRunRequest, name?: string) {
     const run = this.testRun = this.controller.createTestRun(request, name)
 
     run.token.onCancellationRequested(() => {
       this.triggerCancel(this.testRunRequest)
     })
 
-    this.testRunRequest = request
-    // this.testRunDefer = Promise.withResolvers()
-    // // run the next test when this one finished, or cancell or test runs if they were cancelled
-    // this.testRunDefer.promise = this.testRunDefer.promise.finally(() => {
-    //   run.end()
-    // })
-
-    for (const file of files) {
-      if (file[file.length - 1] === '/') {
-        const files = this.getTestFilesInFolder(file)
-        this.startTestRun(files, request)
-        continue
-      }
-
-      // during test collection, we don't have test runs
-      if (request.include && !this.isFileIncluded(file, request.include))
-        continue
-
-      const testItems = request.include || this.tree.getFileTestItems(file)
-      function enqueue(test: vscode.TestItem) {
-        const testData = getTestData(test)
-        // we only change the state of test cases to keep the correct test count
-        if (testData instanceof TestCase && !testData.dynamic && files.includes(testData.file.filepath)) {
-          log.verbose?.(`Enqueuing "${test.label}"`)
-          run.enqueued(test)
-        }
-        if (testData instanceof TestFile) {
-          // ignore tests in another files, this is relevant for continuous runs
-          if (!files.includes(testData.filepath)) {
-            return
-          }
-        }
-        test.children.forEach(enqueue)
-      }
-      testItems.forEach(test => enqueue(test))
-    }
+    return run
   }
 
   public async reportCoverage(coverage: any) {
@@ -442,6 +359,10 @@ export class ContinuousTestRunner extends TestRunner {
     private readonly continuousRequests: Set<vscode.TestRunRequest>,
   ) {
     super(handle, controller, tree, api, diagnostic, importsBreakdown, inlineConsoleLog)
+    handle.handlers.onTestRunStart((files) => {
+      this.startTestRun(files)
+      log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
+    })
   }
 
   public async syncWatcher() {
@@ -468,8 +389,85 @@ export class ContinuousTestRunner extends TestRunner {
     }
   }
 
-  protected getScheduledRequest() {
-    return this.createContinuousRequest()
+  private async startTestRun(files: string[], request = this.createContinuousRequest()) {
+    if (this.testRun) {
+      return
+    }
+
+    if (!files.length) {
+      log.verbose?.('Started an empty test run. This should not happen...')
+      return
+    }
+
+    if (!request) {
+      log.verbose?.('No test run request found for', ...files.map(f => this.relative(f)))
+      return
+    }
+
+    const name = files.length > 1
+      ? undefined
+      : this.relative(files[0])
+
+    this.testRunRequest = request
+    const run = this.createCancellableTestRun(request, name)
+
+    for (const file of files) {
+      if (file[file.length - 1] === '/') {
+        const files = this.getTestFilesInFolder(file)
+        this.startTestRun(files, request)
+        continue
+      }
+
+      // during test collection, we don't have test runs
+      if (request.include && !this.isFileIncluded(file, request.include))
+        continue
+
+      const testItems = request.include || this.tree.getFileTestItems(file)
+      function enqueue(test: vscode.TestItem) {
+        const testData = getTestData(test)
+        // we only change the state of test cases to keep the correct test count
+        if (testData instanceof TestCase && !testData.dynamic && files.includes(testData.file.filepath)) {
+          log.verbose?.(`Enqueuing "${test.label}"`)
+          run.enqueued(test)
+        }
+        if (testData instanceof TestFile) {
+          // ignore tests in another files, this is relevant for continuous runs
+          if (!files.includes(testData.filepath)) {
+            return
+          }
+        }
+        test.children.forEach(enqueue)
+      }
+      testItems.forEach(test => enqueue(test))
+    }
+  }
+
+  private isFileIncluded(file: string, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
+    for (const _item of include) {
+      const item = 'id' in _item ? _item : _item[1]
+      const data = getTestData(item)
+      if (data instanceof TestFile) {
+        if (data.filepath === file)
+          return true
+      }
+      else if (data instanceof TestFolder) {
+        if (this.isFileIncluded(file, item.children))
+          return true
+      }
+      else {
+        if (data.file.filepath === file)
+          return true
+      }
+    }
+    return false
+  }
+
+  private getTestFilesInFolder(path: string) {
+    const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
+    const items = this.tree.getFolderFiles(folder)
+    return Array.from(
+      new Set(items.map(item => (getTestData(item) as TestFile).filepath)),
+    )
   }
 
   // It is important to create new requests every time the file is changed,

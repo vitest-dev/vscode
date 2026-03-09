@@ -80,7 +80,7 @@ export interface ExtensionWorkerEvents {
   onTaskUpdate: (task: RunnerTaskResultPack[]) => void
   onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean, coverage?: unknown) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
-  onTestRunStart: (files: string[], collecting?: boolean) => void
+  onTestRunStart: (files: string[]) => void
 
   onProcessLog: (type: 'stdout' | 'stderr', log: string) => void
 }
