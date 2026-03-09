@@ -8,6 +8,7 @@ import { VitestProcessAPI } from './apiProcess'
 import { log } from './log'
 import { ContinuousTestRunner, TestRunner } from './runner'
 import { getTestData, TestFile, TestFolder } from './testTreeData'
+import { showVitestError } from './utils'
 
 /**
  * Per-process run queue. Ensures only one test run is active at a time per process API.
@@ -78,8 +79,9 @@ export class RunQueue {
       await this.currentRun
     }
     catch (err: any) {
-      if (!err.message?.startsWith('[birpc] rpc is closed'))
-        log.error('Failed to run tests', err)
+      if (!err.message?.startsWith('[birpc] rpc is closed')) {
+        showVitestError('Failed to run tests', err)
+      }
     }
     finally {
       this.currentRun = undefined
@@ -158,6 +160,7 @@ export class RunQueue {
       const offExit = handle.process.onExit(() => {
         // Unexpected exit, make sure we cleanup the state
         if (this.continuousHandle) {
+          showVitestError('The process exited unexpectedly')
           runner.dispose()
           this.continuousHandle = undefined
         }

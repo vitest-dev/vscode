@@ -7,6 +7,7 @@ import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
@@ -142,7 +143,7 @@ export class TestRunner extends vscode.Disposable {
     }
     else if (message) {
       // So we don't lose the log. Ideally, we should start runner sooner
-      log.verbose?.('[WORKER]', message)
+      log.verbose?.('[WORKER]', stripVTControlCharacters(message))
     }
   }
 
