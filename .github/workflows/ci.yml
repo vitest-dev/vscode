@@ -28,9 +28,6 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
 
-    env:
-      OS_NAME: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
@@ -59,7 +56,7 @@ jobs:
         if: always()
         with:
           name: 'test-results-${{ matrix.os }}'
-          path: 'test-results/${{ matrix.os }}'
+          path: test-results
 
   test-legacy:
     runs-on: ${{ matrix.os }}
@@ -95,4 +92,4 @@ jobs:
         if: always()
         with:
           name: 'test-results-legacy-${{ matrix.os }}'
-          path: 'test-results/${{ matrix.os }}'
+          path: test-results
