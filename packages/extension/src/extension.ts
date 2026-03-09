@@ -553,9 +553,3 @@ class VitestExtension {
     this.runQueues.clear()
   }
 }
-
-// TODO: have command to filter configs
-// TODO(bug): when _reloading, the continues state stays and can't be removed
-// TODO: terminal results are not shown
-
-// TODO: optimize `--projects` when running tests in big workspaces

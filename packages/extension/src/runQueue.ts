@@ -64,9 +64,9 @@ export class RunQueue {
         // performance optimization to avoid creating unused projects
         projects: getProjectsFromRequest(request),
       })
-      const runner = this.createRunner(handle)
+      const runner = this.createRunner(handle, api)
       try {
-        await runner.runTests(request, token)
+        await runner.runTests(request)
       }
       finally {
         runner.dispose()
@@ -178,12 +178,12 @@ export class RunQueue {
     return this.continuousPromise
   }
 
-  private createRunner(handle: RunHandle) {
+  private createRunner(handle: RunHandle, api?: VitestProcessAPI) {
     return new TestRunner(
       handle,
       this.controller,
       this.tree,
-      this.api,
+      api || this.api,
       this.diagnostic,
       this.importsBreakdown,
       this.inlineConsoleLog,

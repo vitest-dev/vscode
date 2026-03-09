@@ -165,23 +165,23 @@ export class TestRunner extends vscode.Disposable {
     this.scheduledRequest = undefined
   }
 
-  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+  private triggerCancel(request?: vscode.TestRunRequest) {
+    const timeout = getConfig(this.api.workspaceFolder).forceCancelTimeout
+    const timeoutId = setTimeout(() => {
+      this.api.cancelRun()
+      log.error(`Triggering a force cancel timeout (${timeout}ms).`)
+    }, timeout)
+
+    this.api.cancelRun().then(() => {
+      clearTimeout(timeoutId)
+      this.endTestRun()
+    })
+
+    log.verbose?.('Test run was cancelled manually for', labelTestItems(request?.include))
+  }
+
+  public async runTests(request: vscode.TestRunRequest) {
     this.scheduledRequest = request
-
-    this.disposables.push(
-      token.onCancellationRequested(() => {
-        const timeout = setTimeout(() => {
-          this.api.cancelRun()
-        }, getConfig(this.api.workspaceFolder).forceCancelTimeout)
-
-        this.api.cancelRun().then(() => {
-          clearTimeout(timeout)
-          this.endTestRun()
-        })
-
-        log.verbose?.('Test run was cancelled manually for', labelTestItems(request.include))
-      }),
-    )
 
     const runTests = (files?: ExtensionTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
@@ -249,7 +249,7 @@ export class TestRunner extends vscode.Disposable {
     return this.scheduledRequest
   }
 
-  private async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
+  protected async startTestRun(files: string[], primaryRequest?: vscode.TestRunRequest) {
     const request = primaryRequest || this.getScheduledRequest()
 
     if (!files.length) {
@@ -272,6 +272,11 @@ export class TestRunner extends vscode.Disposable {
       : this.relative(files[0])
 
     const run = this.testRun = this.controller.createTestRun(request, name)
+
+    run.token.onCancellationRequested(() => {
+      this.triggerCancel(this.testRunRequest)
+    })
+
     this.testRunRequest = request
     // this.testRunDefer = Promise.withResolvers()
     // // run the next test when this one finished, or cancell or test runs if they were cancelled
