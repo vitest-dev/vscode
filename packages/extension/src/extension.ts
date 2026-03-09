@@ -196,7 +196,7 @@ class VitestExtension {
         () => {
           log.error('Run handler is not defined')
         },
-        false,
+        true,
         undefined,
         true,
       )
@@ -225,7 +225,7 @@ class VitestExtension {
         () => {
           log.error('Run handler is not defined')
         },
-        false,
+        true,
         undefined,
         false, // continues debugging is not supported
       )
@@ -259,7 +259,7 @@ class VitestExtension {
         () => {
           log.error('Run handler is not defined')
         },
-        false,
+        true,
         undefined,
         false, // continues run with coverage is not supported because we want to keep a single running process per API
       )
@@ -553,3 +553,7 @@ class VitestExtension {
     this.runQueues.clear()
   }
 }
+
+// TODO: add to readme recommended process:
+// - press continuous run
+// - start editing tests
