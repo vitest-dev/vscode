@@ -16,6 +16,7 @@ export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
 
 export interface ProcessSpawnOptions {
   coverage?: boolean
+  sendLog?: boolean
 }
 
 export function waitForWsConnection(
@@ -155,6 +156,7 @@ export function onWsConnection(
     },
     debug,
     coverage: options?.coverage,
+    sendLog: options?.sendLog,
   }
 
   ws.send(JSON.stringify(runnerOptions))

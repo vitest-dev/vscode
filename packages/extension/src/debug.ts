@@ -246,6 +246,7 @@ export async function debugTests(
 
         deferredPromise.reject(err)
       },
+      { sendLog: true },
     ),
   )
 

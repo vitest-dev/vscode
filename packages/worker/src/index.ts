@@ -17,12 +17,11 @@ export async function initVitest(
   let stdout: Writable | undefined
   let stderr: Writable | undefined
 
-  if (data.debug) {
+  if (data.sendLog) {
     stdout = new Writable({
       write(chunk, __, callback) {
         const log = chunk.toString()
         reporter.sendTerminalLog('stdout', log)
-        // process.stdout.write(log)
         callback()
       },
     })
@@ -31,7 +30,6 @@ export async function initVitest(
       write(chunk, __, callback) {
         const log = chunk.toString()
         reporter.sendTerminalLog('stderr', log)
-        // process.stderr.write(log)
         callback()
       },
     })

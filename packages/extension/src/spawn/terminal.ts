@@ -71,7 +71,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
     wss.once('connection', () => {
       clearTimeout(timeout)
     })
-    waitForWsConnection(wss, pkg, 'terminal', options).then(resolve, reject)
+    waitForWsConnection(wss, pkg, 'terminal', { ...options, sendLog: true }).then(resolve, reject)
   })
 
   meta.handlers.onProcessLog((type, message) => {

@@ -152,6 +152,7 @@ export interface WorkerRunnerDebugOptions {
 export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerInitMetadata
+  sendLog?: boolean
   debug?: WorkerRunnerDebugOptions | boolean
   coverage?: boolean
 }

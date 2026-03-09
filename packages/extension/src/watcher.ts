@@ -96,10 +96,11 @@ export class ExtensionWatcher extends vscode.Disposable {
   private async shouldIgnoreFile(api: VitestProcessAPI, path: string, uri: vscode.Uri) {
     if (
       path.includes('/node_modules/')
+      || path.includes('\\node_modules\\')
       || path.includes('/.git/')
+      || path.includes('\\.git\\')
       || path.endsWith('.git')
     ) {
-      log.verbose?.('[VSCODE] Ignoring file:', this.relative(api, uri))
       return true
     }
     try {
