@@ -329,8 +329,9 @@ export function spawnVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOpt
   if (config.cliArguments && !pkg.arguments) {
     pkg.arguments = `vitest ${config.cliArguments}`
   }
-  if (options?.projects?.length) {
-    log.verbose?.('[API]', `Filtering projects: ${options.projects.join(', ')}`)
+  const projects = options?.projects?.join(', ')
+  if (projects) {
+    log.verbose?.('[API]', `Filtering projects: ${projects}`)
   }
   return config.shellType === 'terminal'
     ? createVitestTerminalProcess(pkg, options)

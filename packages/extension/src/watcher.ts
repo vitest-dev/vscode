@@ -44,18 +44,22 @@ export class ExtensionWatcher extends vscode.Disposable {
     const watcher = vscode.workspace.createFileSystemWatcher(pattern)
     this.watcherByFolder.set(folder, watcher)
 
-    watcher.onDidDelete((uri) => {
+    watcher.onDidDelete(async (uri) => {
+      const path = normalize(uri.fsPath)
+      if (await this.shouldIgnoreFile(api, path, uri)) {
+        return
+      }
       log.verbose?.('[VSCODE] File deleted:', this.relative(api, uri))
       this.testTree.removeFile(normalize(uri.fsPath))
       this.transformSchemaProvider.emitChange(uri)
     })
 
     watcher.onDidChange(async (uri) => {
-      this.transformSchemaProvider.emitChange(uri)
       const path = normalize(uri.fsPath)
       if (await this.shouldIgnoreFile(api, path, uri)) {
         return
       }
+      this.transformSchemaProvider.emitChange(uri)
       log.verbose?.('[VSCODE] File changed:', this.relative(api, uri))
       const apis = this.apisByFolder.get(folder) || []
       apis.forEach(api => api.onFileChanged(path))
