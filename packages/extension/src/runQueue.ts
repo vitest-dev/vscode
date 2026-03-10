@@ -59,23 +59,19 @@ export class RunQueue {
     if (request.continuous) return this.startContinuousRun(request, token, coverage)
 
     if (!this.currentRun) {
-      return this.executeRun(request, token, coverage)
+      return this.executeRun(request, coverage)
     }
 
     log.verbose?.('Queueing a new test run to execute when the current one is finished.')
     return new Promise<void>((resolve) => {
       this.pendingQueue.push({
-        runTests: () => this.executeRun(request, token, coverage),
+        runTests: () => this.executeRun(request, coverage),
         resolveWithoutRunning: resolve,
       })
     })
   }
 
-  private async executeRun(
-    request: vscode.TestRunRequest,
-    token: vscode.CancellationToken,
-    coverage: boolean,
-  ) {
+  private async executeRun(request: vscode.TestRunRequest, coverage: boolean) {
     this.currentRun = (async () => {
       // Each "run" click creates a new process to run tests
       // We don't reuse the established process because it's harder to track
@@ -85,6 +81,7 @@ export class RunQueue {
         coverage,
         // performance optimization to avoid creating unused projects
         projects: getProjectsFromRequest(request),
+        related: 'related' in request ? (request.related as string) : undefined,
       })
       const runner = this.createRunner(handle, api)
       try {

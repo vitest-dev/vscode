@@ -64,6 +64,7 @@ export async function initVitest(
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,
+    related: meta.related ? [meta.related] : undefined,
     experimental: {
       importDurations: {
         limit: Infinity,

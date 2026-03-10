@@ -1,6 +1,6 @@
 import type { VitestAPI } from './api'
 import type { VitestProcessAPI } from './apiProcess'
-import { normalize, relative } from 'pathe'
+import { basename, normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
@@ -350,6 +350,35 @@ class VitestExtension {
       ),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
+      }),
+      vscode.commands.registerCommand('vitest.runRelatedTests', async (uri?: vscode.Uri) => {
+        const currentUri = uri || vscode.window.activeTextEditor?.document.uri
+        if (!currentUri) {
+          return
+        }
+        const fsPath = normalize(currentUri.fsPath)
+        if (this.testTree.getFileTestItems(fsPath).length) {
+          vscode.window.showWarningMessage(
+            `"${basename(fsPath)}" is a test file. Pick a source file to run related tests`,
+          )
+          return
+        }
+        const promises = this.api?.processes.map(async (process) => {
+          const runProfile = this.runProfiles.get(`${process.id}:run`)
+          if (!runProfile) {
+            return
+          }
+
+          const request = new vscode.TestRunRequest(undefined, undefined, runProfile, false, false)
+          const tokenSource = new vscode.CancellationTokenSource()
+          Object.assign(request, { related: fsPath })
+          log.info(
+            '[COMMAND] Running tests that import',
+            relative(process.workspaceFolder.uri.fsPath, fsPath),
+          )
+          await runProfile.runHandler(request, tokenSource.token)
+        })
+        await Promise.all(promises || [])
       }),
       vscode.commands.registerCommand(
         'vitest.toggleContinuousRun',

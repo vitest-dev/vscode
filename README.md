@@ -119,6 +119,10 @@ You can also type the same command in the quick picker while the file is open.
 
 ![Reveal test in explorer](./img/reveal-in-picker.png 'Reveal test in explorer')
 
+### Run Related Tests
+
+You can run all tests that import the current file by using the "Run Related Tests" command. Its triggers are visible in the same places as "Reveal in Test Explorer".
+
 ### Import Breakdown
 
 If you use Vitest 4.0.15 or higher, during continuous runs the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
