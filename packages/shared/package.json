@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "birpc": "2.4.0",
+    "birpc": "catalog:",
     "vitest": "catalog:v3"
   }
 }

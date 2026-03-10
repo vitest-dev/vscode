@@ -40,7 +40,7 @@ export function debounce<T extends (...args: any[]) => void>(cb: T, wait = 20) {
   const callable = (...args: any) => {
     if (h)
       clearTimeout(h)
-    h = setTimeout(() => cb(...args), wait)
+    h = setTimeout(cb, wait, ...args)
   }
   return <T>(<any>callable)
 }

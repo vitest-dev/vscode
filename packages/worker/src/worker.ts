@@ -103,7 +103,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       }
       return {
         name: project.name,
-        environments: Array.from(environments).map(([name, { timestamp }]) => ({
+        environments: Array.from(environments, ([name, { timestamp }]) => ({
           name,
           transformTimestamp: timestamp,
         })),

@@ -117,7 +117,7 @@ export class VSCodeReporter implements Reporter {
 
   onTestRunStart(specifications: ReadonlyArray<TestSpecification>) {
     const files = specifications.map(spec => spec.moduleId)
-    this.rpc.onTestRunStart(Array.from(new Set(files)))
+    this.rpc.onTestRunStart([...new Set(files)])
     this.vitest.state.filesMap.clear()
   }
 

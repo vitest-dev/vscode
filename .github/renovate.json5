@@ -5,19 +5,21 @@
   "rangeStrategy": "bump",
   "packageRules": [
     {
+      "groupName": "Eslint packages",
+      "matchPackageNames": ["/eslint/"]
+    },
+    {
       "depTypeList": ["peerDependencies"],
       "enabled": false
     },
     {
-      "matchPaths": [
-        "samples/**"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "all non-major examples dependencies",
-      "groupSlug": "all-minor-patch-examples"
+      "matchDepTypes": ["action"],
+      "matchPackageNames": ["!actions/{/,}**", "!github/{/,}**"],
+      "pinDigests": true
+    },
+    {
+      "matchFileNames": ["samples/**"],
+      "enabled": false
     }
   ]
 }

@@ -122,7 +122,7 @@ class VitestExtension {
     }
 
     const folders = new Set([...workspaces, ...configs].map(x => x.folder))
-    this.testTree.reset(Array.from(folders))
+    this.testTree.reset([...folders])
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()

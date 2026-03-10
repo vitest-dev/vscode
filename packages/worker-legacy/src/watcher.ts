@@ -31,7 +31,7 @@ export class ExtensionWorkerWatcher {
           return await originalScheduleRerun.call(this, [])
         }
 
-        await state.collectTests(files, Array.from(this.changedTests))
+        await state.collectTests(files, [...this.changedTests])
         return await originalScheduleRerun.call(this, [])
       }
 
@@ -46,11 +46,11 @@ export class ExtensionWorkerWatcher {
         return await originalScheduleRerun.call(this, files)
       }
 
-      const changedFiles = Array.from(this.changedTests)
+      const changedFiles = [...this.changedTests]
 
       if (!isTestFileTrigger) {
         // if souce code is changed and related tests are not continious, remove them from changedTests
-        const currentChanged = Array.from(this.changedTests)
+        const currentChanged = [...this.changedTests]
         this.changedTests.clear()
         for (const file of currentChanged) {
           if (state.isTestFileWatched(file))
@@ -65,7 +65,7 @@ export class ExtensionWorkerWatcher {
       if (this.changedTests.size) {
         vitest.logger.log(
           'Rerunning tests due to file changes:',
-          ...[...this.changedTests].map(f => relative(vitest.config.root, f)),
+          ...Array.from(this.changedTests, f => relative(vitest.config.root, f)),
           namePattern ? `with pattern ${namePattern}` : '',
         )
       }
@@ -103,7 +103,7 @@ export class ExtensionWorkerWatcher {
     return this.files.some((file) => {
       if (file === testFile)
         return true
-      if (file[file.length - 1] === '/')
+      if (file.at(-1) === '/')
         return testFile.startsWith(file)
       return false
     })

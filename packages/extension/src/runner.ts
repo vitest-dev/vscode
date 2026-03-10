@@ -373,7 +373,7 @@ export class ContinuousTestRunner extends TestRunner {
       return
     }
 
-    const include = [...this.continuousRequests].map(r => r.include || []).flat()
+    const include = Array.from(this.continuousRequests, r => r.include || []).flat()
 
     if (!include.length) {
       await this.handle.rpc.watchTests()
@@ -415,7 +415,7 @@ export class ContinuousTestRunner extends TestRunner {
     const run = this.createCancellableTestRun(request, name)
 
     for (const file of files) {
-      if (file[file.length - 1] === '/') {
+      if (file.at(-1) === '/') {
         const files = this.getTestFilesInFolder(file)
         this.startTestRun(files, request)
         continue
@@ -468,9 +468,7 @@ export class ContinuousTestRunner extends TestRunner {
   private getTestFilesInFolder(path: string) {
     const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
     const items = this.tree.getFolderFiles(folder)
-    return Array.from(
-      new Set(items.map(item => (getTestData(item) as TestFile).filepath)),
-    )
+    return [...new Set(items.map(item => (getTestData(item) as TestFile).filepath))]
   }
 
   // It is important to create new requests every time the file is changed,
@@ -578,15 +576,13 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTe
   // if there is a folder, we can't limit the tests to a specific project
   const hasFolder = tests.some(test => getTestData(test) instanceof TestFolder)
   if (hasFolder) {
-    return Array.from(
-      new Set(tests.map((test) => {
-        const data = getTestData(test)
-        const fsPath = normalize(test.uri!.fsPath)
-        if (data instanceof TestFolder)
-          return `${fsPath}/`
-        return fsPath
-      }).filter(Boolean) as string[]),
-    )
+    return [...new Set(tests.map((test) => {
+      const data = getTestData(test)
+      const fsPath = normalize(test.uri!.fsPath)
+      if (data instanceof TestFolder)
+        return `${fsPath}/`
+      return fsPath
+    }).filter(Boolean) as string[])]
   }
   const testSpecs: ExtensionTestSpecification[] = []
   const testFiles = new Set<string>()
@@ -611,7 +607,7 @@ function formatTestPattern(tests: readonly vscode.TestItem[], patterns: string[]
     const data = getTestData(test)!
     // file or a folder, try to include every test in there
     if (!('getTestNamePattern' in data)) {
-      formatTestPattern([...test.children].map(t => t[1]), patterns)
+      formatTestPattern(Array.from(test.children, t => t[1]), patterns)
       continue
     }
     patterns.push(data.getTestNamePattern())

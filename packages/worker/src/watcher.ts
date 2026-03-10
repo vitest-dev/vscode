@@ -80,7 +80,7 @@ export class ExtensionWorkerWatcher {
     return files.some((file) => {
       if (file === testFile)
         return true
-      if (file[file.length - 1] === '/')
+      if (file.at(-1) === '/')
         return testFile.startsWith(file)
       return false
     })
