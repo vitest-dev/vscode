@@ -65,11 +65,6 @@ export class VSCodeReporter implements Reporter {
   }
 
   onUserConsoleLog(log: UserConsoleLog) {
-    if ('__vscodeDebugAttach' in log) {
-      this.vitest.logger.log('creating debug promise')
-      return this.createAttachPromise()
-    }
-
     // Parse stack trace to extract file location for inline display
     const extendedLog = log as any
     if (log.origin) {
@@ -97,7 +92,7 @@ export class VSCodeReporter implements Reporter {
         // If parsing fails, continue without parsed location
       }
     }
-    this.rpc.onConsoleLog(extendedLog)
+    return this.rpc.onConsoleLog(extendedLog)
   }
 
   onTaskUpdate(packs: RunnerTaskResultPack[]) {

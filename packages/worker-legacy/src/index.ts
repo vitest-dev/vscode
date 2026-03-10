@@ -95,6 +95,15 @@ export async function initVitest(
         }
       : {},
   }
+  if (typeof data.debug === 'object') {
+    const inspect = `${data.debug.host}:${data.debug.port}`
+    if (data.debug.browser) {
+      cliOptions.inspect = inspect
+    }
+    else {
+      cliOptions.inspectBrk = inspect
+    }
+  }
   const vitest = await vitestModule.createVitest(
     'test',
     cliOptions,
@@ -151,22 +160,8 @@ export async function initVitest(
             context.project.config.printConsoleTrace = true
 
             const browser = context.project.config.browser
-            if (typeof data.debug === 'object') {
-              context.vitest.config.inspector = {
-                enabled: true,
-                port: data.debug.port,
-                host: data.debug.host,
-                waitForDebugger: false,
-              }
-              context.project.config.inspector = context.vitest.config.inspector
-
-              // TODO: test
-              if (browser?.enabled) {
-                context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
-              }
-              else {
-                context.vitest.config.inspector.waitForDebugger = true
-              }
+            if (browser?.enabled && typeof data.debug === 'object') {
+              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
             }
           },
         },
