@@ -91,7 +91,7 @@ export function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>, 
   function flush() {
     if (promise)
       return
-    const values = Array.from(cached)
+    const values = [...cached]
     cached.clear()
     const resolvers = pendingResolvers
     pendingResolvers = []

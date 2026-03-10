@@ -23,6 +23,8 @@ export default antfu(
       'antfu/indent-binary-ops': 'off',
       'unused-imports/no-unused-imports': 'error',
       'curly': 'off',
+      'e18e/prefer-static-regex': 'off',
+      'pnpm/yaml-no-duplicate-catalog-item': 'off',
       'style/member-delimiter-style': [
         'error',
         {

@@ -51,7 +51,7 @@ export class TestTree extends vscode.Disposable {
   }
 
   public getAllFileItems() {
-    return Array.from(this.fileItems.values())
+    return [...this.fileItems.values()]
   }
 
   public reset(workspaceFolders: vscode.WorkspaceFolder[]) {
@@ -183,7 +183,7 @@ export class TestTree extends vscode.Disposable {
     vscode.commands.executeCommand(
       'setContext',
       'vitest.testFiles',
-      Array.from(this.testFiles),
+      [...this.testFiles],
     )
 
     return testFileItem
@@ -360,7 +360,7 @@ export class TestTree extends vscode.Disposable {
         task.name,
         parent.uri,
       )
-      testItem.tags = Array.from(new Set([...parent.tags, tag]))
+      testItem.tags = [...new Set([...parent.tags, tag])]
       testItem.error = undefined
       testItem.label = task.name
       const location = task.location

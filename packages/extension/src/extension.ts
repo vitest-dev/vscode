@@ -122,7 +122,7 @@ class VitestExtension {
     }
 
     const folders = new Set([...workspaces, ...configs].map(x => x.folder))
-    this.testTree.reset(Array.from(folders))
+    this.testTree.reset([...folders])
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()
@@ -586,3 +586,9 @@ class VitestExtension {
     this.runQueues.clear()
   }
 }
+
+// TODO: add to readme recommended process:
+// - press continuous run
+// - start editing tests
+// TODO: if the console line is different, remove the log
+// Deleting/renaming a folder doesn't remove the test

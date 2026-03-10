@@ -32,7 +32,7 @@ emitter.on('message', async function onMessage(message: any) {
 
     try {
       const vitestModule = await import(
-        pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString()
+        pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString(),
       ) as typeof import('vitest/node')
 
       const isLegacy = !vitestModule.version || (Number(vitestModule.version[0]) < 4)
