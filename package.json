@@ -69,6 +69,11 @@
         "category": "Vitest"
       },
       {
+        "title": "Toggle Continuous Run",
+        "command": "vitest.toggleContinuousRun",
+        "category": "Vitest"
+      },
+      {
         "title": "Show Output Channel",
         "command": "vitest.openOutput",
         "category": "Vitest"
@@ -135,6 +140,10 @@
       ],
       "commandPalette": [
         {
+          "command": "vitest.toggleContinuousRun",
+          "when": "false"
+        },
+        {
           "command": "vitest.updateSnapshot",
           "when": "false"
         },
@@ -160,6 +169,10 @@
         },
         {
           "command": "vitest.copyTestItemErrors",
+          "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.toggleContinuousRun",
           "when": "controllerId == 'vitest'"
         }
       ]

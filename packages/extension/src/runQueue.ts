@@ -37,6 +37,20 @@ export class RunQueue {
     private readonly inlineConsoleLog: InlineConsoleLogManager,
   ) {}
 
+  public isContinuousTestItem(testItem: vscode.TestItem): boolean {
+    for (const req of this.continuousRequests) {
+      if (!req.include) {
+        return true
+      }
+      for (const item of req.include) {
+        if (includesTestItem(item, testItem)) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
   async enqueue(request: vscode.TestRunRequest, token: vscode.CancellationToken, coverage: boolean) {
     if (request.continuous)
       return this.startContinuousRun(request, token, coverage)
@@ -218,6 +232,18 @@ export class RunQueue {
 interface ContinuousHandle {
   runner: ContinuousTestRunner
   dispose: () => Promise<void>
+}
+
+function includesTestItem(item: vscode.TestItem, testItem: vscode.TestItem): boolean {
+  if (item === testItem) {
+    return true
+  }
+  for (const [, child] of item.children) {
+    if (includesTestItem(child, testItem)) {
+      return true
+    }
+  }
+  return false
 }
 
 function getProjectsFromRequest(request: vscode.TestRunRequest): string[] | undefined {

@@ -42,7 +42,7 @@ class VitestExtension {
   private tagsManager: TagsManager
   private api: VitestAPI | undefined
 
-  private runQueues = new Set<RunQueue>()
+  private runQueues = new Map<string, RunQueue>()
   private state: ExtensionState
 
   private disposables: vscode.Disposable[] = []
@@ -219,11 +219,12 @@ class VitestExtension {
       this.importsBreakdownProvider,
       this.inlineConsoleLog,
     )
-    this.runQueues.add(runQueue)
+    const runQueueId = `${vitest.id}:run`
+    this.runQueues.set(runQueueId, runQueue)
 
     runProfile.tag = vitest.tag
     runProfile.runHandler = (request, token) => runQueue.enqueue(request, token, false)
-    this.runProfiles.set(`${vitest.id}:run`, runProfile)
+    this.runProfiles.set(runQueueId, runProfile)
 
     let debugProfile = this.runProfiles.get(`${vitest.id}:debug`)
     if (!debugProfile) {
@@ -282,12 +283,13 @@ class VitestExtension {
       this.importsBreakdownProvider,
       this.inlineConsoleLog,
     )
-    this.runQueues.add(coverageQueue)
+    const coverageQueueId = `${vitest.id}:coverage`
+    this.runQueues.set(coverageQueueId, coverageQueue)
 
     coverageProfile.tag = vitest.tag
     coverageProfile.runHandler = (request, token) => coverageQueue.enqueue(request, token, true)
     coverageProfile.loadDetailedCoverage = coverageContext.loadDetailedCoverage
-    this.runProfiles.set(`${vitest.id}:coverage`, coverageProfile)
+    this.runProfiles.set(coverageQueueId, coverageProfile)
   }
 
   private async resolveTestFile(item?: vscode.TestItem) {
@@ -341,6 +343,24 @@ class VitestExtension {
       })),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
+      }),
+      vscode.commands.registerCommand('vitest.toggleContinuousRun', async (testItem?: vscode.TestItem) => {
+        if (!testItem) {
+          return
+        }
+        this.api?.processes.forEach((process) => {
+          const processId = `${process.id}:run`
+          const runProfile = this.runProfiles.get(processId)
+          const queue = this.runQueues.get(processId)
+          if (runProfile && testItem.tags.includes(runProfile.tag!) && queue) {
+            if (queue.isContinuousTestItem(testItem)) {
+              vscode.commands.executeCommand('vscode.stopContinuousTestRun', [testItem])
+            }
+            else {
+              vscode.commands.executeCommand('vscode.startContinuousTestRun', runProfile, [testItem])
+            }
+          }
+        })
       }),
       vscode.commands.registerCommand('vitest.revealInTestExplorer', async (uri: vscode.Uri | undefined) => {
         if (uri === undefined) {
@@ -566,3 +586,9 @@ class VitestExtension {
     this.runQueues.clear()
   }
 }
+
+// TODO: add to readme recommended process:
+// - press continuous run
+// - start editing tests
+// TODO: if the console line is different, remove the log
+// Deleting/renaming a folder doesn't remove the test
