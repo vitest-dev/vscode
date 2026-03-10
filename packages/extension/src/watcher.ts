@@ -53,23 +53,97 @@ export class ExtensionWatcher extends vscode.Disposable {
     const changeQueue = new Map<string, vscode.Uri>()
     const createQueue = new Map<string, vscode.Uri>()
 
+    const scheduleCreateDeleteFlush = () => {
+      this.scheduleFlush(`create-delete:${folder.index}`, async () => {
+        const deleteBatch = new Map(deleteQueue)
+        const createBatch = new Map(createQueue)
+        deleteQueue.clear()
+        createQueue.clear()
+
+        // Process creates first so new items exist in the tree
+        // before deletes remove old ones (prevents parent folders
+        // from being orphaned during renames)
+        if (createBatch.size) {
+          log.verbose?.(`[VSCODE] Flushing ${createBatch.size} created items`)
+
+          const apis = this.apisByFolder.get(folder) || []
+          const roots = apis.flatMap((api) =>
+            api.config.projects.map((p) => normalize(p.dir || p.root)),
+          )
+          const openedFiles = vscode.workspace.textDocuments.map((d) => normalize(d.uri.fsPath))
+
+          const entries = [...createBatch.entries()]
+          const types = await Promise.allSettled(
+            entries.map(([path, uri]) => this.getFsType(path, uri)),
+          )
+
+          const files: string[] = []
+          const folders: [string, vscode.Uri][] = []
+          for (let i = 0; i < entries.length; i++) {
+            const result = types[i]
+            if (result.status !== 'fulfilled' || !result.value) {
+              continue
+            }
+            if (result.value === 'file') {
+              files.push(entries[i][0])
+            } else {
+              folders.push(entries[i])
+            }
+          }
+
+          const folderFiles = await Promise.allSettled(
+            folders.map(([, uri]) => this.readFilesRecursively(uri, roots)),
+          )
+
+          const seen = new Set(files)
+          for (const result of folderFiles) {
+            if (result.status !== 'fulfilled') {
+              continue
+            }
+            for (const file of result.value) {
+              seen.add(file)
+            }
+          }
+
+          seen.forEach((file) => {
+            apis.forEach((api) => {
+              const metadata = api.getPotentialTestFileMetadata(file)
+              metadata.forEach((meta) => {
+                this.testTree.getOrCreateFileTestItem(api, meta, file)
+
+                // If file is open and not a continuous run,
+                // Collect its tests immidetly, otherwise ignore
+                if (
+                  openedFiles.includes(file) &&
+                  !api.getPersistentProcessMeta() &&
+                  !api.isSpawningPersistentProcess
+                ) {
+                  api.collectTests(meta.project, file)
+                }
+              })
+            })
+          })
+        }
+
+        if (deleteBatch.size) {
+          log.verbose?.(`[VSCODE] Flushing ${deleteBatch.size} deleted items`)
+          for (const [path, uri] of deleteBatch) {
+            this.transformSchemaProvider.emitChange(uri)
+            // We don't know if it was a file or a folder
+            this.testTree.removeFile(path)
+            this.testTree.removeFolder(path)
+          }
+        }
+      })
+    }
+
     watcher.onDidDelete((uri) => {
       const path = normalize(uri.fsPath)
       if (this.isCommondIgnore(path)) {
         return
       }
       deleteQueue.set(path, uri)
-      this.scheduleFlush(`delete:${folder.index}`, () => {
-        const batch = new Map(deleteQueue)
-        deleteQueue.clear()
-        log.verbose?.(`[VSCODE] Flushing ${batch.size} deleted items`)
-        for (const [path, uri] of batch) {
-          this.transformSchemaProvider.emitChange(uri)
-          // We don't know if it was a file or a folder
-          this.testTree.removeFile(path)
-          this.testTree.removeFolder(path)
-        }
-      })
+      scheduleCreateDeleteFlush()
     })
 
     watcher.onDidChange((uri) => {
@@ -126,69 +200,7 @@ export class ExtensionWatcher extends vscode.Disposable {
         return
       }
       createQueue.set(path, uri)
-      this.scheduleFlush(`create:${folder.index}`, async () => {
-        const batch = new Map(createQueue)
-        createQueue.clear()
-        log.verbose?.(`[VSCODE] Flushing ${batch.size} created items`)
-
-        const apis = this.apisByFolder.get(folder) || []
-        const roots = apis.flatMap((api) =>
-          api.config.projects.map((p) => normalize(p.dir || p.root)),
-        )
-        const openedFiles = vscode.workspace.textDocuments.map((d) => normalize(d.uri.fsPath))
-
-        const entries = [...batch.entries()]
-        const types = await Promise.allSettled(
-          entries.map(([path, uri]) => this.getFsType(path, uri)),
-        )
-
-        const files: string[] = []
-        const folders: [string, vscode.Uri][] = []
-        for (let i = 0; i < entries.length; i++) {
-          const result = types[i]
-          if (result.status !== 'fulfilled' || !result.value) {
-            continue
-          }
-          if (result.value === 'file') {
-            files.push(entries[i][0])
-          } else {
-            folders.push(entries[i])
-          }
-        }
-
-        const folderFiles = await Promise.allSettled(
-          folders.map(([, uri]) => this.readFilesRecursively(uri, roots)),
-        )
-
-        const seen = new Set(files)
-        for (const result of folderFiles) {
-          if (result.status !== 'fulfilled') {
-            continue
-          }
-          for (const file of result.value) {
-            seen.add(file)
-          }
-        }
-
-        seen.forEach((file) => {
-          apis.forEach((api) => {
-            const metadata = api.getPotentialTestFileMetadata(file)
-            metadata.forEach((meta) => {
-              this.testTree.getOrCreateFileTestItem(api, meta, file)
-
-              // If file is open and not a continuous run,
-              // Collect its tests immidetly, otherwise ignore
-              if (
-                openedFiles.includes(file) &&
-                !api.getPersistentProcessMeta() &&
-                !api.isSpawningPersistentProcess
-              ) {
-                api.collectTests(meta.project, file)
-              }
-            })
-          })
-        })
-      })
+      scheduleCreateDeleteFlush()
     })
   }
 

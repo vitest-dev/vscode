@@ -222,6 +222,10 @@ export class TestTree extends vscode.Disposable {
 
   private recursiveDelete(item: vscode.TestItem) {
     if (!item.parent) return
+
+    // Clean up children first so no stale entries remain in Maps
+    this.cleanupChildren(item)
+
     item.parent.children.delete(item.id)
     this.flatTestItems.delete(item.id)
     const data = getTestData(item)
@@ -233,6 +237,19 @@ export class TestTree extends vscode.Disposable {
     if (data instanceof TestFolder) this.folderItems.delete(item.id)
 
     if (!item.parent.children.size) this.recursiveDelete(item.parent)
+  }
+
+  private cleanupChildren(item: vscode.TestItem) {
+    item.children.forEach((child) => {
+      this.cleanupChildren(child)
+      this.flatTestItems.delete(child.id)
+      const data = getTestData(child)
+      if (data instanceof TestFile) {
+        this.testItemsByFile.delete(data.filepath)
+        this.fileItems.delete(child.id)
+      }
+      if (data instanceof TestFolder) this.folderItems.delete(child.id)
+    })
   }
 
   public getAPIFromTestItem(testItem: vscode.TestItem) {
