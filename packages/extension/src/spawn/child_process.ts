@@ -13,7 +13,7 @@ import { WebSocketServer } from 'ws'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import { createErrorLogger, log } from '../log'
-import { findRuntime, formatPkg, showVitestError } from '../utils'
+import { findRuntimeExecutable, formatPkg, showVitestError } from '../utils'
 import { waitForWsConnection } from './ws'
 
 export async function createVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions) {
@@ -34,7 +34,7 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
       ]
     : runtimeArgs
   const arvString = execArgv.join(' ')
-  const executable = await findRuntime(pkg.cwd)
+  const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
   let executablePath = workerPath
   if (folderConfig.runtime === 'deno') {
     execArgv.push('-A')

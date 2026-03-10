@@ -18,7 +18,7 @@ import { log } from './log'
 import { TestRunner } from './runner'
 import { onWsConnection } from './spawn/ws'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
-import { findRuntime } from './utils'
+import { findRuntimeExecutable } from './utils'
 
 const DebugSessionName = 'Vitest'
 const BrowserDebugSessionName = 'Vitest_Browser'
@@ -44,6 +44,9 @@ export async function debugTests(
   const deferredPromise = Promise.withResolvers<void>()
 
   const { runtimeArgs, runtimeExecutable } = await getRuntimeOptions(pkg)
+  if (pkg.runtime === 'deno') {
+    runtimeArgs.push('-A')
+  }
   const env = config.env || {}
   const debugEnv = config.debugEnv || {}
   const logLevel = config.logLevel
@@ -292,15 +295,15 @@ async function getRuntimeOptions(pkg: VitestPackage) {
       ]
     : runtimeArgs
   if (config.shellType === 'child_process') {
-    const executable = await findRuntime(pkg.cwd)
+    const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
     return {
       runtimeExecutable: executable,
-      runtimeArgs: execArgv,
+      runtimeArgs: [...execArgv],
     }
   }
   return {
     runtimeExecutable: config.runtime,
-    runtimeArgs: execArgv,
+    runtimeArgs: [...execArgv],
   }
 }
 

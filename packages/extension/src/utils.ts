@@ -71,21 +71,24 @@ export function waitUntilExists(file: string, timeoutMs = 5000) {
   })
 }
 
-let pathToRuntime: string | undefined
+const pathToRuntime: {
+  deno?: string
+  node?: string
+} = {}
 
 export function clearCachedRuntime() {
-  pathToRuntime = undefined
+  pathToRuntime.deno = undefined
+  pathToRuntime.node = undefined
 }
 
 // based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
-export async function findRuntime(cwd: string): Promise<string> {
-  const runtime = getConfig().runtime
+export async function findRuntimeExecutable(runtime: 'node' | 'deno', cwd: string): Promise<string> {
   if (getConfig().nodeExecutable)
     // if empty string, keep as undefined
-    pathToRuntime = getConfig().nodeExecutable || undefined
+    pathToRuntime[runtime] = getConfig().nodeExecutable || undefined
 
-  if (pathToRuntime)
-    return pathToRuntime
+  if (pathToRuntime[runtime])
+    return pathToRuntime[runtime]
 
   // Stage 1: Try to find Node.js via process.env.PATH
   let node: string | null = await which(runtime, { nothrow: true })
@@ -103,7 +106,7 @@ export async function findRuntime(cwd: string): Promise<string> {
     log.error(msg)
     throw new Error(msg)
   }
-  pathToRuntime = node
+  pathToRuntime[runtime] = node
   return node
 }
 

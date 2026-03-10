@@ -313,12 +313,13 @@ class VitestExtension {
       'vitest.filesWatcherInclude',
       'vitest.cliArguments',
       'vitest.runtime',
+      'deno.enabled',
     ]
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
         const configName = reloadConfigNames.find(x => event.affectsConfiguration(x))
-        if (event.affectsConfiguration('vitest.runtime')) {
+        if (event.affectsConfiguration('vitest.runtime') || event.affectsConfiguration('deno.enabled')) {
           clearCachedRuntime()
         }
         if (configName) {

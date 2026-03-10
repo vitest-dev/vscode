@@ -333,8 +333,8 @@
         "vitest.runtime": {
           "description": "Which runtime to use by default.",
           "type": "string",
-          "default": "node",
-          "enum": ["node", "deno"]
+          "default": "auto",
+          "enum": ["auto", "node", "deno"]
         }
       }
     }
