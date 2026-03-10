@@ -33,6 +33,10 @@ export class VitestProjectConfig {
     return this.pkg.prefix
   }
 
+  get cwd() {
+    return this.pkg.cwd
+  }
+
   get configs() {
     return this.projects.map((p) => p.config).filter((n) => n != null)
   }
@@ -62,6 +66,7 @@ export class VitestProjectConfig {
     return metadata
   }
 
+  // TODO: if dir is set, this doesn't seem to work properly
   matchesTestGlob(project: SerializedProject, moduleId: string, source: () => string) {
     const relativeId = relative(project.dir || project.root, moduleId)
     if (pm.isMatch(relativeId, project.exclude)) {

@@ -213,6 +213,13 @@ export class TestTree extends vscode.Disposable {
     items?.forEach((item) => this.recursiveDelete(item))
   }
 
+  public removeFolder(folderPath: string) {
+    const folderItem = this.folderItems.get(normalize(folderPath))
+    if (folderItem) {
+      this.recursiveDelete(folderItem)
+    }
+  }
+
   private recursiveDelete(item: vscode.TestItem) {
     if (!item.parent) return
     item.parent.children.delete(item.id)
