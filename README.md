@@ -12,9 +12,9 @@
 ## Features
 
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
-- **Coverage** support (requires VS Code >= 1.88)
-- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
+- **Coverage** support
 - **Inline console.log display**: Console logs appear inline in the editor next to the code that produced them
+- **Imports duration**: Displays the execution time for each import during continuous test runs.
 
 ## Requirements
 
@@ -78,6 +78,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.ignoreWorkspace`: Ignores the workspace resolution step. The extension will only look for `vitest.config` files.
 - `vitest.configSearchPatternInclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be used when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}`.
 - `vitest.configSearchPatternExclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be ignored when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `{**/node_modules/**,**/vendor/**,**/.*/**,*.d.ts}`. If the extension cannot find Vitest, please open an issue.
+- `vitest.runtime`: The default runtime to run tests in. Supported: `auto` (default) `node` and `deno`. If auto, the extension will looks for a `deno.enabled` config flag or a `deno.json` file in the root folder.
 - `vitest.shellType`: The method the extension uses to spawn a long-running Vitest process. This is particularly useful if you are using a custom shell script to set up the environment. When using the `terminal` shell type, the websocket connection will be established. Can either be `terminal` or `child_process`. Default: `child_process`.
 - `vitest.nodeExecutable`: The path to the Node.js executable. If not assigned, tries to find Node.js path via a PATH variable or a `which` command. This is applied only when `vitest.shellType` is `child_process` (the default).
 - `vitest.nodeExecArgs`: The arguments to pass to the Node.js executable. This is applied only when `vitest.shellType` is `child_process` (the default).
@@ -119,7 +120,7 @@ You can also type the same command in the quick picker while the file is open.
 
 ### Import Breakdown
 
-If you use Vitest 4.0.15 or higher, the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
+If you use Vitest 4.0.15 or higher, during continuous runs the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
 
 If you hover over it, you can get a more detailed diagnostic.
 

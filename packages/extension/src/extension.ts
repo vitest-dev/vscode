@@ -21,7 +21,7 @@ import { ExtensionState } from './state'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
-import { debounce, showVitestError } from './utils'
+import { clearCachedRuntime, debounce, showVitestError } from './utils'
 import './polyfills'
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -312,11 +312,16 @@ class VitestExtension {
       'vitest.terminalShellPath',
       'vitest.filesWatcherInclude',
       'vitest.cliArguments',
+      'vitest.runtime',
+      'deno.enabled',
     ]
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
         const configName = reloadConfigNames.find(x => event.affectsConfiguration(x))
+        if (event.affectsConfiguration('vitest.runtime') || event.affectsConfiguration('deno.enabled')) {
+          clearCachedRuntime()
+        }
         if (configName) {
           this.defineTestProfiles(false).catch((error) => {
             log.error('[API]', `Failed to reload Vitest after "${configName}" has changed`, error)
@@ -553,7 +558,3 @@ class VitestExtension {
     this.runQueues.clear()
   }
 }
-
-// TODO: add to readme recommended process:
-// - press continuous run
-// - start editing tests

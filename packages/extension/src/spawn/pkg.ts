@@ -26,6 +26,7 @@ export interface VitestPackage {
   workspaceFile?: string
   loader?: string
   pnp?: string
+  runtime: 'deno' | 'node'
 }
 
 function isVitestInPackageJson(root: string) {
@@ -69,6 +70,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
 
   const id = normalize(configOrWorkspaceFile.fsPath)
   const prefix = `${basename(dirname(id))}:${basename(id)}`
+  const runtime = guessRuntime(cwd, folder)
 
   if (vitest.pnp) {
     return {
@@ -81,6 +83,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
       version: 'pnp',
       loader: vitest.pnp.loaderPath,
       pnp: vitest.pnp.pnpPath,
+      runtime,
     }
   }
 
@@ -96,6 +99,7 @@ function resolveVitestConfig(showWarning: boolean, configOrWorkspaceFile: vscode
     vitestPackageJsonPath: vitest.vitestPackageJsonPath,
     vitestNodePath: vitest.vitestNodePath,
     version: pkg.version,
+    runtime,
   }
 }
 
@@ -156,6 +160,7 @@ function resolveVitestWorkspacePackages(showWarning: boolean) {
     }
     const id = normalize(folder.uri.fsPath)
     const prefix = `${basename(cwd)}:${basename(id)}`
+    const runtime = guessRuntime(cwd, folder)
     meta.push({
       folder,
       id,
@@ -164,6 +169,7 @@ function resolveVitestWorkspacePackages(showWarning: boolean) {
       vitestPackageJsonPath: vitest.vitestPackageJsonPath,
       vitestNodePath: vitest.vitestNodePath,
       version: pkg.version,
+      runtime,
     })
   })
   return {
@@ -214,6 +220,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
 
     const id = `${normalize(pkgPath.fsPath)}/${scriptName}`
     const prefix = `${basename(cwd)}/package.json:${scriptName}`
+    const runtime = guessRuntime(cwd, folder)
     meta.push({
       folder,
       id,
@@ -223,6 +230,7 @@ export async function resolveVitestPackagesViaPackageJson(showWarning: boolean):
       vitestPackageJsonPath: vitest.vitestPackageJsonPath,
       vitestNodePath: vitest.vitestNodePath,
       version: pkg.version,
+      runtime,
     })
   })
 
@@ -330,6 +338,21 @@ async function resolveVitestConfigs(showWarning: boolean) {
     meta: resolvePackagUniquePrefixes(resolvedMeta),
     warned,
   }
+}
+
+function guessRuntime(cwd: string, folder: vscode.WorkspaceFolder): 'deno' | 'node' {
+  const vitestConfig = getConfig(folder)
+  if (vitestConfig.runtime !== 'auto') {
+    return vitestConfig.runtime
+  }
+  const denoConfig = vscode.workspace.getConfiguration('deno', folder)
+  if (denoConfig.get('enabled')) {
+    return 'deno'
+  }
+  if (existsSync(resolve(cwd, 'deno.json'))) {
+    return 'deno'
+  }
+  return 'node'
 }
 
 export function findFirstUniqueFolderNames(paths: string[]) {

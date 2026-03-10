@@ -71,45 +71,53 @@ export function waitUntilExists(file: string, timeoutMs = 5000) {
   })
 }
 
-let pathToNodeJS: string | undefined
+const pathToRuntime: {
+  deno?: string
+  node?: string
+} = {}
+
+export function clearCachedRuntime() {
+  pathToRuntime.deno = undefined
+  pathToRuntime.node = undefined
+}
 
 // based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
-export async function findNode(cwd: string): Promise<string> {
+export async function findRuntimeExecutable(runtime: 'node' | 'deno', cwd: string): Promise<string> {
   if (getConfig().nodeExecutable)
     // if empty string, keep as undefined
-    pathToNodeJS = getConfig().nodeExecutable || undefined
+    pathToRuntime[runtime] = getConfig().nodeExecutable || undefined
 
-  if (pathToNodeJS)
-    return pathToNodeJS
+  if (pathToRuntime[runtime])
+    return pathToRuntime[runtime]
 
   // Stage 1: Try to find Node.js via process.env.PATH
-  let node: string | null = await which('node', { nothrow: true })
+  let node: string | null = await which(runtime, { nothrow: true })
   // Stage 2: When extension host boots, it does not have the right env set, so we might need to wait.
   for (let i = 0; i < 5 && !node; ++i) {
     await new Promise(f => setTimeout(f, 200))
-    node = await which('node', { nothrow: true })
+    node = await which(runtime, { nothrow: true })
   }
   // Stage 3: If we still haven't found Node.js, try to find it via a subprocess.
   // This evaluates shell rc/profile files and makes nvm work.
-  node ??= await findNodeViaShell(cwd)
+  node ??= await findRuntimeViaShell(runtime, cwd)
 
   if (!node) {
     const msg = `Unable to find 'node' executable.\nMake sure to have Node.js installed and available in your PATH.\nCurrent PATH: '${process.env.PATH}'.`
     log.error(msg)
     throw new Error(msg)
   }
-  pathToNodeJS = node
+  pathToRuntime[runtime] = node
   return node
 }
 
-async function findNodeViaShell(cwd: string): Promise<string | null> {
+async function findRuntimeViaShell(runtime: 'node' | 'deno', cwd: string): Promise<string | null> {
   if (process.platform === 'win32')
     return null
   return new Promise<string | null>((resolve) => {
     const startToken = '___START_SHELL__'
     const endToken = '___END_SHELL__'
     try {
-      const childProcess = spawn(`${vscode.env.shell} -i -c 'if [[ $(type node 2>/dev/null) == *function* ]]; then node --version; fi; echo ${startToken} && which node && echo ${endToken}'`, {
+      const childProcess = spawn(`${vscode.env.shell} -i -c 'if [[ $(type ${runtime} 2>/dev/null) == *function* ]]; then ${runtime} --version; fi; echo ${startToken} && which ${runtime} && echo ${endToken}'`, {
         stdio: 'pipe',
         shell: true,
         cwd,

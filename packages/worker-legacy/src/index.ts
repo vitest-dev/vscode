@@ -95,6 +95,15 @@ export async function initVitest(
         }
       : {},
   }
+  if (typeof data.debug === 'object') {
+    const inspect = `${data.debug.host}:${data.debug.port}`
+    if (data.debug.browser) {
+      cliOptions.inspect = inspect
+    }
+    else {
+      cliOptions.inspectBrk = inspect
+    }
+  }
   const vitest = await vitestModule.createVitest(
     'test',
     cliOptions,
@@ -150,16 +159,9 @@ export async function initVitest(
             // Enable printConsoleTrace for inline console log display
             context.project.config.printConsoleTrace = true
 
-            const options = context.project.config.browser
-            if (options?.enabled && typeof data.debug === 'object') {
+            const browser = context.project.config.browser
+            if (browser?.enabled && typeof data.debug === 'object') {
               context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
-              context.vitest.config.inspector = {
-                enabled: true,
-                port: data.debug.port,
-                host: data.debug.host,
-                waitForDebugger: false,
-              }
-              context.project.config.inspector = context.vitest.config.inspector
             }
           },
         },

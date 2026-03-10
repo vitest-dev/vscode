@@ -13,7 +13,7 @@ import { WebSocketServer } from 'ws'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import { createErrorLogger, log } from '../log'
-import { findNode, formatPkg, showVitestError } from '../utils'
+import { findRuntimeExecutable, formatPkg, showVitestError } from '../utils'
 import { waitForWsConnection } from './ws'
 
 export async function createVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions) {
@@ -22,7 +22,8 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
   if (pnpLoader && !pnp)
     throw new Error('pnp file is required if loader option is used')
   const env = getConfig().env || {}
-  const runtimeArgs = getConfig(pkg.folder).nodeExecArgs || []
+  const folderConfig = getConfig(pkg.folder)
+  const runtimeArgs = folderConfig.nodeExecArgs || []
   const execArgv = pnpLoader && pnp
     ? [
         '--require',
@@ -33,15 +34,20 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
       ]
     : runtimeArgs
   const arvString = execArgv.join(' ')
-  const executable = await findNode(pkg.cwd)
-  const script = `${executable} ${arvString ? `${arvString} ` : ''}${workerPath}`.trim()
+  const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
+  let executablePath = workerPath
+  if (folderConfig.runtime === 'deno') {
+    execArgv.push('-A')
+    executablePath = pathToFileURL(workerPath).toString()
+  }
+  const script = `${executable} ${arvString ? `${arvString} ` : ''}${executablePath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
-  const logLevel = getConfig(pkg.folder).logLevel
+  const logLevel = folderConfig.logLevel
   const port = await getPort()
   const server = createServer().listen(port).unref()
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
-  const vitest = spawn(executable, [...execArgv, workerPath], {
+  const vitest = spawn(executable, [...execArgv, executablePath], {
     env: {
       ...process.env,
       ...env,

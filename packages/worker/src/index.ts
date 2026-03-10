@@ -60,9 +60,6 @@ export async function initVitest(
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,
-    inspect: typeof data.debug === 'object'
-      ? `${data.debug.host}:${data.debug.port}`
-      : undefined,
     experimental: {
       importDurations: {
         limit: Infinity,
@@ -70,6 +67,15 @@ export async function initVitest(
         print: false,
       },
     },
+  }
+  if (typeof data.debug === 'object') {
+    const inspect = `${data.debug.host}:${data.debug.port}`
+    if (data.debug.browser) {
+      cliOptions.inspect = inspect
+    }
+    else {
+      cliOptions.inspectBrk = inspect
+    }
   }
   const vitest = await vitestModule.createVitest(
     'test',

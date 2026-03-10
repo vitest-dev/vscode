@@ -18,10 +18,11 @@ import { log } from './log'
 import { TestRunner } from './runner'
 import { onWsConnection } from './spawn/ws'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
-import { findNode } from './utils'
+import { findRuntimeExecutable } from './utils'
 
 const DebugSessionName = 'Vitest'
 const BrowserDebugSessionName = 'Vitest_Browser'
+const AttachSessionName = 'Vitest (Test)'
 
 export async function debugTests(
   controller: vscode.TestController,
@@ -47,6 +48,10 @@ export async function debugTests(
   const env = config.env || {}
   const debugEnv = config.debugEnv || {}
   const logLevel = config.logLevel
+
+  if (pkg.runtime === 'deno') {
+    runtimeArgs.push('-A')
+  }
 
   log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
 
@@ -131,19 +136,21 @@ export async function debugTests(
 
   const disposables: vscode.Disposable[] = []
 
+  const attachDebug = browserDebug || pkg.runtime === 'deno'
+    ? {
+        browser: browserDebug?.browser,
+        // wdio support this only since Vitest 4.beta-13
+        port: config.debuggerPort ?? 9229,
+        host: browserDebug ? 'localhost' : '127.0.0.1',
+      }
+    : undefined
+
   wss.on(
     'connection',
     ws => onWsConnection(
       ws,
       pkg,
-      browserDebug
-        ? {
-            browser: browserDebug.browser,
-            // wdio support this only since Vitest 4.beta-13
-            port: config.debuggerPort ?? 9229,
-            host: 'localhost',
-          }
-        : true,
+      attachDebug ?? true,
       config.shellType,
       async (metadata) => {
         metadata.handlers.onProcessLog((type, message) => {
@@ -173,25 +180,30 @@ export async function debugTests(
             await metadata.dispose()
           })
 
-          if (browserDebug) {
-            const browserAttachConfig: vscode.DebugConfiguration = {
-              __name: BrowserDebugSessionName,
+          if (attachDebug) {
+            const attachConfig: vscode.DebugConfiguration = {
+              __name: browserDebug
+                ? BrowserDebugSessionName
+                : AttachSessionName,
               __parentId: debugId,
+              type: browserDebug
+                ? (browserDebug.browser === 'edge' ? 'msedge' : 'chrome')
+                : 'node',
               request: 'attach',
-              name: `Debug Tests (${browserDebug.browser})`,
-              address: 'localhost',
-              port: config.debuggerPort ?? 9229,
+              name: `Debug Tests (${attachDebug.browser || 'test'})`,
+              address: attachDebug.host,
+              port: attachDebug.port,
               ...(
                 config.debugOutFiles?.length
                   ? { outFiles: config.debugOutFiles }
                   : {}
               ),
-              webRoot: browserDebug.webRoot,
+              webRoot: browserDebug?.webRoot,
               smartStep: true,
               skipFiles,
               cwd: pkg.cwd,
-              type: browserDebug.browser === 'edge' ? 'msedge' : 'chrome',
             }
+            log.info('[DEBUG] Attaching to', attachConfig)
             let parentSession: vscode.DebugSession | undefined
             for (const session of debugManager.sessions.values()) {
               if (session.configuration.__vitestId === debugId) {
@@ -200,7 +212,7 @@ export async function debugTests(
             }
             vscode.debug.startDebugging(
               pkg.folder,
-              browserAttachConfig,
+              attachConfig,
               {
                 parentSession,
                 // this is required for the "restart" button to work
@@ -210,18 +222,18 @@ export async function debugTests(
               },
             ).then(
               (fullfilled) => {
-                log.info('[DEBUG] Browser debugger started')
-                metadata.rpc.onBrowserDebug(fullfilled).catch(() => {})
+                log.info('[DEBUG] Debug session started')
+                metadata.rpc.onDebugAttached(fullfilled).catch(() => {})
                 if (fullfilled) {
-                  log.info('[DEBUG] Browser debugger attached')
+                  log.info('[DEBUG] Debug session attached')
                 }
                 else {
-                  log.error('[DEBUG] Browser debugger failed to attach')
+                  log.error('[DEBUG] Debugger failed to attach')
                 }
               },
               (error) => {
-                metadata.rpc.onBrowserDebug(false).catch(() => {})
-                log.error('[DEBUG] Browser debugger failed to launch', error.message)
+                metadata.rpc.onDebugAttached(false).catch(() => {})
+                log.error('[DEBUG] Attach session failed to launch', error.message)
               },
             )
           }
@@ -292,15 +304,15 @@ async function getRuntimeOptions(pkg: VitestPackage) {
       ]
     : runtimeArgs
   if (config.shellType === 'child_process') {
-    const executable = await findNode(pkg.cwd)
+    const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
     return {
       runtimeExecutable: executable,
-      runtimeArgs: execArgv,
+      runtimeArgs: [...execArgv],
     }
   }
   return {
-    runtimeExecutable: 'node',
-    runtimeArgs: execArgv,
+    runtimeExecutable: config.runtime,
+    runtimeArgs: [...execArgv],
   }
 }
 

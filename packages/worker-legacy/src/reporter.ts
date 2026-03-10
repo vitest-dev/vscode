@@ -77,7 +77,7 @@ export class VSCodeReporter implements Reporter {
       })
       const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
         return new Promise<void>((resolve, reject) => {
-          ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
+          ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
             if (fullfilled) {
               resolve()
             }
@@ -120,7 +120,7 @@ export class VSCodeReporter implements Reporter {
         // If parsing fails, continue without parsed location
       }
     }
-    this.rpc.onConsoleLog(extendedLog)
+    return this.rpc.onConsoleLog(extendedLog)
   }
 
   private logPromises = new Set<Promise<void>>()
