@@ -45,6 +45,17 @@
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
+      "name": "Run Extension Deno Sample",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/samples/deno"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
       "name": "Run Extension Imba Sample",
       "type": "extensionHost",
       "request": "launch",
