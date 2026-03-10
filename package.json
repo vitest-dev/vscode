@@ -337,7 +337,7 @@
           "enum": ["auto", "node", "deno"]
         },
         "vitest.watchOnStartup": {
-          "description": "Watch every test file by default.",
+          "description": "Watch every test file after the extension is loaded. This is the same as enabling continuous run.",
           "type": "boolean",
           "default": false
         }
