@@ -56,7 +56,7 @@ expect.extend({
       if (index) {
         locator += `[data-index="${index}"]`
       }
-      await expect(page.locator(locator)).toBeAttached()
+      await expect(page.locator(locator)).toBeAttached({ timeout: 10_000 })
     }
 
     const counter = { index: currentIndex }

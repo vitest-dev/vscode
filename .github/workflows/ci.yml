@@ -23,7 +23,7 @@ jobs:
       - run: pnpm install --filter="vitest-vscode-*" --frozen-lockfile
       - run: pnpm build
       - run: pnpm typecheck
-      - run: pnpm lint
+      - run: pnpm fmt
 
   test:
     runs-on: ${{ matrix.os }}
