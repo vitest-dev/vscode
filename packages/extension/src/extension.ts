@@ -586,9 +586,3 @@ class VitestExtension {
     this.runQueues.clear()
   }
 }
-
-// TODO: add to readme recommended process:
-// - press continuous run
-// - start editing tests
-// TODO: if the console line is different, remove the log
-// Deleting/renaming a folder doesn't remove the test
