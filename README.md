@@ -12,9 +12,9 @@
 ## Features
 
 - **Run**, **debug**, and **watch** Vitest tests in Visual Studio Code.
-- **Coverage** support (requires VS Code >= 1.88)
-- An `@open` tag can be used when filtering tests, to only show the tests open in the editor.
+- **Coverage** support
 - **Inline console.log display**: Console logs appear inline in the editor next to the code that produced them
+- **Imports duration**: Displays the execution time for each import during continuous test runs.
 
 ## Requirements
 
@@ -120,7 +120,7 @@ You can also type the same command in the quick picker while the file is open.
 
 ### Import Breakdown
 
-If you use Vitest 4.0.15 or higher, the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
+If you use Vitest 4.0.15 or higher, during continuous runs the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
 
 If you hover over it, you can get a more detailed diagnostic.
 
