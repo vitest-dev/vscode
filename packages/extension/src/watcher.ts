@@ -53,23 +53,97 @@ export class ExtensionWatcher extends vscode.Disposable {
     const changeQueue = new Map<string, vscode.Uri>()
     const createQueue = new Map<string, vscode.Uri>()
 
+    const scheduleCreateDeleteFlush = () => {
+      this.scheduleFlush(`create-delete:${folder.index}`, async () => {
+        const deleteBatch = new Map(deleteQueue)
+        const createBatch = new Map(createQueue)
+        deleteQueue.clear()
+        createQueue.clear()
+
+        // Process creates first so new items exist in the tree
+        // before deletes remove old ones (prevents parent folders
+        // from being orphaned during renames)
+        if (createBatch.size) {
+          log.verbose?.(`[VSCODE] Flushing ${createBatch.size} created items`)
+
+          const apis = this.apisByFolder.get(folder) || []
+          const roots = apis.flatMap((api) =>
+            api.config.projects.map((p) => normalize(p.dir || p.root)),
+          )
+          const openedFiles = vscode.workspace.textDocuments.map((d) => normalize(d.uri.fsPath))
+
+          const entries = [...createBatch.entries()]
+          const types = await Promise.allSettled(
+            entries.map(([path, uri]) => this.getFsType(path, uri)),
+          )
+
+          const files: string[] = []
+          const folders: [string, vscode.Uri][] = []
+          for (let i = 0; i < entries.length; i++) {
+            const result = types[i]
+            if (result.status !== 'fulfilled' || !result.value) {
+              continue
+            }
+            if (result.value === 'file') {
+              files.push(entries[i][0])
+            } else {
+              folders.push(entries[i])
+            }
+          }
+
+          const folderFiles = await Promise.allSettled(
+            folders.map(([, uri]) => this.readFilesRecursively(uri, roots)),
+          )
+
+          const seen = new Set(files)
+          for (const result of folderFiles) {
+            if (result.status !== 'fulfilled') {
+              continue
+            }
+            for (const file of result.value) {
+              seen.add(file)
+            }
+          }
+
+          seen.forEach((file) => {
+            apis.forEach((api) => {
+              const metadata = api.getPotentialTestFileMetadata(file)
+              metadata.forEach((meta) => {
+                this.testTree.getOrCreateFileTestItem(api, meta, file)
+
+                // If file is open and not a continuous run,
+                // Collect its tests immidetly, otherwise ignore
+                if (
+                  openedFiles.includes(file) &&
+                  !api.getPersistentProcessMeta() &&
+                  !api.isSpawningPersistentProcess
+                ) {
+                  api.collectTests(meta.project, file)
+                }
+              })
+            })
+          })
+        }
+
+        if (deleteBatch.size) {
+          log.verbose?.(`[VSCODE] Flushing ${deleteBatch.size} deleted items`)
+          for (const [path, uri] of deleteBatch) {
+            this.transformSchemaProvider.emitChange(uri)
+            // We don't know if it was a file or a folder
+            this.testTree.removeFile(path)
+            this.testTree.removeFolder(path)
+          }
+        }
+      })
+    }
+
     watcher.onDidDelete((uri) => {
       const path = normalize(uri.fsPath)
       if (this.isCommondIgnore(path)) {
         return
       }
       deleteQueue.set(path, uri)
-      this.scheduleFlush(`delete:${folder.name}`, () => {
-        const batch = new Map(deleteQueue)
-        deleteQueue.clear()
-        log.verbose?.(`[VSCODE] Flushing ${batch.size} deleted items`)
-        for (const [path, uri] of batch) {
-          this.transformSchemaProvider.emitChange(uri)
-          // We don't know if it is a file or a folder
-          this.testTree.removeFile(path)
-          this.testTree.removeFolder(path)
-        }
-      })
+      scheduleCreateDeleteFlush()
     })
 
     watcher.onDidChange((uri) => {
@@ -78,16 +152,23 @@ export class ExtensionWatcher extends vscode.Disposable {
         return
       }
       changeQueue.set(path, uri)
-      this.scheduleFlush(`change:${folder.name}`, async () => {
+      this.scheduleFlush(`change:${folder.index}`, async () => {
         const batch = new Map(changeQueue)
         changeQueue.clear()
         log.verbose?.(`[VSCODE] Flushing ${batch.size} changed items`)
         const apis = this.apisByFolder.get(folder) || []
-        for (const [path, uri] of batch) {
-          const type = await this.getFsType(api, path, uri)
-          if (type !== 'file') {
+
+        const entries = [...batch.entries()]
+        const types = await Promise.allSettled(
+          entries.map(([path, uri]) => this.getFsType(path, uri)),
+        )
+
+        for (let i = 0; i < entries.length; i++) {
+          const result = types[i]
+          if (result.status !== 'fulfilled' || result.value !== 'file') {
             continue
           }
+          const [path, uri] = entries[i]
           this.transformSchemaProvider.emitChange(uri)
 
           apis.forEach((api) => {
@@ -99,6 +180,7 @@ export class ExtensionWatcher extends vscode.Disposable {
               return
             }
 
+            // If runner is persistent, the tests will be collected at runtime
             if (api.getPersistentProcessMeta() || api.isSpawningPersistentProcess) {
               return
             }
@@ -118,50 +200,7 @@ export class ExtensionWatcher extends vscode.Disposable {
         return
       }
       createQueue.set(path, uri)
-      this.scheduleFlush(`create:${folder.name}`, async () => {
-        const batch = new Map(createQueue)
-        createQueue.clear()
-        log.verbose?.(`[VSCODE] Flushing ${batch.size} created items`)
-
-        const apis = this.apisByFolder.get(folder) || []
-        const roots = apis.flatMap((api) =>
-          // TODO: resolve should be done on the worker side
-          api.config.projects.map((p) => normalize(resolve(api.config.cwd, p.dir || p.root))),
-        )
-        const openedFiles = vscode.workspace.textDocuments.map((d) => normalize(d.uri.fsPath))
-
-        const allFiles: string[] = []
-        for (const [path, uri] of batch) {
-          const type = await this.getFsType(api, path, uri)
-          if (!type) {
-            continue
-          }
-          if (type === 'file') {
-            allFiles.push(path)
-          } else {
-            allFiles.push(...(await this.readFilesRecursively(uri, roots)))
-          }
-        }
-
-        allFiles.forEach((file) => {
-          apis.forEach((api) => {
-            const metadata = api.getPotentialTestFileMetadata(file)
-            metadata.forEach((meta) => {
-              this.testTree.getOrCreateFileTestItem(api, meta, file)
-
-              // If file is open and not a continuous run,
-              // Collect its tests immidetly, otherwise ignore
-              if (
-                openedFiles.includes(file) &&
-                !api.getPersistentProcessMeta() &&
-                !api.isSpawningPersistentProcess
-              ) {
-                api.collectTests(meta.project, file)
-              }
-            })
-          })
-        })
-      })
+      scheduleCreateDeleteFlush()
     })
   }
 
@@ -177,10 +216,6 @@ export class ExtensionWatcher extends vscode.Disposable {
         flush()
       }, DEBOUNCE_DELAY),
     )
-  }
-
-  private relative(api: VitestProcessAPI, uri: vscode.Uri) {
-    return relative(api.workspaceFolder.uri.fsPath, uri.fsPath)
   }
 
   private isCommondIgnore(path: string) {
@@ -201,6 +236,7 @@ export class ExtensionWatcher extends vscode.Disposable {
     }
     const entries = await vscode.workspace.fs.readDirectory(uri)
     const files: string[] = []
+    const subdirs: vscode.Uri[] = []
     for (const [name, type] of entries) {
       const childUri = vscode.Uri.joinPath(uri, name)
       if (
@@ -210,7 +246,7 @@ export class ExtensionWatcher extends vscode.Disposable {
         if (this.isCommondIgnore(normalize(childUri.fsPath))) {
           continue
         }
-        files.push(...(await this.readFilesRecursively(childUri, roots)))
+        subdirs.push(childUri)
       } else if (
         type === vscode.FileType.File ||
         type === (vscode.FileType.File | vscode.FileType.SymbolicLink)
@@ -218,10 +254,18 @@ export class ExtensionWatcher extends vscode.Disposable {
         files.push(normalize(childUri.fsPath))
       }
     }
+    const results = await Promise.allSettled(
+      subdirs.map((child) => this.readFilesRecursively(child, roots)),
+    )
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        files.push(...result.value)
+      }
+    }
     return files
   }
 
-  private async getFsType(api: VitestProcessAPI, path: string, uri: vscode.Uri) {
+  private async getFsType(path: string, uri: vscode.Uri) {
     if (this.isCommondIgnore(path)) {
       return null
     }

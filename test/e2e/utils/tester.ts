@@ -139,6 +139,7 @@ export class TesterTestItem {
 
 const originalFiles = new Map<string, string>()
 const createdFiles = new Set<string>()
+const renamedPaths = new Map<string, string>()
 afterEach(() => {
   originalFiles.forEach((content, file) => {
     fs.writeFileSync(file, content, 'utf-8')
@@ -146,12 +147,21 @@ afterEach(() => {
   createdFiles.forEach((file) => {
     if (fs.existsSync(file)) fs.unlinkSync(file)
   })
+  renamedPaths.forEach((originalPath, currentPath) => {
+    if (fs.existsSync(currentPath)) fs.renameSync(currentPath, originalPath)
+  })
   originalFiles.clear()
   createdFiles.clear()
+  renamedPaths.clear()
 })
 
 export function editFile(file: string, callback: (content: string) => string) {
   const content = fs.readFileSync(file, 'utf-8')
   if (!originalFiles.has(file)) originalFiles.set(file, content)
   fs.writeFileSync(file, callback(content), 'utf-8')
+}
+
+export function renameFile(from: string, to: string) {
+  if (!renamedPaths.has(from)) renamedPaths.set(to, from)
+  fs.renameSync(from, to)
 }

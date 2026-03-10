@@ -2,7 +2,7 @@ import { readFileSync, rmSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './utils/helper'
-import { editFile } from './utils/tester'
+import { editFile, renameFile } from './utils/tester'
 
 // Vitst extension doesn't work with CI flag
 beforeAll(() => {
@@ -250,4 +250,29 @@ describe('continuous testing', () => {
 
     expect(errors).toEqual(['1000 != 2'])
   })
+})
+
+test('renaming a folder back preserves test items', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/basic-v4',
+  })
+
+  await tester.tree.expand('test/deep/deeper')
+
+  const deepTest = tester.tree.getFileItem('deep.test.ts')
+  await expect(deepTest.locator).toBeVisible()
+
+  // Rename deeper -> deeperer
+  renameFile('samples/basic-v4/test/deep/deeper', 'samples/basic-v4/test/deep/deeperer')
+
+  await tester.tree.expand('test/deep/deeperer')
+  const renamedTest = tester.tree.getFileItem('deep.test.ts')
+  await expect(renamedTest.locator).toBeVisible()
+
+  // Rename back deeperer -> deeper
+  renameFile('samples/basic-v4/test/deep/deeperer', 'samples/basic-v4/test/deep/deeper')
+
+  await tester.tree.expand('test/deep/deeper')
+  const restoredTest = tester.tree.getFileItem('deep.test.ts')
+  await expect(restoredTest.locator).toBeVisible()
 })
