@@ -252,7 +252,7 @@ describe('continuous testing', () => {
   })
 })
 
-test.only('renaming a folder back preserves test items', async ({ launch }) => {
+test('renaming a folder back preserves test items', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/basic-v4',
   })
