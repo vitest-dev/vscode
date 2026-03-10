@@ -43,6 +43,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
@@ -75,6 +79,10 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: vitest 3.2
         run: node ./scripts/lower-vitest-version.js

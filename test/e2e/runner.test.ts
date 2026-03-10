@@ -252,6 +252,28 @@ describe('continuous testing', () => {
   })
 })
 
+test('deno runtime', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/deno',
+  })
+
+  await tester.tree.expand('test')
+  await tester.tree.expand('test/deno.test.ts')
+
+  const denoTest = tester.tree.getFileItem('deno.test.ts')
+  await expect(denoTest).toHaveTests({
+    'deno-exists': 'waiting',
+  })
+
+  await tester.runAllTests()
+
+  await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+  await expect(denoTest).toHaveState('passed')
+  await expect(denoTest).toHaveTests({
+    'deno-exists': 'passed',
+  })
+})
+
 test('renaming a folder back preserves test items', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/basic-v4',
