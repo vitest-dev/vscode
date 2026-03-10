@@ -1,7 +1,7 @@
 {
   "name": "explorer",
   "displayName": "Vitest",
-  "version": "1.46.0",
+  "version": "1.48.0",
   "description": "A Vite-native testing framework. It's fast!",
   "categories": [
     "Testing"
