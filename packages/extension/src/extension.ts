@@ -139,10 +139,8 @@ class VitestExtension {
       }
 
       this.api = await resolveVitestAPI(workspaces, configs, cancelToken, ({ api: vitest, files }) => {
-        if (this.state.hasDisabledConfigs()) {
-          if (this.state.isConfigDisabled(vitest.id)) {
-            return
-          }
+        if (this.state.hasDisabledConfigs() && this.state.isConfigDisabled(vitest.id)) {
+          return
         }
 
         this.testTree.watchTestFilesInWorkspace(vitest, files)
@@ -163,6 +161,16 @@ class VitestExtension {
     finally {
       this.testController.items.delete(this.loadingTestItem.id)
     }
+
+    this.api.processes.forEach((process) => {
+      const config = getConfig(process.workspaceFolder)
+      if (config.watchOnStartup) {
+        const profile = this.runProfiles.get(`${process.id}:run`)
+        if (profile) {
+          vscode.commands.executeCommand('testing.startContinuousRun', profile)
+        }
+      }
+    })
 
     // collect tests inside a test file
     vscode.window.visibleTextEditors.forEach(async (editor) => {
@@ -550,7 +558,7 @@ class VitestExtension {
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
     this.inlineConsoleLog.dispose()
-    this.runProfiles.forEach(profile => profile.dispose())
+    this.runProfiles.forEach(p => p.dispose())
     this.runProfiles.clear()
     this.disposables.forEach(d => d.dispose())
     this.disposables = []

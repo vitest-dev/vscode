@@ -88,6 +88,7 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
 - `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
 - `vitest.showImportsDuration`: Show how long it took to import and transform the modules. When hovering, the extension provides more diagnostics.
+- `vitest.watchOnStartup`: Keep Vitest server running in the background at all times automatically on startup, rerunning tests when files change (default: `false`). This is the same as enabling continuous run.
 
 > 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
 > The `vitest.terminalShellPath` and `vitest.terminalShellArgs` settings are used as `shellPath` and `shellArgs` when creating a new [terminal](https://code.visualstudio.com/api/references/vscode-api#Terminal)

@@ -335,6 +335,11 @@
           "type": "string",
           "default": "auto",
           "enum": ["auto", "node", "deno"]
+        },
+        "vitest.watchOnStartup": {
+          "description": "Watch every test file by default.",
+          "type": "boolean",
+          "default": false
         }
       }
     }

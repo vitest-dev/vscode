@@ -73,6 +73,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const showInlineConsoleLog = get<boolean>('showInlineConsoleLog', true) ?? true
   const forceCancelTimeout = get<number>('forceCancelTimeout', 1000) ?? 1000
   const runtime = get<'node' | 'deno' | 'auto'>('runtime', 'auto') ?? 'auto'
+  const watchOnStartup = get<boolean>('watchOnStartup', false) ?? false
 
   return {
     env: get<null | Record<string, string>>('nodeEnv', null),
@@ -82,6 +83,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     filesWatcherInclude,
     runtime,
     forceCancelTimeout,
+    watchOnStartup,
     terminalShellArgs,
     terminalShellPath,
     shellType,
