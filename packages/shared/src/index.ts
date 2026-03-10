@@ -148,7 +148,7 @@ export interface WorkerInitMetadata {
 export interface WorkerRunnerDebugOptions {
   browser?: string
   port: number
-  host?: string
+  host: string
 }
 
 export interface WorkerRunnerOptions {
