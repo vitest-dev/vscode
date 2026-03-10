@@ -26,6 +26,7 @@ export interface ProcessSpawnOptions {
   coverage?: boolean
   sendLog?: boolean
   projects?: string[]
+  related?: string
 }
 
 export function waitForWsConnection(
@@ -160,6 +161,7 @@ export function onWsConnection(
       },
       finalCoverageFileName,
       projectFilter: options?.projects,
+      related: options?.related,
     },
     debug,
     coverage: options?.coverage,

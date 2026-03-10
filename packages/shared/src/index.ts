@@ -147,6 +147,7 @@ export interface WorkerInitMetadata {
   }
   finalCoverageFileName: string
   projectFilter?: string[]
+  related?: string
 }
 
 export interface WorkerRunnerDebugOptions {

@@ -133,6 +133,11 @@
         "category": "Vitest"
       },
       {
+        "title": "Run Related Tests",
+        "command": "vitest.runRelatedTests",
+        "category": "Vitest"
+      },
+      {
         "title": "Open Transformed Module",
         "command": "vitest.openTransformedModule",
         "category": "Vitest"
@@ -179,6 +184,11 @@
         {
           "command": "vitest.openTransformedModule",
           "when": "vitest.environmentsSupported",
+          "group": "vitest"
+        },
+        {
+          "command": "vitest.runRelatedTests",
+          "when": "vitest.testFiles && !(resourcePath in vitest.testFiles)",
           "group": "vitest"
         }
       ],
