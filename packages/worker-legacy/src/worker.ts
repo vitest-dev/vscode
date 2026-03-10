@@ -352,8 +352,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     // ignore
   }
 
-  onBrowserDebug(fulfilled: boolean) {
-    ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
+  onDebugAttached(fulfilled: boolean) {
+    ExtensionWorker.emitter.emit('onDebugAttached', fulfilled)
   }
 
   // TODO:(?) -- if environments are supported

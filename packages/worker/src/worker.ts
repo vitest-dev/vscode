@@ -133,7 +133,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return await this.vitest.experimental_getSourceModuleDiagnostic(moduleId)
   }
 
-  onBrowserDebug(fulfilled: boolean) {
-    ExtensionWorker.emitter.emit('onBrowserDebug', fulfilled)
+  onDebugAttached(fulfilled: boolean) {
+    ExtensionWorker.emitter.emit('onDebugAttached', fulfilled)
   }
 }

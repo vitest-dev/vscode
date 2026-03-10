@@ -40,7 +40,7 @@ export class VSCodeReporter implements Reporter {
 
   onInit(vitest: VitestCore) {
     this.vitest = vitest
-    this.configureBrowserDebugging(vitest)
+    this.configureAttachDebugging(vitest)
 
     vitest.projects.forEach((project) => {
       this.ensureSetupFileIsAllowed(project.vite.config)
@@ -57,27 +57,7 @@ export class VSCodeReporter implements Reporter {
     this.ensureSetupFileIsAllowed(config)
 
     const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (this.debuggerAttached !== undefined) {
-          if (this.debuggerAttached) {
-            resolve()
-            return
-          }
-          else if (this.debuggerAttached === false) {
-            reject(new Error(`Browser Debugger failed to connect.`))
-            return
-          }
-        }
-
-        ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
-          if (fullfilled) {
-            resolve()
-          }
-          else {
-            reject(new Error(`Browser Debugger failed to connect.`))
-          }
-        })
-      })
+      return this.createAttachPromise()
     }
     // TODO: move this command init to configureVitest when Vitest 4 is out
     // @ts-expect-error private "parent" property
@@ -85,6 +65,11 @@ export class VSCodeReporter implements Reporter {
   }
 
   onUserConsoleLog(log: UserConsoleLog) {
+    if ('__vscodeDebugAttach' in log) {
+      this.vitest.logger.log('creating debug promise')
+      return this.createAttachPromise()
+    }
+
     // Parse stack trace to extract file location for inline display
     const extendedLog = log as any
     if (log.origin) {
@@ -179,8 +164,32 @@ export class VSCodeReporter implements Reporter {
     config.execArgv.push(...this.execArgv)
   }
 
-  configureBrowserDebugging(vitest: VitestCore) {
-    ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
+  private createAttachPromise() {
+    return new Promise<void>((resolve, reject) => {
+      if (this.debuggerAttached !== undefined) {
+        if (this.debuggerAttached) {
+          resolve()
+          return
+        }
+        else if (this.debuggerAttached === false) {
+          reject(new Error(`Browser Debugger failed to connect.`))
+          return
+        }
+      }
+
+      ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
+        if (fullfilled) {
+          resolve()
+        }
+        else {
+          reject(new Error(`Browser Debugger failed to connect.`))
+        }
+      })
+    })
+  }
+
+  configureAttachDebugging(vitest: VitestCore) {
+    ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
       this.debuggerAttached = fullfilled
     })
 

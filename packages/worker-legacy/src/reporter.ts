@@ -77,7 +77,7 @@ export class VSCodeReporter implements Reporter {
       })
       const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
         return new Promise<void>((resolve, reject) => {
-          ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
+          ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
             if (fullfilled) {
               resolve()
             }

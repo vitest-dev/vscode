@@ -120,8 +120,7 @@ export class ExtensionWatcher extends vscode.Disposable {
       }
       return false
     }
-    catch (err: unknown) {
-      log.verbose?.('[VSCODE] Error checking file stats:', this.relative(api, uri), err as string)
+    catch {
       return true
     }
   }

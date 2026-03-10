@@ -150,9 +150,8 @@ export async function initVitest(
             // Enable printConsoleTrace for inline console log display
             context.project.config.printConsoleTrace = true
 
-            const options = context.project.config.browser
-            if (options?.enabled && typeof data.debug === 'object') {
-              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
+            const browser = context.project.config.browser
+            if (typeof data.debug === 'object') {
               context.vitest.config.inspector = {
                 enabled: true,
                 port: data.debug.port,
@@ -160,6 +159,14 @@ export async function initVitest(
                 waitForDebugger: false,
               }
               context.project.config.inspector = context.vitest.config.inspector
+
+              // TODO: test
+              if (browser?.enabled) {
+                context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
+              }
+              else {
+                context.vitest.config.inspector.waitForDebugger = true
+              }
             }
           },
         },

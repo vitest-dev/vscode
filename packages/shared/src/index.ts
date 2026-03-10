@@ -72,7 +72,7 @@ export interface ExtensionWorkerTransport {
   getModuleEnvironments: (moduleId: string) => ExtensionEnvironment[]
   getTransformedModule: (project: string, environment: string, moduleId: string) => string | null
 
-  onBrowserDebug: (fulfilled: boolean) => void
+  onDebugAttached: (fulfilled: boolean) => void
 }
 
 export interface ExtensionWorkerEvents {
@@ -146,9 +146,9 @@ export interface WorkerInitMetadata {
 }
 
 export interface WorkerRunnerDebugOptions {
-  browser: string
+  browser?: string
   port: number
-  host: string
+  host?: string
 }
 
 export interface WorkerRunnerOptions {
