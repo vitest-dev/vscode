@@ -17,6 +17,7 @@ import {
 } from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
+import { resolve } from 'pathe'
 
 export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
   ws: WebSocket
@@ -94,7 +95,12 @@ export function onWsConnection(
         rpc: api,
         workspaceSource: message.workspaceSource,
         handlers,
-        projects: message.projects,
+        projects: message.projects.map((p) => {
+          if (p.dir) {
+            p.dir = resolve(pkg.cwd, p.dir)
+          }
+          return p
+        }),
         ws,
         pkg,
         async dispose() {

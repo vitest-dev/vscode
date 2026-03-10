@@ -21,6 +21,7 @@ export class TransformSchemaProvider
     this.disposables.push(this._onDidChangeEvents)
   }
 
+  // This is called by vscode to clear the internal cache
   public onDidChange = this._onDidChangeEvents.event
 
   public emitChange(uri: vscode.Uri) {

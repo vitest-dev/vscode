@@ -331,12 +331,6 @@ class VitestExtension {
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
         const configName = reloadConfigNames.find((x) => event.affectsConfiguration(x))
-        if (
-          event.affectsConfiguration('vitest.runtime') ||
-          event.affectsConfiguration('deno.enabled')
-        ) {
-          clearCachedRuntime()
-        }
         if (configName) {
           this.defineTestProfiles(false).catch((error) => {
             log.error('[API]', `Failed to reload Vitest after "${configName}" has changed`, error)
@@ -511,7 +505,7 @@ class VitestExtension {
           } catch (err) {
             log.error(err)
             vscode.window.showErrorMessage(
-              `Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`,
+              `Vitest: The file was not processed by Vite yet. Try starting the continuous run first${options.length > 1 ? ' or select a different environment' : ''}.`,
             )
           }
         },
