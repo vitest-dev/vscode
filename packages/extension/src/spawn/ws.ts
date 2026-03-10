@@ -1,4 +1,8 @@
-import type { WorkerEvent, WorkerRunnerDebugOptions, WorkerRunnerOptions } from 'vitest-vscode-shared'
+import type {
+  WorkerEvent,
+  WorkerRunnerDebugOptions,
+  WorkerRunnerOptions,
+} from 'vitest-vscode-shared'
 import type { WebSocket, WebSocketServer } from 'ws'
 import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
@@ -6,7 +10,11 @@ import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import vscode from 'vscode'
 import { getConfig } from '../config'
-import { browserSetupFilePath, browserSetupFilePathLegacy, finalCoverageFileName } from '../constants'
+import {
+  browserSetupFilePath,
+  browserSetupFilePathLegacy,
+  finalCoverageFileName,
+} from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 
@@ -33,8 +41,8 @@ export function waitForWsConnection(
         pkg,
         false,
         shellType,
-        meta => resolve(meta),
-        err => reject(err),
+        (meta) => resolve(meta),
+        (err) => reject(err),
         options,
       )
 
@@ -67,24 +75,19 @@ export function onWsConnection(
   function onMessage(_message: any) {
     const message = JSON.parse(_message.toString()) as WorkerEvent
 
-    if (message.type === 'debug')
-      log.worker('info', ...message.args)
+    if (message.type === 'debug') log.worker('info', ...message.args)
 
     if (message.type === 'ready') {
       const { api, handlers } = createVitestRpc({
-        on: listener => ws.on('message', listener),
-        send: message => ws.send(message),
+        on: (listener) => ws.on('message', listener),
+        send: (message) => ws.send(message),
       })
       ws.once('close', () => {
         log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
         api.$close()
       })
       if (!message.legacy) {
-        vscode.commands.executeCommand(
-          'setContext',
-          'vitest.environmentsSupported',
-          true,
-        )
+        vscode.commands.executeCommand('setContext', 'vitest.environmentsSupported', true)
       }
       onStart({
         rpc: api,
@@ -147,9 +150,10 @@ export function onWsConnection(
       workspaceFile: pkg.workspaceFile,
       id: pkg.id,
       pnpApi: pnp,
-      pnpLoader: pnpLoader && gte(process.version, '18.19.0')
-        ? pathToFileURL(pnpLoader).toString()
-        : undefined,
+      pnpLoader:
+        pnpLoader && gte(process.version, '18.19.0')
+          ? pathToFileURL(pnpLoader).toString()
+          : undefined,
       setupFilePaths: {
         browserDebug: browserSetupFilePath,
         browserDebugLegacy: browserSetupFilePathLegacy,

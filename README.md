@@ -31,7 +31,7 @@ Vitest uses vscode's `TestController` API to provide a unified testing experienc
 
 ### In the Testing View
 
-![Testing view](./img/vitest-extension.png "Testing view")
+![Testing view](./img/vitest-extension.png 'Testing view')
 
 You can access the extension from the Testing view in the Visual Studio Code sidebar.
 
@@ -53,7 +53,7 @@ Icons next to each test indicate their status—passed (checkmark), failed (cros
 
 ### In the Test File
 
-![Vitest test file](./img/vitest-test-file.png "Vitest test file")
+![Vitest test file](./img/vitest-test-file.png 'Vitest test file')
 
 When viewing a test file, you'll notice test icons in the gutter next to each test case:
 
@@ -113,11 +113,11 @@ These options are resolved relative to the [workspace file](https://code.visuals
 
 You can reveal the current test file in the test explorer view by selecting the "Reveal in Test Explorer" option (the last option on the screenshot) in the file context:
 
-![Reveal test in explorer](./img/reveal-in-explorer.png "Reveal test in explorer")
+![Reveal test in explorer](./img/reveal-in-explorer.png 'Reveal test in explorer')
 
 You can also type the same command in the quick picker while the file is open.
 
-![Reveal test in explorer](./img/reveal-in-picker.png "Reveal test in explorer")
+![Reveal test in explorer](./img/reveal-in-picker.png 'Reveal test in explorer')
 
 ### Import Breakdown
 
@@ -125,7 +125,7 @@ If you use Vitest 4.0.15 or higher, during continuous runs the extension will sh
 
 If you hover over it, you can get a more detailed diagnostic.
 
-![Import breakdown example](./img/import-breakdown.png "Import breakdown example")
+![Import breakdown example](./img/import-breakdown.png 'Import breakdown example')
 
 You can disable this feature by turning off `vitest.showImportsDuration`.
 
@@ -141,11 +141,11 @@ By default, the extension doens't rerun tests when files change.
 
 Click on the "eye" icon next to the test, file or a directory to enable "continuous run" for a related item. Whenever that test, file or any file in the directory changes, Vitest will rerun that test. Note that Vitest will also rerun tests if an imported module of the file is changed.
 
-![Turn on continuous run button for a test](./img/eye-item-icon.png "Turn on continuous run button for a test")
+![Turn on continuous run button for a test](./img/eye-item-icon.png 'Turn on continuous run button for a test')
 
 To enabled continuous run globally, click on the "eye" icon in the "Test Explorer" row.
 
-![Start continuous run button](./img/eye-global-icon.png "Start continuous run button")
+![Start continuous run button](./img/eye-global-icon.png 'Start continuous run button')
 
 ### How to hide Test Results view when running tests
 
@@ -154,7 +154,7 @@ You can change the behaviour of testing view by modifying `testing.automatically
 - `neverOpen` will never open the testing view
 - `openOnTestStart` (default) opens the test results view when test starts running
 - `openOnTestFailure` opens the test results view if at least one of test fails
-- `openExplorerOnTestStart`  will open the test tree view when tests starts
+- `openExplorerOnTestStart` will open the test tree view when tests starts
 
 This is a vscode's built-in option and will control every plugin.
 

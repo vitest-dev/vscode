@@ -1,4 +1,8 @@
-import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type {
+  SerializedProject,
+  WorkerRunnerOptions,
+  WorkerWSEventEmitter,
+} from 'vitest-vscode-shared'
 import type { UserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { randomUUID } from 'node:crypto'
@@ -20,7 +24,7 @@ export async function initVitest(
       typeof data.debug === 'object' && data.debug.browser
         ? meta.setupFilePaths.browserDebugLegacy
         : null,
-    ].filter(v => v != null),
+    ].filter((v) => v != null),
   })
 
   let stdout: Writable | undefined
@@ -45,18 +49,14 @@ export async function initVitest(
     globalThis.console = new Console(stdout, stderr)
   }
 
-  const pnpExecArgv = meta.pnpApi && meta.pnpLoader
-    ? [
-        '--require',
-        meta.pnpApi,
-        '--experimental-loader',
-        meta.pnpLoader,
-      ]
-    : undefined
+  const pnpExecArgv =
+    meta.pnpApi && meta.pnpLoader
+      ? ['--require', meta.pnpApi, '--experimental-loader', meta.pnpLoader]
+      : undefined
   const args = meta.arguments
     ? vitestModule.parseCLI(meta.arguments, {
-      allowUnknownOptions: false,
-    }).options
+        allowUnknownOptions: false,
+      }).options
     : {}
   const options = data.debug
     ? {
@@ -78,29 +78,29 @@ export async function initVitest(
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,
-    poolOptions: meta.pnpApi && meta.pnpLoader
-      ? {
-          threads: {
-            execArgv: pnpExecArgv,
-          },
-          forks: {
-            execArgv: pnpExecArgv,
-          },
-          vmForks: {
-            execArgv: pnpExecArgv,
-          },
-          vmThreads: {
-            execArgv: pnpExecArgv,
-          },
-        }
-      : {},
+    poolOptions:
+      meta.pnpApi && meta.pnpLoader
+        ? {
+            threads: {
+              execArgv: pnpExecArgv,
+            },
+            forks: {
+              execArgv: pnpExecArgv,
+            },
+            vmForks: {
+              execArgv: pnpExecArgv,
+            },
+            vmThreads: {
+              execArgv: pnpExecArgv,
+            },
+          }
+        : {},
   }
   if (typeof data.debug === 'object') {
     const inspect = `${data.debug.host}:${data.debug.port}`
     if (data.debug.browser) {
       cliOptions.inspect = inspect
-    }
-    else {
+    } else {
       cliOptions.inspectBrk = inspect
     }
   }
@@ -138,9 +138,7 @@ export async function initVitest(
                   enabled: !!data.coverage,
                   reportOnFailure: true,
                   reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
-                  reporter: [
-                    ['json', { file: meta.finalCoverageFileName }],
-                  ],
+                  reporter: [['json', { file: meta.finalCoverageFileName }]],
                 },
               },
             }
@@ -196,9 +194,9 @@ export async function initVitest(
 
   const workspaceSource: string | false = meta.workspaceFile
     ? meta.workspaceFile
-    : (vitest.config.workspace != null || vitest.config.projects != null)
-        ? vitest.server.config.configFile || false
-        : false
+    : vitest.config.workspace != null || vitest.config.projects != null
+      ? vitest.server.config.configFile || false
+      : false
   return {
     vitest,
     reporter,
@@ -206,11 +204,7 @@ export async function initVitest(
     projects,
     meta,
     createWorker() {
-      return new ExtensionWorker(
-        vitest,
-        !!data.debug,
-        emitter,
-      )
+      return new ExtensionWorker(vitest, !!data.debug, emitter)
     },
   }
 }

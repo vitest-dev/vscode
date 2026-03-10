@@ -19,13 +19,14 @@ The project uses a monorepo structure with multiple packages that work together:
 ### Key Components
 
 - **Extension Host** (packages/extension): Manages VSCode integration, test discovery, debugging, coverage
-- **Worker Processes** (packages/worker*): Execute Vitest in isolated processes, handle test running and reporting
+- **Worker Processes** (packages/worker\*): Execute Vitest in isolated processes, handle test running and reporting
 - **RPC Communication** (packages/shared): Bidirectional communication between extension and workers using birpc
 - **API Abstraction**: Supports both child_process and terminal shell types for running Vitest
 
 ## Development Commands
 
 ### Building
+
 ```bash
 pnpm build              # Build for production (minified)
 pnpm dev                # Build in development mode with watch and sourcemap
@@ -33,6 +34,7 @@ pnpm vscode:prepublish  # Prepare for publishing (runs build)
 ```
 
 ### Testing
+
 ```bash
 pnpm test               # Run unit tests (Mocha-based VSCode tests)
 pnpm test:watch         # Run unit tests in watch mode
@@ -40,6 +42,7 @@ pnpm test-e2e           # Run end-to-end tests (Vitest-based)
 ```
 
 ### Code Quality
+
 ```bash
 pnpm typecheck          # TypeScript type checking
 pnpm lint               # Run ESLint
@@ -47,6 +50,7 @@ pnpm lint:fix           # Run ESLint with auto-fix
 ```
 
 ### Packaging
+
 ```bash
 pnpm package            # Create .vsix package for distribution
 ```
@@ -72,6 +76,7 @@ Uses **pnpm** with workspaces. The project requires pnpm@10.11.1 as specified in
 ## Worker Architecture
 
 The extension uses a multi-process architecture:
+
 - Extension runs in VSCode extension host
 - Worker processes execute Vitest in isolation
 - Communication via RPC (birpc)

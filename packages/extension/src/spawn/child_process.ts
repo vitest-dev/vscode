@@ -19,20 +19,20 @@ import { waitForWsConnection } from './ws'
 export async function createVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions) {
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
-  if (pnpLoader && !pnp)
-    throw new Error('pnp file is required if loader option is used')
+  if (pnpLoader && !pnp) throw new Error('pnp file is required if loader option is used')
   const env = getConfig().env || {}
   const folderConfig = getConfig(pkg.folder)
   const runtimeArgs = folderConfig.nodeExecArgs || []
-  const execArgv = pnpLoader && pnp
-    ? [
-        '--require',
-        pnp,
-        '--experimental-loader',
-        pathToFileURL(pnpLoader).toString(),
-        ...runtimeArgs,
-      ]
-    : runtimeArgs
+  const execArgv =
+    pnpLoader && pnp
+      ? [
+          '--require',
+          pnp,
+          '--experimental-loader',
+          pathToFileURL(pnpLoader).toString(),
+          ...runtimeArgs,
+        ]
+      : runtimeArgs
   const arvString = execArgv.join(' ')
   const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
   let executablePath = workerPath

@@ -9,7 +9,10 @@ export class ExtensionWorkerWatcher {
   private trackedTestItems: Record<string, string[]> = {}
   private trackedDirectories: string[] = []
 
-  constructor(vitest: Vitest, private runner: ExtensionWorkerRunner) {
+  constructor(
+    vitest: Vitest,
+    private runner: ExtensionWorkerRunner,
+  ) {
     vitest.onFilterWatchedSpecification((specification) => {
       const shouldRun = this.shouldRunSpecification(specification)
       if (shouldRun) {
@@ -50,8 +53,7 @@ export class ExtensionWorkerWatcher {
     this.enabled = true
     if (typeof filesOrDirectories[0] === 'string') {
       this.trackedDirectories = filesOrDirectories as string[]
-    }
-    else {
+    } else {
       for (const [project, file] of filesOrDirectories) {
         if (!this.trackedTestItems[project]) {
           this.trackedTestItems[project] = []
@@ -74,14 +76,11 @@ export class ExtensionWorkerWatcher {
   }
 
   private isTestFileWatched(testFile: string, files: string[]) {
-    if (!files?.length)
-      return false
+    if (!files?.length) return false
 
     return files.some((file) => {
-      if (file === testFile)
-        return true
-      if (file.at(-1) === '/')
-        return testFile.startsWith(file)
+      if (file === testFile) return true
+      if (file.at(-1) === '/') return testFile.startsWith(file)
       return false
     })
   }

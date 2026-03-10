@@ -1,11 +1,7 @@
 import type { SourceMap } from 'node:module'
 import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase, TestError } from 'vitest'
 import type { Vite, WorkspaceProject } from 'vitest/node'
-import {
-  calculateSuiteHash,
-  generateHash,
-  someTasksAreOnly,
-} from '@vitest/runner/utils'
+import { calculateSuiteHash, generateHash, someTasksAreOnly } from '@vitest/runner/utils'
 import { originalPositionFor, TraceMap } from '@vitest/utils/source-map'
 import { parse } from 'acorn'
 import { ancestor as walkAst } from 'acorn-walk'
@@ -46,19 +42,21 @@ export interface FileInformation {
   definitions: LocalCallDefinition[]
 }
 
-const debug = process.env.VITEST_VSCODE_LOG !== 'info'
-  ? (...args: any[]) => {
-    // eslint-disable-next-line no-console
-      console.info(...args)
-    }
-  : undefined
+const debug =
+  process.env.VITEST_VSCODE_LOG !== 'info'
+    ? (...args: any[]) => {
+        // eslint-disable-next-line no-console
+        console.info(...args)
+      }
+    : undefined
 
-const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
-  ? (...args: any[]) => {
-      // eslint-disable-next-line no-console
-      console.info(...args)
-    }
-  : undefined
+const verbose =
+  process.env.VITEST_VSCODE_LOG === 'verbose'
+    ? (...args: any[]) => {
+        // eslint-disable-next-line no-console
+        console.info(...args)
+      }
+    : undefined
 
 function isTestFunctionName(name: string) {
   return name === 'it' || name === 'test' || name.startsWith('test') || name.endsWith('Test')
@@ -77,13 +75,8 @@ export function astParseFile(filepath: string, code: string) {
   })
 
   if (verbose) {
-    verbose(
-      'Collecting',
-      filepath,
-      code,
-    )
-  }
-  else {
+    verbose('Collecting', filepath, code)
+  } else {
     debug?.('Collecting', filepath)
   }
   const definitions: LocalCallDefinition[] = []
@@ -101,18 +94,16 @@ export function astParseFile(filepath: string, code: string) {
       return getName(callee.tag)
     }
     if (callee.type === 'MemberExpression') {
-      if (
-        callee.object?.type === 'Identifier'
-        && isVitestFunctionName(callee.object.name)
-      ) {
+      if (callee.object?.type === 'Identifier' && isVitestFunctionName(callee.object.name)) {
         return callee.object?.name
       }
       if (
         // direct call as `__vite_ssr_exports_0__.test()`
-        callee.object?.name?.startsWith('__vite_ssr_')
+        callee.object?.name?.startsWith('__vite_ssr_') ||
         // call as `__vite_ssr_exports_0__.Vitest.test`,
         // this is a special case for using Vitest namespaces popular in Effect
-        || (callee.object?.object?.name?.startsWith('__vite_ssr_') && callee.object?.property?.name === 'Vitest')
+        (callee.object?.object?.name?.startsWith('__vite_ssr_') &&
+          callee.object?.property?.name === 'Vitest')
       ) {
         return getName(callee.property)
       }
@@ -151,13 +142,12 @@ export function astParseFile(filepath: string, code: string) {
       const end = node.end
       // .each or (0, __vite_ssr_exports_0__.test)()
       if (
-        callee.type === 'CallExpression'
-        || callee.type === 'SequenceExpression'
-        || callee.type === 'TaggedTemplateExpression'
+        callee.type === 'CallExpression' ||
+        callee.type === 'SequenceExpression' ||
+        callee.type === 'TaggedTemplateExpression'
       ) {
         start = callee.end
-      }
-      else {
+      } else {
         start = node.start
       }
 
@@ -171,8 +161,7 @@ export function astParseFile(filepath: string, code: string) {
       let message: string
       if (messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral') {
         message = code.slice(messageNode.start + 1, messageNode.end - 1)
-      }
-      else {
+      } else {
         message = code.slice(messageNode.start, messageNode.end)
       }
 
@@ -193,7 +182,10 @@ export function astParseFile(filepath: string, code: string) {
         mode = 'skip'
       }
 
-      const parentCalleeName = typeof callee?.callee === 'object' && callee?.callee.type === 'MemberExpression' && callee?.callee.property?.name
+      const parentCalleeName =
+        typeof callee?.callee === 'object' &&
+        callee?.callee.type === 'MemberExpression' &&
+        callee?.callee.property?.name
       let isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
       if (!isDynamicEach && callee.type === 'TaggedTemplateExpression') {
         const property = callee.tag?.property?.name
@@ -328,8 +320,7 @@ export function createFileTask(
             `${originalLocation.line}:${originalLocation.column}`,
           )
           location = originalLocation
-        }
-        else {
+        } else {
           debug?.(
             'Cannot find original location for',
             definition.type,
@@ -337,8 +328,7 @@ export function createFileTask(
             `${processedLocation.column}:${processedLocation.line}`,
           )
         }
-      }
-      else {
+      } else {
         debug?.(
           'Cannot find original location for',
           definition.type,
@@ -387,13 +377,7 @@ export function createFileTask(
     })
   calculateSuiteHash(file)
   const hasOnly = someTasksAreOnly(file)
-  interpretTaskModes(
-    file,
-    options.testNamePattern,
-    hasOnly,
-    false,
-    options.allowOnly,
-  )
+  interpretTaskModes(file, options.testNamePattern, hasOnly, false, options.allowOnly)
   markDynamicTests(file.tasks)
   if (!file.tasks.length) {
     file.result = {
@@ -416,7 +400,7 @@ export async function astCollectTests(
   const request = await transformSSR(project, filepath)
   const testFilepath = relative(project.config.root, filepath)
   if (!request) {
-    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
+    debug?.('Cannot parse', testFilepath, "(vite didn't return anything)")
     return createFailedFileTask(
       project,
       filepath,
@@ -450,8 +434,7 @@ function createIndexMap(source: string) {
     if (char === '\n' || char === '\r\n') {
       line++
       column = 0
-    }
-    else {
+    } else {
       column++
     }
   }
@@ -480,11 +463,9 @@ function interpretTaskModes(
           checkAllowOnly(t, allowOnly)
           t.mode = 'run'
         }
-      }
-      else if (t.mode === 'run' && !includeTask) {
+      } else if (t.mode === 'run' && !includeTask) {
         t.mode = 'skip'
-      }
-      else if (t.mode === 'only') {
+      } else if (t.mode === 'only') {
         checkAllowOnly(t, allowOnly)
         t.mode = 'run'
       }
@@ -493,12 +474,10 @@ function interpretTaskModes(
       if (namePattern && !getTaskFullName(t).match(namePattern)) {
         t.mode = 'skip'
       }
-    }
-    else if (t.type === 'suite') {
+    } else if (t.type === 'suite') {
       if (t.mode === 'skip') {
         skipAllTasks(t)
-      }
-      else {
+      } else {
         interpretTaskModes(t, namePattern, onlyMode, includeTask, allowOnly)
       }
     }
@@ -506,7 +485,7 @@ function interpretTaskModes(
 
   // if all subtasks are skipped, mark as skip
   if (suite.mode === 'run') {
-    if (suite.tasks.length && suite.tasks.every(i => i.mode !== 'run')) {
+    if (suite.tasks.length && suite.tasks.every((i) => i.mode !== 'run')) {
       suite.mode = 'skip'
     }
   }

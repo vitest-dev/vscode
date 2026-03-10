@@ -22,7 +22,7 @@ export class ExtensionWatcher extends vscode.Disposable {
   }
 
   reset() {
-    this.watcherByFolder.forEach(x => x.dispose())
+    this.watcherByFolder.forEach((x) => x.dispose())
     this.watcherByFolder.clear()
     this.apisByFolder = new WeakMap()
   }
@@ -62,7 +62,7 @@ export class ExtensionWatcher extends vscode.Disposable {
       this.transformSchemaProvider.emitChange(uri)
       log.verbose?.('[VSCODE] File changed:', this.relative(api, uri))
       const apis = this.apisByFolder.get(folder) || []
-      apis.forEach(api => api.onFileChanged(path))
+      apis.forEach((api) => api.onFileChanged(path))
       apis.forEach((api) => {
         if (api.getPersistentProcessMeta() || api.isSpawningPersistentProcess) {
           return
@@ -99,11 +99,11 @@ export class ExtensionWatcher extends vscode.Disposable {
 
   private async shouldIgnoreFile(api: VitestProcessAPI, path: string, uri: vscode.Uri) {
     if (
-      path.includes('/node_modules/')
-      || path.includes('\\node_modules\\')
-      || path.includes('/.git/')
-      || path.includes('\\.git\\')
-      || path.endsWith('.git')
+      path.includes('/node_modules/') ||
+      path.includes('\\node_modules\\') ||
+      path.includes('/.git/') ||
+      path.includes('\\.git\\') ||
+      path.endsWith('.git')
     ) {
       return true
     }
@@ -111,16 +111,15 @@ export class ExtensionWatcher extends vscode.Disposable {
       const stats = await vscode.workspace.fs.stat(uri)
       if (
         // if not a file
-        stats.type !== vscode.FileType.File
+        stats.type !== vscode.FileType.File &&
         // if not a symlinked file
-        && stats.type !== (vscode.FileType.File | vscode.FileType.SymbolicLink)
+        stats.type !== (vscode.FileType.File | vscode.FileType.SymbolicLink)
       ) {
         log.verbose?.('[VSCODE]', this.relative(api, uri), 'is not a file. Ignoring.')
         return true
       }
       return false
-    }
-    catch {
+    } catch {
       return true
     }
   }

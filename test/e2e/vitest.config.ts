@@ -9,12 +9,8 @@ export default defineConfig({
       VSCODE_E2E_EXTENSION_PATH: './',
       VSCODE_E2E_TRACE: 'on',
     },
-    setupFiles: [
-      './utils/assertions.ts',
-    ],
-    globalSetup: [
-      './utils/downloadSetup.ts',
-    ],
+    setupFiles: ['./utils/assertions.ts'],
+    globalSetup: ['./utils/downloadSetup.ts'],
     retry: process.env.CI ? 2 : 0,
   },
 })

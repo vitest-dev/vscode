@@ -1,25 +1,25 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base", "schedule:weekly", "group:allNonMajor"],
-  "labels": ["dependencies"],
-  "rangeStrategy": "bump",
-  "packageRules": [
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:base', 'schedule:weekly', 'group:allNonMajor'],
+  labels: ['dependencies'],
+  rangeStrategy: 'bump',
+  packageRules: [
     {
-      "groupName": "Eslint packages",
-      "matchPackageNames": ["/eslint/"]
+      groupName: 'Eslint packages',
+      matchPackageNames: ['/eslint/'],
     },
     {
-      "depTypeList": ["peerDependencies"],
-      "enabled": false
+      depTypeList: ['peerDependencies'],
+      enabled: false,
     },
     {
-      "matchDepTypes": ["action"],
-      "matchPackageNames": ["!actions/{/,}**", "!github/{/,}**"],
-      "pinDigests": true
+      matchDepTypes: ['action'],
+      matchPackageNames: ['!actions/{/,}**', '!github/{/,}**'],
+      pinDigests: true,
     },
     {
-      "matchFileNames": ["samples/**"],
-      "enabled": false
-    }
-  ]
+      matchFileNames: ['samples/**'],
+      enabled: false,
+    },
+  ],
 }

@@ -1,4 +1,8 @@
-import type { ExtensionTestFileSpecification, ExtensionTestSpecification, ModuleDefinitionDurationsDiagnostic } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestFileSpecification,
+  ExtensionTestSpecification,
+  ModuleDefinitionDurationsDiagnostic,
+} from 'vitest-vscode-shared'
 import type * as vscode from 'vscode'
 import type { VitestPackage } from './spawn/pkg'
 import { dirname, isAbsolute } from 'node:path'
@@ -8,18 +12,19 @@ import { log } from './log'
 import { showVitestError } from './utils'
 
 export class VitestAPI {
-  constructor(
-    public readonly processes: VitestProcessAPI[],
-  ) {}
+  constructor(public readonly processes: VitestProcessAPI[]) {}
 
   async getSourceModuleDiagnostic(moduleId: string) {
     const allDiagnostic = await Promise.all(
-      this.processes.map(api => api.getSourceModuleDiagnostic(moduleId)),
+      this.processes.map((api) => api.getSourceModuleDiagnostic(moduleId)),
     )
     const modules = allDiagnostic[0]?.modules || []
     const untrackedModules = allDiagnostic[0]?.untrackedModules || []
 
-    type TimeDiagnostic = Pick<ModuleDefinitionDurationsDiagnostic, 'selfTime' | 'totalTime' | 'transformTime' | 'resolvedId'>
+    type TimeDiagnostic = Pick<
+      ModuleDefinitionDurationsDiagnostic,
+      'selfTime' | 'totalTime' | 'transformTime' | 'resolvedId'
+    >
     const aggregateModules = (aggregatedModule: TimeDiagnostic, currentMod: TimeDiagnostic) => {
       if (aggregatedModule.resolvedId === currentMod.resolvedId) {
         aggregatedModule.selfTime += currentMod.selfTime
@@ -63,7 +68,7 @@ export class VitestAPI {
   }
 
   async dispose() {
-    await Promise.all(this.processes.map(api => api.dispose()))
+    await Promise.all(this.processes.map((api) => api.dispose()))
   }
 }
 
@@ -74,10 +79,13 @@ export async function resolveVitestAPI(
   onResolved?: (result: DiscoveryResult) => void,
 ) {
   const usedConfigs = new Set<string>()
-  const workspacePromises = workspaceConfigs.map(pkg => createVitestProcessAPI(usedConfigs, pkg))
+  const workspacePromises = workspaceConfigs.map((pkg) => createVitestProcessAPI(usedConfigs, pkg))
 
   if (workspacePromises.length) {
-    log.info('[API]', `Resolving workspace configs: ${workspaceConfigs.map(p => relative(p.folder.uri.fsPath, p.id)).join(', ')}`)
+    log.info(
+      '[API]',
+      `Resolving workspace configs: ${workspaceConfigs.map((p) => relative(p.folder.uri.fsPath, p.id)).join(', ')}`,
+    )
   }
 
   const resolvedApisPromises = await Promise.allSettled(workspacePromises)
@@ -87,39 +95,49 @@ export async function resolveVitestAPI(
     if (result.status === 'fulfilled') {
       apis.push(result.value.api)
       onResolved?.(result.value)
-    }
-    else {
+    } else {
       errors.push(result.reason)
     }
   }
 
-  const configsToResolve = configs.filter((pkg) => {
-    return !pkg.configFile || pkg.workspaceFile || !usedConfigs.has(pkg.configFile)
-  }).sort((a, b) => {
-    const depthA = a.id.split('/').length
-    const depthB = b.id.split('/').length
-    return depthA - depthB
-  })
+  const configsToResolve = configs
+    .filter((pkg) => {
+      return !pkg.configFile || pkg.workspaceFile || !usedConfigs.has(pkg.configFile)
+    })
+    .sort((a, b) => {
+      const depthA = a.id.split('/').length
+      const depthB = b.id.split('/').length
+      return depthA - depthB
+    })
 
   const workspaceRoots: string[] = apis
-    .map(r => r.workspaceSource ? dirname(r.workspaceSource) : null)
-    .filter(r => r != null)
+    .map((r) => (r.workspaceSource ? dirname(r.workspaceSource) : null))
+    .filter((r) => r != null)
 
   if (configsToResolve.length) {
-    log.info('[API]', `Resolving configs: ${configsToResolve.map(p => relative(dirname(p.cwd), p.id)).join(', ')}`)
+    log.info(
+      '[API]',
+      `Resolving configs: ${configsToResolve.map((p) => relative(dirname(p.cwd), p.id)).join(', ')}`,
+    )
   }
 
   // one by one because it's possible some of them have "workspace:" -- the configs are already sorted by priority
   for (const pkg of configsToResolve) {
     // if the config is used by the workspace, ignore the config
     if (pkg.configFile && usedConfigs.has(pkg.configFile)) {
-      log.info('[API]', `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because it's already used by the workspace`)
+      log.info(
+        '[API]',
+        `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because it's already used by the workspace`,
+      )
       continue
     }
 
     // if the config is defined in the directory that is covered by the workspace, ignore the config
     if (pkg.configFile && isCoveredByWorkspace(workspaceRoots, pkg.configFile)) {
-      log.info('[API]', `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because there is a workspace config in the parent folder`)
+      log.info(
+        '[API]',
+        `Ignoring config ${relative(dirname(pkg.cwd), pkg.id)} because there is a workspace config in the parent folder`,
+      )
       continue
     }
 
@@ -130,8 +148,7 @@ export async function resolveVitestAPI(
       if (result.api.workspaceSource) {
         workspaceRoots.push(dirname(result.api.workspaceSource))
       }
-    }
-    catch (err: unknown) {
+    } catch (err: unknown) {
       errors.push(err)
     }
 
@@ -142,12 +159,11 @@ export async function resolveVitestAPI(
 
   if (!apis.length) {
     log.error('There were errors during config load.')
-    errors.forEach(e => log.error(e))
+    errors.forEach((e) => log.error(e))
     throw new Error('The extension could not load any config.')
-  }
-  else if (errors.length) {
+  } else if (errors.length) {
     log.error('There were errors during config load.')
-    errors.forEach(e => log.error(e))
+    errors.forEach((e) => log.error(e))
     showVitestError('The extension could not load some configs')
   }
 
@@ -166,7 +182,10 @@ interface DiscoveryResult {
   files: ExtensionTestFileSpecification[]
 }
 
-async function createVitestProcessAPI(usedConfigs: Set<string>, pkg: VitestPackage): Promise<DiscoveryResult> {
+async function createVitestProcessAPI(
+  usedConfigs: Set<string>,
+  pkg: VitestPackage,
+): Promise<DiscoveryResult> {
   return withProcess(pkg, async (meta) => {
     meta.projects.forEach((project) => {
       if (project.config) {

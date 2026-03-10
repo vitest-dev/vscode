@@ -1,18 +1,10 @@
 import { describe, it } from 'vitest'
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe('console', () => {
   it('basic', () => {
-    console.log([
-      'string',
-      { hello: 'world' },
-      1234,
-      /regex/g,
-      true,
-      false,
-      null,
-    ])
+    console.log(['string', { hello: 'world' }, 1234, /regex/g, true, false, null])
   })
 
   it('async', async () => {

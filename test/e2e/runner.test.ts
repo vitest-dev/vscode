@@ -118,7 +118,7 @@ test('browser mode correctly collects tests', async ({ launch }) => {
     console: 'waiting',
   })
 
-  editFile('samples/browser/test/console.test.ts', content => `/arakara---\n${content}`)
+  editFile('samples/browser/test/console.test.ts', (content) => `/arakara---\n${content}`)
 
   await expect(consoleTest).toHaveError('Error: Unterminated regular expression')
 })
@@ -142,8 +142,12 @@ test('watcher updates the file if there are several config files', async ({ laun
     math: 'waiting',
   })
 
-  editFile('samples/multiple-configs/app1/test-app1.test.ts', content => content.replace('math', 'math-123'))
-  editFile('samples/multiple-configs/app2/test-app2.test.ts', content => content.replace('math', 'math-987'))
+  editFile('samples/multiple-configs/app1/test-app1.test.ts', (content) =>
+    content.replace('math', 'math-123'),
+  )
+  editFile('samples/multiple-configs/app2/test-app2.test.ts', (content) =>
+    content.replace('math', 'math-987'),
+  )
 
   await expect(app1Test).toHaveTests({
     'math-123': 'waiting',
@@ -167,7 +171,7 @@ test('ast collector keeps the pattern on rerun', async ({ launch }) => {
   const item = tester.tree.getFileItem('each.test.ts')
 
   await expect(item).toHaveTests({
-    'testing': {
+    testing: {
       // all pass: %i => %i
       'pattern|3': 'waiting',
       // table1: returns $expected when $a is added $b
@@ -195,7 +199,7 @@ test('ast collector keeps the pattern on rerun', async ({ launch }) => {
       // table1: returns $expected when $a is added $b
       'pattern|6': 'waiting',
       'table1: returns 2 when 1 is added 1': 'passed',
-      'table1: returns \'ab\' when \'a\' is added \'b\'': 'passed',
+      "table1: returns 'ab' when 'a' is added 'b'": 'passed',
     },
     // testing %s
     'pattern|9': 'waiting',
@@ -229,13 +233,13 @@ describe('continuous testing', () => {
 
     await item.toggleContinuousRun()
 
-    editFile('samples/continuous/test/imports-divide.test.ts', content => `${content}\n`)
+    editFile('samples/continuous/test/imports-divide.test.ts', (content) => `${content}\n`)
 
     await expect(item).toHaveTests({
       divide: 'passed',
     })
 
-    editFile('samples/continuous/src/calculator.ts', content => content.replace('a / b', '1000'))
+    editFile('samples/continuous/src/calculator.ts', (content) => content.replace('a / b', '1000'))
 
     await expect(item).toHaveTests({
       divide: 'failed',
@@ -244,8 +248,6 @@ describe('continuous testing', () => {
 
     const errors = await tester.errors.getInlineErrors()
 
-    expect(errors).toEqual([
-      '1000 != 2',
-    ])
+    expect(errors).toEqual(['1000 != 2'])
   })
 })

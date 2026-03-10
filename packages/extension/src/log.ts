@@ -8,7 +8,7 @@ import { getConfig } from './config'
 
 const logFile = process.env.VITEST_VSCODE_E2E_LOG_FILE!
 const channel = window.createOutputChannel('Vitest')
-const callbacks: Set<((message: string) => void)> = new Set()
+const callbacks: Set<(message: string) => void> = new Set()
 
 function logToCallbacks(message: string) {
   for (const callback of callbacks) {
@@ -68,19 +68,20 @@ export const log = {
     }
     channel.appendLine(message)
   },
-  verbose: getConfig().logLevel === 'verbose' || process.env.VITEST_VSCODE_LOG === 'verbose'
-    ? (...args: string[]) => {
-        const time = new Date().toLocaleTimeString()
-        if (process.env.EXTENSION_NODE_ENV === 'dev') {
-          console.log(`[${time}]`, ...args)
+  verbose:
+    getConfig().logLevel === 'verbose' || process.env.VITEST_VSCODE_LOG === 'verbose'
+      ? (...args: string[]) => {
+          const time = new Date().toLocaleTimeString()
+          if (process.env.EXTENSION_NODE_ENV === 'dev') {
+            console.log(`[${time}]`, ...args)
+          }
+          const message = `[${time}] ${args.map(inspectValue).join(' ')}`
+          if (logFile) {
+            appendFile(message)
+          }
+          channel.appendLine(message)
         }
-        const message = `[${time}] ${args.map(inspectValue).join(' ')}`
-        if (logFile) {
-          appendFile(message)
-        }
-        channel.appendLine(message)
-      }
-    : undefined,
+      : undefined,
   workspaceInfo: (folder: string, ...args: any[]) => {
     log.info(`[Workspace ${folder}]`, ...args)
   },

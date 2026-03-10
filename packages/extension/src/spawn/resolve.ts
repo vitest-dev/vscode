@@ -14,7 +14,10 @@ export interface VitestResolution {
   }
 }
 
-export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder | undefined): VitestResolution | null {
+export function resolveVitestPackage(
+  cwd: string,
+  folder: vscode.WorkspaceFolder | undefined,
+): VitestResolution | null {
   const vitestPackageJsonPath = !process.versions.pnp && resolveVitestPackagePath(cwd, folder)
   if (vitestPackageJsonPath) {
     return {
@@ -32,13 +35,11 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
 
   const pnpCwd = folder?.uri.fsPath || cwd
   const pnp = resolvePnp(pnpCwd)
-  if (!pnp)
-    return null
-  const vitestNodePath
-    = resolvePnpPackagePath(pnp.pnpApi, 'vitest/node', pnpCwd)
-      || resolvePnpPackagePath(pnp.pnpApi, 'vite-plus/test/node', pnpCwd)
-  if (!vitestNodePath)
-    return null
+  if (!pnp) return null
+  const vitestNodePath =
+    resolvePnpPackagePath(pnp.pnpApi, 'vitest/node', pnpCwd) ||
+    resolvePnpPackagePath(pnp.pnpApi, 'vite-plus/test/node', pnpCwd)
+  if (!vitestNodePath) return null
   return {
     vitestNodePath,
     vitestPackageJsonPath: '', // we don't read pkg.json for pnp
@@ -52,16 +53,19 @@ export function resolveVitestPackage(cwd: string, folder: vscode.WorkspaceFolder
 export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFolder | undefined) {
   const customPackagePath = getConfig(folder).vitestPackagePath
   if (customPackagePath && !customPackagePath.endsWith('package.json'))
-    throw new Error(`"vitest.vitestPackagePath" must point to a package.json file, instead got: ${customPackagePath}`)
+    throw new Error(
+      `"vitest.vitestPackagePath" must point to a package.json file, instead got: ${customPackagePath}`,
+    )
   try {
-    const result = customPackagePath || require.resolve('vitest/package.json', {
-      paths: [cwd],
-    })
+    const result =
+      customPackagePath ||
+      require.resolve('vitest/package.json', {
+        paths: [cwd],
+      })
     delete require.cache['vitest/package.json']
     delete require.cache[result]
     return result
-  }
-  catch {
+  } catch {
     return null
   }
 }
@@ -74,8 +78,7 @@ export function resolveVitePlusPackagePath(cwd: string) {
     delete require.cache['vite-plus/package.json']
     delete require.cache[result]
     return result
-  }
-  catch {
+  } catch {
     return null
   }
 }
@@ -94,18 +97,20 @@ export function resolvePnp(cwd: string) {
       pnpPath,
       pnpApi,
     }
-  }
-  catch {
+  } catch {
     return null
   }
 }
 
-export function resolvePnpPackagePath(pnpApi: any, pkg: 'vitest/node' | 'vite-plus/test/node', cwd: string): string | null {
+export function resolvePnpPackagePath(
+  pnpApi: any,
+  pkg: 'vitest/node' | 'vite-plus/test/node',
+  cwd: string,
+): string | null {
   try {
     const vitestNodePath = pnpApi.resolveRequest(pkg, cwd)
     return vitestNodePath
-  }
-  catch {
+  } catch {
     return null
   }
 }

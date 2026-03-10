@@ -37,7 +37,7 @@ export class TestRunner extends vscode.Disposable {
     super(() => {
       log.verbose?.('Disposing test runner')
       this.endTestRun()
-      this.disposables.forEach(d => d.dispose())
+      this.disposables.forEach((d) => d.dispose())
       this.disposables = []
       log.offWorkerLog(this.onWorkerLog)
     })
@@ -45,8 +45,7 @@ export class TestRunner extends vscode.Disposable {
     log.onWorkerLog(this.onWorkerLog)
 
     handle.handlers.onTestRunStart((files) => {
-      if (!files.length)
-        return
+      if (!files.length) return
 
       files.forEach((file) => {
         const uri = vscode.Uri.file(file)
@@ -74,8 +73,7 @@ export class TestRunner extends vscode.Disposable {
 
     handle.handlers.onCollected((file, collecting) => {
       this.tree.collectFile(this.api, file)
-      if (collecting)
-        return
+      if (collecting) return
 
       this.importsBreakdown.refreshCurrentDecorations()
 
@@ -86,24 +84,20 @@ export class TestRunner extends vscode.Disposable {
           return
         }
         const testRun = this.testRun
-        if (!testRun)
-          return
+        if (!testRun) return
 
         if (task.mode === 'skip' || task.mode === 'todo') {
           const include = this.testRunRequest?.include
           if (this.testRunRequest && (!include || this.isTestIncluded(test, include))) {
             log.verbose?.(`Marking "${test.label}" as skipped`)
             testRun.skipped(test)
-          }
-          else {
+          } else {
             log.verbose?.(`Ignore "${test.label}" during collection`)
           }
-        }
-        else if (!task.result && task.type !== 'suite') {
+        } else if (!task.result && task.type !== 'suite') {
           log.verbose?.(`Enqueuing "${test.label}"`)
           testRun.enqueued(test)
-        }
-        else {
+        } else {
           this.markResult(testRun, test, task.result)
         }
       })
@@ -113,8 +107,7 @@ export class TestRunner extends vscode.Disposable {
       const testRun = this.testRun
 
       if (!testRun) {
-        if (unhandledError)
-          log.error(unhandledError)
+        if (unhandledError) log.error(unhandledError)
         this.endTestRun()
         return
       }
@@ -125,11 +118,9 @@ export class TestRunner extends vscode.Disposable {
         })
       }
 
-      if (unhandledError)
-        testRun.appendOutput(formatTestOutput(unhandledError))
+      if (unhandledError) testRun.appendOutput(formatTestOutput(unhandledError))
 
-      if (!collecting)
-        this.endTestRun()
+      if (!collecting) this.endTestRun()
     })
 
     handle.handlers.onConsoleLog((consoleLog) => {
@@ -140,8 +131,7 @@ export class TestRunner extends vscode.Disposable {
   private onWorkerLog = (message: string) => {
     if (this.testRun) {
       this.testRun.appendOutput(formatTestOutput(message))
-    }
-    else if (message) {
+    } else if (message) {
       // So we don't lose the log. Ideally, we should start runner sooner
       log.verbose?.('[WORKER]', stripVTControlCharacters(message))
     }
@@ -175,11 +165,9 @@ export class TestRunner extends vscode.Disposable {
     const tests = request.include || []
     const files = getTestFiles(tests)
 
-    const testFiles = files.filter(f => !(typeof f === 'string' ? f : f[1]).endsWith('/'))
-    const testRunName = testFiles.length === 1
-      ? this.relative(testFiles[0])
-      : undefined
-    const run = this.testRun = this.createCancellableTestRun(request, testRunName)
+    const testFiles = files.filter((f) => !(typeof f === 'string' ? f : f[1]).endsWith('/'))
+    const testRunName = testFiles.length === 1 ? this.relative(testFiles[0]) : undefined
+    const run = (this.testRun = this.createCancellableTestRun(request, testRunName))
     this.testRunRequest = request
 
     const testItems = request.include || this.controller.items
@@ -192,7 +180,7 @@ export class TestRunner extends vscode.Disposable {
       }
       test.children.forEach(enqueue)
     }
-    testItems.forEach(test => enqueue(test))
+    testItems.forEach((test) => enqueue(test))
 
     const runTests = (files?: ExtensionTestSpecification[] | string[], testNamePatern?: string) =>
       'updateSnapshots' in request
@@ -203,30 +191,33 @@ export class TestRunner extends vscode.Disposable {
       const root = this.api.workspaceFolder.uri.fsPath
       log.info(`Running all tests in ${basename(root)}`)
       await runTests()
-    }
-    else {
+    } else {
       const testNamePatern = formatTestPattern(tests)
       if (testNamePatern)
         log.info(`Running ${files.length} file(s) with name pattern: ${testNamePatern}`)
       else
-        log.info(`Running ${files.length} file(s):`, files.map(f => this.relative(f)))
+        log.info(
+          `Running ${files.length} file(s):`,
+          files.map((f) => this.relative(f)),
+        )
       await runTests(files, testNamePatern)
     }
   }
 
-  private isTestIncluded(test: vscode.TestItem, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
+  private isTestIncluded(
+    test: vscode.TestItem,
+    include: readonly vscode.TestItem[] | vscode.TestItemCollection,
+  ) {
     for (const _item of include) {
       const item = 'id' in _item ? _item : _item[1]
-      if (item === test)
-        return true
-      if (this.isTestIncluded(test, item.children))
-        return true
+      if (item === test) return true
+      if (this.isTestIncluded(test, item.children)) return true
     }
     return false
   }
 
   protected createCancellableTestRun(request: vscode.TestRunRequest, name?: string) {
-    const run = this.testRun = this.controller.createTestRun(request, name)
+    const run = (this.testRun = this.controller.createTestRun(request, name))
 
     run.token.onCancellationRequested(() => {
       this.triggerCancel(this.testRunRequest)
@@ -237,17 +228,13 @@ export class TestRunner extends vscode.Disposable {
 
   public async reportCoverage(coverage: any) {
     const testRun = this.testRun
-    if (!testRun)
-      return
+    if (!testRun) return
 
     // TODO: quick patch, coverage shouldn't report negative columns
     function ensureLoc(loc: any) {
-      if (!loc)
-        return
-      if (loc.start?.column && loc.start.column < 0)
-        loc.start.column = 0
-      if (loc.end?.column && loc.end.column < 0)
-        loc.end.column = 0
+      if (!loc) return
+      if (loc.start?.column && loc.start.column < 0) loc.start.column = 0
+      if (loc.end?.column && loc.end.column < 0) loc.end.column = 0
     }
     for (const file in coverage) {
       coverage[file] = coverage[file].data
@@ -263,24 +250,18 @@ export class TestRunner extends vscode.Disposable {
     await coverageContext.applyJson(testRun, coverage)
   }
 
-  private markTestCase(
-    testRun: vscode.TestRun,
-    test: vscode.TestItem,
-    result: RunnerTaskResult,
-  ) {
+  private markTestCase(testRun: vscode.TestRun, test: vscode.TestItem, result: RunnerTaskResult) {
     setTestErrors(test, result.errors as TestError[])
 
     switch (result.state) {
       case 'fail': {
-        const errors = result.errors?.map(err =>
-          testMessageForTestError(test, err as TestError),
-        ) || []
+        const errors =
+          result.errors?.map((err) => testMessageForTestError(test, err as TestError)) || []
         if (!errors.length) {
           log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
           return
         }
-        if (test.uri)
-          this.diagnostic?.addDiagnostic(test.uri, errors)
+        if (test.uri) this.diagnostic?.addDiagnostic(test.uri, errors)
         log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
         testRun.failed(test, errors, result.duration)
         break
@@ -316,9 +297,7 @@ export class TestRunner extends vscode.Disposable {
     }
 
     // errors in a suite are stored only if it happens during discovery
-    const errors = result.errors?.map(err =>
-      err.stack || err.message,
-    )
+    const errors = result.errors?.map((err) => err.stack || err.message)
     if (!errors?.length) {
       log.verbose?.(`No errors found for "${test.label}"`)
       return
@@ -364,7 +343,11 @@ export class ContinuousTestRunner extends TestRunner {
     super(handle, controller, tree, api, diagnostic, importsBreakdown, inlineConsoleLog)
     handle.handlers.onTestRunStart((files) => {
       this.startTestRun(files)
-      log.verbose?.('Starting a test run because', ...files.map(f => this.relative(f)), 'triggered a watch rerun event')
+      log.verbose?.(
+        'Starting a test run because',
+        ...files.map((f) => this.relative(f)),
+        'triggered a watch rerun event',
+      )
     })
   }
 
@@ -373,20 +356,19 @@ export class ContinuousTestRunner extends TestRunner {
       return
     }
 
-    const include = Array.from(this.continuousRequests, r => r.include || []).flat()
+    const include = Array.from(this.continuousRequests, (r) => r.include || []).flat()
 
     if (!include.length) {
       await this.handle.rpc.watchTests()
       log.info('[RUNNER]', 'Watching all test files')
-    }
-    else {
+    } else {
       const files = getTestFiles(include)
       const testNamePatern = formatTestPattern(include)
       await this.handle.rpc.watchTests(files, testNamePatern)
       log.info(
         '[RUNNER]',
         'Watching test files:',
-        files.map(f => this.relative(f)).join(', '),
+        files.map((f) => this.relative(f)).join(', '),
         testNamePatern ? `with pattern ${testNamePatern}` : '',
       )
     }
@@ -403,13 +385,11 @@ export class ContinuousTestRunner extends TestRunner {
     }
 
     if (!request) {
-      log.verbose?.('No test run request found for', ...files.map(f => this.relative(f)))
+      log.verbose?.('No test run request found for', ...files.map((f) => this.relative(f)))
       return
     }
 
-    const name = files.length > 1
-      ? undefined
-      : this.relative(files[0])
+    const name = files.length > 1 ? undefined : this.relative(files[0])
 
     this.testRunRequest = request
     const run = this.createCancellableTestRun(request, name)
@@ -422,14 +402,17 @@ export class ContinuousTestRunner extends TestRunner {
       }
 
       // during test collection, we don't have test runs
-      if (request.include && !this.isFileIncluded(file, request.include))
-        continue
+      if (request.include && !this.isFileIncluded(file, request.include)) continue
 
       const testItems = request.include || this.tree.getFileTestItems(file)
       function enqueue(test: vscode.TestItem) {
         const testData = getTestData(test)
         // we only change the state of test cases to keep the correct test count
-        if (testData instanceof TestCase && !testData.dynamic && files.includes(testData.file.filepath)) {
+        if (
+          testData instanceof TestCase &&
+          !testData.dynamic &&
+          files.includes(testData.file.filepath)
+        ) {
           log.verbose?.(`Enqueuing "${test.label}"`)
           run.enqueued(test)
         }
@@ -441,25 +424,23 @@ export class ContinuousTestRunner extends TestRunner {
         }
         test.children.forEach(enqueue)
       }
-      testItems.forEach(test => enqueue(test))
+      testItems.forEach((test) => enqueue(test))
     }
   }
 
-  private isFileIncluded(file: string, include: readonly vscode.TestItem[] | vscode.TestItemCollection) {
+  private isFileIncluded(
+    file: string,
+    include: readonly vscode.TestItem[] | vscode.TestItemCollection,
+  ) {
     for (const _item of include) {
       const item = 'id' in _item ? _item : _item[1]
       const data = getTestData(item)
       if (data instanceof TestFile) {
-        if (data.filepath === file)
-          return true
-      }
-      else if (data instanceof TestFolder) {
-        if (this.isFileIncluded(file, item.children))
-          return true
-      }
-      else {
-        if (data.file.filepath === file)
-          return true
+        if (data.filepath === file) return true
+      } else if (data instanceof TestFolder) {
+        if (this.isFileIncluded(file, item.children)) return true
+      } else {
+        if (data.file.filepath === file) return true
       }
     }
     return false
@@ -468,17 +449,16 @@ export class ContinuousTestRunner extends TestRunner {
   private getTestFilesInFolder(path: string) {
     const folder = this.tree.getOrCreateFolderTestItem(this.api, path)
     const items = this.tree.getFolderFiles(folder)
-    return [...new Set(items.map(item => (getTestData(item) as TestFile).filepath))]
+    return [...new Set(items.map((item) => (getTestData(item) as TestFile).filepath))]
   }
 
   // It is important to create new requests every time the file is changed,
   // Otherwise it becomes stale.
   private createContinuousRequest() {
-    if (!this.continuousRequests.size)
-      return undefined
+    if (!this.continuousRequests.size) return undefined
     const include = []
     for (const request of this.continuousRequests) {
-      include.push(...request.include || [])
+      include.push(...(request.include || []))
     }
     return new vscode.TestRunRequest(
       include.length ? include : undefined,
@@ -496,15 +476,21 @@ function setTestErrors(test: vscode.TestItem, errors: TestError[] | undefined) {
   }
 }
 
-function testMessageForTestError(testItem: vscode.TestItem, error: TestError | undefined): vscode.TestMessage {
-  if (!error)
-    return new vscode.TestMessage('Unknown error')
+function testMessageForTestError(
+  testItem: vscode.TestItem,
+  error: TestError | undefined,
+): vscode.TestMessage {
+  if (!error) return new vscode.TestMessage('Unknown error')
 
   let testMessage
-  if (error.actual != null && error.expected != null && error.actual !== 'undefined' && error.expected !== 'undefined')
+  if (
+    error.actual != null &&
+    error.expected != null &&
+    error.actual !== 'undefined' &&
+    error.expected !== 'undefined'
+  )
     testMessage = vscode.TestMessage.diff(getErrorMessage(error), error.expected, error.actual)
-  else
-    testMessage = new vscode.TestMessage(getErrorMessage(error))
+  else testMessage = new vscode.TestMessage(getErrorMessage(error))
 
   setMessageStackFramesFromErrorStacks(testMessage, error.stacks)
 
@@ -525,7 +511,11 @@ export interface DebuggerLocation {
   column: number
 }
 
-function getSourceFilepathAndLocationFromStack(stack: ParsedStack): { sourceFilepath?: string; line: number; column: number } {
+function getSourceFilepathAndLocationFromStack(stack: ParsedStack): {
+  sourceFilepath?: string
+  line: number
+  column: number
+} {
   return {
     sourceFilepath: stack.file.replace(/\//g, path.sep),
     line: stack.line,
@@ -533,9 +523,11 @@ function getSourceFilepathAndLocationFromStack(stack: ParsedStack): { sourceFile
   }
 }
 
-function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[]): DebuggerLocation | undefined {
-  if (stacks.length === 0)
-    return undefined
+function parseLocationFromStacks(
+  testItem: vscode.TestItem,
+  stacks: ParsedStack[],
+): DebuggerLocation | undefined {
+  if (stacks.length === 0) return undefined
 
   const targetFilepath = testItem.uri!.fsPath
   for (const stack of stacks) {
@@ -554,19 +546,24 @@ function parseLocationFromStacks(testItem: vscode.TestItem, stacks: ParsedStack[
   log.verbose?.('Could not find a valid stack for', testItem.label, JSON.stringify(stacks, null, 2))
 }
 
-function setMessageStackFramesFromErrorStacks(testMessage: vscode.TestMessage, stacks: ParsedStack[] | undefined) {
+function setMessageStackFramesFromErrorStacks(
+  testMessage: vscode.TestMessage,
+  stacks: ParsedStack[] | undefined,
+) {
   // Error stack frames are available only in ^1.93
-  if (!('TestMessageStackFrame' in vscode))
-    return
-  if (!stacks || stacks.length === 0)
-    return
+  if (!('TestMessageStackFrame' in vscode)) return
+  if (!stacks || stacks.length === 0) return
 
   const TestMessageStackFrame = vscode.TestMessageStackFrame
 
   const frames = stacks.map((stack) => {
     const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
     const sourceUri = sourceFilepath ? vscode.Uri.file(sourceFilepath) : undefined
-    return new TestMessageStackFrame(stack.method, sourceUri, new vscode.Position(line - 1, column - 1))
+    return new TestMessageStackFrame(
+      stack.method,
+      sourceUri,
+      new vscode.Position(line - 1, column - 1),
+    )
   })
 
   testMessage.stackTrace = frames
@@ -574,15 +571,20 @@ function setMessageStackFramesFromErrorStacks(testMessage: vscode.TestMessage, s
 
 function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTestSpecification[] {
   // if there is a folder, we can't limit the tests to a specific project
-  const hasFolder = tests.some(test => getTestData(test) instanceof TestFolder)
+  const hasFolder = tests.some((test) => getTestData(test) instanceof TestFolder)
   if (hasFolder) {
-    return [...new Set(tests.map((test) => {
-      const data = getTestData(test)
-      const fsPath = normalize(test.uri!.fsPath)
-      if (data instanceof TestFolder)
-        return `${fsPath}/`
-      return fsPath
-    }).filter(Boolean) as string[])]
+    return [
+      ...new Set(
+        tests
+          .map((test) => {
+            const data = getTestData(test)
+            const fsPath = normalize(test.uri!.fsPath)
+            if (data instanceof TestFolder) return `${fsPath}/`
+            return fsPath
+          })
+          .filter(Boolean) as string[],
+      ),
+    ]
   }
   const testSpecs: ExtensionTestSpecification[] = []
   const testFiles = new Set<string>()
@@ -590,12 +592,10 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTe
     const fsPath = normalize(test.uri!.fsPath)
     const data = getTestData(test)
     // just to type guard, actually not possible to have
-    if (data instanceof TestFolder)
-      continue
+    if (data instanceof TestFolder) continue
     const project = data instanceof TestFile ? data.project : data.file.project
     const key = `${project}\0${fsPath}`
-    if (testFiles.has(key))
-      continue
+    if (testFiles.has(key)) continue
     testFiles.add(key)
     testSpecs.push([project, fsPath])
   }
@@ -607,13 +607,15 @@ function formatTestPattern(tests: readonly vscode.TestItem[], patterns: string[]
     const data = getTestData(test)!
     // file or a folder, try to include every test in there
     if (!('getTestNamePattern' in data)) {
-      formatTestPattern(Array.from(test.children, t => t[1]), patterns)
+      formatTestPattern(
+        Array.from(test.children, (t) => t[1]),
+        patterns,
+      )
       continue
     }
     patterns.push(data.getTestNamePattern())
   }
-  if (!patterns.length)
-    return undefined
+  if (!patterns.length) return undefined
   return patterns.join('|')
 }
 
@@ -622,7 +624,6 @@ function formatTestOutput(output: string) {
 }
 
 function labelTestItems(items: readonly vscode.TestItem[] | undefined) {
-  if (!items)
-    return '<all tests>'
-  return items.map(p => `"${p.label}"`).join(', ')
+  if (!items) return '<all tests>'
+  return items.map((p) => `"${p.label}"`).join(', ')
 }

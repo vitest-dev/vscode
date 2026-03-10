@@ -3,5 +3,5 @@ export function add(a: number, b: number) {
 }
 
 export function sum(from: number, to: number) {
-  return (from + to) * (to - from + 1) / 2
+  return ((from + to) * (to - from + 1)) / 2
 }

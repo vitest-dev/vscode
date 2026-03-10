@@ -66,8 +66,7 @@ export class TestTree extends vscode.Disposable {
     if (workspaceFolders.length === 1) {
       const rootItem = this.getOrCreateInlineFolderItem(workspaceFolders[0].uri)
       rootItem.children.replace([this.loaderItem])
-    }
-    else {
+    } else {
       const folderItems = workspaceFolders.map((x) => {
         const item = this.getOrCreateWorkspaceFolderItem(x.uri)
         item.children.replace([])
@@ -80,11 +79,9 @@ export class TestTree extends vscode.Disposable {
 
   discoverAllTestFiles(api: VitestProcessAPI, files: ExtensionTestFileSpecification[]) {
     const folderItem = this.folderItems.get(normalize(api.workspaceFolder.uri.fsPath))
-    if (folderItem)
-      folderItem.busy = false
+    if (folderItem) folderItem.busy = false
 
-    for (const [file, metadata] of files)
-      this.getOrCreateFileTestItem(api, metadata, file)
+    for (const [file, metadata] of files) this.getOrCreateFileTestItem(api, metadata, file)
 
     return files
   }
@@ -105,8 +102,7 @@ export class TestTree extends vscode.Disposable {
     const symlinkUri = this.getSymlinkFolder(folderUri)
     const id = normalize(symlinkUri.fsPath)
     const cached = this.folderItems.get(id)
-    if (cached)
-      return cached
+    if (cached) return cached
     const item: vscode.TestItem = {
       id: symlinkUri.toString(),
       children: this.controller.items,
@@ -133,8 +129,7 @@ export class TestTree extends vscode.Disposable {
     const symlinkUri = this.getSymlinkFolder(folderUri)
     const folderId = normalize(symlinkUri.fsPath)
     const cached = this.folderItems.get(folderId)
-    if (cached)
-      return cached
+    if (cached) return cached
 
     const folderItem = this._createFolderItem(symlinkUri)
     this.folderItems.set(folderId, folderItem)
@@ -151,40 +146,25 @@ export class TestTree extends vscode.Disposable {
     const normalizedFile = normalize(file)
     const fileId = `${normalizedFile}${project}`
     const cached = this.fileItems.get(fileId)
-    if (cached)
-      return cached
+    if (cached) return cached
 
     const fileUri = vscode.Uri.file(resolve(file))
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
     const label = `${basename(file)}${project ? ` [${project}]` : ''}`
-    const testFileItem = this.controller.createTestItem(
-      fileId,
-      label,
-      fileUri,
-    )
+    const testFileItem = this.controller.createTestItem(fileId, label, fileUri)
     // "description" looks nicer in the test explorer,
     // but it's not displayed in the gutter icon
     // testFileItem.description = project
     testFileItem.tags = [api.tag]
     testFileItem.canResolveChildren = true
-    TestFile.register(
-      testFileItem,
-      parentItem,
-      normalizedFile,
-      api,
-      metadata,
-    )
+    TestFile.register(testFileItem, parentItem, normalizedFile, api, metadata)
     parentItem.children.add(testFileItem)
     this.fileItems.set(fileId, testFileItem)
     const cachedItems = this.testItemsByFile.get(normalizedFile) || []
     cachedItems.push(testFileItem)
     this.testItemsByFile.set(normalizedFile, cachedItems)
     this.testFiles.add(fileUri.fsPath)
-    vscode.commands.executeCommand(
-      'setContext',
-      'vitest.testFiles',
-      [...this.testFiles],
-    )
+    vscode.commands.executeCommand('setContext', 'vitest.testFiles', [...this.testFiles])
 
     return testFileItem
   }
@@ -192,8 +172,7 @@ export class TestTree extends vscode.Disposable {
   getOrCreateFolderTestItem(api: VitestProcessAPI, normalizedFolder: string) {
     const cached = this.folderItems.get(normalizedFolder)
     if (cached) {
-      if (!cached.tags.includes(api.tag))
-        cached.tags = [...cached.tags, api.tag]
+      if (!cached.tags.includes(api.tag)) cached.tags = [...cached.tags, api.tag]
       return cached
     }
 
@@ -231,12 +210,11 @@ export class TestTree extends vscode.Disposable {
 
   public removeFile(filepath: string) {
     const items = this.testItemsByFile.get(normalize(filepath))
-    items?.forEach(item => this.recursiveDelete(item))
+    items?.forEach((item) => this.recursiveDelete(item))
   }
 
   private recursiveDelete(item: vscode.TestItem) {
-    if (!item.parent)
-      return
+    if (!item.parent) return
     item.parent.children.delete(item.id)
     this.flatTestItems.delete(item.id)
     const data = getTestData(item)
@@ -245,11 +223,9 @@ export class TestTree extends vscode.Disposable {
       this.testItemsByFile.delete(data.filepath)
       this.fileItems.delete(item.id)
     }
-    if (data instanceof TestFolder)
-      this.folderItems.delete(item.id)
+    if (data instanceof TestFolder) this.folderItems.delete(item.id)
 
-    if (!item.parent.children.size)
-      this.recursiveDelete(item.parent)
+    if (!item.parent.children.size) this.recursiveDelete(item.parent)
   }
 
   public getAPIFromTestItem(testItem: vscode.TestItem) {
@@ -258,8 +234,7 @@ export class TestTree extends vscode.Disposable {
 
   async discoverTestsInFile(testItem: vscode.TestItem) {
     const data = getTestData(testItem)
-    if (!(data instanceof TestFile))
-      return
+    if (!(data instanceof TestFile)) return
     const api = data.api
     if (!api) {
       log.error(`Cannot find collector for ${testItem.uri?.fsPath}`)
@@ -269,23 +244,20 @@ export class TestTree extends vscode.Disposable {
     try {
       await api.collectTests(data.project, testItem.uri!.fsPath)
       return testItem
-    }
-    finally {
+    } finally {
       testItem.busy = false
     }
   }
 
   public getTestItemByTaskId(taskId: string): vscode.TestItem | undefined {
     const testItem = this.flatTestItems.get(taskId)
-    if (!testItem)
-      return undefined
+    if (!testItem) return undefined
     return testItem || undefined
   }
 
   public getTestItemByTask(task: RunnerTask): vscode.TestItem | null {
     const cachedItem = this.flatTestItems.get(task.id)
-    if (cachedItem)
-      return cachedItem
+    if (cachedItem) return cachedItem
     if ('filepath' in task && task.filepath) {
       const testItem = this.fileItems.get(`${task.filepath}${task.projectName || ''}`)
       return testItem || null
@@ -297,10 +269,8 @@ export class TestTree extends vscode.Disposable {
     const files: vscode.TestItem[] = []
     for (const [_, item] of folder.children) {
       const data = getTestData(item)
-      if (data instanceof TestFile)
-        files.push(item)
-      else if (data instanceof TestFolder)
-        files.push(...this.getFolderFiles(item))
+      if (data instanceof TestFile) files.push(item)
+      else if (data instanceof TestFolder) files.push(...this.getFolderFiles(item))
     }
     return files
   }
@@ -310,7 +280,9 @@ export class TestTree extends vscode.Disposable {
     const fileId = `${normalizedFile}${file.projectName || ''}`
     const fileTestItem = this.fileItems.get(fileId)
     if (!fileTestItem) {
-      log.error(`Cannot find a file test item for ${file.filepath} in "${file.projectName || 'core'}" project.`)
+      log.error(
+        `Cannot find a file test item for ${file.filepath} in "${file.projectName || 'core'}" project.`,
+      )
       return
     }
     fileTestItem.error = undefined
@@ -318,11 +290,10 @@ export class TestTree extends vscode.Disposable {
     const data = getTestData(fileTestItem) as TestFile
     this.collectTasks(api.tag, data, file.tasks, fileTestItem)
     if (file.result?.errors) {
-      const error = file.result.errors.map(error => error.stack || error.message).join('\n')
+      const error = file.result.errors.map((error) => error.stack || error.message).join('\n')
       fileTestItem.error = error
       log.error(`Error in ${file.filepath}`, error)
-    }
-    else if (!file.tasks.length) {
+    } else if (!file.tasks.length) {
       fileTestItem.error = `No tests found in ${file.filepath}`
     }
     fileTestItem.canResolveChildren = false
@@ -338,8 +309,14 @@ export class TestTree extends vscode.Disposable {
     }
   } = {}
 
-  collectTasks(tag: vscode.TestTag, fileData: TestFile, tasks: RunnerTask[], parent: vscode.TestItem) {
-    const fileCachedTests = this.cacheDynamic[fileData.filepath] || (this.cacheDynamic[fileData.filepath] = {})
+  collectTasks(
+    tag: vscode.TestTag,
+    fileData: TestFile,
+    tasks: RunnerTask[],
+    parent: vscode.TestItem,
+  ) {
+    const fileCachedTests =
+      this.cacheDynamic[fileData.filepath] || (this.cacheDynamic[fileData.filepath] = {})
     const ids = new Set()
 
     for (const task of tasks) {
@@ -355,11 +332,9 @@ export class TestTree extends vscode.Disposable {
         }
       }
 
-      const testItem = this.flatTestItems.get(task.id) || this.controller.createTestItem(
-        task.id,
-        task.name,
-        parent.uri,
-      )
+      const testItem =
+        this.flatTestItems.get(task.id) ||
+        this.controller.createTestItem(task.id, task.name, parent.uri)
       testItem.tags = [...new Set([...parent.tags, tag])]
       testItem.error = undefined
       testItem.label = task.name
@@ -367,37 +342,39 @@ export class TestTree extends vscode.Disposable {
       if (location) {
         const position = new vscode.Position(location.line - 1, location.column)
         testItem.range = new vscode.Range(position, position)
-      }
-      else {
+      } else {
         log.error(`Cannot find location for "${testItem.label}". Using "id" to sort instead.`)
         testItem.sortText = task.id
       }
       // dynamic exists only during AST collection
       // see src/worker/collect.ts:172
       const isDynamic = (task as any).dynamic
-      if (task.type === 'suite')
-        TestSuite.register(testItem, parent, fileData, isDynamic)
-      else if (isTest(task))
-        TestCase.register(testItem, parent, fileData, isDynamic)
+      if (task.type === 'suite') TestSuite.register(testItem, parent, fileData, isDynamic)
+      else if (isTest(task)) TestCase.register(testItem, parent, fileData, isDynamic)
 
       if (isDynamic) {
         testItem.description = 'pattern'
-        const dynamicTestRegExp = (getTestData(testItem) as TestCase | TestSuite).getTestNamePattern()
+        const dynamicTestRegExp = (
+          getTestData(testItem) as TestCase | TestSuite
+        ).getTestNamePattern()
 
-        const cachedDynamicTest = fileCachedTests[dynamicTestRegExp] || (fileCachedTests[dynamicTestRegExp] = {
-          id: task.id,
-          type: isTest(task) ? 'test' : task.type,
-          children: new Set(),
-        })
+        const cachedDynamicTest =
+          fileCachedTests[dynamicTestRegExp] ||
+          (fileCachedTests[dynamicTestRegExp] = {
+            id: task.id,
+            type: isTest(task) ? 'test' : task.type,
+            children: new Set(),
+          })
         cachedDynamicTest.children.forEach((fileId) => {
           // don't remove tests that were collected during runtime
           ids.add(fileId)
         })
-      }
-      else if (task.each) {
+      } else if (task.each) {
         const fullName = getTaskFullName(task)
         // order in the opposite order so we only match one item with the longest name
-        const orderedTests = Object.entries(fileCachedTests).sort(([a1], [a2]) => a2.localeCompare(a1))
+        const orderedTests = Object.entries(fileCachedTests).sort(([a1], [a2]) =>
+          a2.localeCompare(a1),
+        )
         for (const [testRegexp, cachedDynamicTask] of orderedTests) {
           if (new RegExp(testRegexp).test(fullName)) {
             const testId = cachedDynamicTask.id
@@ -410,11 +387,9 @@ export class TestTree extends vscode.Disposable {
             ids.add(childId)
             if (dynamicTestItem) {
               // we are creating a separate one because we can't use the same one in multiple places
-              const suiteCopyChild = this.flatTestItems.get(childId) || this.controller.createTestItem(
-                childId,
-                dynamicTestItem.label,
-                dynamicTestItem.uri,
-              )
+              const suiteCopyChild =
+                this.flatTestItems.get(childId) ||
+                this.controller.createTestItem(childId, dynamicTestItem.label, dynamicTestItem.uri)
               this.flatTestItems.set(childId, suiteCopyChild)
               suiteCopyChild.tags = dynamicTestItem.tags
               suiteCopyChild.canResolveChildren = dynamicTestItem.canResolveChildren
@@ -425,8 +400,7 @@ export class TestTree extends vscode.Disposable {
 
               if (task.type === 'suite') {
                 TestSuite.register(suiteCopyChild, parent, fileData, true)
-              }
-              else {
+              } else {
                 TestCase.register(suiteCopyChild, parent, fileData, true)
               }
 
@@ -444,7 +418,7 @@ export class TestTree extends vscode.Disposable {
       // errors during collection are not test failures, they need to be
       // displayed as errors in the tree
       if (task.result?.errors) {
-        const error = task.result.errors.map(error => error.stack).join('\n')
+        const error = task.result.errors.map((error) => error.stack).join('\n')
         testItem.error = error
       }
 
@@ -453,15 +427,14 @@ export class TestTree extends vscode.Disposable {
       }
       // only tests have tags, and 'tasks' in task narrows it down
       else if ('tags' in task) {
-        const tags = (task.tags as string[]).map(tag => this.tagsManager.getTestTag(tag))
+        const tags = (task.tags as string[]).map((tag) => this.tagsManager.getTestTag(tag))
         testItem.tags = [...testItem.tags, ...tags]
       }
     }
 
     // remove tasks that are no longer present
     parent.children.forEach((child) => {
-      if (!ids.has(child.id))
-        parent.children.delete(child.id)
+      if (!ids.has(child.id)) parent.children.delete(child.id)
     })
   }
 }
@@ -475,14 +448,11 @@ function isTest(task: RunnerTask) {
 
 function getAPIFromFolder(folder: vscode.TestItem): VitestProcessAPI | null {
   const data = getTestData(folder)
-  if (data instanceof TestFile)
-    return data.api
-  if (!(data instanceof TestFolder))
-    return null
+  if (data instanceof TestFile) return data.api
+  if (!(data instanceof TestFolder)) return null
   for (const [, child] of folder.children) {
     const api = getAPIFromTestItem(child)
-    if (api)
-      return api
+    if (api) return api
   }
   return null
 }
@@ -491,11 +461,9 @@ function getAPIFromTestItem(testItem: vscode.TestItem): VitestProcessAPI | null 
   const data = getTestData(testItem)
   // API is stored in test files - if this is a folder, try to find a file inside,
   // otherwise go up until we find a file, this should never be a folder
-  if (data instanceof TestFolder)
-    return getAPIFromFolder(testItem)
+  if (data instanceof TestFolder) return getAPIFromFolder(testItem)
 
-  if (data instanceof TestFile)
-    return data.api
+  if (data instanceof TestFile) return data.api
   return data.file.api
 }
 

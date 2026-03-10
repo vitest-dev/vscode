@@ -18,9 +18,11 @@ type LaunchFixture = (options: {
   extensionPath?: string
   workspacePath?: string
   trace?: 'on' | 'off'
-}) => Promise<Context & {
-  step: (name: string, fn: (context: Context) => void | Promise<void>) => Promise<void>
-}>
+}) => Promise<
+  Context & {
+    step: (name: string, fn: (context: Context) => void | Promise<void>) => Promise<void>
+  }
+>
 
 const defaultConfig = process.env as {
   VSCODE_E2E_EXTENSION_PATH?: string
@@ -30,7 +32,8 @@ const defaultConfig = process.env as {
 
 export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; logPath: string }>({
   taskName: async ({ task }, use) => use(`${task.name}-${task.id}`),
-  logPath: async ({ taskName }, use) => use(resolve(`./test-results/${process.env.OS_NAME + '/' || ''}tests-logs-${taskName}.txt`)),
+  logPath: async ({ taskName }, use) =>
+    use(resolve(`./test-results/${process.env.OS_NAME + '/' || ''}tests-logs-${taskName}.txt`)),
   launch: async ({ taskName, logPath }, use) => {
     const teardowns: (() => Promise<void>)[] = []
 
@@ -63,12 +66,13 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
       })
       const page = await app.firstWindow()
 
-      if (trace)
-        await page.context().tracing.start({ screenshots: true, snapshots: true })
+      if (trace) await page.context().tracing.start({ screenshots: true, snapshots: true })
 
       const teardown = async () => {
         if (trace) {
-          await page.context().tracing.stop({ path: `test-results/${process.env.OS_NAME + '/' || ''}${taskName}/basic.zip` })
+          await page.context().tracing.stop({
+            path: `test-results/${process.env.OS_NAME + '/' || ''}${taskName}/basic.zip`,
+          })
         }
         await app.close()
         await fs.promises.rm(tempDir, { recursive: true, force: true })
@@ -81,8 +85,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
         await page.reload()
         try {
           await fn({ page, tester })
-        }
-        catch (err) {
+        } catch (err) {
           throw new Error(`Error during step "${name}"`, { cause: err })
         }
       }
@@ -92,7 +95,6 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
       return { page, tester, step }
     })
 
-    for (const teardown of teardowns)
-      await teardown()
+    for (const teardown of teardowns) await teardown()
   },
 })

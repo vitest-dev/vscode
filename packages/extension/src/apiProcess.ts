@@ -34,7 +34,7 @@ export class VitestProjectConfig {
   }
 
   get configs() {
-    return this.projects.map(p => p.config).filter(n => n != null)
+    return this.projects.map((p) => p.config).filter((n) => n != null)
   }
 
   get version() {
@@ -49,7 +49,9 @@ export class VitestProjectConfig {
     const metadata: TestFileMetadata[] = []
     let fileContent: string
     for (const project of this.projects) {
-      if (this.matchesTestGlob(project, file, () => (fileContent ??= readFileSync(file, 'utf-8')))) {
+      if (
+        this.matchesTestGlob(project, file, () => (fileContent ??= readFileSync(file, 'utf-8')))
+      ) {
         metadata.push({
           pool: project.pool,
           project: project.name,
@@ -68,10 +70,7 @@ export class VitestProjectConfig {
     if (pm.isMatch(relativeId, project.include)) {
       return true
     }
-    if (
-      project.includeSource?.length
-      && pm.isMatch(relativeId, project.includeSource)
-    ) {
+    if (project.includeSource?.length && pm.isMatch(relativeId, project.includeSource)) {
       const code = source()
       if (code.includes('import.meta.vitest')) {
         return true
@@ -170,20 +169,26 @@ export class VitestProcessAPI {
       return [projectName, filepath] as [string, string]
     })
     const root = this.workspaceFolder.uri.fsPath
-    log.info('[API]', `Collecting tests: ${tests.map(t => `${relative(root, t[1])}${t[0] ? ` [${t[0]}]` : ''}`).join(', ')}`)
+    log.info(
+      '[API]',
+      `Collecting tests: ${tests.map((t) => `${relative(root, t[1])}${t[0] ? ` [${t[0]}]` : ''}`).join(', ')}`,
+    )
     const projects = [...new Set(tests.map(([projectName]) => projectName))]
     try {
       // TODO make sure errors are reported during collection (throw error in the config, for example)
-      await withProcess(this.config.pkg, async (meta) => {
-        meta.handlers.onCollected((file, collecting) => {
-          for (const listener of this.collectionListeners) {
-            listener(file, collecting)
-          }
-        })
-        await meta.rpc.collectTests(tests)
-      }, { projects })
-    }
-    catch (err) {
+      await withProcess(
+        this.config.pkg,
+        async (meta) => {
+          meta.handlers.onCollected((file, collecting) => {
+            for (const listener of this.collectionListeners) {
+              listener(file, collecting)
+            }
+          })
+          await meta.rpc.collectTests(tests)
+        },
+        { projects },
+      )
+    } catch (err) {
       log.error('[API]', 'Collection failed:', err)
     }
   }, 300)
@@ -233,8 +238,7 @@ export class VitestProcessAPI {
   }
 
   async cancelRun() {
-    if (!this.currentMeta || this.currentMeta.process.closed)
-      return
+    if (!this.currentMeta || this.currentMeta.process.closed) return
     await this.currentMeta.rpc.cancelRun()
   }
 
@@ -247,8 +251,7 @@ export class VitestProcessAPI {
   }
 
   async getModuleEnvironments(moduleId: string) {
-    if (!this.currentMeta || this.currentMeta.process.closed)
-      return []
+    if (!this.currentMeta || this.currentMeta.process.closed) return []
     return this.currentMeta.rpc.getModuleEnvironments(normalize(moduleId))
   }
 
@@ -267,7 +270,7 @@ export class VitestProcessAPI {
     if (!this.currentMeta || this.currentMeta.process.closed) {
       return
     }
-    return this.currentMeta.rpc.onFilesChanged(files.map(f => normalize(f))).catch((err) => {
+    return this.currentMeta.rpc.onFilesChanged(files.map((f) => normalize(f))).catch((err) => {
       log.error('[API]', 'Failed to notify Vitest about file change', err)
     })
   })
@@ -324,7 +327,10 @@ export interface ResolvedMeta {
   dispose: () => Promise<void>
 }
 
-export function spawnVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions): Promise<ResolvedMeta> {
+export function spawnVitestProcess(
+  pkg: VitestPackage,
+  options?: ProcessSpawnOptions,
+): Promise<ResolvedMeta> {
   const config = getConfig(pkg.folder)
   if (config.cliArguments && !pkg.arguments) {
     pkg.arguments = `vitest ${config.cliArguments}`
@@ -348,8 +354,7 @@ export async function withProcess<T>(
   const meta = await spawnVitestProcess(pkg, options)
   try {
     return await fn(meta)
-  }
-  finally {
+  } finally {
     await meta.dispose().catch((err) => {
       log.error('[API]', 'Failed to close Vitest process', err)
     })

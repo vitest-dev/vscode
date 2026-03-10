@@ -71,5 +71,6 @@ Run and watch the tests.
 Run and watch the tests - and open the [Vitest UI](https://vitest.dev/guide/ui.html)
 
 ## Notes
+
 - This app doesn't have a server. If you need a full stack web application with server logic you can use [imba base template](https://github.com/imba/imba-base-template) or check out [Vite's backend integration guide](https://vitejs.dev/guide/backend-integration.html)
 - There is a temporary `src/main.js` file that is still necessary for Vite to work correctly. You don't have to do anything with this file. And this will probably be fixed in a future version of Vite.

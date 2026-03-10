@@ -26,12 +26,8 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const folderConfig = vscode.workspace.getConfiguration('vitest', workspaceFolder)
   const rootConfig = vscode.workspace.getConfiguration('vitest')
 
-  const get = <T>(key: string, defaultValue?: T) => getConfigValue<T>(
-    rootConfig,
-    folderConfig,
-    key,
-    defaultValue,
-  )
+  const get = <T>(key: string, defaultValue?: T) =>
+    getConfigValue<T>(rootConfig, folderConfig, key, defaultValue)
 
   const nodeExecutable = get<string | undefined>('nodeExecutable')
   const workspaceConfig = get<string | undefined>('workspaceConfig')
@@ -42,19 +38,18 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     '{**/node_modules/**,**/vendor/**,**/.*/**,**/*.d.ts}',
   )!
 
-  const configSearchPatternInclude = get<string>(
-    'configSearchPatternInclude',
-    configGlob,
-  ) || configGlob
+  const configSearchPatternInclude =
+    get<string>('configSearchPatternInclude', configGlob) || configGlob
 
   const vitestPackagePath = get<string | undefined>('vitestPackagePath')
-  const resolvedVitestPackagePath = workspaceFolder && vitestPackagePath
-    ? resolve(
-        workspaceFolder.uri.fsPath,
-        // eslint-disable-next-line no-template-curly-in-string
-        vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
-      )
-    : vitestPackagePath
+  const resolvedVitestPackagePath =
+    workspaceFolder && vitestPackagePath
+      ? resolve(
+          workspaceFolder.uri.fsPath,
+          // eslint-disable-next-line no-template-curly-in-string
+          vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
+        )
+      : vitestPackagePath
 
   const logLevel = get<string>('logLevel', 'info')
 
@@ -108,8 +103,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
 }
 
 export function resolveConfigPath(path: string | undefined) {
-  if (!path || isAbsolute(path))
-    return path
+  if (!path || isAbsolute(path)) return path
   if (path.startsWith('~/')) {
     return resolve(homedir(), path.slice(2))
   }
@@ -119,8 +113,7 @@ export function resolveConfigPath(path: string | undefined) {
     return resolve(dirname(vscode.workspace.workspaceFile.fsPath), path)
   const workspaceFolders = vscode.workspace.workspaceFolders
   // if there is no workspace file, then it's probably a single folder workspace
-  if (workspaceFolders?.length === 1)
-    return resolve(workspaceFolders[0].uri.fsPath, path)
+  if (workspaceFolders?.length === 1) return resolve(workspaceFolders[0].uri.fsPath, path)
   // if there are still several folders, then we can't reliably resolve the path
   return path
 }

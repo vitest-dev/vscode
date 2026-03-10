@@ -1,10 +1,10 @@
 {
   "name": "ast-collector",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "description": "",
-  "author": "",
   "license": "ISC",
+  "author": "",
   "scripts": {
     "test": "vitest run"
   },

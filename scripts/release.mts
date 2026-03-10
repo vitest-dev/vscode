@@ -29,15 +29,23 @@ const result = await prompts([
     choices: [
       { value: major, title: `${'major'.padStart(PADDING, ' ')} ${c.bold(major)}` },
       { value: minor, title: `${'minor'.padStart(PADDING, ' ')} ${c.bold(minor)}` },
-      { value: preminor, title: `${'pre-minor'.padStart(PADDING, ' ')} ${c.bold(preminor)} (odd number)` },
-      { value: patch, title: `${(isCurrentlyPreRelease ? 'pre-patch' : 'patch').padStart(PADDING, ' ')} ${c.bold(patch)}` },
-      { value: currentVersion, title: `${'as-is'.padStart(PADDING, ' ')} ${c.bold(currentVersion)}` },
+      {
+        value: preminor,
+        title: `${'pre-minor'.padStart(PADDING, ' ')} ${c.bold(preminor)} (odd number)`,
+      },
+      {
+        value: patch,
+        title: `${(isCurrentlyPreRelease ? 'pre-patch' : 'patch').padStart(PADDING, ' ')} ${c.bold(patch)}`,
+      },
+      {
+        value: currentVersion,
+        title: `${'as-is'.padStart(PADDING, ' ')} ${c.bold(currentVersion)}`,
+      },
     ],
   },
 ])
 
-if (!result.release)
-  process.exit(0)
+if (!result.release) process.exit(0)
 
 await versionBump({
   release: result.release,

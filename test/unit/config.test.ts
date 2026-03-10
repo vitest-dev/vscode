@@ -4,7 +4,5 @@ import { expect } from 'chai'
 import { resolveConfigPath } from '../../packages/extension/src/config'
 
 it('correctly resolves ~', () => {
-  expect(resolveConfigPath('~/test')).to.equal(
-    resolve(homedir(), 'test'),
-  )
+  expect(resolveConfigPath('~/test')).to.equal(resolve(homedir(), 'test'))
 })
