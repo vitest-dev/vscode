@@ -155,6 +155,17 @@ afterEach(() => {
   renamedPaths.clear()
 })
 
+export function addFile(file: string, content: string) {
+  createdFiles.add(file)
+  fs.writeFileSync(file, content, 'utf-8')
+}
+
+export function deleteFile(file: string) {
+  const content = fs.readFileSync(file, 'utf-8')
+  if (!originalFiles.has(file)) originalFiles.set(file, content)
+  fs.unlinkSync(file)
+}
+
 export function editFile(file: string, callback: (content: string) => string) {
   const content = fs.readFileSync(file, 'utf-8')
   if (!originalFiles.has(file)) originalFiles.set(file, content)

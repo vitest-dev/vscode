@@ -2,7 +2,7 @@ import { readFileSync, rmSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './utils/helper'
-import { editFile, renameFile } from './utils/tester'
+import { addFile, deleteFile, editFile, renameFile } from './utils/tester'
 
 // Vitst extension doesn't work with CI flag
 beforeAll(() => {
@@ -272,6 +272,49 @@ test('deno runtime', async ({ launch }) => {
   await expect(denoTest).toHaveTests({
     'deno-exists': 'passed',
   })
+})
+
+test('adding and deleting files updates the tree', async ({ launch }) => {
+  const sample = 'samples/basic-v4'
+
+  const { tester } = await launch({
+    workspacePath: `./${sample}`,
+  })
+
+  await tester.tree.expand('test/deep/deeper')
+
+  const deepTest = tester.tree.getFileItem('deep.test.ts')
+  await expect(deepTest.locator).toBeVisible()
+
+  // also expand a parallel branch so we can verify it stays
+  await tester.tree.expand('test/add.test.ts')
+  const addTest = tester.tree.getFileItem('add.test.ts')
+  await expect(addTest.locator).toBeVisible()
+
+  // add a second file in deeper
+  addFile(
+    `${sample}/test/deep/deeper/second.test.ts`,
+    `import { expect, it } from 'vitest'\n\nit('second', () => {\n  expect(2).toBe(2)\n})\n`,
+  )
+
+  await tester.tree.expand('test/deep/deeper')
+  const secondTest = tester.tree.getFileItem('second.test.ts')
+  await expect(secondTest.locator).toBeVisible()
+  await expect(deepTest.locator).toBeVisible()
+
+  // delete the first file — second file should remain, folder stays
+  deleteFile(`${sample}/test/deep/deeper/deep.test.ts`)
+
+  await expect(deepTest.locator).not.toBeVisible()
+  await expect(secondTest.locator).toBeVisible()
+
+  // delete the second file — folder should disappear from the tree
+  deleteFile(`${sample}/test/deep/deeper/second.test.ts`)
+
+  await expect(secondTest.locator).not.toBeVisible()
+
+  // parallel tree branch is untouched
+  await expect(addTest.locator).toBeVisible()
 })
 
 test('renaming a folder back preserves test items', async ({ launch }) => {
