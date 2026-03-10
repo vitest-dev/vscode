@@ -5,14 +5,7 @@ export default antfu(
     // Disable tests rules because we need to test with various setup
     test: false,
     // This replaces the old `.gitignore`
-    ignores: [
-      '**/coverage',
-      '**/*.snap',
-      '**/bench.json',
-      '**/fixtures',
-      '**/samples',
-      'test',
-    ],
+    ignores: ['**/coverage', '**/*.snap', '**/bench.json', '**/fixtures', '**/samples', 'test'],
   },
   {
     rules: {
@@ -22,7 +15,7 @@ export default antfu(
       'no-empty-pattern': 'off',
       'antfu/indent-binary-ops': 'off',
       'unused-imports/no-unused-imports': 'error',
-      'curly': 'off',
+      curly: 'off',
       'e18e/prefer-static-regex': 'off',
       'pnpm/yaml-no-duplicate-catalog-item': 'off',
       'style/member-delimiter-style': [
@@ -67,9 +60,7 @@ export default antfu(
     },
   },
   {
-    files: [
-      `docs/${GLOB_SRC}`,
-    ],
+    files: [`docs/${GLOB_SRC}`],
     rules: {
       'style/max-statements-per-line': 'off',
       'import/newline-after-import': 'off',
@@ -78,11 +69,7 @@ export default antfu(
     },
   },
   {
-    files: [
-      `docs/${GLOB_SRC}`,
-      `packages/web-worker/${GLOB_SRC}`,
-      `test/web-worker/${GLOB_SRC}`,
-    ],
+    files: [`docs/${GLOB_SRC}`, `packages/web-worker/${GLOB_SRC}`, `test/web-worker/${GLOB_SRC}`],
     rules: {
       'no-restricted-globals': 'off',
     },

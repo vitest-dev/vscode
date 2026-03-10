@@ -2,9 +2,9 @@
   "name": "continuous",
   "version": "1.0.0",
   "description": "",
-  "type": "module",
-  "author": "",
   "license": "ISC",
+  "author": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "vitest run"

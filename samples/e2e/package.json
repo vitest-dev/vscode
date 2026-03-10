@@ -1,8 +1,8 @@
 {
   "name": "@vitest/vscode-sample-e2e",
-  "type": "module",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
+  "type": "module",
   "scripts": {
     "test": "vitest"
   },

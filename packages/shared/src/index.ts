@@ -1,9 +1,5 @@
 import type { BirpcReturn } from 'birpc'
-import type {
-  RunnerTaskResultPack,
-  RunnerTestFile,
-  UserConsoleLog,
-} from 'vitest'
+import type { RunnerTaskResultPack, RunnerTestFile, UserConsoleLog } from 'vitest'
 
 export { WorkerWSEventEmitter } from './emitter'
 export { createWorkerRPC } from './rpc'
@@ -15,10 +11,7 @@ export {
   normalizeDriveLetter,
 } from './utils'
 
-export type ExtensionTestSpecification = [
-  project: string,
-  file: string,
-]
+export type ExtensionTestSpecification = [project: string, file: string]
 
 export interface ExtensionTestFileMetadata {
   project: string
@@ -30,10 +23,7 @@ export interface ExtensionTestFileMetadata {
   }
 }
 
-export type ExtensionTestFileSpecification = [
-  file: string,
-  ExtensionTestFileMetadata,
-]
+export type ExtensionTestFileSpecification = [file: string, ExtensionTestFileMetadata]
 
 export interface ExtensionUserConsoleLog extends UserConsoleLog {
   // Parsed location from stack trace for inline display
@@ -57,10 +47,19 @@ export interface ExtensionWorkerTransport {
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
   cancelRun: () => Promise<void>
   // accepts files with the project or folders (project doesn't matter for them)
-  runTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
-  updateSnapshots: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
+  runTests: (
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ) => Promise<void>
+  updateSnapshots: (
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ) => Promise<void>
 
-  watchTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
+  watchTests: (
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ) => Promise<void>
   getSourceModuleDiagnostic: (moduleId: string) => Promise<SourceModuleDiagnostic>
 
   exit: () => void
@@ -78,7 +77,12 @@ export interface ExtensionWorkerTransport {
 export interface ExtensionWorkerEvents {
   onConsoleLog: (log: ExtensionUserConsoleLog) => void
   onTaskUpdate: (task: RunnerTaskResultPack[]) => void
-  onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean, coverage?: unknown) => void
+  onTestRunEnd: (
+    files: RunnerTestFile[],
+    unhandledError: string,
+    collecting?: boolean,
+    coverage?: unknown,
+  ) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
   onTestRunStart: (files: string[]) => void
 

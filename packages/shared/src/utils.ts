@@ -6,7 +6,12 @@ type QueueNode<T> = [value: T, next?: QueueNode<T>]
 /**
  * Return a function for running multiple async operations with limited concurrency.
  */
-export function limitConcurrency(concurrency = Number.POSITIVE_INFINITY): <Args extends unknown[], T>(func: (...args: Args) => PromiseLike<T> | T, ...args: Args) => Promise<T> {
+export function limitConcurrency(
+  concurrency = Number.POSITIVE_INFINITY,
+): <Args extends unknown[], T>(
+  func: (...args: Args) => PromiseLike<T> | T,
+  ...args: Args
+) => Promise<T> {
   // The number of currently active + pending tasks.
   let count = 0
 
@@ -41,20 +46,20 @@ export function limitConcurrency(concurrency = Number.POSITIVE_INFINITY): <Args 
       if (count++ < concurrency) {
         // No need to queue if fewer than maxConcurrency tasks are running.
         resolve()
-      }
-      else if (tail) {
+      } else if (tail) {
         // There are pending tasks, so append to the queue.
         tail = tail[1] = [resolve]
-      }
-      else {
+      } else {
         // No other pending tasks, initialize the queue with a new tail and head.
         head = tail = [resolve]
       }
-    }).then(() => {
-      // Running func here ensures that even a non-thenable result or an
-      // immediately thrown error gets wrapped into a Promise.
-      return func(...args)
-    }).finally(finish)
+    })
+      .then(() => {
+        // Running func here ensures that even a non-thenable result or an
+        // immediately thrown error gets wrapped into a Promise.
+        return func(...args)
+      })
+      .finally(finish)
   }
 }
 
@@ -67,9 +72,12 @@ export function assert(condition: unknown, message: string | (() => string)): as
 export function getSuggestedInstallCommand(cwd: string) {
   const pkgManager = detectPackageManager(cwd)
   switch (pkgManager?.name) {
-    case 'bun': return 'bun install --dev vitest'
-    case 'yarn': return 'yarn add -D vitest'
-    case 'pnpm': return 'pnpm add -D vitest'
+    case 'bun':
+      return 'bun install --dev vitest'
+    case 'yarn':
+      return 'yarn add -D vitest'
+    case 'pnpm':
+      return 'pnpm add -D vitest'
     case 'npm':
     default:
       return 'npm i --save-dev vitest'
@@ -77,8 +85,7 @@ export function getSuggestedInstallCommand(cwd: string) {
 }
 
 export function normalizeDriveLetter(path: string) {
-  if (process.platform !== 'win32')
-    return path
+  if (process.platform !== 'win32') return path
   return path[0].toUpperCase() + path.slice(1)
 }
 
@@ -89,18 +96,16 @@ export function createQueuedHandler<T>(resolver: (value: T[]) => Promise<void>, 
   let pendingResolvers: Array<() => void> = []
 
   function flush() {
-    if (promise)
-      return
+    if (promise) return
     const values = [...cached]
     cached.clear()
     const resolvers = pendingResolvers
     pendingResolvers = []
     promise = resolver(values).finally(() => {
       promise = null
-      resolvers.forEach(fn => fn())
+      resolvers.forEach((fn) => fn())
       // If more items were queued while resolving, flush them
-      if (cached.size)
-        flush()
+      if (cached.size) flush()
     })
   }
 

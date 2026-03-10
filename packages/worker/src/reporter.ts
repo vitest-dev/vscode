@@ -29,12 +29,7 @@ export class VSCodeReporter implements Reporter {
     this.setupFilePaths = meta.setupFilePaths
     this.debug = debug
     if (meta.pnpApi && meta.pnpLoader) {
-      this.execArgv.push(
-        '--require',
-        meta.pnpApi,
-        '--experimental-loader',
-        meta.pnpLoader,
-      )
+      this.execArgv.push('--require', meta.pnpApi, '--experimental-loader', meta.pnpLoader)
     }
   }
 
@@ -87,8 +82,7 @@ export class VSCodeReporter implements Reporter {
             }
           }
         }
-      }
-      catch {
+      } catch {
         // If parsing fails, continue without parsed location
       }
     }
@@ -116,7 +110,7 @@ export class VSCodeReporter implements Reporter {
   }
 
   onTestRunStart(specifications: ReadonlyArray<TestSpecification>) {
-    const files = specifications.map(spec => spec.moduleId)
+    const files = specifications.map((spec) => spec.moduleId)
     this.rpc.onTestRunStart([...new Set(files)])
     this.vitest.state.filesMap.clear()
   }
@@ -126,7 +120,7 @@ export class VSCodeReporter implements Reporter {
   }
 
   async onTestRunEnd(testModules: ReadonlyArray<TestModule>) {
-    const files = testModules.map(m => getEntityJSONTask(m))
+    const files = testModules.map((m) => getEntityJSONTask(m))
 
     // Make sure we rendered everything before ending the test run
     // If test run is no active, the log will be lost
@@ -165,8 +159,7 @@ export class VSCodeReporter implements Reporter {
         if (this.debuggerAttached) {
           resolve()
           return
-        }
-        else if (this.debuggerAttached === false) {
+        } else if (this.debuggerAttached === false) {
           reject(new Error(`Browser Debugger failed to connect.`))
           return
         }
@@ -175,8 +168,7 @@ export class VSCodeReporter implements Reporter {
       ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
         if (fullfilled) {
           resolve()
-        }
-        else {
+        } else {
           reject(new Error(`Browser Debugger failed to connect.`))
         }
       })
@@ -207,9 +199,12 @@ export class VSCodeReporter implements Reporter {
       return
     }
 
-    const promise = this.rpc.onProcessLog(type, message).catch(() => {}).finally(() => {
-      this.logPromises.delete(promise)
-    })
+    const promise = this.rpc
+      .onProcessLog(type, message)
+      .catch(() => {})
+      .finally(() => {
+        this.logPromises.delete(promise)
+      })
 
     this.logPromises.add(promise)
   }

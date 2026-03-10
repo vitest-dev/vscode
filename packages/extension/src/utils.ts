@@ -17,16 +17,13 @@ export function formatPkg(pkg: VitestPackage) {
 }
 
 function _showVitestError(message: string, error?: any) {
-  if (error)
-    log.error(error)
+  if (error) log.error(error)
 
-  vscode.window.showErrorMessage(
-    `${message}. Check the output for more details.`,
-    'See error',
-  ).then((result) => {
-    if (result === 'See error')
-      vscode.commands.executeCommand('vitest.openOutput')
-  })
+  vscode.window
+    .showErrorMessage(`${message}. Check the output for more details.`, 'See error')
+    .then((result) => {
+      if (result === 'See error') vscode.commands.executeCommand('vitest.openOutput')
+    })
 }
 
 export const showVitestError = debounce(_showVitestError, 100)
@@ -38,8 +35,7 @@ export function pluralize(count: number, singular: string) {
 export function debounce<T extends (...args: any[]) => void>(cb: T, wait = 20) {
   let h: NodeJS.Timeout | undefined
   const callable = (...args: any) => {
-    if (h)
-      clearTimeout(h)
+    if (h) clearTimeout(h)
     h = setTimeout(cb, wait, ...args)
   }
   return <T>(<any>callable)
@@ -51,8 +47,7 @@ const urlAlphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwy
 export function nanoid(size = 21) {
   let id = ''
   let i = size
-  while (i--)
-    id += urlAlphabet[(Math.random() * 64) | 0]
+  while (i--) id += urlAlphabet[(Math.random() * 64) | 0]
   return id
 }
 
@@ -82,19 +77,21 @@ export function clearCachedRuntime() {
 }
 
 // based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
-export async function findRuntimeExecutable(runtime: 'node' | 'deno', cwd: string): Promise<string> {
+export async function findRuntimeExecutable(
+  runtime: 'node' | 'deno',
+  cwd: string,
+): Promise<string> {
   if (getConfig().nodeExecutable)
     // if empty string, keep as undefined
     pathToRuntime[runtime] = getConfig().nodeExecutable || undefined
 
-  if (pathToRuntime[runtime])
-    return pathToRuntime[runtime]
+  if (pathToRuntime[runtime]) return pathToRuntime[runtime]
 
   // Stage 1: Try to find Node.js via process.env.PATH
   let node: string | null = await which(runtime, { nothrow: true })
   // Stage 2: When extension host boots, it does not have the right env set, so we might need to wait.
   for (let i = 0; i < 5 && !node; ++i) {
-    await new Promise(f => setTimeout(f, 200))
+    await new Promise((f) => setTimeout(f, 200))
     node = await which(runtime, { nothrow: true })
   }
   // Stage 3: If we still haven't found Node.js, try to find it via a subprocess.
@@ -111,31 +108,30 @@ export async function findRuntimeExecutable(runtime: 'node' | 'deno', cwd: strin
 }
 
 async function findRuntimeViaShell(runtime: 'node' | 'deno', cwd: string): Promise<string | null> {
-  if (process.platform === 'win32')
-    return null
+  if (process.platform === 'win32') return null
   return new Promise<string | null>((resolve) => {
     const startToken = '___START_SHELL__'
     const endToken = '___END_SHELL__'
     try {
-      const childProcess = spawn(`${vscode.env.shell} -i -c 'if [[ $(type ${runtime} 2>/dev/null) == *function* ]]; then ${runtime} --version; fi; echo ${startToken} && which ${runtime} && echo ${endToken}'`, {
-        stdio: 'pipe',
-        shell: true,
-        cwd,
-      })
+      const childProcess = spawn(
+        `${vscode.env.shell} -i -c 'if [[ $(type ${runtime} 2>/dev/null) == *function* ]]; then ${runtime} --version; fi; echo ${startToken} && which ${runtime} && echo ${endToken}'`,
+        {
+          stdio: 'pipe',
+          shell: true,
+          cwd,
+        },
+      )
       let output = ''
-      childProcess.stdout.on('data', data => output += data.toString())
+      childProcess.stdout.on('data', (data) => (output += data.toString()))
       childProcess.on('error', () => resolve(null))
       childProcess.on('exit', (exitCode) => {
-        if (exitCode !== 0)
-          return resolve(null)
+        if (exitCode !== 0) return resolve(null)
         const start = output.indexOf(startToken)
         const end = output.indexOf(endToken)
-        if (start === -1 || end === -1)
-          return resolve(null)
+        if (start === -1 || end === -1) return resolve(null)
         return resolve(output.substring(start + startToken.length, end).trim())
       })
-    }
-    catch (e) {
+    } catch (e) {
       log.error('[SPAWN]', vscode.env.shell, e)
       resolve(null)
     }
@@ -150,8 +146,7 @@ export function getErrorMessage(error: TestError) {
   message += stripVTControlCharacters(error.message ?? '')
   if (typeof error.frame === 'string') {
     message += `\n${error.frame}`
-  }
-  else {
+  } else {
     const errorProperties = getErrorProperties(error)
     if (Object.keys(errorProperties).length) {
       const errorsInspect = inspect(errorProperties, {

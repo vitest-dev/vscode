@@ -1,44 +1,88 @@
 {
-  "publisher": "vitest",
   "name": "explorer",
   "displayName": "Vitest",
-  "type": "commonjs",
   "version": "1.46.0",
-  "packageManager": "pnpm@10.11.1",
   "description": "A Vite-native testing framework. It's fast!",
-  "author": "Vitest Team",
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "javascript",
+    "test",
+    "typescript",
+    "vitest"
+  ],
+  "bugs": {
+    "url": "https://github.com/vitest-dev/vscode/issues"
+  },
   "license": "MIT",
+  "author": "Vitest Team",
   "repository": {
     "type": "git",
     "url": "https://github.com/vitest-dev/vscode.git"
   },
-  "bugs": {
-    "url": "https://github.com/vitest-dev/vscode/issues"
-  },
   "sponsor": {
     "url": "https://opencollective.com/vitest"
   },
-  "keywords": [
-    "vitest",
-    "test",
-    "typescript",
-    "javascript"
-  ],
-  "categories": [
-    "Testing"
-  ],
+  "publisher": "vitest",
+  "type": "commonjs",
   "main": "./dist/extension.js",
-  "icon": "img/icon.png",
-  "pricing": "Free",
-  "engines": {
-    "vscode": "^1.88.0"
+  "scripts": {
+    "vscode:prepublish": "pnpm build",
+    "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
+    "build": "tsdown --minify --clean",
+    "package": "vsce package --no-dependencies",
+    "dev": "EXTENSION_NODE_ENV=dev tsdown --watch --sourcemap",
+    "test": "vscode-test",
+    "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
+    "test-e2e": "vitest --root test/e2e",
+    "test-e2e:legacy": "TEST_LEGACY=true vitest --root test/e2e",
+    "ecosystem-ci:build": "pnpm build",
+    "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
+    "typecheck": "tsc -b ./ --noEmit",
+    "fmt": "oxfmt --check",
+    "fmt:fix": "oxfmt"
   },
-  "activationEvents": [
-    "workspaceContains:**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}",
-    "workspaceContains:**/*vitest.{workspace,projects}*.{ts,js,mjs,cjs,cts,mts,json}",
-    "workspaceContains:node_modules/.bin/vitest",
-    "workspaceContains:node_modules/.bin/vp"
-  ],
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/chai": "catalog:",
+    "@types/micromatch": "catalog:",
+    "@types/mocha": "catalog:",
+    "@types/node": "catalog:",
+    "@types/prompts": "catalog:",
+    "@types/semver": "catalog:",
+    "@types/vscode": "^1.77.0",
+    "@types/which": "catalog:",
+    "@types/ws": "catalog:",
+    "@vscode/test-cli": "catalog:",
+    "@vscode/test-electron": "catalog:",
+    "@vscode/vsce": "catalog:",
+    "@vue/reactivity": "catalog:",
+    "acorn": "catalog:",
+    "acorn-walk": "catalog:",
+    "birpc": "catalog:",
+    "bumpp": "catalog:",
+    "chai": "catalog:",
+    "changelogithub": "catalog:",
+    "execa": "catalog:",
+    "find-up": "catalog:",
+    "get-port": "catalog:",
+    "istanbul-to-vscode": "catalog:",
+    "micromatch": "catalog:",
+    "mighty-promise": "catalog:",
+    "mocha": "catalog:",
+    "oxfmt": "^0.37.0",
+    "pathe": "catalog:",
+    "picocolors": "catalog:",
+    "prompts": "catalog:",
+    "semver": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:latest",
+    "which": "catalog:",
+    "ws": "catalog:"
+  },
   "contributes": {
     "languages": [
       {
@@ -347,7 +391,11 @@
           "description": "Which runtime to use by default.",
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "node", "deno"]
+          "enum": [
+            "auto",
+            "node",
+            "deno"
+          ]
         },
         "vitest.watchOnStartup": {
           "description": "Watch every test file after the extension is loaded. This is the same as enabling continuous run.",
@@ -357,66 +405,16 @@
       }
     }
   },
-  "scripts": {
-    "vscode:prepublish": "pnpm build",
-    "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
-    "build": "tsdown --minify --clean",
-    "package": "vsce package --no-dependencies",
-    "dev": "EXTENSION_NODE_ENV=dev tsdown --watch --sourcemap",
-    "test": "vscode-test",
-    "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
-    "test-e2e": "vitest --root test/e2e",
-    "test-e2e:legacy": "TEST_LEGACY=true vitest --root test/e2e",
-    "ecosystem-ci:build": "pnpm build",
-    "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
-    "typecheck": "tsc -b ./ --noEmit",
-    "lint": "eslint --cache .",
-    "lint:fix": "eslint --cache --fix ."
+  "activationEvents": [
+    "workspaceContains:**/*vitest.{workspace,projects}*.{ts,js,mjs,cjs,cts,mts,json}",
+    "workspaceContains:**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}",
+    "workspaceContains:node_modules/.bin/vitest",
+    "workspaceContains:node_modules/.bin/vp"
+  ],
+  "icon": "img/icon.png",
+  "engines": {
+    "vscode": "^1.88.0"
   },
-  "devDependencies": {
-    "@antfu/eslint-config": "catalog:",
-    "@playwright/test": "catalog:",
-    "@types/chai": "catalog:",
-    "@types/micromatch": "catalog:",
-    "@types/mocha": "catalog:",
-    "@types/node": "catalog:",
-    "@types/prompts": "catalog:",
-    "@types/semver": "catalog:",
-    "@types/vscode": "^1.77.0",
-    "@types/which": "catalog:",
-    "@types/ws": "catalog:",
-    "@vscode/test-cli": "catalog:",
-    "@vscode/test-electron": "catalog:",
-    "@vscode/vsce": "catalog:",
-    "@vue/reactivity": "catalog:",
-    "acorn": "catalog:",
-    "acorn-walk": "catalog:",
-    "birpc": "catalog:",
-    "bumpp": "catalog:",
-    "chai": "catalog:",
-    "changelogithub": "catalog:",
-    "eslint": "catalog:",
-    "execa": "catalog:",
-    "find-up": "catalog:",
-    "get-port": "catalog:",
-    "istanbul-to-vscode": "catalog:",
-    "micromatch": "catalog:",
-    "mighty-promise": "catalog:",
-    "mocha": "catalog:",
-    "pathe": "catalog:",
-    "picocolors": "catalog:",
-    "prompts": "catalog:",
-    "semver": "catalog:",
-    "tsdown": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:latest",
-    "which": "catalog:",
-    "ws": "catalog:"
-  },
-  "lint-staged": {
-    "*.{js,ts,tsx,vue,md}": [
-      "eslint --fix"
-    ]
-  }
+  "packageManager": "pnpm@10.11.1",
+  "pricing": "Free"
 }

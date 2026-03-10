@@ -37,7 +37,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   public get collecting() {
-    return this.configOverride.testNamePattern?.toString() === `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
+    return (
+      this.configOverride.testNamePattern?.toString() ===
+      `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
+    )
   }
 
   private get configOverride(): Partial<ResolvedConfig> {
@@ -47,14 +50,11 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   public setGlobalTestNamePattern(pattern?: string | RegExp): void {
     if (pattern == null || pattern === '') {
       this.configOverride.testNamePattern = undefined
-    }
-    else if ('setGlobalTestNamePattern' in this.vitest) {
+    } else if ('setGlobalTestNamePattern' in this.vitest) {
       return this.vitest.setGlobalTestNamePattern(pattern)
-    }
-    else {
-      this.configOverride.testNamePattern = typeof pattern === 'string'
-        ? new RegExp(pattern)
-        : pattern
+    } else {
+      this.configOverride.testNamePattern =
+        typeof pattern === 'string' ? new RegExp(pattern) : pattern
     }
   }
 
@@ -74,7 +74,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     const specifications: [project: WorkspaceProject, filepath: string][] = []
 
     for (const [projectName, filepath] of files) {
-      const project = this.vitest.projects.find(project => project.getName() === projectName)
+      const project = this.vitest.projects.find((project) => project.getName() === projectName)
       assert(project, `Project ${projectName} not found for file ${filepath}`)
       specifications.push([project, filepath])
     }
@@ -91,16 +91,23 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
     const runConcurrently = limitConcurrency(5)
 
-    const promises = specs.map(([project, filename]) => runConcurrently(
-      () => astCollectTests(project, filename).catch(err => createFailedFileTask(project, filename, err)),
-    ))
+    const promises = specs.map(([project, filename]) =>
+      runConcurrently(() =>
+        astCollectTests(project, filename).catch((err) =>
+          createFailedFileTask(project, filename, err),
+        ),
+      ),
+    )
     const files = await Promise.all(promises)
     this.configOverride.testNamePattern = new RegExp(ExtensionWorker.COLLECT_NAME_PATTERN)
     await this.report('onCollected', files)
     this.setTestNamePattern(undefined)
   }
 
-  public async updateSnapshots(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePattern?: string | undefined) {
+  public async updateSnapshots(
+    files?: ExtensionTestSpecification[] | string[] | undefined,
+    testNamePattern?: string | undefined,
+  ) {
     this.configOverride.snapshotOptions = {
       updateSnapshot: 'all',
       // environment is resolved inside a worker thread
@@ -108,29 +115,30 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     }
     try {
       return await this.runTests(files, testNamePattern)
-    }
-    finally {
+    } finally {
       delete this.configOverride.snapshotOptions
     }
   }
 
-  async resolveTestSpecs(specs: string[] | ExtensionTestSpecification[] | undefined): Promise<ExtensionTestSpecification[]> {
+  async resolveTestSpecs(
+    specs: string[] | ExtensionTestSpecification[] | undefined,
+  ): Promise<ExtensionTestSpecification[]> {
     if (!specs || typeof specs[0] === 'string') {
       const files = await this.globTestSpecifications(specs as string[] | undefined)
       return files.map<ExtensionTestSpecification>((spec) => {
         const project = spec[0]
         const file = spec[1]
 
-        return [
-          project.getName(),
-          file,
-        ]
+        return [project.getName(), file]
       })
     }
-    return (specs as ExtensionTestSpecification[] || [])
+    return (specs as ExtensionTestSpecification[]) || []
   }
 
-  public async runTests(specsOrPaths: ExtensionTestSpecification[] | string[] | undefined, testNamePattern?: string) {
+  public async runTests(
+    specsOrPaths: ExtensionTestSpecification[] | string[] | undefined,
+    testNamePattern?: string,
+  ) {
     // @ts-expect-error private method in Vitest <=2.1.5
     await this.vitest.initBrowserProviders?.()
 
@@ -152,7 +160,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     // reset cached test files list
     this.vitest.projects.forEach((project) => {
       // testFilesList is private
-      (project as any).testFilesList = null
+      ;(project as any).testFilesList = null
     })
     const files = await this.globTestSpecifications()
     return files.map((spec) => {
@@ -195,13 +203,17 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     })
   }
 
-  private async runTestFiles(specs: ExtensionTestSpecification[], testNamePattern?: string | undefined, runAllFiles = false) {
+  private async runTestFiles(
+    specs: ExtensionTestSpecification[],
+    testNamePattern?: string | undefined,
+    runAllFiles = false,
+  ) {
     await (this.vitest as any).runningPromise
 
     this.setTestNamePattern(testNamePattern)
 
     // populate cache so it can find test files
-    await this.globTestSpecifications(specs.map(f => f[1]))
+    await this.globTestSpecifications(specs.map((f) => f[1]))
 
     await this.rerunTests(specs, runAllFiles)
   }
@@ -211,18 +223,18 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   private async rerunTests(specs: ExtensionTestSpecification[], runAllFiles = false) {
-    const paths = specs.map(spec => spec[1])
+    const paths = specs.map((spec) => spec[1])
 
     const specsToRun = specs.flatMap((spec) => {
       const file = typeof spec === 'string' ? spec : spec[1]
       const fileSpecs = this.vitest.getModuleSpecifications
         ? this.vitest.getModuleSpecifications(file)
-        // supported by the older version
-        : this.vitest.getProjectsByTestFile(file)
+        : // supported by the older version
+          this.vitest.getProjectsByTestFile(file)
       if (!fileSpecs.length) {
         return []
       }
-      return fileSpecs.filter(s => s[0].getName() === spec[0])
+      return fileSpecs.filter((s) => s[0].getName() === spec[0])
     })
     await Promise.all([
       this.report('onWatcherRerun', paths),
@@ -256,10 +268,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   private updateLastChanged(filepath: string) {
     this.vitest.projects.forEach(({ server, browser }) => {
       const serverMods = server.moduleGraph.getModulesByFile(filepath)
-      serverMods?.forEach(mod => server.moduleGraph.invalidateModule(mod))
+      serverMods?.forEach((mod) => server.moduleGraph.invalidateModule(mod))
       if (browser) {
         const browserMods = browser.vite.moduleGraph.getModulesByFile(filepath)
-        browserMods?.forEach(mod => browser.vite.moduleGraph.invalidateModule(mod))
+        browserMods?.forEach((mod) => browser.vite.moduleGraph.invalidateModule(mod))
       }
     })
   }
@@ -273,8 +285,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
           this.scheduleRerun(needRerun)
         }
       }
-    }
-    catch (err) {
+    } catch (err) {
       this.vitest.logger.error('Error during analyzing changed files', err)
     }
   }
@@ -288,11 +299,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
         let content: string | null = null
         const projects = []
         for (const project of this.vitest.projects) {
-          if (this.isTestFile(
-            project,
-            file,
-            () => content ?? (content = readFileSync(file, 'utf-8')),
-          )) {
+          if (
+            this.isTestFile(project, file, () => content ?? (content = readFileSync(file, 'utf-8')))
+          ) {
             testFiles.push(file)
             ;(project as any).testFilesList?.push(file)
             this.vitest.changedTests.add(file)
@@ -301,13 +310,12 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
         }
         // to support Vitest 1.4.0
         if (projects.length && (this.vitest as any).projectsTestFiles) {
-          (this.vitest as any).projectsTestFiles.set(file, new Set(projects))
+          ;(this.vitest as any).projectsTestFiles.set(file, new Set(projects))
         }
       }
 
-      testFiles.forEach(file => this.scheduleRerun([file]))
-    }
-    catch (err) {
+      testFiles.forEach((file) => this.scheduleRerun([file]))
+    } catch (err) {
       this.vitest.logger.error('Error during analyzing created files', err)
     }
   }
@@ -321,8 +329,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       return true
     }
     if (
-      project.config.includeSource?.length
-      && mm.isMatch(relativeId, project.config.includeSource)
+      project.config.includeSource?.length &&
+      mm.isMatch(relativeId, project.config.includeSource)
     ) {
       const source = getContent()
       return source.includes('import.meta.vitest')
@@ -330,13 +338,18 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return false
   }
 
-  async watchTests(files?: ExtensionTestSpecification[] | string[] | undefined, testNamePatern?: string) {
-    await this.globTestSpecifications(files?.map(f => typeof f === 'string' ? f : f[1]))
+  async watchTests(
+    files?: ExtensionTestSpecification[] | string[] | undefined,
+    testNamePatern?: string,
+  ) {
+    await this.globTestSpecifications(files?.map((f) => (typeof f === 'string' ? f : f[1])))
 
     if (files)
-      this.watcher.trackTests(files.map(f => typeof f === 'string' ? f : f[1]), testNamePatern)
-    else
-      this.watcher.trackEveryFile()
+      this.watcher.trackTests(
+        files.map((f) => (typeof f === 'string' ? f : f[1])),
+        testNamePatern,
+      )
+    else this.watcher.trackEveryFile()
   }
 
   async exit() {

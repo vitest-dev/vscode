@@ -9,10 +9,7 @@
       "name": "Run Extension Basic Sample",
       "type": "extensionHost",
       "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}",
-        "${workspaceFolder}/samples/basic"
-      ],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/samples/basic"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -51,10 +48,7 @@
       "name": "Run Extension Imba Sample",
       "type": "extensionHost",
       "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}",
-        "${workspaceFolder}/samples/imba"
-      ],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/samples/imba"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {
@@ -151,10 +145,7 @@
       "name": "Run Extension Vue Sample",
       "type": "extensionHost",
       "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}",
-        "${workspaceFolder}/samples/vue"
-      ],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/samples/vue"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     },
     {

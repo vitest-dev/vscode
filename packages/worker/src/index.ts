@@ -1,4 +1,8 @@
-import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type {
+  SerializedProject,
+  WorkerRunnerOptions,
+  WorkerWSEventEmitter,
+} from 'vitest-vscode-shared'
 import type { TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { Writable } from 'node:stream'
@@ -38,8 +42,8 @@ export async function initVitest(
 
   const args = meta.arguments
     ? vitestModule.parseCLI(meta.arguments, {
-      allowUnknownOptions: false,
-    }).options
+        allowUnknownOptions: false,
+      }).options
     : {}
   const options = data.debug
     ? {
@@ -72,8 +76,7 @@ export async function initVitest(
     const inspect = `${data.debug.host}:${data.debug.port}`
     if (data.debug.browser) {
       cliOptions.inspect = inspect
-    }
-    else {
+    } else {
       cliOptions.inspectBrk = inspect
     }
   }
@@ -104,9 +107,7 @@ export async function initVitest(
                 coverage: {
                   enabled: !!data.coverage,
                   reportOnFailure: true,
-                  reporter: [
-                    ['json', { file: meta.finalCoverageFileName }],
-                  ],
+                  reporter: [['json', { file: meta.finalCoverageFileName }]],
                 },
               },
             }
@@ -158,9 +159,8 @@ export async function initVitest(
     }
   })
 
-  const workspaceSource: string | false = (vitest.config.projects != null)
-    ? vitest.vite.config.configFile || false
-    : false
+  const workspaceSource: string | false =
+    vitest.config.projects != null ? vitest.vite.config.configFile || false : false
   return {
     vitest,
     reporter,
@@ -168,11 +168,7 @@ export async function initVitest(
     projects,
     meta,
     createWorker() {
-      return new ExtensionWorker(
-        vitest,
-        !!data.debug,
-        emitter,
-      )
+      return new ExtensionWorker(vitest, !!data.debug, emitter)
     },
   }
 }

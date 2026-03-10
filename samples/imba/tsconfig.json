@@ -1,7 +1,5 @@
 {
-	"compilerOptions": {
-	  "types": [
-			"vitest/importMeta"
-	  ]
-	}
+  "compilerOptions": {
+    "types": ["vitest/importMeta"]
   }
+}

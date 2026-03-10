@@ -7,9 +7,7 @@ import { WebSocket } from 'ws'
 
 // this is the file that will be executed with "node <path>"
 
-const emitter = new WorkerWSEventEmitter(
-  new WebSocket(process.env.VITEST_WS_ADDRESS!),
-)
+const emitter = new WorkerWSEventEmitter(new WebSocket(process.env.VITEST_WS_ADDRESS!))
 
 process.title = 'vitest-vscode'
 
@@ -31,11 +29,11 @@ emitter.on('message', async function onMessage(message: any) {
     const data = message as WorkerRunnerOptions
 
     try {
-      const vitestModule = await import(
-        pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString(),
-      ) as typeof import('vitest/node')
+      const vitestModule = (await import(
+        pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString()
+      )) as typeof import('vitest/node')
 
-      const isLegacy = !vitestModule.version || (Number(vitestModule.version[0]) < 4)
+      const isLegacy = !vitestModule.version || Number(vitestModule.version[0]) < 4
       const workerName = isLegacy ? './workerLegacy.js' : './workerNew.js'
       const workerPath = pathToFileURL(join(__dirname, workerName))
       const initModule = await import(workerPath.toString())
@@ -48,26 +46,22 @@ emitter.on('message', async function onMessage(message: any) {
 
       const worker = createWorker()
 
-      const rpc = createWorkerRPC(
-        worker,
-        {
-          on(listener) {
-            emitter.on('message', listener)
-          },
-          post(message) {
-            emitter.send(message)
-          },
-          serialize: v8.serialize,
-          deserialize: v => v8.deserialize(Buffer.from(v) as any),
+      const rpc = createWorkerRPC(worker, {
+        on(listener) {
+          emitter.on('message', listener)
         },
-      )
+        post(message) {
+          emitter.send(message)
+        },
+        serialize: v8.serialize,
+        deserialize: (v) => v8.deserialize(Buffer.from(v) as any),
+      })
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
       emitter.ready(projects, workspaceSource, isLegacy)
 
       await worker.vitest.report('onInit', worker.vitest)
-    }
-    catch (err: any) {
+    } catch (err: any) {
       emitter.error(err)
     }
   }

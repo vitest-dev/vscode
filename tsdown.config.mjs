@@ -16,7 +16,9 @@ export default defineConfig([
     inlineOnly: false,
     platform: 'node',
     define: {
-      'process.env.EXTENSION_NODE_ENV': JSON.stringify(process.env.EXTENSION_NODE_ENV || 'production'),
+      'process.env.EXTENSION_NODE_ENV': JSON.stringify(
+        process.env.EXTENSION_NODE_ENV || 'production',
+      ),
     },
   },
   {

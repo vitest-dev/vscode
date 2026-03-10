@@ -6,13 +6,7 @@ export function createWorkerRPC(vitest: ExtensionWorkerTransport, channel: Chann
   const rpc = createBirpc<ExtensionWorkerEvents, ExtensionWorkerTransport>(vitest, {
     timeout: -1,
     bind: 'functions',
-    eventNames: [
-      'onConsoleLog',
-      'onTaskUpdate',
-      'onCollected',
-      'onTestRunStart',
-      'onTestRunEnd',
-    ],
+    eventNames: ['onConsoleLog', 'onTaskUpdate', 'onCollected', 'onTestRunStart', 'onTestRunEnd'],
     ...channel,
   })
   return rpc

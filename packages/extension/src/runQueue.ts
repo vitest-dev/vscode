@@ -51,9 +51,12 @@ export class RunQueue {
     return false
   }
 
-  async enqueue(request: vscode.TestRunRequest, token: vscode.CancellationToken, coverage: boolean) {
-    if (request.continuous)
-      return this.startContinuousRun(request, token, coverage)
+  async enqueue(
+    request: vscode.TestRunRequest,
+    token: vscode.CancellationToken,
+    coverage: boolean,
+  ) {
+    if (request.continuous) return this.startContinuousRun(request, token, coverage)
 
     if (!this.currentRun) {
       return this.executeRun(request, token, coverage)
@@ -68,7 +71,11 @@ export class RunQueue {
     })
   }
 
-  private async executeRun(request: vscode.TestRunRequest, token: vscode.CancellationToken, coverage: boolean) {
+  private async executeRun(
+    request: vscode.TestRunRequest,
+    token: vscode.CancellationToken,
+    coverage: boolean,
+  ) {
     this.currentRun = (async () => {
       // Each "run" click creates a new process to run tests
       // We don't reuse the established process because it's harder to track
@@ -82,8 +89,7 @@ export class RunQueue {
       const runner = this.createRunner(handle, api)
       try {
         await runner.runTests(request)
-      }
-      finally {
+      } finally {
         runner.dispose()
         await handle.dispose()
       }
@@ -91,13 +97,11 @@ export class RunQueue {
 
     try {
       await this.currentRun
-    }
-    catch (err: any) {
+    } catch (err: any) {
       if (!err.message?.startsWith('[birpc] rpc is closed')) {
         showVitestError('Failed to run tests', err)
       }
-    }
-    finally {
+    } finally {
       this.currentRun = undefined
       this.drainQueue()
     }
@@ -105,7 +109,7 @@ export class RunQueue {
 
   private drainQueue() {
     if (this.disposed) {
-      this.pendingQueue.forEach(p => p.resolveWithoutRunning())
+      this.pendingQueue.forEach((p) => p.resolveWithoutRunning())
       this.pendingQueue.length = 0
       return
     }
@@ -118,7 +122,11 @@ export class RunQueue {
 
   private continuousTimer: NodeJS.Timeout | undefined
 
-  private async startContinuousRun(request: vscode.TestRunRequest, token: vscode.CancellationToken, coverage: boolean) {
+  private async startContinuousRun(
+    request: vscode.TestRunRequest,
+    token: vscode.CancellationToken,
+    coverage: boolean,
+  ) {
     this.continuousRequests.add(request)
 
     token.onCancellationRequested(() => {
@@ -152,8 +160,7 @@ export class RunQueue {
     // it's possible that request was cancelled before we spawn the process
     if (this.continuousRequests.size) {
       await handle.runner.syncWatcher()
-    }
-    else {
+    } else {
       log.verbose?.('Closing the continues process because requests were cancelled.')
       await handle.dispose()
     }
@@ -223,7 +230,7 @@ export class RunQueue {
 
   dispose() {
     this.disposed = true
-    this.pendingQueue.forEach(p => p.resolveWithoutRunning())
+    this.pendingQueue.forEach((p) => p.resolveWithoutRunning())
     this.pendingQueue.length = 0
     this.api.cancelRun()
   }
@@ -248,13 +255,11 @@ function includesTestItem(item: vscode.TestItem, testItem: vscode.TestItem): boo
 
 function getProjectsFromRequest(request: vscode.TestRunRequest): string[] | undefined {
   const include = request.include
-  if (!include?.length)
-    return undefined
+  if (!include?.length) return undefined
   const projects = new Set<string>()
   for (const test of include) {
     const data = getTestData(test)
-    if (data instanceof TestFolder)
-      return undefined
+    if (data instanceof TestFolder) return undefined
     const project = data instanceof TestFile ? data.project : data.file.project
     projects.add(project)
   }

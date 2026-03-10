@@ -38,23 +38,31 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return this.runner.cancelRun()
   }
 
-  async runTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+  async runTests(
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ): Promise<void> {
     await this.runner.runTests(filesOrDirectories, testNamePattern)
   }
 
-  async updateSnapshots(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+  async updateSnapshots(
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ): Promise<void> {
     return this.runner.updateSnapshots(filesOrDirectories, testNamePattern)
   }
 
-  async watchTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+  async watchTests(
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ): Promise<void> {
     // Reset previous tracking state so re-clicking continuous run
     // picks up the new files/pattern instead of appending to old ones
     this.watcher.stopTracking()
 
     if (testNamePattern) {
       this.vitest.setGlobalTestNamePattern(testNamePattern)
-    }
-    else {
+    } else {
       this.vitest.resetGlobalTestNamePattern()
     }
 
@@ -64,8 +72,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
     if (!filesOrDirectories) {
       this.watcher.trackEveryFile()
-    }
-    else {
+    } else {
       this.watcher.trackTestItems(filesOrDirectories)
     }
   }
@@ -75,11 +82,11 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   onFilesChanged(files: string[]): void {
-    files.forEach(file => this.vitest.watcher.onFileChange(file))
+    files.forEach((file) => this.vitest.watcher.onFileChange(file))
   }
 
   onFilesCreated(files: string[]): void {
-    files.forEach(file => this.vitest.watcher.onFileCreate(file))
+    files.forEach((file) => this.vitest.watcher.onFileCreate(file))
   }
 
   async exit() {
@@ -96,8 +103,8 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
       const environments = new Map<string, { timestamp: number }>()
       for (const name in project.vite.environments) {
         const environment = project.vite.environments[name]
-        const nodes = [...environment.moduleGraph.getModulesByFile(moduleId) || []]
-        if (nodes.some(n => n.transformResult)) {
+        const nodes = [...(environment.moduleGraph.getModulesByFile(moduleId) || [])]
+        if (nodes.some((n) => n.transformResult)) {
           environments.set(name, { timestamp: nodes[0].lastInvalidationTimestamp })
         }
       }
@@ -112,10 +119,11 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   }
 
   getTransformedModule(projectName: string, environmentName: string, moduleId: string) {
-    const project = this.vitest.projects.find(p => p.name === projectName)
-    const environment = environmentName === '__browser__'
-      ? project?.browser?.vite?.environments.client
-      : project?.vite.environments[environmentName]
+    const project = this.vitest.projects.find((p) => p.name === projectName)
+    const environment =
+      environmentName === '__browser__'
+        ? project?.browser?.vite?.environments.client
+        : project?.vite.environments[environmentName]
     const files = environment?.moduleGraph.getModulesByFile(moduleId)
     if (!files || !files.size) {
       return null

@@ -56,22 +56,23 @@ class VitestExtension {
   _debugDisposable: vscode.Disposable | undefined
 
   constructor(context: vscode.ExtensionContext) {
-    log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
+    log.info(
+      `[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`,
+    )
 
     this.state = new ExtensionState(context)
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
-    this.testController.refreshHandler = cancelToken => this.defineTestProfiles(true, cancelToken).catch((err) => {
-      showVitestError('Failed to refresh Vitest', err)
-    })
-    this.testController.resolveHandler = item => this.resolveTestFile(item)
+    this.testController.refreshHandler = (cancelToken) =>
+      this.defineTestProfiles(true, cancelToken).catch((err) => {
+        showVitestError('Failed to refresh Vitest', err)
+      })
+    this.testController.resolveHandler = (item) => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
-    this.schemaProvider = new TransformSchemaProvider(
-      async (apiId, project, environment, file) => {
-        const api = this.api?.processes.find(a => a.id === apiId)
-        return api?.getTransformedModule(project, environment, file) ?? null
-      },
-    )
+    this.schemaProvider = new TransformSchemaProvider(async (apiId, project, environment, file) => {
+      const api = this.api?.processes.find((a) => a.id === apiId)
+      return api?.getTransformedModule(project, environment, file) ?? null
+    })
     this.tagsManager = new TagsManager()
     this.testTree = new TestTree(
       this.testController,
@@ -81,10 +82,11 @@ class VitestExtension {
     )
     this.debugManager = new DebugManager()
     this.importsBreakdownProvider = new ImportsBreakdownProvider(
-      async (moduleId: string) => this.api?.getSourceModuleDiagnostic(moduleId) || {
-        modules: [],
-        untrackedModules: [],
-      },
+      async (moduleId: string) =>
+        this.api?.getSourceModuleDiagnostic(moduleId) || {
+          modules: [],
+          untrackedModules: [],
+        },
     )
     this.inlineConsoleLog = new InlineConsoleLogManager(this.testTree)
   }
@@ -93,7 +95,8 @@ class VitestExtension {
 
   private async defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     if (!this._defineTestProfilePromise) {
-      this._defineTestProfilePromise = (() => this._defineTestProfiles(showWarning, cancelToken))().finally(() => {
+      this._defineTestProfilePromise = (() =>
+        this._defineTestProfiles(showWarning, cancelToken))().finally(() => {
         this._defineTestProfilePromise = undefined
       })
     }
@@ -104,7 +107,7 @@ class VitestExtension {
     this.importsBreakdownProvider.clear()
     this.inlineConsoleLog.clear()
     this.testTree.reset([])
-    this.runQueues.forEach(q => q.dispose())
+    this.runQueues.forEach((q) => q.dispose())
     this.runQueues.clear()
 
     const { workspaces, configs } = await resolveVitestPackages(showWarning)
@@ -121,7 +124,7 @@ class VitestExtension {
       return
     }
 
-    const folders = new Set([...workspaces, ...configs].map(x => x.folder))
+    const folders = new Set([...workspaces, ...configs].map((x) => x.folder))
     this.testTree.reset([...folders])
 
     const previousRunProfiles = this.runProfiles
@@ -138,27 +141,30 @@ class VitestExtension {
         profile.dispose()
       }
 
-      this.api = await resolveVitestAPI(workspaces, configs, cancelToken, ({ api: vitest, files }) => {
-        if (this.state.hasDisabledConfigs() && this.state.isConfigDisabled(vitest.id)) {
-          return
-        }
-
-        this.testTree.watchTestFilesInWorkspace(vitest, files)
-        this.setupProcessAPI(vitest)
-
-        this.testController.items.forEach((item) => {
-          if (item.children.size) {
-            item.busy = false
+      this.api = await resolveVitestAPI(
+        workspaces,
+        configs,
+        cancelToken,
+        ({ api: vitest, files }) => {
+          if (this.state.hasDisabledConfigs() && this.state.isConfigDisabled(vitest.id)) {
+            return
           }
-        })
-      })
-    }
-    catch (err) {
+
+          this.testTree.watchTestFilesInWorkspace(vitest, files)
+          this.setupProcessAPI(vitest)
+
+          this.testController.items.forEach((item) => {
+            if (item.children.size) {
+              item.busy = false
+            }
+          })
+        },
+      )
+    } catch (err) {
       this.testTree.reset([])
       showVitestError('Failed to start Vitest', err)
       return
-    }
-    finally {
+    } finally {
       this.testController.items.delete(this.loadingTestItem.id)
     }
 
@@ -293,20 +299,16 @@ class VitestExtension {
   }
 
   private async resolveTestFile(item?: vscode.TestItem) {
-    if (!item)
-      return
+    if (!item) return
     try {
       await this.testTree.discoverTestsInFile(item)
-    }
-    catch (err) {
+    } catch (err) {
       showVitestError('There was an error during test discovery', err)
     }
   }
 
   async activate() {
-    this.diagnostic = getConfig().applyDiagnostic
-      ? new ExtensionDiagnostic()
-      : undefined
+    this.diagnostic = getConfig().applyDiagnostic ? new ExtensionDiagnostic() : undefined
 
     this.loadingTestItem.busy = true
     this.testController.items.replace([this.loadingTestItem])
@@ -328,8 +330,11 @@ class VitestExtension {
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
-        const configName = reloadConfigNames.find(x => event.affectsConfiguration(x))
-        if (event.affectsConfiguration('vitest.runtime') || event.affectsConfiguration('deno.enabled')) {
+        const configName = reloadConfigNames.find((x) => event.affectsConfiguration(x))
+        if (
+          event.affectsConfiguration('vitest.runtime') ||
+          event.affectsConfiguration('deno.enabled')
+        ) {
           clearCachedRuntime()
         }
         if (configName) {
@@ -338,52 +343,64 @@ class VitestExtension {
           })
         }
       }),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false).catch((error) => {
-        log.error('[API]', `Failed to reload Vitest after workspaces changed`, error)
-      })),
+      vscode.workspace.onDidChangeWorkspaceFolders(() =>
+        this.defineTestProfiles(false).catch((error) => {
+          log.error('[API]', `Failed to reload Vitest after workspaces changed`, error)
+        }),
+      ),
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOuput()
       }),
-      vscode.commands.registerCommand('vitest.toggleContinuousRun', async (testItem?: vscode.TestItem) => {
-        if (!testItem) {
-          return
-        }
-        this.api?.processes.forEach((process) => {
-          const processId = `${process.id}:run`
-          const runProfile = this.runProfiles.get(processId)
-          const queue = this.runQueues.get(processId)
-          if (runProfile && testItem.tags.includes(runProfile.tag!) && queue) {
-            if (queue.isContinuousTestItem(testItem)) {
-              vscode.commands.executeCommand('vscode.stopContinuousTestRun', [testItem])
-            }
-            else {
-              vscode.commands.executeCommand('vscode.startContinuousTestRun', runProfile, [testItem])
-            }
+      vscode.commands.registerCommand(
+        'vitest.toggleContinuousRun',
+        async (testItem?: vscode.TestItem) => {
+          if (!testItem) {
+            return
           }
-        })
-      }),
-      vscode.commands.registerCommand('vitest.revealInTestExplorer', async (uri: vscode.Uri | undefined) => {
-        if (uri === undefined) {
-          uri = vscode.window.activeTextEditor?.document.uri
-        }
-        if (!(uri instanceof vscode.Uri)) {
-          return
-        }
-        const testItems = this.testTree.getFileTestItems(uri.fsPath)
-        if (testItems[0]) {
-          vscode.commands.executeCommand('vscode.revealTestInExplorer', testItems[0])
-        }
-      }),
+          this.api?.processes.forEach((process) => {
+            const processId = `${process.id}:run`
+            const runProfile = this.runProfiles.get(processId)
+            const queue = this.runQueues.get(processId)
+            if (runProfile && testItem.tags.includes(runProfile.tag!) && queue) {
+              if (queue.isContinuousTestItem(testItem)) {
+                vscode.commands.executeCommand('vscode.stopContinuousTestRun', [testItem])
+              } else {
+                vscode.commands.executeCommand('vscode.startContinuousTestRun', runProfile, [
+                  testItem,
+                ])
+              }
+            }
+          })
+        },
+      ),
+      vscode.commands.registerCommand(
+        'vitest.revealInTestExplorer',
+        async (uri: vscode.Uri | undefined) => {
+          if (uri === undefined) {
+            uri = vscode.window.activeTextEditor?.document.uri
+          }
+          if (!(uri instanceof vscode.Uri)) {
+            return
+          }
+          const testItems = this.testTree.getFileTestItems(uri.fsPath)
+          if (testItems[0]) {
+            vscode.commands.executeCommand('vscode.revealTestInExplorer', testItems[0])
+          }
+        },
+      ),
       vscode.commands.registerCommand('vitest.showShellTerminal', async () => {
-        const apis = this.api?.processes
-          .filter(api => api.getPersistentProcessMeta()?.process instanceof ExtensionTerminalProcess)
+        const apis = this.api?.processes.filter(
+          (api) => api.getPersistentProcessMeta()?.process instanceof ExtensionTerminalProcess,
+        )
         if (!apis?.length) {
-          vscode.window.showInformationMessage('No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration? Do you have any continuous runs active?')
+          vscode.window.showInformationMessage(
+            'No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration? Do you have any continuous runs active?',
+          )
           return
         }
         if (apis.length === 1) {
-          log.info('Showing the only available shell terminal');
-          (apis[0].getPersistentProcessMeta()?.process as ExtensionTerminalProcess).show()
+          log.info('Showing the only available shell terminal')
+          ;(apis[0].getPersistentProcessMeta()?.process as ExtensionTerminalProcess).show()
           return
         }
         const pick = await vscode.window.showQuickPick(
@@ -399,71 +416,80 @@ class VitestExtension {
           pick.process.show()
         }
       }),
-      vscode.commands.registerCommand('vitest.updateSnapshot', async (testItem: vscode.TestItem | undefined) => {
-        if (!testItem)
-          return
-        const api = this.testTree.getAPIFromTestItem(testItem)
-        if (!api)
-          return
-        const profile = this.runProfiles.get(`${api.id}:run`)
-        if (!profile)
-          return
-        const request = new vscode.TestRunRequest(
-          [testItem],
-          undefined,
-          profile,
-          false,
-        )
-        Object.assign(request, { updateSnapshots: true })
-        const tokenSource = new vscode.CancellationTokenSource()
-        await profile.runHandler(request, tokenSource.token)
-      }),
-      vscode.commands.registerCommand('vitest.openTransformedModule', async (uri: vscode.Uri | undefined) => {
-        const currentUri = uri || vscode.window.activeTextEditor?.document.uri
-        if (!this.api || !currentUri || currentUri.scheme === 'vitest-transform') {
-          return
-        }
-        const environments = await this.api.getModuleEnvironments(currentUri.fsPath)
-        const options = environments.map(({ api, projects }) => {
-          return projects.map((project) => {
-            return project.environments.map((environment) => {
-              let label = ''
-              if (environments.length > 1) {
-                label += `${api.prefix}: `
-              }
-              if (project.name) {
-                label += `[${project.name}] `
-              }
-              label += environment
-              return {
-                label,
-                uriParts: [api.id, project.name, environment.name, environment.transformTimestamp],
-              }
+      vscode.commands.registerCommand(
+        'vitest.updateSnapshot',
+        async (testItem: vscode.TestItem | undefined) => {
+          if (!testItem) return
+          const api = this.testTree.getAPIFromTestItem(testItem)
+          if (!api) return
+          const profile = this.runProfiles.get(`${api.id}:run`)
+          if (!profile) return
+          const request = new vscode.TestRunRequest([testItem], undefined, profile, false)
+          Object.assign(request, { updateSnapshots: true })
+          const tokenSource = new vscode.CancellationTokenSource()
+          await profile.runHandler(request, tokenSource.token)
+        },
+      ),
+      vscode.commands.registerCommand(
+        'vitest.openTransformedModule',
+        async (uri: vscode.Uri | undefined) => {
+          const currentUri = uri || vscode.window.activeTextEditor?.document.uri
+          if (!this.api || !currentUri || currentUri.scheme === 'vitest-transform') {
+            return
+          }
+          const environments = await this.api.getModuleEnvironments(currentUri.fsPath)
+          const options = environments
+            .map(({ api, projects }) => {
+              return projects.map((project) => {
+                return project.environments.map((environment) => {
+                  let label = ''
+                  if (environments.length > 1) {
+                    label += `${api.prefix}: `
+                  }
+                  if (project.name) {
+                    label += `[${project.name}] `
+                  }
+                  label += environment
+                  return {
+                    label,
+                    uriParts: [
+                      api.id,
+                      project.name,
+                      environment.name,
+                      environment.transformTimestamp,
+                    ],
+                  }
+                })
+              })
             })
-          })
-        }).flat(2)
-        if (options.length === 0) {
-          vscode.window.showWarningMessage('All module graphs are empty, nothing to show.')
-          return
-        }
-        const pick = options.length === 1 ? options[0] : await vscode.window.showQuickPick(options)
-        if (!pick) {
-          return
-        }
-        try {
-          const [apiId, projectName, environment, t] = pick.uriParts
-          const uri = vscode.Uri.parse(
-            `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}&t=${t}`,
-          )
-          const doc = await vscode.workspace.openTextDocument(uri)
-          await vscode.window.showTextDocument(doc, { preview: false })
-        }
-        catch (err) {
-          log.error(err)
-          vscode.window.showErrorMessage(`Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`)
-        }
-      }),
-      vscode.commands.registerCommand('vitest.copyTestItemErrors', testItem => copyTestItemErrors(this.testController, testItem)),
+            .flat(2)
+          if (options.length === 0) {
+            vscode.window.showWarningMessage('All module graphs are empty, nothing to show.')
+            return
+          }
+          const pick =
+            options.length === 1 ? options[0] : await vscode.window.showQuickPick(options)
+          if (!pick) {
+            return
+          }
+          try {
+            const [apiId, projectName, environment, t] = pick.uriParts
+            const uri = vscode.Uri.parse(
+              `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}&t=${t}`,
+            )
+            const doc = await vscode.workspace.openTextDocument(uri)
+            await vscode.window.showTextDocument(doc, { preview: false })
+          } catch (err) {
+            log.error(err)
+            vscode.window.showErrorMessage(
+              `Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`,
+            )
+          }
+        },
+      ),
+      vscode.commands.registerCommand('vitest.copyTestItemErrors', (testItem) =>
+        copyTestItemErrors(this.testController, testItem),
+      ),
       vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
       vscode.commands.registerCommand('vitest.toggleConfigs', async () => {
         if (!this.api) {
@@ -488,8 +514,10 @@ class VitestExtension {
           return
         }
 
-        const enabledKeys = new Set(result.map(i => i.key))
-        await this.state.setDisabledConfigs(new Set(items.filter(i => !enabledKeys.has(i.key)).map(i => i.key)))
+        const enabledKeys = new Set(result.map((i) => i.key))
+        await this.state.setDisabledConfigs(
+          new Set(items.filter((i) => !enabledKeys.has(i.key)).map((i) => i.key)),
+        )
 
         await this.defineTestProfiles(false)
       }),
@@ -502,39 +530,44 @@ class VitestExtension {
     ]
     this.disposables.push(...configWatchers)
 
-    const redefineTestProfiles = debounce((uri: vscode.Uri, event: 'create' | 'delete' | 'change') => {
-      if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
-        return
-      // if new config is created, always check if it should be respected
-      if (event === 'create') {
-        this.defineTestProfiles(false).catch((err) => {
-          log.error('Failed to define test profiles after a new config file was created', err)
-        })
-        return
-      }
-      // otherwise ignore changes to unrelated configs
-      const filePath = normalize(uri.fsPath)
-      for (const api of this.api.processes) {
-        if (
-          api.package.workspaceFile === filePath
-          || api.configs.includes(filePath)
-        ) {
+    const redefineTestProfiles = debounce(
+      (uri: vscode.Uri, event: 'create' | 'delete' | 'change') => {
+        if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
+          return
+        // if new config is created, always check if it should be respected
+        if (event === 'create') {
           this.defineTestProfiles(false).catch((err) => {
-            log.error('Failed to define test profiles after a new config file was updated', err)
+            log.error('Failed to define test profiles after a new config file was created', err)
           })
           return
         }
-      }
-    }, 300)
+        // otherwise ignore changes to unrelated configs
+        const filePath = normalize(uri.fsPath)
+        for (const api of this.api.processes) {
+          if (api.package.workspaceFile === filePath || api.configs.includes(filePath)) {
+            this.defineTestProfiles(false).catch((err) => {
+              log.error('Failed to define test profiles after a new config file was updated', err)
+            })
+            return
+          }
+        }
+      },
+      300,
+    )
 
-    configWatchers.forEach(watcher => watcher.onDidChange(uri => redefineTestProfiles(uri, 'change')))
-    configWatchers.forEach(watcher => watcher.onDidCreate(uri => redefineTestProfiles(uri, 'create')))
-    configWatchers.forEach(watcher => watcher.onDidDelete(uri => redefineTestProfiles(uri, 'delete')))
+    configWatchers.forEach((watcher) =>
+      watcher.onDidChange((uri) => redefineTestProfiles(uri, 'change')),
+    )
+    configWatchers.forEach((watcher) =>
+      watcher.onDidCreate((uri) => redefineTestProfiles(uri, 'create')),
+    )
+    configWatchers.forEach((watcher) =>
+      watcher.onDidDelete((uri) => redefineTestProfiles(uri, 'delete')),
+    )
 
     try {
       await this.defineTestProfiles(true)
-    }
-    catch (err) {
+    } catch (err) {
       showVitestError('There was an error during Vitest startup', err)
     }
   }
@@ -548,7 +581,9 @@ class VitestExtension {
       return
     }
     try {
-      const jsDebugExt = vscode.extensions.getExtension('ms-vscode.js-debug-nightly') || vscode.extensions.getExtension('ms-vscode.js-debug')
+      const jsDebugExt =
+        vscode.extensions.getExtension('ms-vscode.js-debug-nightly') ||
+        vscode.extensions.getExtension('ms-vscode.js-debug')
       await jsDebugExt?.activate()
       const jsDebug: import('@vscode/js-debug').IExports = jsDebugExt?.exports
 
@@ -561,12 +596,10 @@ class VitestExtension {
           },
         })
         this.disposables.push(this._debugDisposable)
-      }
-      else {
+      } else {
         log.error('Failed to connect to the debug extension. Debugger will open a terminal window.')
       }
-    }
-    catch (err) {
+    } catch (err) {
       log.error('Cannot create debug options provider.', err)
     }
   }
@@ -578,11 +611,11 @@ class VitestExtension {
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
     this.inlineConsoleLog.dispose()
-    this.runProfiles.forEach(p => p.dispose())
+    this.runProfiles.forEach((p) => p.dispose())
     this.runProfiles.clear()
-    this.disposables.forEach(d => d.dispose())
+    this.disposables.forEach((d) => d.dispose())
     this.disposables = []
-    this.runQueues.forEach(q => q.dispose())
+    this.runQueues.forEach((q) => q.dispose())
     this.runQueues.clear()
   }
 }

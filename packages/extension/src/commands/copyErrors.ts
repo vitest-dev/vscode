@@ -3,7 +3,10 @@ import * as vscode from 'vscode'
 import { getTestData, TestCase } from '../testTreeData'
 import { createTestLabel, getErrorMessage, showVitestError } from '../utils'
 
-export async function copyTestItemErrors(testController: vscode.TestController, testItem: vscode.TestItem | undefined) {
+export async function copyTestItemErrors(
+  testController: vscode.TestController,
+  testItem: vscode.TestItem | undefined,
+) {
   const errors: string[] = []
 
   const data = testItem && getTestData(testItem)
@@ -22,16 +25,14 @@ export async function copyTestItemErrors(testController: vscode.TestController, 
       if (message != null) {
         errors.push(message)
       }
-    }
-    else if (item.children.size) {
-      item.children.forEach(item => walk(item))
+    } else if (item.children.size) {
+      item.children.forEach((item) => walk(item))
     }
   }
   if (testItem) {
-    testItem.children.forEach(item => walk(item))
-  }
-  else {
-    testController.items.forEach(item => walk(item))
+    testItem.children.forEach((item) => walk(item))
+  } else {
+    testController.items.forEach((item) => walk(item))
   }
   if (errors.length) {
     await vscode.env.clipboard.writeText(errors.join(`\n${'='.repeat(50)}\n\n`))
@@ -39,14 +40,16 @@ export async function copyTestItemErrors(testController: vscode.TestController, 
 }
 
 function createTestItemErrors(item: vscode.TestItem, test: TestCase) {
-  const errors = test.errors?.map(error => createTestErrorMessage(getErrorMessage(error), error))
+  const errors = test.errors?.map((error) => createTestErrorMessage(getErrorMessage(error), error))
   if (errors?.length) {
     const errorLabel = createTestItemLabel(item)
     return errorLabel + errors.join(`\n${'='.repeat(50)}\n\n`)
   }
 }
 
-export async function copyErrorOutput(arg1: { test: vscode.TestItem; message: vscode.TestMessage } | undefined) {
+export async function copyErrorOutput(
+  arg1: { test: vscode.TestItem; message: vscode.TestMessage } | undefined,
+) {
   if (!arg1) {
     return
   }
@@ -58,7 +61,7 @@ export async function copyErrorOutput(arg1: { test: vscode.TestItem; message: vs
     return
   }
 
-  const error = data.errors?.find(e => e.__vscode_id === message.contextValue)
+  const error = data.errors?.find((e) => e.__vscode_id === message.contextValue)
   if (!error) {
     showVitestError('Cannot copy the error output. Please, open an issue with reproduction')
     return
@@ -72,27 +75,19 @@ export async function copyErrorOutput(arg1: { test: vscode.TestItem; message: vs
 
 function createTestItemLabel(test: vscode.TestItem) {
   const parts: string[] = []
-  parts.push(
-    `Test: ${createTestLabel(test)}`,
-    `File: ${test.uri}`,
-    '',
-    '',
-  )
+  parts.push(`Test: ${createTestLabel(test)}`, `File: ${test.uri}`, '', '')
   return parts.join('\n')
 }
 
 function createTestErrorMessage(message: string, error: TestError) {
   const parts: string[] = []
-  parts.push(
-    message,
-  )
+  parts.push(message)
 
   for (const frame of error.stacks || []) {
     const location = `${frame.file}:${frame.line}:${frame.column}`
     if (frame.method) {
       parts.push(`  at ${frame.method} (${location})`)
-    }
-    else {
+    } else {
       parts.push(`  at ${location}`)
     }
   }

@@ -18,8 +18,7 @@ export class VSCodeTester {
   async openTestTab() {
     const tabLocator = this.page.getByRole('tab', { name: 'Testing' })
     const attribute = await tabLocator.getAttribute('aria-selected')
-    if (attribute !== 'true')
-      await tabLocator.locator('a').click()
+    if (attribute !== 'true') await tabLocator.locator('a').click()
   }
 
   async runAllTests() {
@@ -49,7 +48,7 @@ class TesterTree {
       this.page.locator(`[aria-label*="${label} ("]`),
       this.page,
       project,
-      this.logPath
+      this.logPath,
     )
   }
 
@@ -63,34 +62,31 @@ class TesterTree {
         // test already run
         .or(this.page.locator(`[aria-label="${segment}"][aria-level="${i + 1}"]`))
       const state = await locator.getAttribute('aria-expanded')
-      if (state === 'true')
-        continue
+      if (state === 'true') continue
       await locator.click({ force: true })
     }
   }
 }
 
 class TesterErrorOutput {
-  constructor(
-    private page: Page,
-  ) {}
+  constructor(private page: Page) {}
 
   async getInlineErrors() {
     const locator = this.page.locator('.test-error-content-widget')
     const text = await locator.allInnerTexts()
-    return text.map(t => t.trim().replace(/\s/g, ' '))
+    return text.map((t) => t.trim().replace(/\s/g, ' '))
   }
 
   async getInlineExpectedOutput() {
-    return await this.page.locator(
-      '.test-output-peek .editor.original .view-lines[role="presentation"]',
-    ).textContent()
+    return await this.page
+      .locator('.test-output-peek .editor.original .view-lines[role="presentation"]')
+      .textContent()
   }
 
   async getInlineActualOutput() {
-    return await this.page.locator(
-      '.test-output-peek .editor.modified .view-lines[role="presentation"]',
-    ).textContent()
+    return await this.page
+      .locator('.test-output-peek .editor.modified .view-lines[role="presentation"]')
+      .textContent()
   }
 }
 
@@ -121,12 +117,15 @@ export class TesterTestItem {
   async toggleContinuousRun() {
     await this.locator.hover()
     await this.locator.getByLabel(/Turn (on|off) Continuous Run/).click()
-    await vi.waitUntil(() => {
-      const log = readFileSync(this.logPath, 'utf-8')
-      return log.includes('Watching test files') || log.includes('Watching all test files')
-    }, {
-      timeout: 5_000,
-    })
+    await vi.waitUntil(
+      () => {
+        const log = readFileSync(this.logPath, 'utf-8')
+        return log.includes('Watching test files') || log.includes('Watching all test files')
+      },
+      {
+        timeout: 5_000,
+      },
+    )
   }
 
   async navigate() {
@@ -145,8 +144,7 @@ afterEach(() => {
     fs.writeFileSync(file, content, 'utf-8')
   })
   createdFiles.forEach((file) => {
-    if (fs.existsSync(file))
-      fs.unlinkSync(file)
+    if (fs.existsSync(file)) fs.unlinkSync(file)
   })
   originalFiles.clear()
   createdFiles.clear()
@@ -154,7 +152,6 @@ afterEach(() => {
 
 export function editFile(file: string, callback: (content: string) => string) {
   const content = fs.readFileSync(file, 'utf-8')
-  if (!originalFiles.has(file))
-    originalFiles.set(file, content)
+  if (!originalFiles.has(file)) originalFiles.set(file, content)
   fs.writeFileSync(file, callback(content), 'utf-8')
 }

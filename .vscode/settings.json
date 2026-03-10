@@ -1,21 +1,16 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-  // Enable the ESlint flat config support
-  "eslint.experimental.useFlatConfig": true,
-
-  // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
-  "typescript.tsc.autoDetect": "off",
   // Disable the default formatter, use eslint instead
   "prettier.enable": false,
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
+
+  "editor.defaultFormatter": "oxc.oxc-vscode",
 
   // Auto fix
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
+    "source.fixAll.oxc": "always",
     "source.organizeImports": "never"
   },
-
-  "testing.openTesting": "neverOpen",
 
   // Enable eslint for all supported languages
   "eslint.validate": [
@@ -30,5 +25,8 @@
     "jsonc",
     "yaml"
   ],
-  "testing.automaticallyOpenTestResults": "neverOpen"
+  "testing.automaticallyOpenTestResults": "neverOpen",
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  }
 }

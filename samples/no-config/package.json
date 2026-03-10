@@ -2,8 +2,8 @@
   "name": "no-package",
   "version": "1.0.0",
   "description": "",
-  "author": "",
   "license": "ISC",
+  "author": "",
   "main": "index.js",
   "scripts": {
     "test": "vitest run --pool=forks"

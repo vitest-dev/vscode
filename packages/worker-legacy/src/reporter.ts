@@ -23,23 +23,21 @@ export class VSCodeReporter implements Reporter {
   }
 
   private get collecting(): boolean {
-    return (this.vitest as any).configOverride.testNamePattern?.toString() === `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
+    return (
+      (this.vitest as any).configOverride.testNamePattern?.toString() ===
+      `/${ExtensionWorker.COLLECT_NAME_PATTERN}/`
+    )
   }
 
   onInit(vitest: VitestCore) {
     this.vitest = vitest
     const server = vitest.server.config.server
     this.setupFilePaths.forEach((setupFile) => {
-      if (!server.fs.allow.includes(setupFile))
-        server.fs.allow.push(setupFile)
+      if (!server.fs.allow.includes(setupFile)) server.fs.allow.push(setupFile)
       vitest.projects.forEach((project) => {
-        project.config.setupFiles = [
-          ...project.config.setupFiles || [],
-          setupFile,
-        ]
+        project.config.setupFiles = [...(project.config.setupFiles || []), setupFile]
         const server = project.server.config.server
-        if (!server.fs.allow.includes(setupFile))
-          server.fs.allow.push(setupFile)
+        if (!server.fs.allow.includes(setupFile)) server.fs.allow.push(setupFile)
         // @ts-expect-error internal, Vitest 3
         if (project._initBrowserProvider) {
           this.overrideInitBrowserProvider(project, '_initBrowserProvider')
@@ -53,8 +51,7 @@ export class VSCodeReporter implements Reporter {
           return
         }
         const config = 'vite' in browser ? browser.vite.config.server : browser.config.server
-        if (!config.fs.allow.includes(setupFile))
-          config.fs.allow.push(setupFile)
+        if (!config.fs.allow.includes(setupFile)) config.fs.allow.push(setupFile)
       })
     })
   }
@@ -80,8 +77,7 @@ export class VSCodeReporter implements Reporter {
           ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
             if (fullfilled) {
               resolve()
-            }
-            else {
+            } else {
               reject(new Error(`Browser Debugger failed to connect.`))
             }
           })
@@ -115,8 +111,7 @@ export class VSCodeReporter implements Reporter {
             }
           }
         }
-      }
-      catch {
+      } catch {
         // If parsing fails, continue without parsed location
       }
     }
@@ -129,9 +124,12 @@ export class VSCodeReporter implements Reporter {
       return
     }
 
-    const promise = this.rpc.onProcessLog(type, message).catch(() => {}).finally(() => {
-      this.logPromises.delete(promise)
-    })
+    const promise = this.rpc
+      .onProcessLog(type, message)
+      .catch(() => {})
+      .finally(() => {
+        this.logPromises.delete(promise)
+      })
 
     this.logPromises.add(promise)
   }
@@ -144,7 +142,7 @@ export class VSCodeReporter implements Reporter {
     // the new version uses browser.parseErrorStacktrace
     if ('getBrowserSourceMapModuleById' in project) {
       return parseErrorStacktrace(obj as Error, {
-        getSourceMap: file => (project as any).getBrowserSourceMapModuleById(file),
+        getSourceMap: (file) => (project as any).getBrowserSourceMapModuleById(file),
       })
     }
 
@@ -182,7 +180,11 @@ export class VSCodeReporter implements Reporter {
     this.rpc.onTaskUpdate(packs)
   }
 
-  async onFinished(files?: RunnerTestFile[], errors: unknown[] = this.vitest.state.getUnhandledErrors(), coverage?: unknown) {
+  async onFinished(
+    files?: RunnerTestFile[],
+    errors: unknown[] = this.vitest.state.getUnhandledErrors(),
+    coverage?: unknown,
+  ) {
     const collecting = this.collecting
 
     let output = ''
@@ -217,7 +219,7 @@ export class VSCodeReporter implements Reporter {
   }
 
   onCollected(files?: RunnerTestFile[]) {
-    files?.forEach(file => this.rpc.onCollected(file, this.collecting))
+    files?.forEach((file) => this.rpc.onCollected(file, this.collecting))
   }
 
   onWatcherRerun(files: string[]) {
@@ -230,7 +232,5 @@ export class VSCodeReporter implements Reporter {
 }
 
 function isPrimitive(value: unknown) {
-  return (
-    value === null || (typeof value !== 'function' && typeof value !== 'object')
-  )
+  return value === null || (typeof value !== 'function' && typeof value !== 'object')
 }

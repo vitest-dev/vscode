@@ -19,7 +19,7 @@ export class InlineConsoleLogManager extends vscode.Disposable {
   constructor(private readonly testTree: TestTree) {
     super(() => {
       this.decorationType.dispose()
-      this.disposables.forEach(d => d.dispose())
+      this.disposables.forEach((d) => d.dispose())
       this.disposables = []
     })
 
@@ -94,7 +94,7 @@ export class InlineConsoleLogManager extends vscode.Disposable {
   clear(): void {
     this.consoleLogsByFile.clear()
     // Update all visible editors
-    vscode.window.visibleTextEditors.forEach(editor => this.updateDecorations(editor))
+    vscode.window.visibleTextEditors.forEach((editor) => this.updateDecorations(editor))
   }
 
   clearFile(file: string): void {
@@ -130,16 +130,18 @@ export class InlineConsoleLogManager extends vscode.Disposable {
         return
       }
 
-      const noAnsi = entries.map(e => stripVTControlCharacters(e.content))
+      const noAnsi = entries.map((e) => stripVTControlCharacters(e.content))
       // Combine multiple console logs on the same line
-      const content = noAnsi.map(e => this.formatContent(e)).join(' ')
+      const content = noAnsi.map((e) => this.formatContent(e)).join(' ')
 
       const hoverMessage = entries.map((e, index) => {
         const md = new vscode.MarkdownString()
         if (e.testItem) {
           md.supportHtml = true
           const line = (e.testItem.range?.start.line ?? 0) + 1
-          md.appendMarkdown(`<sub>[${createTestLabel(e.testItem)}](${e.testItem.uri?.with({ fragment: `L${line}` })})</sub>`)
+          md.appendMarkdown(
+            `<sub>[${createTestLabel(e.testItem)}](${e.testItem.uri?.with({ fragment: `L${line}` })})</sub>`,
+          )
           md.appendText('\n')
         }
         return md.appendText(noAnsi[index])
@@ -176,6 +178,6 @@ export class InlineConsoleLogManager extends vscode.Disposable {
 
   private refresh(): void {
     // Update all visible editors
-    vscode.window.visibleTextEditors.forEach(editor => this.updateDecorations(editor))
+    vscode.window.visibleTextEditors.forEach((editor) => this.updateDecorations(editor))
   }
 }

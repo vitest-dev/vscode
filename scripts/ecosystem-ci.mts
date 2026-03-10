@@ -13,8 +13,7 @@ async function main() {
   if (process.env.CI === 'true' && process.platform === 'linux') {
     await $`xvfb-run pnpm test`
     await $`xvfb-run pnpm test-e2e --retry 2`
-  }
-  else {
+  } else {
     await $`pnpm test`
     await $`pnpm test-e2e`
   }

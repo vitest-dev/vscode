@@ -72,11 +72,7 @@ export async function debugTests(
     name: 'Debug Tests',
     autoAttachChildProcesses: true,
     skipFiles,
-    ...(
-      config.debugOutFiles?.length
-        ? { outFiles: config.debugOutFiles }
-        : {}
-    ),
+    ...(config.debugOutFiles?.length ? { outFiles: config.debugOutFiles } : {}),
     smartStep: true,
     ...(config.shellType === 'terminal'
       ? {
@@ -86,8 +82,7 @@ export async function debugTests(
           program: workerPath,
           runtimeArgs,
           runtimeExecutable,
-        }
-    ),
+        }),
     cwd: pkg.cwd,
     env: {
       ...process.env,
@@ -107,23 +102,20 @@ export async function debugTests(
 
   if (debugManager.sessions.size) {
     await Promise.all(
-      Array.from(debugManager.sessions, session => vscode.debug.stopDebugging(session)),
+      Array.from(debugManager.sessions, (session) => vscode.debug.stopDebugging(session)),
     ).catch((error) => {
       log.error('[DEBUG] Failed to stop debugging sessions', error)
     })
   }
 
-  vscode.debug.startDebugging(
-    pkg.folder,
-    debugConfig,
-    { suppressDebugView: true },
-  ).then(
+  vscode.debug.startDebugging(pkg.folder, debugConfig, { suppressDebugView: true }).then(
     (fulfilled) => {
       if (fulfilled) {
         log.info('[DEBUG] Debugging started')
-      }
-      else {
-        deferredPromise.reject(new Error('Failed to start debugging. See output for more information.'))
+      } else {
+        deferredPromise.reject(
+          new Error('Failed to start debugging. See output for more information.'),
+        )
         log.error('[DEBUG] Debugging failed')
       }
     },
@@ -136,18 +128,18 @@ export async function debugTests(
 
   const disposables: vscode.Disposable[] = []
 
-  const attachDebug = browserDebug || pkg.runtime === 'deno'
-    ? {
-        browser: browserDebug?.browser,
-        // wdio support this only since Vitest 4.beta-13
-        port: config.debuggerPort ?? 9229,
-        host: browserDebug ? 'localhost' : '127.0.0.1',
-      }
-    : undefined
+  const attachDebug =
+    browserDebug || pkg.runtime === 'deno'
+      ? {
+          browser: browserDebug?.browser,
+          // wdio support this only since Vitest 4.beta-13
+          port: config.debuggerPort ?? 9229,
+          host: browserDebug ? 'localhost' : '127.0.0.1',
+        }
+      : undefined
 
-  wss.on(
-    'connection',
-    ws => onWsConnection(
+  wss.on('connection', (ws) =>
+    onWsConnection(
       ws,
       pkg,
       attachDebug ?? true,
@@ -160,9 +152,7 @@ export async function debugTests(
         try {
           const api = VitestProcessAPI.forDebug(pkg, {
             ...metadata,
-            process: new ExtensionDebugProcess(
-              metadata.ws,
-            ),
+            process: new ExtensionDebugProcess(metadata.ws),
           })
           const handle = await api.spawnForRun()
           const runner = new TestRunner(
@@ -182,22 +172,14 @@ export async function debugTests(
 
           if (attachDebug) {
             const attachConfig: vscode.DebugConfiguration = {
-              __name: browserDebug
-                ? BrowserDebugSessionName
-                : AttachSessionName,
+              __name: browserDebug ? BrowserDebugSessionName : AttachSessionName,
               __parentId: debugId,
-              type: browserDebug
-                ? (browserDebug.browser === 'edge' ? 'msedge' : 'chrome')
-                : 'node',
+              type: browserDebug ? (browserDebug.browser === 'edge' ? 'msedge' : 'chrome') : 'node',
               request: 'attach',
               name: `Debug Tests (${attachDebug.browser || 'test'})`,
               address: attachDebug.host,
               port: attachDebug.port,
-              ...(
-                config.debugOutFiles?.length
-                  ? { outFiles: config.debugOutFiles }
-                  : {}
-              ),
+              ...(config.debugOutFiles?.length ? { outFiles: config.debugOutFiles } : {}),
               webRoot: browserDebug?.webRoot,
               smartStep: true,
               skipFiles,
@@ -210,39 +192,35 @@ export async function debugTests(
                 parentSession = session
               }
             }
-            vscode.debug.startDebugging(
-              pkg.folder,
-              attachConfig,
-              {
+            vscode.debug
+              .startDebugging(pkg.folder, attachConfig, {
                 parentSession,
                 // this is required for the "restart" button to work
                 // TODO: but it still doesn't work
                 lifecycleManagedByParent: true,
                 compact: true,
-              },
-            ).then(
-              (fullfilled) => {
-                log.info('[DEBUG] Debug session started')
-                metadata.rpc.onDebugAttached(fullfilled).catch(() => {})
-                if (fullfilled) {
-                  log.info('[DEBUG] Debug session attached')
-                }
-                else {
-                  log.error('[DEBUG] Debugger failed to attach')
-                }
-              },
-              (error) => {
-                metadata.rpc.onDebugAttached(false).catch(() => {})
-                log.error('[DEBUG] Attach session failed to launch', error.message)
-              },
-            )
+              })
+              .then(
+                (fullfilled) => {
+                  log.info('[DEBUG] Debug session started')
+                  metadata.rpc.onDebugAttached(fullfilled).catch(() => {})
+                  if (fullfilled) {
+                    log.info('[DEBUG] Debug session attached')
+                  } else {
+                    log.error('[DEBUG] Debugger failed to attach')
+                  }
+                },
+                (error) => {
+                  metadata.rpc.onDebugAttached(false).catch(() => {})
+                  log.error('[DEBUG] Attach session failed to launch', error.message)
+                },
+              )
           }
 
           await runner.runTests(request)
 
           deferredPromise.resolve()
-        }
-        catch (err: any) {
+        } catch (err: any) {
           if (err.message.startsWith('[birpc] rpc is closed')) {
             deferredPromise.resolve()
             return
@@ -268,18 +246,17 @@ export async function debugTests(
 
     // dispose all test runners
     if (
-      session.configuration.__name !== BrowserDebugSessionName
-      && parent
-      && parent.configuration.__name === DebugSessionName
+      session.configuration.__name !== BrowserDebugSessionName &&
+      parent &&
+      parent.configuration.__name === DebugSessionName
     ) {
-      disposables.reverse().forEach(d => d.dispose())
+      disposables.reverse().forEach((d) => d.dispose())
       disposables.length = 0
     }
   })
 
   const onDidTerminate = vscode.debug.onDidTerminateDebugSession((session) => {
-    if (session.configuration.__name !== DebugSessionName)
-      return
+    if (session.configuration.__name !== DebugSessionName) return
     server.close()
     onDidTerminate.dispose()
     onDidWorkerTerminate.dispose()
@@ -294,15 +271,16 @@ async function getRuntimeOptions(pkg: VitestPackage) {
   const runtimeArgs = config.nodeExecArgs || []
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
-  const execArgv = pnpLoader && pnp
-    ? [
-        '--require',
-        pnp,
-        '--experimental-loader',
-        pathToFileURL(pnpLoader).toString(),
-        ...runtimeArgs,
-      ]
-    : runtimeArgs
+  const execArgv =
+    pnpLoader && pnp
+      ? [
+          '--require',
+          pnp,
+          '--experimental-loader',
+          pathToFileURL(pnpLoader).toString(),
+          ...runtimeArgs,
+        ]
+      : runtimeArgs
   if (config.shellType === 'child_process') {
     const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
     return {
@@ -382,23 +360,27 @@ function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.
           `VSCode can only debug tests running in the "chromium" browser. ${testItem.label} runs in ${options.name} instead.`,
         )
       }
-      if (options.provider === 'webdriverio' && options.name !== 'chrome' && options.name !== 'edge') {
+      if (
+        options.provider === 'webdriverio' &&
+        options.name !== 'chrome' &&
+        options.name !== 'edge'
+      ) {
         throw new Error(
           `VSCode can only debug tests running in the "chrome" or "edge" browser. ${testItem.label} runs in ${options.name} instead.`,
         )
       }
       if (options.provider === 'preview') {
-        throw new Error(`Cannot debug tests running in the "preview" provider. Choose either "playwright" or "webdriverio" to be able to debug tests.`)
+        throw new Error(
+          `Cannot debug tests running in the "preview" provider. Choose either "playwright" or "webdriverio" to be able to debug tests.`,
+        )
       }
 
       provider = options.provider
       browser = options.name
       webRootsFound.add(options.webRoot)
-    }
-    else if (data instanceof TestFolder) {
+    } else if (data instanceof TestFolder) {
       testItem.children.forEach(traverse)
-    }
-    else if (data instanceof TestCase || data instanceof TestSuite) {
+    } else if (data instanceof TestCase || data instanceof TestSuite) {
       if (testItem.parent) {
         traverse(testItem.parent)
       }
@@ -407,17 +389,17 @@ function getBrowserDebugInfo(controller: vscode.TestController, request: vscode.
 
   if (request.include) {
     request.include.forEach(traverse)
-  }
-  else {
+  } else {
     controller.items.forEach(traverse)
   }
 
   let webRoot: string | undefined
   if (webRootsFound.size === 1) {
-    [webRoot] = webRootsFound // Grab the first (and only) value
-  }
-  else if (webRootsFound.size > 1) {
-    log.info('[DEBUG] Multiple webRoots found for browser debugging. Breakpoints in source code may not work as expected. Try debugging again by selecting specific tests or test files to debug.')
+    ;[webRoot] = webRootsFound // Grab the first (and only) value
+  } else if (webRootsFound.size > 1) {
+    log.info(
+      '[DEBUG] Multiple webRoots found for browser debugging. Breakpoints in source code may not work as expected. Try debugging again by selecting specific tests or test files to debug.',
+    )
   }
 
   return provider && browser ? { provider, browser, webRoot } : null

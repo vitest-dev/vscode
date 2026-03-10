@@ -40,7 +40,7 @@ export class ExtensionWorkerWatcher {
       if (state.watchEveryFile) {
         vitest.logger.log(
           'Rerunning all tests due to file changes:',
-          ...files.map(f => relative(vitest.config.root, f)),
+          ...files.map((f) => relative(vitest.config.root, f)),
           namePattern ? `with pattern ${namePattern}` : '',
         )
         return await originalScheduleRerun.call(this, files)
@@ -53,8 +53,7 @@ export class ExtensionWorkerWatcher {
         const currentChanged = [...this.changedTests]
         this.changedTests.clear()
         for (const file of currentChanged) {
-          if (state.isTestFileWatched(file))
-            this.changedTests.add(file)
+          if (state.isTestFileWatched(file)) this.changedTests.add(file)
         }
       }
       // the other test file was edited, ignore it
@@ -65,11 +64,10 @@ export class ExtensionWorkerWatcher {
       if (this.changedTests.size) {
         vitest.logger.log(
           'Rerunning tests due to file changes:',
-          ...Array.from(this.changedTests, f => relative(vitest.config.root, f)),
+          ...Array.from(this.changedTests, (f) => relative(vitest.config.root, f)),
           namePattern ? `with pattern ${namePattern}` : '',
         )
-      }
-      else {
+      } else {
         await state.collectTests(files, changedFiles)
       }
 
@@ -79,7 +77,7 @@ export class ExtensionWorkerWatcher {
 
   private async collectTests(trigger: string[], tests: string[]) {
     const vitest = this.worker.vitest
-    const specs = tests.flatMap(file => vitest.getProjectsByTestFile(file))
+    const specs = tests.flatMap((file) => vitest.getProjectsByTestFile(file))
     const astSpecs: [project: WorkspaceProject, file: string][] = []
 
     for (const [project, file] of specs) {
@@ -87,7 +85,10 @@ export class ExtensionWorkerWatcher {
     }
 
     this.worker.setGlobalTestNamePattern(ExtensionWorker.COLLECT_NAME_PATTERN)
-    vitest.logger.log('Collecting tests due to file changes:', ...trigger.map(f => relative(vitest.config.root, f)))
+    vitest.logger.log(
+      'Collecting tests due to file changes:',
+      ...trigger.map((f) => relative(vitest.config.root, f)),
+    )
 
     if (astSpecs.length) {
       vitest.logger.log('Collecting using AST explorer...')
@@ -97,14 +98,11 @@ export class ExtensionWorkerWatcher {
   }
 
   private isTestFileWatched(testFile: string) {
-    if (!this.files?.length)
-      return false
+    if (!this.files?.length) return false
 
     return this.files.some((file) => {
-      if (file === testFile)
-        return true
-      if (file.at(-1) === '/')
-        return testFile.startsWith(file)
+      if (file === testFile) return true
+      if (file.at(-1) === '/') return testFile.startsWith(file)
       return false
     })
   }

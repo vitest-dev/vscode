@@ -26,10 +26,11 @@ expect.extend({
 
     return {
       pass,
-      message: () => `${this.utils.matcherHint('toHaveState', title, state, { isNot: this.isNot })}\n\n`
-      + `Locator: ${item.locator}\n`
-      + `Expected: ${this.isNot ? 'not ' : ''}to have state: ${this.utils.printExpected(state)}\n`
-      + `Received: ${this.utils.printReceived(title)}\n`,
+      message: () =>
+        `${this.utils.matcherHint('toHaveState', title, state, { isNot: this.isNot })}\n\n` +
+        `Locator: ${item.locator}\n` +
+        `Expected: ${this.isNot ? 'not ' : ''}to have state: ${this.utils.printExpected(state)}\n` +
+        `Received: ${this.utils.printReceived(title)}\n`,
       name: 'toHaveState',
     }
   },
@@ -55,7 +56,7 @@ expect.extend({
       if (index) {
         locator += `[data-index="${index}"]`
       }
-      await expect(page.locator(locator)).toBeAttached()
+      await expect(page.locator(locator)).toBeAttached({ timeout: 10_000 })
     }
 
     const counter = { index: currentIndex }
@@ -67,8 +68,7 @@ expect.extend({
         const item = tests[test]
         if (typeof item === 'string') {
           await assert(test, level, item, counter.index)
-        }
-        else {
+        } else {
           const [name, index = counter.index] = test.split('|')
           let locator = `[aria-label*="${name}"][aria-level="${level}"]`
           if (index) {

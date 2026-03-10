@@ -15,11 +15,13 @@ import { createErrorLogger, log } from '../log'
 import { formatPkg } from '../utils'
 import { waitForWsConnection } from './ws'
 
-export async function createVitestTerminalProcess(pkg: VitestPackage, options?: ProcessSpawnOptions): Promise<ResolvedMeta> {
+export async function createVitestTerminalProcess(
+  pkg: VitestPackage,
+  options?: ProcessSpawnOptions,
+): Promise<ResolvedMeta> {
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
-  if (pnpLoader && !pnp)
-    throw new Error('pnp file is required if loader option is used')
+  if (pnpLoader && !pnp) throw new Error('pnp file is required if loader option is used')
   const port = await getPort()
   const server = createServer().listen(port).unref()
   const wss = new WebSocketServer({ server })
@@ -49,7 +51,9 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
 
   const processId = await terminal.processId
   if (terminal.exitStatus && terminal.exitStatus.code != null) {
-    throw new Error(`Terminal was ${getExitReason(terminal.exitStatus.reason)} with code ${terminal.exitStatus.code}`)
+    throw new Error(
+      `Terminal was ${getExitReason(terminal.exitStatus.reason)} with code ${terminal.exitStatus.code}`,
+    )
   }
 
   let command = pkg.runtime
@@ -69,7 +73,11 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
   const meta = await new Promise<WsConnectionMetadata>((resolve, reject) => {
     const timeout = setTimeout(() => {
       terminal.show(false)
-      reject(new Error(`The extension could not connect to the terminal in 30 seconds. See the "vitest" terminal output for more details.`))
+      reject(
+        new Error(
+          `The extension could not connect to the terminal in 30 seconds. See the "vitest" terminal output for more details.`,
+        ),
+      )
     }, 30_000)
     wss.once('connection', () => {
       clearTimeout(timeout)
@@ -82,11 +90,7 @@ export async function createVitestTerminalProcess(pkg: VitestPackage, options?: 
   })
 
   log.info('[API]', `${formatPkg(pkg)} terminal process ${processId} created`)
-  const vitestProcess = new ExtensionTerminalProcess(
-    terminal,
-    server,
-    meta.ws,
-  )
+  const vitestProcess = new ExtensionTerminalProcess(terminal, server, meta.ws)
   return {
     rpc: meta.rpc,
     handlers: meta.handlers,

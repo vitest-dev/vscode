@@ -14,12 +14,11 @@ function createHandler<T extends (...args: any) => any>() {
   return {
     handlers,
     register: (listener: any) => handlers.push(listener),
-    trigger: (...data: any) => handlers.forEach(handler => handler(...data)),
-    clear: () => handlers.length = 0,
+    trigger: (...data: any) => handlers.forEach((handler) => handler(...data)),
+    clear: () => (handlers.length = 0),
     remove: (listener: T) => {
       const index = handlers.indexOf(listener)
-      if (index !== -1)
-        handlers.splice(index, 1)
+      if (index !== -1) handlers.splice(index, 1)
     },
   }
 }
@@ -56,8 +55,7 @@ export function createRpcOptions() {
         handlers[name as 'onCollected']?.remove(listener)
       },
       clearListeners() {
-        for (const name in handlers)
-          handlers[name as 'onCollected']?.clear()
+        for (const name in handlers) handlers[name as 'onCollected']?.clear()
       },
     },
   }
@@ -69,21 +67,18 @@ export function createVitestRpc(options: {
 }) {
   const { events, handlers } = createRpcOptions()
 
-  const api = createBirpc<ExtensionWorkerTransport, ExtensionWorkerEvents>(
-    events,
-    {
-      timeout: -1,
-      bind: 'functions',
-      on(listener) {
-        options.on(listener)
-      },
-      post(message) {
-        options.send(message)
-      },
-      serialize: v8.serialize,
-      deserialize: v => v8.deserialize(Buffer.from(v) as any),
+  const api = createBirpc<ExtensionWorkerTransport, ExtensionWorkerEvents>(events, {
+    timeout: -1,
+    bind: 'functions',
+    on(listener) {
+      options.on(listener)
     },
-  )
+    post(message) {
+      options.send(message)
+    },
+    serialize: v8.serialize,
+    deserialize: (v) => v8.deserialize(Buffer.from(v) as any),
+  })
 
   return {
     api,

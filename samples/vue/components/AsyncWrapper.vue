@@ -7,8 +7,6 @@ defineProps<{ promise: Promise<void> }>()
 <template>
   <Suspense>
     <AsyncComp :promise="promise" />
-    <template #fallback>
-      fallback
-    </template>
+    <template #fallback> fallback </template>
   </Suspense>
 </template>
