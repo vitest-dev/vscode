@@ -1,0 +1,13 @@
+{
+  "name": "@vitest/vscode-sample-projects",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.7.4",
+    "vitest": "catalog:latest"
+  }
+}

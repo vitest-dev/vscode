@@ -8,7 +8,7 @@ export class VSCodeTester {
   public errors: TesterErrorOutput
 
   constructor(
-    private page: Page,
+    public page: Page,
     private logPath: string,
   ) {
     this.tree = new TesterTree(page, logPath)

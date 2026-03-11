@@ -88,6 +88,42 @@ test('workspaces', async ({ launch }) => {
   await expect(tester.tree.getResultsLocator()).toHaveText('4/4')
 })
 
+test('running a project does not update other projects', async ({ launch }) => {
+  const { tester } = await launch({
+    workspacePath: './samples/projects',
+  })
+
+  await tester.tree.expand('test')
+
+  const nodeTest = tester.tree.getFileItem('basic.test.ts', 'node')
+  const happyDomTest = tester.tree.getFileItem('basic.test.ts', 'happy-dom')
+
+  await expect(nodeTest.locator).toBeVisible()
+  await expect(happyDomTest.locator).toBeVisible()
+
+  await tester.tree.expand('test/basic.test.ts [node]')
+  await tester.tree.expand('test/basic.test.ts [happy-dom]')
+
+  await expect(nodeTest).toHaveTests({
+    'check|4': 'waiting',
+  })
+  await expect(happyDomTest).toHaveTests({
+    'check|2': 'waiting',
+  })
+
+  await nodeTest.run()
+
+  await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+  await expect(nodeTest).toHaveState('passed')
+  await expect(nodeTest).toHaveTests({
+    check: 'passed',
+  })
+  // happy-dom project should remain untouched
+  await expect(happyDomTest).toHaveTests({
+    check: 'waiting',
+  })
+})
+
 test('custom imba language', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/imba',
