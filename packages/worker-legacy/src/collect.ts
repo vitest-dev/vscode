@@ -167,8 +167,7 @@ export function astParseFile(filepath: string, code: string) {
       for (const prop of properties) {
         if (prop === 'skip' || prop === 'only' || prop === 'todo') {
           mode = prop
-        }
-        else if (['skipIf', 'runIf'].includes(prop)) {
+        } else if (['skipIf', 'runIf'].includes(prop)) {
           mode = 'skip'
         }
       }
@@ -235,11 +234,9 @@ export function astParseFile(filepath: string, code: string) {
           if (prop.value?.type === 'Literal' && prop.value.value === true) {
             if (keyName === 'skip' || keyName === 'only' || keyName === 'todo') {
               mode = keyName
-            }
-            else if (keyName === 'concurrent') {
+            } else if (keyName === 'concurrent') {
               isConcurrent = true
-            }
-            else if (keyName === 'sequential') {
+            } else if (keyName === 'sequential') {
               isSequential = true
             }
           }
@@ -395,7 +392,7 @@ export function createFileTask(
       // resolve concurrent/sequential: sequential cancels inherited concurrent
       const concurrent = definition.sequential
         ? undefined
-        : (definition.concurrent || (latestSuite as any).concurrent || undefined)
+        : definition.concurrent || (latestSuite as any).concurrent || undefined
 
       if (definition.type === 'suite') {
         const task: ParsedSuite = {
