@@ -32,6 +32,8 @@ interface LocalCallDefinition {
   mode: 'run' | 'skip' | 'only' | 'todo' | 'queued'
   task: ParsedSuite | ParsedFile | ParsedTest
   dynamic: boolean
+  concurrent: boolean
+  sequential: boolean
 }
 
 export interface FileInformation {
@@ -107,8 +109,8 @@ export function astParseFile(filepath: string, code: string) {
       ) {
         return getName(callee.property)
       }
-      // call as `__vite_ssr__.test.skip()`
-      return getName(callee.object?.property)
+      // call as `__vite_ssr__.test.skip()` or `describe.concurrent.each()`
+      return getName(callee.object)
     }
     // unwrap (0, ...)
     if (callee.type === 'SequenceExpression' && callee.expressions.length === 2) {
@@ -118,6 +120,29 @@ export function astParseFile(filepath: string, code: string) {
       }
     }
     return null
+  }
+
+  const getProperties = (callee: any): string[] => {
+    if (!callee) {
+      return []
+    }
+    if (callee.type === 'Identifier') {
+      return []
+    }
+    if (callee.type === 'CallExpression') {
+      return getProperties(callee.callee)
+    }
+    if (callee.type === 'TaggedTemplateExpression') {
+      return getProperties(callee.tag)
+    }
+    if (callee.type === 'MemberExpression') {
+      const props = getProperties(callee.object)
+      if (callee.property?.name) {
+        props.push(callee.property.name)
+      }
+      return props
+    }
+    return []
   }
 
   walkAst(ast as any, {
@@ -131,12 +156,24 @@ export function astParseFile(filepath: string, code: string) {
         verbose?.(`Skipping ${name} (unknown call)`)
         return
       }
+      const properties = getProperties(callee)
       const property = callee?.property?.name
-      let mode = !property || property === name ? 'run' : property
-      // they will be picked up in the next iteration
-      if (['each', 'for', 'skipIf', 'runIf', 'extend', 'scoped'].includes(mode)) {
+      // intermediate calls like .each(), .for() will be picked up in the next iteration
+      if (property && ['each', 'for', 'skipIf', 'runIf', 'extend', 'scoped'].includes(property)) {
         return
       }
+      // derive mode from the full chain (handles any order like .skip.concurrent or .concurrent.skip)
+      let mode: 'run' | 'skip' | 'only' | 'todo' = 'run'
+      for (const prop of properties) {
+        if (prop === 'skip' || prop === 'only' || prop === 'todo') {
+          mode = prop
+        }
+        else if (['skipIf', 'runIf'].includes(prop)) {
+          mode = 'skip'
+        }
+      }
+      let isConcurrent = properties.includes('concurrent')
+      let isSequential = properties.includes('sequential')
 
       let start: number
       const end = node.end
@@ -177,11 +214,6 @@ export function astParseFile(filepath: string, code: string) {
         // Vitest module mocker injects these
         .replace(/__vi_import_\d+__\./g, '')
 
-      // cannot statically analyze, so we always skip it
-      if (mode === 'skipIf' || mode === 'runIf') {
-        mode = 'skip'
-      }
-
       const parentCalleeName =
         typeof callee?.callee === 'object' &&
         callee?.callee.type === 'MemberExpression' &&
@@ -190,6 +222,28 @@ export function astParseFile(filepath: string, code: string) {
       if (!isDynamicEach && callee.type === 'TaggedTemplateExpression') {
         const property = callee.tag?.property?.name
         isDynamicEach = property === 'each' || property === 'for'
+      }
+
+      // Extract options from the second argument if it's an options object
+      const secondArg = node.arguments?.[1]
+      if (secondArg?.type === 'ObjectExpression') {
+        for (const prop of (secondArg.properties || []) as any[]) {
+          if (prop.type !== 'Property' || prop.key?.type !== 'Identifier') {
+            continue
+          }
+          const keyName = prop.key.name
+          if (prop.value?.type === 'Literal' && prop.value.value === true) {
+            if (keyName === 'skip' || keyName === 'only' || keyName === 'todo') {
+              mode = keyName
+            }
+            else if (keyName === 'concurrent') {
+              isConcurrent = true
+            }
+            else if (keyName === 'sequential') {
+              isSequential = true
+            }
+          }
+        }
       }
 
       debug?.('Found', name, message, `(${mode})`)
@@ -201,6 +255,8 @@ export function astParseFile(filepath: string, code: string) {
         mode,
         task: null as any,
         dynamic: isDynamicEach,
+        concurrent: isConcurrent,
+        sequential: isSequential,
       } satisfies LocalCallDefinition)
     },
   })
@@ -336,6 +392,11 @@ export function createFileTask(
           `${definition.start}`,
         )
       }
+      // resolve concurrent/sequential: sequential cancels inherited concurrent
+      const concurrent = definition.sequential
+        ? undefined
+        : (definition.concurrent || (latestSuite as any).concurrent || undefined)
+
       if (definition.type === 'suite') {
         const task: ParsedSuite = {
           type: definition.type,
@@ -344,6 +405,7 @@ export function createFileTask(
           file,
           tasks: [],
           mode,
+          concurrent,
           name: definition.name,
           end: definition.end,
           start: definition.start,
@@ -362,6 +424,7 @@ export function createFileTask(
         suite: latestSuite,
         file,
         mode,
+        concurrent,
         context: {} as any, // not used on the server
         name: definition.name,
         end: definition.end,
