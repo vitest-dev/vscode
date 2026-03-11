@@ -286,6 +286,57 @@ describe('continuous testing', () => {
 
     expect(errors).toEqual(['1000 != 2'])
   })
+
+  test('editing an imported file only reruns affected tests', async ({ launch }) => {
+    const { tester } = await launch({
+      workspacePath: './samples/continuous',
+    })
+
+    await tester.tree.expand('test/imports-divide.test.ts')
+    await tester.tree.expand('test/imports-multiply.test.ts')
+    await tester.tree.expand('test/no-import.test.ts')
+
+    const divideTest = tester.tree.getFileItem('imports-divide.test.ts')
+    const multiplyTest = tester.tree.getFileItem('imports-multiply.test.ts')
+    const noImportTest = tester.tree.getFileItem('no-import.test.ts')
+
+    await expect(divideTest).toHaveTests({ divide: 'waiting' })
+    await expect(multiplyTest).toHaveTests({ multiply: 'waiting' })
+    await expect(noImportTest).toHaveTests({
+      multiply: 'waiting',
+      divide: 'waiting',
+    })
+
+    await divideTest.toggleContinuousRun()
+    await multiplyTest.toggleContinuousRun()
+    await noImportTest.toggleContinuousRun()
+
+    // trigger initial run by touching each test file
+    editFile('samples/continuous/test/imports-divide.test.ts', (content) => `${content}\n`)
+    await expect(divideTest).toHaveTests({ divide: 'passed' })
+
+    editFile('samples/continuous/test/imports-multiply.test.ts', (content) => `${content}\n`)
+    await expect(multiplyTest).toHaveTests({ multiply: 'passed' })
+
+    editFile('samples/continuous/test/no-import.test.ts', (content) => `${content}\n`)
+    await expect(noImportTest).toHaveTests({
+      multiply: 'passed',
+      divide: 'passed',
+    })
+
+    // break calculator.ts — only importing tests should rerun and fail
+    editFile('samples/continuous/src/calculator.ts', (content) =>
+      content.replace('a * b', '0').replace('a / b', '0'),
+    )
+
+    await expect(divideTest).toHaveTests({ divide: 'failed' })
+    await expect(multiplyTest).toHaveTests({ multiply: 'failed' })
+    // no-import.test.ts should remain passed — it doesn't import calculator
+    await expect(noImportTest).toHaveTests({
+      multiply: 'passed',
+      divide: 'passed',
+    })
+  })
 })
 
 test('deno runtime', async ({ launch }) => {
