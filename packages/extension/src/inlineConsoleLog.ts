@@ -144,7 +144,7 @@ export class InlineConsoleLogManager extends vscode.Disposable {
           )
           md.appendText('\n')
         }
-        return md.appendText(noAnsi[index])
+        return md.appendCodeblock(noAnsi[index])
       })
 
       const lineRange = editor.document.lineAt(line).range
