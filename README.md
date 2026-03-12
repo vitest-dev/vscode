@@ -103,7 +103,6 @@ These options are resolved relative to the [workspace file](https://code.visuals
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
   `["<node_internals>/**"]`
 - `vitest.debugOutFiles`: If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with `!` the files are excluded. If not specified, the generated code is expected in the same directory as its source. Default: `["${workspaceFolder}/**/*.(m|c|)js", "!**/node_modules/**"]`
-- `vitest.maximumConfigs`: The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file. Default: `5`
 - `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
 - `vitest.applyDiagnostic`: Show a squiggly line where the error was thrown. This also enables the error count in the File Tab. Default: `true`
 - `vitest.showInlineConsoleLog`: Show console.log messages inline in the editor next to the code that produced them. When disabled, console logs will still appear in the test output but not inline. Default: `true`
