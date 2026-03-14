@@ -303,8 +303,7 @@
           "markdownDescription": "Automatically skip files covered by these glob patterns.",
           "type": "array",
           "default": [
-            "<node_internals>/**",
-            "**/node_modules/**"
+            "<node_internals>/**"
           ],
           "scope": "resource"
         },

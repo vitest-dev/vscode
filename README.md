@@ -101,8 +101,8 @@ These options are resolved relative to the [workspace file](https://code.visuals
   `process.env`
 - `vitest.debugNodeEnv`: Environment passed to the runner process in addition to `process.env` and `vitest.nodeEnv` when debugging tests
 - `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
-  `["<node_internals>/**"]`
-- `vitest.debugOutFiles`: If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with `!` the files are excluded. If not specified, the generated code is expected in the same directory as its source. Default: `["${workspaceFolder}/**/*.(m|c|)js", "!**/node_modules/**"]`
+  `["<node_internals>/**", "vitest/dist/**"]`
+- `vitest.debugOutFiles`: If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with `!` the files are excluded. If not specified, the generated code is expected in the same directory as its source.
 - `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
 - `vitest.applyDiagnostic`: Show a squiggly line where the error was thrown. This also enables the error count in the File Tab. Default: `true`
 - `vitest.showInlineConsoleLog`: Show console.log messages inline in the editor next to the code that produced them. When disabled, console logs will still appear in the test output but not inline. Default: `true`
@@ -124,7 +124,7 @@ You can run all tests that import the current file by using the "Run Related Tes
 
 ### Import Breakdown
 
-If you use Vitest 4.0.15 or higher, during continuous runs the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
+If you use Vitest 4.1 or higher, during continuous runs the extension will show how long it took to load the module on the same line where the import is defined. This number includes transform time and evaluation time, including static imports.
 
 If you hover over it, you can get a more detailed diagnostic.
 
@@ -177,4 +177,4 @@ Since 1.44.1, Vitest extension will forcefully stop any Vitest process after 1s 
 
 ### I am using `vitest.shellType: terminal`, but I don't see the terminal
 
-The extension uses a modified Vitest script that removes the reporter output. For this reason, the terminal is hidden by default. However, it might be useful to debug issues with the extension or Vitest itself - to open the terminal in the "Terminals" view you can use the "Vitest: Show Shell Terminal" command.
+The terminal is hidden by default because the content is replicated in the "Test Results" window. However, it might be useful to debug issues with the extension or Vitest itself - to open the terminal in the "Terminals" view you can use the "Vitest: Show Shell Terminal" command.
