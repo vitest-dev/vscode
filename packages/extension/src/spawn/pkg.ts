@@ -319,7 +319,6 @@ async function resolveVitestConfigs(showWarning: boolean) {
         config.configSearchPatternInclude || configGlob,
         config.configSearchPatternExclude,
       )
-  console.log(configs, vscode.workspace.workspaceFolders)
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)
