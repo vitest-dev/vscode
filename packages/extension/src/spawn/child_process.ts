@@ -34,6 +34,9 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
         ]
       : runtimeArgs
   const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
+  if (executable.endsWith('.CMD')) {
+    log.error(`Executable resolved to CMD instead of EXE. The PATH: ${process.env.PATH}`)
+  }
   let executablePath = workerPath
   if (folderConfig.runtime === 'deno') {
     execArgv.push('-A')
