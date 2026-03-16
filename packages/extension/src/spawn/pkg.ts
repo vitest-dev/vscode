@@ -21,6 +21,7 @@ export interface VitestPackage {
   id: string
   cwd: string
   version: string
+  name: string
   arguments?: string
   configFile?: string
   workspaceFile?: string
@@ -90,6 +91,7 @@ function resolveVitestConfig(
       loader: vitest.pnp.loaderPath,
       pnp: vitest.pnp.pnpPath,
       runtime,
+      name: vitest.packageName,
     }
   }
 
@@ -105,6 +107,7 @@ function resolveVitestConfig(
     vitestNodePath: vitest.vitestNodePath,
     version: pkg.version,
     runtime,
+    name: vitest.packageName,
   }
 }
 
@@ -178,6 +181,7 @@ function resolveVitestWorkspacePackages(showWarning: boolean) {
       vitestNodePath: vitest.vitestNodePath,
       version: pkg.version,
       runtime,
+      name: vitest.packageName,
     })
   })
   return {
@@ -240,6 +244,7 @@ export async function resolveVitestPackagesViaPackageJson(
       vitestNodePath: vitest.vitestNodePath,
       version: pkg.version,
       runtime,
+      name: vitest.packageName,
     })
   })
 
@@ -314,6 +319,7 @@ async function resolveVitestConfigs(showWarning: boolean) {
         config.configSearchPatternInclude || configGlob,
         config.configSearchPatternExclude,
       )
+  console.log(configs, vscode.workspace.workspaceFolders)
 
   const configsByFolder = configs.reduce<Record<string, vscode.Uri[]>>((acc, config) => {
     const dir = dirname(config.fsPath)
