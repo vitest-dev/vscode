@@ -8,6 +8,7 @@ const _require = require
 export interface VitestResolution {
   vitestPackageJsonPath: string
   vitestNodePath: string
+  packageName: string
   pnp?: {
     loaderPath: string
     pnpPath: string
@@ -23,6 +24,7 @@ export function resolveVitestPackage(
     return {
       vitestNodePath: resolveVitestNodePath(vitestPackageJsonPath),
       vitestPackageJsonPath,
+      packageName: 'Vitest',
     }
   }
   const vitePlus = resolveVitePlusPackagePath(cwd)
@@ -30,24 +32,32 @@ export function resolveVitestPackage(
     return {
       vitestNodePath: resolveViePlusVitestNodePath(vitePlus),
       vitestPackageJsonPath: vitePlus,
+      packageName: 'VitePlus',
     }
   }
 
   const pnpCwd = folder?.uri.fsPath || cwd
   const pnp = resolvePnp(pnpCwd)
   if (!pnp) return null
-  const vitestNodePath =
-    resolvePnpPackagePath(pnp.pnpApi, 'vitest/node', pnpCwd) ||
-    resolvePnpPackagePath(pnp.pnpApi, 'vite-plus/test/node', pnpCwd)
-  if (!vitestNodePath) return null
-  return {
-    vitestNodePath,
-    vitestPackageJsonPath: '', // we don't read pkg.json for pnp
-    pnp: {
-      loaderPath: pnp.pnpLoader,
-      pnpPath: pnp.pnpPath,
-    },
+  const vitestNodePath = resolvePnpPackagePath(pnp.pnpApi, 'vitest/node', pnpCwd)
+  if (vitestNodePath) {
+    return {
+      vitestNodePath,
+      vitestPackageJsonPath: '', // we don't read pkg.json for pnp
+      pnp,
+      packageName: 'Vitest',
+    }
   }
+  const vitePlusNodePath = resolvePnpPackagePath(pnp.pnpApi, 'vite-plus/test/node', pnpCwd)
+  if (vitePlusNodePath) {
+    return {
+      vitestNodePath: vitePlusNodePath,
+      vitestPackageJsonPath: '', // we don't read pkg.json for pnp
+      pnp,
+      packageName: 'VitePlus',
+    }
+  }
+  return null
 }
 
 export function resolveVitestPackagePath(cwd: string, folder: vscode.WorkspaceFolder | undefined) {
@@ -91,7 +101,7 @@ export function resolvePnp(cwd: string) {
     }
     const pnpApi = _require(pnpPath)
     return {
-      pnpLoader: require.resolve('./.pnp.loader.mjs', {
+      loaderPath: require.resolve('./.pnp.loader.mjs', {
         paths: [dirname(pnpPath)],
       }),
       pnpPath,

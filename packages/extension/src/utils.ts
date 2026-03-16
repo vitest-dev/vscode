@@ -13,7 +13,7 @@ import { getTestData, TestFile } from './testTreeData'
 export function noop() {}
 
 export function formatPkg(pkg: VitestPackage) {
-  return `Vitest v${pkg.version} (${relative(dirname(pkg.cwd), pkg.id)})`
+  return `${pkg.name} v${pkg.version} (${relative(dirname(pkg.cwd), pkg.id)})`
 }
 
 function _showVitestError(message: string, error?: any) {
