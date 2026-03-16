@@ -113,14 +113,12 @@ async function findRuntimeViaShell(runtime: 'node' | 'deno', cwd: string): Promi
     const startToken = '___START_SHELL__'
     const endToken = '___END_SHELL__'
     try {
-      const childProcess = spawn(
-        `${vscode.env.shell} -i -c 'if [[ $(type ${runtime} 2>/dev/null) == *function* ]]; then ${runtime} --version; fi; echo ${startToken} && which ${runtime} && echo ${endToken}'`,
-        {
-          stdio: 'pipe',
-          shell: true,
-          cwd,
-        },
-      )
+      const command = `${vscode.env.shell} -i -c 'if [[ $(type ${runtime} 2>/dev/null) == *function* ]]; then ${runtime} --version; fi; echo ${startToken} && which ${runtime} && echo ${endToken}'`
+      const childProcess = spawn(command, {
+        stdio: 'pipe',
+        shell: true,
+        cwd,
+      })
       let output = ''
       childProcess.stdout.on('data', (data) => (output += data.toString()))
       childProcess.on('error', () => resolve(null))
@@ -129,6 +127,7 @@ async function findRuntimeViaShell(runtime: 'node' | 'deno', cwd: string): Promi
         const start = output.indexOf(startToken)
         const end = output.indexOf(endToken)
         if (start === -1 || end === -1) return resolve(null)
+        log.verbose?.('[SHELL] Resolved runtime via shell command', command)
         return resolve(output.substring(start + startToken.length, end).trim())
       })
     } catch (e) {

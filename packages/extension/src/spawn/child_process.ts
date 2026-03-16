@@ -33,13 +33,13 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
           ...runtimeArgs,
         ]
       : runtimeArgs
-  const arvString = execArgv.join(' ')
   const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
   let executablePath = workerPath
   if (folderConfig.runtime === 'deno') {
     execArgv.push('-A')
     executablePath = pathToFileURL(workerPath).toString()
   }
+  const arvString = execArgv.join(' ')
   const script = `${executable} ${arvString ? `${arvString} ` : ''}${executablePath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = folderConfig.logLevel
