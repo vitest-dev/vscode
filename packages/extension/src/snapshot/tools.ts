@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 
 const ExportSymbolRegex = /^exports\[`([^`]*)`\]/gm
-const RangeEndRegex = /^`;$/m
+const RangeEndRegex = /`;$/m
 
 export interface SnapshotEntry {
   name: string
@@ -48,10 +48,11 @@ export class SnapshotEntryTool {
       const name = match[1]
       const snapshotDataStart = match.index
       const snapshotDataEnd =
-        (text.slice(snapshotDataStart).match(RangeEndRegex)?.index ??
-          /* broken snapshot data */
-          'exports[`'.length + name.length + '`]'.length + ' = `'.length) +
         snapshotDataStart +
+        // find the nearest closing delimiter
+        (text.slice(snapshotDataStart).match(RangeEndRegex)?.index ??
+          // fallback to empty snapshot
+          'exports[`'.length + name.length + '`]'.length + ' = `'.length + '""'.length) +
         '`;'.length
 
       this.snapshotEntries.push({
@@ -77,11 +78,10 @@ export function createSnapshotSymbol(
   entry: SnapshotEntry,
   index: number,
 ): vscode.DocumentSymbol {
-  const isLast = index === entry.breadcrumb.length - 1
-  const isTopLevel = index === 0
+  const isLastRound = index === entry.breadcrumb.length - 1
   return new vscode.DocumentSymbol(
     name,
-    isLast ? (isTopLevel ? 'test' : 'it') : 'describe',
+    isLastRound ? 'it' : 'describe',
     vscode.SymbolKind.Function,
     entry.fullRange,
     entry.keyRange,
