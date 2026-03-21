@@ -21,29 +21,22 @@ export class SnapshotDocumentSymbolProvider implements vscode.DocumentSymbolProv
 
     const documentSymbols: vscode.DocumentSymbol[] = []
     forExportsSymbol: for (const entry of this.snapshotEntryTool.snapshotEntries) {
-      let latestDocumentSymbols: vscode.DocumentSymbol | undefined = documentSymbols.at(-1)
+      let currentLevel: vscode.DocumentSymbol[] = documentSymbols
+      let parent: vscode.DocumentSymbol[] | undefined
 
-      if (!latestDocumentSymbols || latestDocumentSymbols.name !== entry.breadcrumb[0]) {
-        latestDocumentSymbols = createSnapshotSymbol(entry.breadcrumb[0], entry, 0)
-        documentSymbols.push(latestDocumentSymbols)
-        entry.breadcrumb.length > 1 && pushToDocumentSymbol(latestDocumentSymbols, entry)
-        continue forExportsSymbol
-      }
-
-      // Round
-      let parent: vscode.DocumentSymbol | undefined
-      for (let i = 1; i < entry.breadcrumb.length; i++) {
-        parent = latestDocumentSymbols
-        latestDocumentSymbols = latestDocumentSymbols.children.at(-1)
-        if (!latestDocumentSymbols || latestDocumentSymbols.name !== entry.breadcrumb[i]) {
-          latestDocumentSymbols = createSnapshotSymbol(entry.breadcrumb[i], entry, i)
-          parent.children.push(latestDocumentSymbols)
-          entry.breadcrumb.length !== i && pushToDocumentSymbol(latestDocumentSymbols, entry, i + 1)
+      for (let i = 0; i < entry.breadcrumb.length; i++) {
+        const existingSymbol = currentLevel.at(-1)
+        if (!existingSymbol || existingSymbol.name !== entry.breadcrumb[i]) {
+          const newSymbol = createSnapshotSymbol(entry.breadcrumb[i], entry, i)
+          currentLevel.push(newSymbol)
+          i + 1 < entry.breadcrumb.length && pushToDocumentSymbol(newSymbol, entry, i + 1)
           continue forExportsSymbol
         }
+        parent = currentLevel
+        currentLevel = existingSymbol.children
       }
       // last level - all breadcrumbs matched, create duplicate leaf
-      ;(parent?.children || documentSymbols).push(
+      ;(parent || documentSymbols).push(
         createSnapshotSymbol(entry.breadcrumb.at(-1)!, entry, entry.breadcrumb.length - 1),
       )
     }
