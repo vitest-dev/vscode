@@ -1,4 +1,4 @@
-import type { WebSocket } from 'ws'
+import type { AddressInfo, WebSocket } from 'ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { InlineConsoleLogManager } from './inlineConsoleLog'
@@ -6,10 +6,9 @@ import type { VitestPackage } from './spawn/pkg'
 import type { ExtensionWorkerProcess } from './spawn/types'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
-import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import getPort from 'get-port'
 import * as vscode from 'vscode'
+import { createBoundServer } from './net'
 import { WebSocketServer } from 'ws'
 import { VitestProcessAPI } from './apiProcess'
 import { getConfig } from './config'
@@ -36,8 +35,8 @@ export async function debugTests(
   token: vscode.CancellationToken,
   debugManager: DebugManager,
 ) {
-  const port = await getPort()
-  const server = createServer().listen(port)
+  const server = await createBoundServer()
+  const { port } = (server.address() as AddressInfo)
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
 
