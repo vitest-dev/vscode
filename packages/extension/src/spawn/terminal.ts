@@ -1,5 +1,6 @@
 import type { Server } from 'node:http'
-import type { AddressInfo, WebSocket } from 'ws'
+import type { AddressInfo } from 'node:net'
+import type { WebSocket } from 'ws'
 import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
