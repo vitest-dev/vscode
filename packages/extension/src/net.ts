@@ -15,7 +15,13 @@ import { createServer } from 'node:http'
 export function createBoundServer(): Promise<Server> {
   return new Promise<Server>((resolve, reject) => {
     const server = createServer()
-    server.on('error', reject)
-    server.listen(0, () => resolve(server))
+    const onError = (err: unknown) => {
+      reject(err)
+    }
+    server.once('error', onError)
+    server.listen(0, () => {
+      server.off('error', onError)
+      resolve(server)
+    })
   })
 }
