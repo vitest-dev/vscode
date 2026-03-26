@@ -36,13 +36,13 @@ it('createBoundServer: port is already listening (no TOCTOU gap)', async () => {
 })
 
 it('two concurrent createBoundServer calls receive different ports', async () => {
-  const [ s1, s2 ] = await Promise.all([createBoundServer(), createBoundServer()])
+  const [s1, s2] = await Promise.all([createBoundServer(), createBoundServer()])
 
   try {
-    const p1 = (s1.address() as AddressInfo).port;
-    const p2 = (s2.address() as AddressInfo).port;
-    expect(p1).to.not.equal(p2);
+    const p1 = (s1.address() as AddressInfo).port
+    const p2 = (s2.address() as AddressInfo).port
+    expect(p1).to.not.equal(p2)
   } finally {
-    await Promise.all([closeServer(s1), closeServer(s2)]);
+    await Promise.all([closeServer(s1), closeServer(s2)])
   }
 })
