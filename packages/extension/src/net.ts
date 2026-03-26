@@ -15,6 +15,7 @@ import { createServer } from 'node:http'
 export function createBoundServer(): Promise<Server> {
   return new Promise<Server>((resolve, reject) => {
     const server = createServer()
+    server.unref()
     const onError = (err: unknown) => {
       reject(err)
     }
@@ -22,7 +23,6 @@ export function createBoundServer(): Promise<Server> {
     server.listen(0, () => {
       server.off('error', onError)
       resolve(server)
-			server.unref()
     })
   })
 }
