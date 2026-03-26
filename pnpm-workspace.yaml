@@ -58,14 +58,7 @@ catalogs:
     vitest: ^3.2.4
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
-  - b
-  - d
-  - e
   - esbuild
-  - i
   - keytar
-  - l
-  - s
-  - u
 shellEmulator: true
 trustPolicy: no-downgrade
