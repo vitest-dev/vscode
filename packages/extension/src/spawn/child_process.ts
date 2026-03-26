@@ -47,7 +47,6 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = folderConfig.logLevel
   const server = await createBoundServer()
-  server.unref()
   const { port } = (server.address() as AddressInfo)
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`

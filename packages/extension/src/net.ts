@@ -10,7 +10,7 @@ import { createServer } from 'node:http'
  * phantom listener on ephemeral ports for ~1 second after close.
  *
  * The returned server is already listening; callers should read the port via
- * `(server.address() as AddressInfo).port` and call `server.unref()` as needed.
+ * `(server.address() as AddressInfo).port`.
  */
 export function createBoundServer(): Promise<Server> {
   return new Promise<Server>((resolve, reject) => {
@@ -22,6 +22,7 @@ export function createBoundServer(): Promise<Server> {
     server.listen(0, () => {
       server.off('error', onError)
       resolve(server)
+			server.unref()
     })
   })
 }
