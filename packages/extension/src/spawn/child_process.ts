@@ -6,10 +6,10 @@ import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
 import type { ProcessSpawnOptions } from './ws'
 import { spawn } from 'node:child_process'
-import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import getPort from 'get-port'
 import { WebSocketServer } from 'ws'
+import type { AddressInfo } from 'node:net'
+import { createBoundServer } from '../net'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import { createErrorLogger, log } from '../log'
@@ -46,8 +46,8 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
   const script = `${executable} ${arvString ? `${arvString} ` : ''}${executablePath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
   const logLevel = folderConfig.logLevel
-  const port = await getPort()
-  const server = createServer().listen(port).unref()
+  const server = await createBoundServer()
+  const { port } = server.address() as AddressInfo
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
   const vitest = spawn(executable, [...execArgv, executablePath], {

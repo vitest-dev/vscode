@@ -1,13 +1,13 @@
 import type { Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import type { WebSocket } from 'ws'
 import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
 import type { ProcessSpawnOptions, WsConnectionMetadata } from './ws'
-import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import getPort from 'get-port'
 import * as vscode from 'vscode'
+import { createBoundServer } from '../net'
 import { WebSocketServer } from 'ws'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
@@ -22,8 +22,8 @@ export async function createVitestTerminalProcess(
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
   if (pnpLoader && !pnp) throw new Error('pnp file is required if loader option is used')
-  const port = await getPort()
-  const server = createServer().listen(port).unref()
+  const server = await createBoundServer()
+  const { port } = server.address() as AddressInfo
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
   const config = getConfig(pkg.folder)

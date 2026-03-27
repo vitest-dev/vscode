@@ -69,9 +69,6 @@ catalogs:
     find-up:
       specifier: ^7.0.0
       version: 7.0.0
-    get-port:
-      specifier: ^6.1.2
-      version: 6.1.2
     istanbul-to-vscode:
       specifier: ^2.1.0
       version: 2.1.1
@@ -229,9 +226,6 @@ importers:
       find-up:
         specifier: 'catalog:'
         version: 7.0.0
-      get-port:
-        specifier: 'catalog:'
-        version: 6.1.2
       istanbul-to-vscode:
         specifier: 'catalog:'
         version: 2.1.1
@@ -2944,10 +2938,6 @@ packages:
   get-port@5.1.1:
     resolution: {integrity: sha512-g/Q1aTSDOxFpchXC4i8ZWvxA1lnPqx/JHqcpIw0/LX9T8x/GBbi6YnlN5nhaKIFkT8oFsscUKgDJYxfwfS6QsQ==}
     engines: {node: '>=8'}
-
-  get-port@6.1.2:
-    resolution: {integrity: sha512-BrGGraKm2uPqurfGVj/z97/zv8dPleC6x9JBNRTrDNtCkkRF4rPwrQXFgL7+I+q8QSdU4ntLQX2D7KIxSy8nGw==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   get-proto@1.0.1:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
@@ -7444,8 +7434,6 @@ snapshots:
   get-port@3.2.0: {}
 
   get-port@5.1.1: {}
-
-  get-port@6.1.2: {}
 
   get-proto@1.0.1:
     dependencies:
