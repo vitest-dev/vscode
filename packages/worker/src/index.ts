@@ -3,7 +3,7 @@ import type {
   WorkerRunnerOptions,
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
-import type { TestUserConfig } from 'vitest/node'
+import type { Reporter, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
@@ -138,6 +138,11 @@ export async function initVitest(
       stdout,
     },
   )
+  ;((vitest as any).reporters as Reporter[]).forEach((reporter) => {
+    if (!(reporter instanceof VSCodeReporter)) {
+      reporter.onUserConsoleLog = undefined
+    }
+  })
 
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config

@@ -4,14 +4,13 @@ import { basename, normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
-import { copyErrorOutput, copyTestItemErrors } from './commands/copyErrors'
+import { copyOutput, copyTestItemErrors } from './commands/copyOutput'
 import { getConfig, testControllerId } from './config'
 import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
 import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
 import { ImportsBreakdownProvider } from './importsBreakdownProvider'
-import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
 import { RunQueue } from './runQueue'
 import { TransformSchemaProvider } from './schemaProvider'
@@ -50,7 +49,6 @@ class VitestExtension {
   private debugManager: DebugManager
   private schemaProvider: TransformSchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
-  private inlineConsoleLog: InlineConsoleLogManager
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -88,7 +86,6 @@ class VitestExtension {
           untrackedModules: [],
         },
     )
-    this.inlineConsoleLog = new InlineConsoleLogManager(this.testTree)
   }
 
   private _defineTestProfilePromise: Promise<void> | undefined
@@ -105,7 +102,6 @@ class VitestExtension {
 
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     this.importsBreakdownProvider.clear()
-    this.inlineConsoleLog.clear()
     this.testTree.reset([])
     this.runQueues.forEach((q) => q.dispose())
     this.runQueues.clear()
@@ -223,7 +219,6 @@ class VitestExtension {
       vitest,
       this.diagnostic,
       this.importsBreakdownProvider,
-      this.inlineConsoleLog,
     )
     const runQueueId = `${vitest.id}:run`
     this.runQueues.set(runQueueId, runQueue)
@@ -255,7 +250,6 @@ class VitestExtension {
         vitest.package,
         this.diagnostic,
         this.importsBreakdownProvider,
-        this.inlineConsoleLog,
 
         request,
         token,
@@ -287,7 +281,6 @@ class VitestExtension {
       vitest,
       this.diagnostic,
       this.importsBreakdownProvider,
-      this.inlineConsoleLog,
     )
     const coverageQueueId = `${vitest.id}:coverage`
     this.runQueues.set(coverageQueueId, coverageQueue)
@@ -513,7 +506,7 @@ class VitestExtension {
       vscode.commands.registerCommand('vitest.copyTestItemErrors', (testItem) =>
         copyTestItemErrors(this.testController, testItem),
       ),
-      vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
+      vscode.commands.registerCommand('vitest.copyErrorOutput', copyOutput),
       vscode.commands.registerCommand('vitest.toggleConfigs', async () => {
         if (!this.api) {
           return
@@ -633,7 +626,6 @@ class VitestExtension {
     this.testController.dispose()
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
-    this.inlineConsoleLog.dispose()
     this.runProfiles.forEach((p) => p.dispose())
     this.runProfiles.clear()
     this.disposables.forEach((d) => d.dispose())

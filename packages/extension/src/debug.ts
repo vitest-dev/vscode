@@ -1,7 +1,6 @@
 import type { WebSocket } from 'ws'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
-import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { VitestPackage } from './spawn/pkg'
 import type { ExtensionWorkerProcess } from './spawn/types'
 import type { TestTree } from './testTree'
@@ -30,7 +29,6 @@ export async function debugTests(
   pkg: VitestPackage,
   diagnostic: ExtensionDiagnostic | undefined,
   importsBreakdown: ImportsBreakdownProvider,
-  inlineConsoleLog: InlineConsoleLogManager,
 
   request: vscode.TestRunRequest,
   token: vscode.CancellationToken,
@@ -155,15 +153,7 @@ export async function debugTests(
             process: new ExtensionDebugProcess(metadata.ws),
           })
           const handle = await api.spawnForRun()
-          const runner = new TestRunner(
-            handle,
-            controller,
-            tree,
-            api,
-            diagnostic,
-            importsBreakdown,
-            inlineConsoleLog,
-          )
+          const runner = new TestRunner(handle, controller, tree, api, diagnostic, importsBreakdown)
           disposables.push(api, runner)
 
           token.onCancellationRequested(async () => {
