@@ -73,40 +73,42 @@ You can identify if your config is loaded by the extension with `process.env.VIT
 
 These options are resolved relative to the [workspace file](https://code.visualstudio.com/docs/editor/workspaces#_multiroot-workspaces) if there is one. If you have a single folder open in Visual Studio Code, paths will be resolved relative to that folder. If there are multiple folders, but there is no workspace file, then paths are resolved as is (so they should be absolute) - this can happen if you change your user config to have multiple folders.
 
-- `vitest.rootConfig`: The path to your root config file. If you have several Vitest configs, consider using a [Vitest workspace](https://vitest.dev/guide/workspace).
-- `vitest.workspaceConfig`: The path to the [Vitest workspace](https://vitest.dev/guide/workspace) config file. You can only have a single workspace config per VSCode workspace.
-- `vitest.ignoreWorkspace`: Ignores the workspace resolution step. The extension will only look for `vitest.config` files.
-- `vitest.configSearchPatternInclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be used when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}`.
-- `vitest.configSearchPatternExclude`: [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) that should be ignored when this extension looks for config files. Note that this is applied to _config_ files, not test files inside configs. Default: `{**/node_modules/**,**/vendor/**,**/.*/**,*.d.ts}`. If the extension cannot find Vitest, please open an issue.
-- `vitest.runtime`: The default runtime to run tests in. Supported: `auto` (default) `node` and `deno`. If auto, the extension will looks for a `deno.enabled` config flag or a `deno.json` file in the root folder.
-- `vitest.shellType`: The method the extension uses to spawn a long-running Vitest process. This is particularly useful if you are using a custom shell script to set up the environment. When using the `terminal` shell type, the websocket connection will be established. Can either be `terminal` or `child_process`. Default: `child_process`.
-- `vitest.nodeExecutable`: The path to the Node.js executable. If not assigned, tries to find Node.js path via a PATH variable or a `which` command. This is applied only when `vitest.shellType` is `child_process` (the default).
-- `vitest.nodeExecArgs`: The arguments to pass to the Node.js executable. This is applied only when `vitest.shellType` is `child_process` (the default).
-- `vitest.terminalShellPath`: The path to the shell executable. This is applied only when `vitest.shellType` is `terminal`.
-- `vitest.terminalShellArgs`: The arguments to pass to the shell executable. This is applied only when `vitest.shellType` is `terminal`.
-- `vitest.debuggerPort`: Port that the debugger will be attached to. By default uses 9229 or tries to find a free port if it's not available.
-- `vitest.debuggerAddress`: TCP/IP address of process to be debugged. Default: localhost
-- `vitest.cliArguments`: Additional arguments to pass to the Vitest CLI. Note that some arguments will be ignored: `watch`, `reporter`, `api`, and `ui`. Example: `--mode=staging`
-- `vitest.showImportsDuration`: Show how long it took to import and transform the modules. When hovering, the extension provides more diagnostics.
-- `vitest.watchOnStartup`: Keep Vitest server running in the background at all times automatically on startup, rerunning tests when files change (default: `false`). This is the same as enabling continuous run.
+| Key | Description | Type | Default |
+|-----|-------------|------|---------|
+| `vitest.rootConfig` | The path to your root config file. If you have several Vitest configs, consider using a [Vitest workspace](https://vitest.dev/guide/workspace). | `string` | — |
+| `vitest.workspaceConfig` | The path to the [Vitest workspace](https://vitest.dev/guide/workspace) config file. You can only have a single workspace config per VSCode workspace. | `string` | — |
+| `vitest.ignoreWorkspace` | Ignores the workspace resolution step. The extension will only look for `vitest.config` files. | `boolean` | — |
+| `vitest.configSearchPatternInclude` | [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) used when looking for config files. Applied to _config_ files, not test files inside configs. | `string` | `**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}` |
+| `vitest.configSearchPatternExclude` | [Glob pattern](https://code.visualstudio.com/docs/editor/glob-patterns) ignored when looking for config files. Applied to _config_ files, not test files inside configs. If the extension cannot find Vitest, please open an issue. | `string` | `{**/node_modules/**, **/vendor/**, **/.*/**, *.d.ts}` |
+| `vitest.runtime` | The default runtime to run tests in. Supported: `auto`, `node`, `deno`. If `auto`, the extension looks for a `deno.enabled` config flag or a `deno.json` file in the root folder. | `string` | `auto` |
+| `vitest.shellType` | The method the extension uses to spawn a Vitest process. Useful if you use a custom shell script to set up the environment. When using `terminal`, a websocket connection is established. | `"child_process" \| "terminal"` | `child_process` |
+| `vitest.nodeExecutable` | The path to the Node.js executable. If not set, tries to find it via `PATH` or `which`. Only applies when `vitest.shellType` is `child_process`. | `string` | — |
+| `vitest.nodeExecArgs` | Arguments to pass to the Node.js executable. Only applies when `vitest.shellType` is `child_process`. | `string[]` | — |
+| `vitest.terminalShellPath` | The path to the shell executable. Only applies when `vitest.shellType` is `terminal`. | `string` | — |
+| `vitest.terminalShellArgs` | Arguments to pass to the shell executable. Only applies when `vitest.shellType` is `terminal`. | `string[]` | — |
+| `vitest.debuggerPort` | Port the debugger will be attached to. Uses `9229` or finds a free port if unavailable. | `number` | `9229` |
+| `vitest.debuggerAddress` | TCP/IP address of the process to be debugged. | `string` | `localhost` |
+| `vitest.cliArguments` | Additional arguments to pass to the Vitest CLI. Note: `watch`, `reporter`, `api`, and `ui` are ignored. Example: `--mode=staging` | `string` | — |
+| `vitest.showImportsDuration` | Show how long it took to import and transform modules. Hovering provides more diagnostics. | `boolean` | — |
+| `vitest.watchOnStartup` | Keep Vitest running in the background on startup, rerunning tests when files change. Same as enabling continuous run. | `boolean` | `false` |
 
 > 💡 The `vitest.nodeExecutable` and `vitest.nodeExecArgs` settings are used as `execPath` and `execArgv` when spawning a new `child_process`, and as `runtimeExecutable` and `runtimeArgs` when [debugging a test](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md).
 > The `vitest.terminalShellPath` and `vitest.terminalShellArgs` settings are used as `shellPath` and `shellArgs` when creating a new [terminal](https://code.visualstudio.com/api/references/vscode-api#Terminal)
 
 ### Other Options
 
-- `vitest.filesWatcherInclude`: Glob pattern for the watcher that triggers a test rerun or collects changes. Default: `**/*`
-- `vitest.vitestPackagePath`: The path to a `package.json` file of a Vitest executable (it's usually inside `node_modules`) in case the extension cannot find it. It will be used to resolve Vitest API paths. This should be used as a last resort fix.
-- `vitest.nodeEnv`: Environment passed to the runner process in addition to
-  `process.env`
-- `vitest.debugNodeEnv`: Environment passed to the runner process in addition to `process.env` and `vitest.nodeEnv` when debugging tests
-- `vitest.debugExclude`: Excludes files matching specified glob patterns from debugging. Default:
-  `["<node_internals>/**", "vitest/dist/**"]`
-- `vitest.debugOutFiles`: If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with `!` the files are excluded. If not specified, the generated code is expected in the same directory as its source.
-- `vitest.logLevel`: How verbose should the logger be in the "Output" channel. Default: `info`
-- `vitest.applyDiagnostic`: Show a squiggly line where the error was thrown. This also enables the error count in the File Tab. Default: `true`
-- `vitest.showInlineConsoleLog`: Show console.log messages inline in the editor next to the code that produced them. When disabled, console logs will still appear in the test output but not inline. Default: `true`
-- `vitest.forceCancelTimeout`: When the 'Stop' button is clicked, the extension tries to stop tests gracefully so they don't keep any hanging processes. By default, if tests didn't finish in 1 second, the extension will kill any Vitest process which may keep your test's 'child_process' alive. You can configure the timeout with this option, but consider using [`signal`](https://vitest.dev/guide/test-context#signal) API inside of your tests instead.
+| Key | Description | Type | Default |
+|-----|-------------|------|---------|
+| `vitest.filesWatcherInclude` | Glob pattern for the watcher that triggers a test rerun or collects changes. | `string` | `**/*` |
+| `vitest.vitestPackagePath` | Path to a `package.json` of a Vitest executable (usually in `node_modules`) if the extension cannot find it. Used to resolve Vitest API paths. Last resort fix. | `string` | — |
+| `vitest.nodeEnv` | Environment passed to the runner process in addition to `process.env`. | `object` | — |
+| `vitest.debugNodeEnv` | Environment passed to the runner process in addition to `process.env` and `vitest.nodeEnv` when debugging tests. | `object` | — |
+| `vitest.debugExclude` | Glob patterns for files to exclude from debugging. | `string[]` | `["<node_internals>/**", "vitest/dist/**"]` |
+| `vitest.debugOutFiles` | If source maps are enabled, glob patterns specifying the generated JavaScript files. Patterns starting with `!` exclude files. If not set, generated code is expected alongside its source. | `string[]` | — |
+| `vitest.logLevel` | How verbose the logger is in the "Output" channel. | `string` | `info` |
+| `vitest.applyDiagnostic` | Show a squiggly line where the error was thrown. Also enables the error count in the File Tab. | `boolean` | `true` |
+| `vitest.showInlineConsoleLog` | Show `console.log` messages inline in the editor next to the code that produced them. Logs still appear in test output when disabled. | `boolean` | `true` |
+| `vitest.forceCancelTimeout` | Milliseconds to wait for tests to stop gracefully after clicking "Stop" before force-killing Vitest. Consider using the [`signal`](https://vitest.dev/guide/test-context#signal) API in tests instead. | `number` | `1000` |
 
 ### Commands
 
