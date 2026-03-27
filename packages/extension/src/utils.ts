@@ -41,16 +41,6 @@ export function debounce<T extends (...args: any[]) => void>(cb: T, wait = 20) {
   return <T>(<any>callable)
 }
 
-// port from nanoid
-// https://github.com/ai/nanoid
-const urlAlphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict'
-export function nanoid(size = 21) {
-  let id = ''
-  let i = size
-  while (i--) id += urlAlphabet[(Math.random() * 64) | 0]
-  return id
-}
-
 export function waitUntilExists(file: string, timeoutMs = 5000) {
   return new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -71,11 +61,6 @@ const pathToRuntime: {
   node?: string
 } = {}
 
-export function clearCachedRuntime() {
-  pathToRuntime.deno = undefined
-  pathToRuntime.node = undefined
-}
-
 // based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
 export async function findRuntimeExecutable(
   runtime: 'node' | 'deno',
@@ -83,9 +68,11 @@ export async function findRuntimeExecutable(
 ): Promise<string> {
   if (getConfig().nodeExecutable)
     // if empty string, keep as undefined
-    pathToRuntime[runtime] = getConfig().nodeExecutable || undefined
+    pathToRuntime[runtime] = getConfig().nodeExecutable
 
-  if (pathToRuntime[runtime]) return pathToRuntime[runtime]
+  if (pathToRuntime[runtime]) {
+    return pathToRuntime[runtime]
+  }
 
   // Stage 1: Try to find Node.js via process.env.PATH
   let node: string | null = await which(runtime, { nothrow: true })
@@ -99,7 +86,7 @@ export async function findRuntimeExecutable(
   node ??= await findRuntimeViaShell(runtime, cwd)
 
   if (!node) {
-    const msg = `Unable to find 'node' executable.\nMake sure to have Node.js installed and available in your PATH.\nCurrent PATH: '${process.env.PATH}'.`
+    const msg = `Unable to find '${runtime}' executable.\nMake sure to have ${runtime} installed and available in your PATH.\nCurrent PATH: '${process.env.PATH}'.`
     log.error(msg)
     throw new Error(msg)
   }
