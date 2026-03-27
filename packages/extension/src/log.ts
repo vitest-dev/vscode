@@ -88,17 +88,17 @@ export const log = {
   workspaceError: (folder: string, ...args: any[]) => {
     log.error(`[Workspace ${folder}]`, ...args)
   },
-  openOuput() {
+  openOutput() {
     channel.show()
   },
 } as const
 
-let exitsts = false
+let exists = false
 function appendFile(log: string) {
-  if (!exitsts) {
+  if (!exists) {
     mkdirSync(dirname(logFile), { recursive: true })
     writeFileSync(logFile, '')
-    exitsts = true
+    exists = true
   }
   appendFileSync(logFile, `${log}\n`)
 }

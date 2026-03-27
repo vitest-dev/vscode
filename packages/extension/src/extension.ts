@@ -22,6 +22,9 @@ import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
 import { clearCachedRuntime, debounce, showVitestError } from './utils'
 import './polyfills'
+import { SnapshotEntryTool } from './snapshot/tools'
+import { SnapshotDocumentSymbolProvider } from './snapshot/documentSymbolProvider'
+import { SnapshotFoldingRangeProvider } from './snapshot/foldingRangeProvider'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension(context)
@@ -320,6 +323,7 @@ class VitestExtension {
       'vitest.runtime',
       'deno.enabled',
     ]
+    const snapshotEntryTool = new SnapshotEntryTool()
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
@@ -336,7 +340,7 @@ class VitestExtension {
         }),
       ),
       vscode.commands.registerCommand('vitest.openOutput', () => {
-        log.openOuput()
+        log.openOutput()
       }),
       vscode.commands.registerCommand('vitest.runRelatedTests', async (uri?: vscode.Uri) => {
         const currentUri = uri || vscode.window.activeTextEditor?.document.uri
@@ -537,6 +541,14 @@ class VitestExtension {
 
         await this.defineTestProfiles(false)
       }),
+      vscode.languages.registerDocumentSymbolProvider(
+        { language: 'vitest-snapshot' },
+        new SnapshotDocumentSymbolProvider(snapshotEntryTool),
+      ),
+      vscode.languages.registerFoldingRangeProvider(
+        { language: 'vitest-snapshot' },
+        new SnapshotFoldingRangeProvider(snapshotEntryTool),
+      ),
     ]
 
     // if the config changes, re-define all test profiles
