@@ -19,7 +19,7 @@ it('createBoundServer resolves with a server bound to a valid port', async () =>
 
 it('createBoundServer: port is already listening (no TOCTOU gap)', async () => {
   const server = await createBoundServer()
-  const { port } = (server.address() as AddressInfo)
+  const { port } = server.address() as AddressInfo
   try {
     // A TCP connection to the port must succeed immediately — the socket is
     // never released and re-acquired, so there is no window for EADDRINUSE.

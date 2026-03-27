@@ -36,7 +36,7 @@ export async function debugTests(
   debugManager: DebugManager,
 ) {
   const server = await createBoundServer()
-  const { port } = (server.address() as AddressInfo)
+  const { port } = server.address() as AddressInfo
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
 

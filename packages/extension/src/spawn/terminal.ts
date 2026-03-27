@@ -23,7 +23,7 @@ export async function createVitestTerminalProcess(
   const pnp = pkg.pnp
   if (pnpLoader && !pnp) throw new Error('pnp file is required if loader option is used')
   const server = await createBoundServer()
-  const { port } = (server.address() as AddressInfo)
+  const { port } = server.address() as AddressInfo
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
   const config = getConfig(pkg.folder)
