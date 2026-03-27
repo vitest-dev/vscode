@@ -3,7 +3,6 @@ import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { RunHandle, VitestProcessAPI } from './apiProcess'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
-import type { InlineConsoleLogManager } from './inlineConsoleLog'
 import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import path from 'node:path'
@@ -32,7 +31,6 @@ export class TestRunner extends vscode.Disposable {
     protected readonly api: VitestProcessAPI,
     protected readonly diagnostic: ExtensionDiagnostic | undefined,
     protected readonly importsBreakdown: ImportsBreakdownProvider,
-    protected readonly inlineConsoleLog: InlineConsoleLogManager,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
@@ -51,7 +49,6 @@ export class TestRunner extends vscode.Disposable {
         const uri = vscode.Uri.file(file)
         this.diagnostic?.deleteDiagnostic(uri)
       })
-      this.inlineConsoleLog.clear()
     })
 
     handle.handlers.onTaskUpdate((packs) => {
@@ -124,7 +121,24 @@ export class TestRunner extends vscode.Disposable {
     })
 
     handle.handlers.onConsoleLog((consoleLog) => {
-      this.inlineConsoleLog.addConsoleLog(consoleLog)
+      const testRun = this.testRun
+      if (!testRun) {
+        return
+      }
+
+      const config = getConfig()
+      const test = consoleLog.taskId ? this.tree.getTestItemByTaskId(consoleLog.taskId) : undefined
+      const loc = consoleLog.parsedLocation
+      testRun.appendOutput(
+        formatTestOutput(consoleLog.content),
+        config.showInlineConsoleLog && loc
+          ? new vscode.Location(
+              vscode.Uri.file(loc.file),
+              new vscode.Position(loc.line, loc.column),
+            )
+          : undefined,
+        test,
+      )
     })
   }
 
@@ -336,11 +350,10 @@ export class ContinuousTestRunner extends TestRunner {
     api: VitestProcessAPI,
     diagnostic: ExtensionDiagnostic | undefined,
     importsBreakdown: ImportsBreakdownProvider,
-    inlineConsoleLog: InlineConsoleLogManager,
     private readonly testRunProfile: vscode.TestRunProfile,
     private readonly continuousRequests: Set<vscode.TestRunRequest>,
   ) {
-    super(handle, controller, tree, api, diagnostic, importsBreakdown, inlineConsoleLog)
+    super(handle, controller, tree, api, diagnostic, importsBreakdown)
     handle.handlers.onTestRunStart((files) => {
       this.startTestRun(files)
       log.verbose?.(

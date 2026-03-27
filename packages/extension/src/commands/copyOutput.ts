@@ -2,6 +2,7 @@ import type { TestError } from 'vitest'
 import * as vscode from 'vscode'
 import { getTestData, TestCase } from '../testTreeData'
 import { createTestLabel, getErrorMessage, showVitestError } from '../utils'
+import { stripVTControlCharacters } from 'node:util'
 
 export async function copyTestItemErrors(
   testController: vscode.TestController,
@@ -47,7 +48,7 @@ function createTestItemErrors(item: vscode.TestItem, test: TestCase) {
   }
 }
 
-export async function copyErrorOutput(
+export async function copyOutput(
   arg1: { test: vscode.TestItem; message: vscode.TestMessage } | undefined,
 ) {
   if (!arg1) {
@@ -63,7 +64,7 @@ export async function copyErrorOutput(
 
   const error = data.errors?.find((e) => e.__vscode_id === message.contextValue)
   if (!error) {
-    showVitestError('Cannot copy the error output. Please, open an issue with reproduction')
+    await vscode.env.clipboard.writeText(stripVTControlCharacters(message.message.toString()))
     return
   }
 
