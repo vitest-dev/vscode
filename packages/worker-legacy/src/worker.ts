@@ -141,6 +141,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
   ) {
     // @ts-expect-error private method in Vitest <=2.1.5
     await this.vitest.initBrowserProviders?.()
+    if (this.vitest.config.coverage.enabled) {
+      await (this.vitest as any).initCoverageProvider?.()
+      await (this.vitest as any).coverageProvider?.clean(this.vitest.config.coverage.clean)
+    }
 
     const specs = await this.resolveTestSpecs(specsOrPaths)
 
