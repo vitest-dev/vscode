@@ -183,7 +183,7 @@ export class VSCodeReporter implements Reporter {
   async onFinished(
     files?: RunnerTestFile[],
     errors: unknown[] = this.vitest.state.getUnhandledErrors(),
-    coverage?: unknown,
+    coverage?: any,
   ) {
     const collecting = this.collecting
 
@@ -214,7 +214,12 @@ export class VSCodeReporter implements Reporter {
     }
 
     nextTick(() => {
-      this.rpc.onTestRunEnd(files || [], output, collecting, coverage)
+      this.rpc.onTestRunEnd(
+        files || [],
+        output,
+        collecting,
+        coverage ? coverage.toJSON() : undefined,
+      )
     })
   }
 
