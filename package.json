@@ -159,25 +159,22 @@
       }
     ],
     "menus": {
-      "testing/item/result": [
-        {
-          "command": "vitest.copyTestItemErrors"
-        }
-      ],
       "testing/message/content": [
         {
-          "command": "vitest.copyErrorOutput"
+          "command": "vitest.copyErrorOutput",
+          "when": "resourcePath in vitest.testFiles"
         }
       ],
       "testing/message/context": [
         {
-          "command": "vitest.copyErrorOutput"
+          "command": "vitest.copyErrorOutput",
+          "when": "resourcePath in vitest.testFiles"
         }
       ],
       "editor/title/context": [
         {
           "command": "vitest.revealInTestExplorer",
-          "when": "vitest.testFiles && resourcePath in vitest.testFiles",
+          "when": "resourcePath in vitest.testFiles",
           "group": "vitest"
         },
         {
