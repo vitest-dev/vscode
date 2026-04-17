@@ -70,7 +70,7 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     return (this.vitest as any).getCoreWorkspaceProject()
   }
 
-  public async collectTests(files: [projectName: string, filepath: string][]) {
+  public async collectTests(files: ExtensionTestSpecification[]) {
     const specifications: [project: WorkspaceProject, filepath: string][] = []
 
     for (const [projectName, filepath] of files) {
