@@ -106,9 +106,12 @@ export class ExtensionWorkerRunner {
   ): Promise<TestSpecification[]> {
     const specifications: TestSpecification[] = []
     files.forEach((file) => {
-      const [projectName, filepath] = file
+      const [projectName, filepath, options] = file
       const project = this.vitest.getProjectByName(projectName)
-      specifications.push(project.createSpecification(filepath))
+      const specification = project.createSpecification(filepath)
+      // @ts-expect-error testNamePattern is readonly and supported only in v4.1
+      specification.testNamePattern = options?.testNamePattern
+      specifications.push(specification)
     })
     return specifications
   }
