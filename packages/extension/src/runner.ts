@@ -212,7 +212,16 @@ export class TestRunner extends vscode.Disposable {
       else
         log.info(
           `Running ${files.length} file(s):`,
-          files.map((f) => this.relative(f)),
+          files.map((f) => {
+            if (typeof f === 'string')
+              return this.relative(f)
+            const parts = [this.relative(f)]
+            if (f[0])
+              parts.push(`[${f[0]}]`)
+            if (f[2]?.testNamePattern)
+              parts.push(`(${f[2].testNamePattern})`)
+            return parts.join(' ')
+          }),
         )
       await runTests(files, testNamePatern)
     }
