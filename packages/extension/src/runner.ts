@@ -14,7 +14,7 @@ import * as vscode from 'vscode'
 import { getConfig } from './config'
 import { coverageContext } from './coverage'
 import { log } from './log'
-import { getTestData, TestCase, TestFile, TestFolder } from './testTreeData'
+import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { getErrorMessage, showVitestError } from './utils'
 
 export class TestRunner extends vscode.Disposable {
@@ -212,7 +212,13 @@ export class TestRunner extends vscode.Disposable {
       else
         log.info(
           `Running ${files.length} file(s):`,
-          files.map((f) => this.relative(f)),
+          files.map((f) => {
+            if (typeof f === 'string') return this.relative(f)
+            const parts = [this.relative(f)]
+            if (f[0]) parts.push(`[${f[0]}]`)
+            if (f[2]?.testNamePattern) parts.push(`(${f[2].testNamePattern})`)
+            return parts.join(' ')
+          }),
         )
       await runTests(files, testNamePatern)
     }
@@ -376,7 +382,7 @@ export class ContinuousTestRunner extends TestRunner {
       log.info('[RUNNER]', 'Watching all test files')
     } else {
       const files = getTestFiles(include)
-      const testNamePatern = formatTestPattern(include)
+      const testNamePatern = formatContinuousTestPattern(include)
       await this.handle.rpc.watchTests(files, testNamePatern)
       log.info(
         '[RUNNER]',
@@ -600,7 +606,7 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTe
     ]
   }
   const testSpecs: ExtensionTestSpecification[] = []
-  const testFiles = new Set<string>()
+  const testFiles = new Map<string, ExtensionTestSpecification>()
   for (const test of tests) {
     const fsPath = normalize(test.uri!.fsPath)
     const data = getTestData(test)
@@ -608,23 +614,54 @@ function getTestFiles(tests: readonly vscode.TestItem[]): string[] | ExtensionTe
     if (data instanceof TestFolder) continue
     const project = data instanceof TestFile ? data.project : data.file.project
     const key = `${project}\0${fsPath}`
-    if (testFiles.has(key)) continue
-    testFiles.add(key)
-    testSpecs.push([project, fsPath])
+    if (testFiles.has(key)) {
+      const specification = testFiles.get(key)!
+      if (data instanceof TestCase || data instanceof TestSuite) {
+        const options = specification[2]!
+        if (options.testNamePattern === '.+') {
+          options.testNamePattern = data.getTestNamePattern()
+        } else {
+          options.testNamePattern += `|${data.getTestNamePattern()}`
+        }
+      }
+      continue
+    }
+    const specification: ExtensionTestSpecification = [
+      project,
+      fsPath,
+      {
+        // run every test by default
+        testNamePattern: data instanceof TestFile ? '.+' : data.getTestNamePattern(),
+      },
+    ]
+    testFiles.set(key, specification)
+    testSpecs.push(specification)
   }
   return testSpecs
+}
+
+function formatContinuousTestPattern(tests: readonly vscode.TestItem[], patterns: string[] = []) {
+  for (const test of tests) {
+    const data = getTestData(test)!
+    // file or a folder, try to include every test in there
+    if (!('getTestNamePattern' in data)) {
+      formatContinuousTestPattern(
+        Array.from(test.children, (t) => t[1]),
+        patterns,
+      )
+      continue
+    }
+    patterns.push(data.getTestNamePattern())
+  }
+  if (!patterns.length) return undefined
+  return patterns.join('|')
 }
 
 function formatTestPattern(tests: readonly vscode.TestItem[], patterns: string[] = []) {
   for (const test of tests) {
     const data = getTestData(test)!
-    // file or a folder, try to include every test in there
     if (!('getTestNamePattern' in data)) {
-      formatTestPattern(
-        Array.from(test.children, (t) => t[1]),
-        patterns,
-      )
-      continue
+      return
     }
     patterns.push(data.getTestNamePattern())
   }
@@ -637,6 +674,6 @@ function formatTestOutput(output: string) {
 }
 
 function labelTestItems(items: readonly vscode.TestItem[] | undefined) {
-  if (!items) return '<all tests>'
+  if (!items?.length) return '<all tests>'
   return items.map((p) => `"${p.label}"`).join(', ')
 }

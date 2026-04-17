@@ -11,7 +11,15 @@ export {
   normalizeDriveLetter,
 } from './utils'
 
-export type ExtensionTestSpecification = [project: string, file: string]
+export type ExtensionTestSpecificationOptions = {
+  testNamePattern?: string
+}
+
+export type ExtensionTestSpecification = [
+  project: string,
+  file: string,
+  options?: ExtensionTestSpecificationOptions,
+]
 
 export interface ExtensionTestFileMetadata {
   project: string

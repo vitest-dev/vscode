@@ -1,4 +1,7 @@
-import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestSpecification,
+  ExtensionTestSpecificationOptions,
+} from 'vitest-vscode-shared'
 import type { TestSpecification, Vitest } from 'vitest/node'
 import type { ExtensionWorkerRunner } from './runner'
 import { createQueuedHandler } from 'vitest-vscode-shared'
@@ -6,7 +9,7 @@ import { createQueuedHandler } from 'vitest-vscode-shared'
 export class ExtensionWorkerWatcher {
   private enabled = false
   private trackingEveryFile = false
-  private trackedTestItems: Record<string, string[]> = {}
+  private trackedTestItems: Record<string, Map<string, ExtensionTestSpecificationOptions>> = {}
   private trackedDirectories: string[] = []
 
   constructor(
@@ -42,11 +45,17 @@ export class ExtensionWorkerWatcher {
 
     const project = specification.project.name
     const files = this.trackedTestItems[project]
-    if (!files?.length) {
+    if (!files?.size) {
       return false
     }
 
-    return files.includes(specification.moduleId)
+    const options = files.get(specification.moduleId)
+    if (options) {
+      // @ts-expect-error testNamePattern is readonly and available only in v4.1
+      specification.testNamePattern = options.testNamePattern
+      return true
+    }
+    return false
   }
 
   trackTestItems(filesOrDirectories: ExtensionTestSpecification[] | string[]) {
@@ -54,11 +63,11 @@ export class ExtensionWorkerWatcher {
     if (typeof filesOrDirectories[0] === 'string') {
       this.trackedDirectories = filesOrDirectories as string[]
     } else {
-      for (const [project, file] of filesOrDirectories) {
+      for (const [project, file, options] of filesOrDirectories as ExtensionTestSpecification[]) {
         if (!this.trackedTestItems[project]) {
-          this.trackedTestItems[project] = []
+          this.trackedTestItems[project] = new Map()
         }
-        this.trackedTestItems[project].push(file)
+        this.trackedTestItems[project].set(file, options || {})
       }
     }
   }
