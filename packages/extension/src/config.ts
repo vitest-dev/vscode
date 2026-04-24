@@ -9,17 +9,19 @@ export const testControllerId = 'vitest'
 
 export function substituteVariables(value: string, workspaceFolder?: WorkspaceFolder): string {
   const folder = workspaceFolder ?? vscode.workspace.workspaceFolders?.[0]
-  return value
-    // eslint-disable-next-line no-template-curly-in-string
-    .replace(/\$\{workspaceFolder\}/g, folder?.uri.fsPath ?? '')
-    // eslint-disable-next-line no-template-curly-in-string
-    .replace(/\$\{workspaceFolderBasename\}/g, folder?.name ?? '')
-    // eslint-disable-next-line no-template-curly-in-string
-    .replace(/\$\{userHome\}/g, homedir())
-    // eslint-disable-next-line no-template-curly-in-string
-    .replace(/\$\{env:([^}]+)\}/g, (_, name) => process.env[name] ?? '')
-    // eslint-disable-next-line no-template-curly-in-string
-    .replace(/\$\{pathSeparator\}/g, sep)
+  return (
+    value
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{workspaceFolder\}/g, folder?.uri.fsPath ?? '')
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{workspaceFolderBasename\}/g, folder?.name ?? '')
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{userHome\}/g, homedir())
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{env:([^}]+)\}/g, (_, name) => process.env[name] ?? '')
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{pathSeparator\}/g, sep)
+  )
 }
 
 function resolvePathWithSubstitution(path: string | undefined, workspaceFolder?: WorkspaceFolder) {
@@ -91,7 +93,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugEnv: get<null | Record<string, string>>('debugNodeEnv', null),
     debugExclude: get<string[]>('debugExclude'),
-    debugOutFiles: debugOutFiles?.map(f => substituteVariables(f, workspaceFolder)),
+    debugOutFiles: debugOutFiles?.map((f) => substituteVariables(f, workspaceFolder)),
     filesWatcherInclude,
     runtime,
     forceCancelTimeout,
