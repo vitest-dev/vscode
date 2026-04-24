@@ -47,9 +47,9 @@ describe('substituteVariables', () => {
   })
 
   it('substitutes multiple occurrences', () => {
-    const folder = mockWorkspaceFolder('/ws', 'ws')
+    const folder = mockWorkspaceFolder('/ws', 'myws')
     // eslint-disable-next-line no-template-curly-in-string
-    expect(substituteVariables('${workspaceFolder}/a/${workspaceFolder}/b', folder)).to.equal('/ws/a//ws/b')
+    expect(substituteVariables('${workspaceFolder}/a/${workspaceFolderBasename}/b', folder)).to.equal('/ws/a/myws/b')
   })
 
   it('leaves unrecognized variables unchanged', () => {

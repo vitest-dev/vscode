@@ -22,6 +22,13 @@ export function substituteVariables(value: string, workspaceFolder?: WorkspaceFo
     .replace(/\$\{pathSeparator\}/g, sep)
 }
 
+function resolvePathWithSubstitution(path: string | undefined, workspaceFolder?: WorkspaceFolder) {
+  return resolveConfigPath(
+    path ? substituteVariables(path, workspaceFolder) : path,
+    workspaceFolder,
+  )
+}
+
 export function getConfigValue<T>(
   rootConfig: WorkspaceConfiguration,
   folderConfig: WorkspaceConfiguration,
@@ -57,10 +64,9 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     get<string>('configSearchPatternInclude', configGlob) || configGlob
 
   const vitestPackagePath = get<string | undefined>('vitestPackagePath')
-  const resolvedVitestPackagePath =
-    vitestPackagePath
-      ? resolveConfigPath(substituteVariables(vitestPackagePath, workspaceFolder), workspaceFolder)
-      : vitestPackagePath
+  const resolvedVitestPackagePath = vitestPackagePath
+    ? resolvePathWithSubstitution(vitestPackagePath, workspaceFolder)
+    : vitestPackagePath
 
   const logLevel = get<string>('logLevel', 'info')
 
@@ -91,18 +97,18 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     forceCancelTimeout,
     watchOnStartup,
     terminalShellArgs,
-    terminalShellPath: terminalShellPath ? resolveConfigPath(substituteVariables(terminalShellPath, workspaceFolder), workspaceFolder) : terminalShellPath,
+    terminalShellPath: resolvePathWithSubstitution(terminalShellPath, workspaceFolder),
     shellType,
     applyDiagnostic,
     cliArguments,
     nodeExecArgs,
     vitestPackagePath: resolvedVitestPackagePath,
-    workspaceConfig: resolveConfigPath(workspaceConfig ? substituteVariables(workspaceConfig, workspaceFolder) : workspaceConfig, workspaceFolder),
-    rootConfig: resolveConfigPath(rootConfigFile ? substituteVariables(rootConfigFile, workspaceFolder) : rootConfigFile, workspaceFolder),
+    workspaceConfig: resolvePathWithSubstitution(workspaceConfig, workspaceFolder),
+    rootConfig: resolvePathWithSubstitution(rootConfigFile, workspaceFolder),
     configSearchPatternInclude,
     configSearchPatternExclude,
     ignoreWorkspace,
-    nodeExecutable: resolveConfigPath(nodeExecutable ? substituteVariables(nodeExecutable, workspaceFolder) : nodeExecutable, workspaceFolder),
+    nodeExecutable: resolvePathWithSubstitution(nodeExecutable, workspaceFolder),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
     debuggerPort: get<number>('debuggerPort') || undefined,
     debuggerAddress: get<string>('debuggerAddress', undefined) || undefined,
