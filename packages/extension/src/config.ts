@@ -1,11 +1,35 @@
 import type { WorkspaceConfiguration, WorkspaceFolder } from 'vscode'
 import { homedir } from 'node:os'
-import { dirname, isAbsolute, resolve } from 'node:path'
+import { dirname, isAbsolute, resolve, sep } from 'node:path'
 import * as vscode from 'vscode'
 import { configGlob } from './constants'
 
 export const extensionId = 'vitest.explorer'
 export const testControllerId = 'vitest'
+
+export function substituteVariables(value: string, workspaceFolder?: WorkspaceFolder): string {
+  const folder = workspaceFolder ?? vscode.workspace.workspaceFolders?.[0]
+  return (
+    value
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{workspaceFolder\}/g, folder?.uri.fsPath ?? '')
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{workspaceFolderBasename\}/g, folder?.name ?? '')
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{userHome\}/g, homedir())
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{env:([^}]+)\}/g, (_, name) => process.env[name] ?? '')
+      // eslint-disable-next-line no-template-curly-in-string
+      .replace(/\$\{pathSeparator\}/g, sep)
+  )
+}
+
+function resolvePathWithSubstitution(path: string | undefined, workspaceFolder?: WorkspaceFolder) {
+  return resolveConfigPath(
+    path ? substituteVariables(path, workspaceFolder) : path,
+    workspaceFolder,
+  )
+}
 
 export function getConfigValue<T>(
   rootConfig: WorkspaceConfiguration,
@@ -42,14 +66,9 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     get<string>('configSearchPatternInclude', configGlob) || configGlob
 
   const vitestPackagePath = get<string | undefined>('vitestPackagePath')
-  const resolvedVitestPackagePath =
-    workspaceFolder && vitestPackagePath
-      ? resolve(
-          workspaceFolder.uri.fsPath,
-          // eslint-disable-next-line no-template-curly-in-string
-          vitestPackagePath.replace('${workspaceFolder}', workspaceFolder.uri.fsPath),
-        )
-      : vitestPackagePath
+  const resolvedVitestPackagePath = vitestPackagePath
+    ? resolvePathWithSubstitution(vitestPackagePath, workspaceFolder)
+    : vitestPackagePath
 
   const logLevel = get<string>('logLevel', 'info')
 
@@ -74,24 +93,24 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     env: get<null | Record<string, string>>('nodeEnv', null),
     debugEnv: get<null | Record<string, string>>('debugNodeEnv', null),
     debugExclude: get<string[]>('debugExclude'),
-    debugOutFiles,
+    debugOutFiles: debugOutFiles?.map((f) => substituteVariables(f, workspaceFolder)),
     filesWatcherInclude,
     runtime,
     forceCancelTimeout,
     watchOnStartup,
     terminalShellArgs,
-    terminalShellPath,
+    terminalShellPath: resolvePathWithSubstitution(terminalShellPath, workspaceFolder),
     shellType,
     applyDiagnostic,
     cliArguments,
     nodeExecArgs,
     vitestPackagePath: resolvedVitestPackagePath,
-    workspaceConfig: resolveConfigPath(workspaceConfig),
-    rootConfig: resolveConfigPath(rootConfigFile),
+    workspaceConfig: resolvePathWithSubstitution(workspaceConfig, workspaceFolder),
+    rootConfig: resolvePathWithSubstitution(rootConfigFile, workspaceFolder),
     configSearchPatternInclude,
     configSearchPatternExclude,
     ignoreWorkspace,
-    nodeExecutable: resolveConfigPath(nodeExecutable),
+    nodeExecutable: resolvePathWithSubstitution(nodeExecutable, workspaceFolder),
     disableWorkspaceWarning: get<boolean>('disableWorkspaceWarning', false),
     debuggerPort: get<number>('debuggerPort') || undefined,
     debuggerAddress: get<string>('debuggerAddress', undefined) || undefined,
@@ -101,11 +120,13 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   }
 }
 
-export function resolveConfigPath(path: string | undefined) {
+export function resolveConfigPath(path: string | undefined, workspaceFolder?: WorkspaceFolder) {
   if (!path || isAbsolute(path)) return path
   if (path.startsWith('~/')) {
     return resolve(homedir(), path.slice(2))
   }
+  // if a workspaceFolder was provided, resolve relative to it
+  if (workspaceFolder) return resolve(workspaceFolder.uri.fsPath, path)
   // if there is a workspace file, then it should be relative to it because
   // this option cannot be configured on a workspace folder level
   if (vscode.workspace.workspaceFile)
