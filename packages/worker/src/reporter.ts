@@ -1,20 +1,19 @@
 import type { RunnerTaskResultPack, UserConsoleLog } from 'vitest'
 import type { VitestWorkerRPC, WorkerInitMetadata, WorkerRunnerOptions } from 'vitest-vscode-shared'
-import {
-  experimental_getRunnerTask,
-  type BrowserCommand,
-  type Reporter,
-  type ResolvedConfig,
-  type RunnerTask,
-  type RunnerTestFile,
-  type TestCase,
-  type TestModule,
-  type TestProject,
-  type TestResult,
-  type TestSpecification,
-  type TestSuite,
-  type Vite,
-  type Vitest as VitestCore,
+import type {
+  BrowserCommand,
+  Reporter,
+  ResolvedConfig,
+  RunnerTask,
+  RunnerTestFile,
+  TestCase,
+  TestModule,
+  TestProject,
+  TestResult,
+  TestSpecification,
+  TestSuite,
+  Vite,
+  Vitest as VitestCore,
 } from 'vitest/node'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import { ExtensionWorker } from './worker'
@@ -102,19 +101,19 @@ export class VSCodeReporter implements Reporter {
 
   onTestCaseResult(testCase: TestCase): void {
     if (testCase.result().state === 'failed') {
-      this.logFailedTask(experimental_getRunnerTask(testCase))
+      this.logFailedTask(getRunnerTask(testCase))
     }
   }
 
   onTestSuiteResult(testSuite: TestSuite): void {
     if (testSuite.state() === 'failed') {
-      this.logFailedTask(experimental_getRunnerTask(testSuite))
+      this.logFailedTask(getRunnerTask(testSuite))
     }
   }
 
   onTestModuleEnd(testModule: TestModule): void {
     if (testModule.state() === 'failed') {
-      this.logFailedTask(experimental_getRunnerTask(testModule))
+      this.logFailedTask(getRunnerTask(testModule))
     }
   }
 
@@ -269,4 +268,8 @@ export class VSCodeReporter implements Reporter {
 
 function getEntityJSONTask(entity: TestModule) {
   return (entity as any).task as RunnerTestFile
+}
+
+function getRunnerTask(value: any): RunnerTask {
+  return value.task
 }
