@@ -1,7 +1,21 @@
 import type { BirpcReturn } from 'birpc'
-import type { ErrorWithDiff, RunnerTestFile, TaskResultPack, UserConsoleLog } from 'vitest'
+import type {
+  ErrorWithDiff,
+  RunnerTask,
+  RunnerTestFile,
+  TaskResultPack,
+  UserConsoleLog,
+} from 'vitest'
 import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from 'vitest-vscode-shared'
-import type { BrowserCommand, Vitest as VitestCore, WorkspaceProject } from 'vitest/node'
+import type {
+  BrowserCommand,
+  TestCase,
+  TestModule,
+  TestResult,
+  TestSuite,
+  Vitest as VitestCore,
+  WorkspaceProject,
+} from 'vitest/node'
 import type { Reporter } from 'vitest/reporters'
 import { Console } from 'node:console'
 import { nextTick } from 'node:process'
@@ -17,6 +31,7 @@ export class VSCodeReporter implements Reporter {
   public rpc!: BirpcReturn<ExtensionWorkerEvents, ExtensionWorkerTransport>
   private vitest!: VitestCore
   private setupFilePaths: string[]
+  private silent: boolean | 'passed-only' = false
 
   constructor(options: VSCodeReporterOptions) {
     this.setupFilePaths = options.setupFilePaths
@@ -31,6 +46,7 @@ export class VSCodeReporter implements Reporter {
 
   onInit(vitest: VitestCore) {
     this.vitest = vitest
+    this.silent = vitest.config.silent
     const server = vitest.server.config.server
     this.setupFilePaths.forEach((setupFile) => {
       if (!server.fs.allow.includes(setupFile)) server.fs.allow.push(setupFile)
@@ -95,7 +111,11 @@ export class VSCodeReporter implements Reporter {
     this.rpc = rpc
   }
 
-  onUserConsoleLog(log: UserConsoleLog) {
+  onUserConsoleLog(log: UserConsoleLog, taskState?: TestResult['state']) {
+    if (!this.shouldLog(log, taskState)) {
+      return
+    }
+
     // Parse stack trace to extract file location for inline display
     const extendedLog = log as any
     if (log.origin) {
@@ -116,6 +136,50 @@ export class VSCodeReporter implements Reporter {
       }
     }
     return this.rpc.onConsoleLog(extendedLog)
+  }
+
+  onTestCaseResult(testCase: TestCase): void {
+    if (testCase.result().state === 'failed') {
+      this.logFailedTask(getRunnerTask(testCase))
+    }
+  }
+
+  onTestSuiteResult(testSuite: TestSuite): void {
+    if (testSuite.state() === 'failed') {
+      this.logFailedTask(getRunnerTask(testSuite))
+    }
+  }
+
+  onTestModuleEnd(testModule: TestModule): void {
+    if (testModule.state() === 'failed') {
+      this.logFailedTask(getRunnerTask(testModule))
+    }
+  }
+
+  private logFailedTask(task: RunnerTask) {
+    if (this.vitest.config.silent === 'passed-only') {
+      for (const log of task.logs || []) {
+        this.onUserConsoleLog(log, 'failed')
+      }
+    }
+  }
+
+  shouldLog(log: UserConsoleLog, taskState?: TestResult['state']): boolean {
+    if (this.silent === true) {
+      return false
+    }
+
+    if (this.silent === 'passed-only' && taskState !== 'failed') {
+      return false
+    }
+
+    if (this.vitest.config.onConsoleLog) {
+      const shouldLog = this.vitest.config.onConsoleLog(log.content, log.type)
+      if (shouldLog === false) {
+        return false
+      }
+    }
+    return true
   }
 
   private logPromises = new Set<Promise<void>>()
@@ -238,4 +302,8 @@ export class VSCodeReporter implements Reporter {
 
 function isPrimitive(value: unknown) {
   return value === null || (typeof value !== 'function' && typeof value !== 'object')
+}
+
+function getRunnerTask(value: any): RunnerTask {
+  return value.task
 }
