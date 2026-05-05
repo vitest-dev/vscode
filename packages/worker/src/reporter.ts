@@ -1,15 +1,20 @@
 import type { RunnerTaskResultPack, UserConsoleLog } from 'vitest'
 import type { VitestWorkerRPC, WorkerInitMetadata, WorkerRunnerOptions } from 'vitest-vscode-shared'
-import type {
-  BrowserCommand,
-  Reporter,
-  ResolvedConfig,
-  RunnerTestFile,
-  TestModule,
-  TestProject,
-  TestSpecification,
-  Vite,
-  Vitest as VitestCore,
+import {
+  experimental_getRunnerTask,
+  type BrowserCommand,
+  type Reporter,
+  type ResolvedConfig,
+  type RunnerTask,
+  type RunnerTestFile,
+  type TestCase,
+  type TestModule,
+  type TestProject,
+  type TestResult,
+  type TestSpecification,
+  type TestSuite,
+  type Vite,
+  type Vitest as VitestCore,
 } from 'vitest/node'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
 import { ExtensionWorker } from './worker'
@@ -24,6 +29,7 @@ export class VSCodeReporter implements Reporter {
 
   private debuggerAttached: boolean | undefined = undefined
   private coverageData: Record<string, unknown> | undefined = undefined
+  private silent: boolean | 'passed-only' = false
 
   constructor(meta: WorkerInitMetadata, debug: WorkerRunnerOptions['debug']) {
     this.setupFilePaths = meta.setupFilePaths
@@ -36,6 +42,7 @@ export class VSCodeReporter implements Reporter {
   onInit(vitest: VitestCore) {
     this.vitest = vitest
     this.configureAttachDebugging(vitest)
+    this.silent = vitest.config.silent
 
     vitest.projects.forEach((project) => {
       this.ensureSetupFileIsAllowed(project.vite.config)
@@ -59,7 +66,11 @@ export class VSCodeReporter implements Reporter {
     project.browser!.parent.commands.__vscode_waitForDebugger = __vscode_waitForDebugger
   }
 
-  onUserConsoleLog(log: UserConsoleLog) {
+  onUserConsoleLog(log: UserConsoleLog, taskState?: TestResult['state']) {
+    if (!this.shouldLog(log, taskState)) {
+      return
+    }
+
     // Parse stack trace to extract file location for inline display
     const extendedLog = log as any
     if (log.origin) {
@@ -87,6 +98,52 @@ export class VSCodeReporter implements Reporter {
       }
     }
     return this.rpc.onConsoleLog(extendedLog)
+  }
+
+  onTestCaseResult(testCase: TestCase): void {
+    if (testCase.result().state === 'failed') {
+      this.logFailedTask(experimental_getRunnerTask(testCase))
+    }
+  }
+
+  onTestSuiteResult(testSuite: TestSuite): void {
+    if (testSuite.state() === 'failed') {
+      this.logFailedTask(experimental_getRunnerTask(testSuite))
+    }
+  }
+
+  onTestModuleEnd(testModule: TestModule): void {
+    if (testModule.state() === 'failed') {
+      this.logFailedTask(experimental_getRunnerTask(testModule))
+    }
+  }
+
+  protected logFailedTask(task: RunnerTask): void {
+    if (this.silent === 'passed-only') {
+      for (const log of task.logs || []) {
+        this.onUserConsoleLog(log, 'failed')
+      }
+    }
+  }
+
+  shouldLog(log: UserConsoleLog, taskState?: TestResult['state']): boolean {
+    if (this.silent === true) {
+      return false
+    }
+
+    if (this.silent === 'passed-only' && taskState !== 'failed') {
+      return false
+    }
+
+    if (this.vitest.config.onConsoleLog) {
+      const task = log.taskId ? this.vitest.state.idMap.get(log.taskId) : undefined
+      const entity = task && this.vitest.state.getReportedEntity(task)
+      const shouldLog = this.vitest.config.onConsoleLog(log.content, log.type, entity)
+      if (shouldLog === false) {
+        return false
+      }
+    }
+    return true
   }
 
   onTaskUpdate(packs: RunnerTaskResultPack[]) {
