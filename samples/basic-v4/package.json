@@ -12,6 +12,7 @@
     "@vitest/browser": "catalog:latest",
     "@vitest/coverage-istanbul": "catalog:latest",
     "@vitest/coverage-v8": "catalog:latest",
+    "typescript": "catalog:",
     "vite": "catalog:latest",
     "vitest": "catalog:latest"
   }
