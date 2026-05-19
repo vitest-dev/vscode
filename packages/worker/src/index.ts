@@ -140,7 +140,7 @@ export async function initVitest(
   )
   ;((vitest as any).reporters as Reporter[]).forEach((reporter) => {
     if (!(reporter instanceof VSCodeReporter)) {
-      reporter.onUserConsoleLog = undefined
+      reporter.onUserConsoleLog = () => {}
     }
   })
 
