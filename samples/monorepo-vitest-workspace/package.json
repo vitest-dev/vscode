@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:latest",
-    "happy-dom": "^15.7.4",
+    "happy-dom": "^20.9.0",
     "vitest": "catalog:latest"
   }
 }
