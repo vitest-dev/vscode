@@ -4,16 +4,22 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  issues: write
+
 jobs:
   reply-labeled:
     runs-on: ubuntu-latest
     steps:
       - name: needs reproduction
         if: github.event.label.name == 'needs reproduction'
-        uses: actions-cool/issues-helper@v3
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
-          actions: create-comment
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            Hello @${{ github.event.issue.user.login }}. Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://vitest.new) (you can also use [examples](https://github.com/vitest-dev/vitest/tree/main/examples)). Issues marked with `needs reproduction` will be closed if they have no activity within 3 days.
+          script: |
+            const author = context.payload.issue.user.login;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `Hello @${author}. Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://vitest.new) (you can also use [examples](https://github.com/vitest-dev/vitest/tree/main/examples)). Issues marked with \`needs reproduction\` will be closed if they have no activity within 3 days.`,
+            });
