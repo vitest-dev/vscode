@@ -54,7 +54,20 @@ emitter.on('message', async function onMessage(message: any) {
         post(message) {
           emitter.send(message)
         },
-        serialize: data.meta.runtime !== 'node' ? stringify : v8.serialize,
+        serialize:
+          data.meta.runtime !== 'node'
+            ? (e) =>
+                stringify(e, (_, v) => {
+                  if (v instanceof Error) {
+                    return {
+                      name: v.name,
+                      message: v.message,
+                      stack: v.stack,
+                    }
+                  }
+                  return v
+                })
+            : v8.serialize,
         deserialize:
           data.meta.runtime !== 'node' ? parse : (v) => v8.deserialize(Buffer.from(v) as any),
       })
