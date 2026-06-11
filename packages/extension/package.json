@@ -9,5 +9,8 @@
     "picomatch": "catalog:latest",
     "vitest": "catalog:v3",
     "vitest-vscode-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "flatted": "^3.4.2"
   }
 }

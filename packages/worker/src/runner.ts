@@ -73,7 +73,9 @@ export class ExtensionWorkerRunner {
     }
 
     if (!filesOrDirectories || this.isOnlyDirectories(filesOrDirectories)) {
-      const specifications = await this.vitest.getRelevantTestSpecifications(filesOrDirectories)
+      const specifications = await this.vitest.getRelevantTestSpecifications(
+        filesOrDirectories || [],
+      )
       await this.vitest.rerunTestSpecifications(specifications, true)
     } else {
       const specifications = await this.resolveTestSpecifications(filesOrDirectories)

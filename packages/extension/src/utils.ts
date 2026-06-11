@@ -17,7 +17,7 @@ export function formatPkg(pkg: VitestPackage) {
 }
 
 function _showVitestError(message: string, error?: any) {
-  if (error) log.error(error)
+  if (error) log.error(error.stack || error)
 
   vscode.window
     .showErrorMessage(`${message}. Check the output for more details.`, 'See error')
