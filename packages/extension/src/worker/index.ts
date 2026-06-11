@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url'
 import v8 from 'node:v8'
 import { createWorkerRPC, normalizeDriveLetter, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import { WebSocket } from 'ws'
+import { parse, stringify } from 'flatted'
 
 // this is the file that will be executed with "node <path>"
 
@@ -53,8 +54,9 @@ emitter.on('message', async function onMessage(message: any) {
         post(message) {
           emitter.send(message)
         },
-        serialize: v8.serialize,
-        deserialize: (v) => v8.deserialize(Buffer.from(v) as any),
+        serialize: data.meta.runtime !== 'node' ? stringify : v8.serialize,
+        deserialize:
+          data.meta.runtime !== 'node' ? parse : (v) => v8.deserialize(Buffer.from(v) as any),
       })
       worker.initRpc(rpc)
       reporter.initRpc(rpc)

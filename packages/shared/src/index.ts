@@ -143,6 +143,7 @@ export interface WorkerInitMetadata {
   id: string
   cwd: string
   arguments?: string
+  runtime: 'node' | 'deno'
   configFile?: string
   workspaceFile?: string
   env: Record<string, any> | undefined

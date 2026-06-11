@@ -18,6 +18,7 @@ import {
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 import { resolve } from 'pathe'
+import { parse, stringify } from 'flatted'
 
 export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
   ws: WebSocket
@@ -83,6 +84,8 @@ export function onWsConnection(
       const { api, handlers } = createVitestRpc({
         on: (listener) => ws.on('message', listener),
         send: (message) => ws.send(message),
+        serialize: pkg.runtime !== 'node' ? stringify : undefined,
+        deserialize: pkg.runtime !== 'node' ? parse : undefined,
       })
       ws.once('close', () => {
         log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
@@ -153,6 +156,7 @@ export function onWsConnection(
       env: getConfig(pkg.folder).env || undefined,
       configFile: pkg.configFile,
       cwd: pkg.cwd,
+      runtime: pkg.runtime,
       arguments: pkg.arguments,
       workspaceFile: pkg.workspaceFile,
       id: pkg.id,
