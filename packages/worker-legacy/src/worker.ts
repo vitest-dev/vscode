@@ -188,9 +188,9 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
 
   private async globTestSpecifications(filters?: string[]): Promise<TestSpecification[]> {
     if ('globTestSpecifications' in this.vitest) {
-      return this.vitest.globTestSpecifications(filters)
+      return this.vitest.globTestSpecifications(filters || [])
     }
-    return await (this.vitest as any).globTestFiles(filters)
+    return await (this.vitest as any).globTestFiles(filters || [])
   }
 
   private invalidateTree(mod: any, seen = new Set()) {
