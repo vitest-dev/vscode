@@ -310,27 +310,31 @@ export class TestRunner extends vscode.Disposable {
 
   // we only change the state of test cases to keep the correct test count
   // ignoring test files, test folders and suites - these only report syntax errors
-  private markNonTestCase(test: vscode.TestItem, result?: RunnerTaskResult) {
+  private markNonTestCase(
+    testRun: vscode.TestRun,
+    test: vscode.TestItem,
+    result?: RunnerTaskResult,
+  ) {
     if (!result) {
       log.verbose?.(`No task result for "${test.label}", ignoring`)
       return
     }
 
     // errors in a suite are stored only if it happens during discovery
-    const errors = result.errors?.map((err) => err.stack || err.message)
+    const errors = result.errors?.map((err) => testMessageForTestError(test, err as TestError))
     if (!errors?.length) {
       log.verbose?.(`No errors found for "${test.label}"`)
       return
     }
     log.verbose?.(`Marking "${test.label}" as failed with ${errors.length} errors`)
-    test.error = errors.join('\n')
+    testRun.errored(test, errors, result?.duration)
   }
 
   private markResult(testRun: vscode.TestRun, test: vscode.TestItem, result?: RunnerTaskResult) {
     const isTestCase = getTestData(test) instanceof TestCase
 
     if (!isTestCase) {
-      this.markNonTestCase(test, result)
+      this.markNonTestCase(testRun, test, result)
       return
     }
 
