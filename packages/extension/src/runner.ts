@@ -552,7 +552,7 @@ function parseLocationFromStacks(
 ): DebuggerLocation | undefined {
   if (stacks.length === 0) return undefined
 
-  const targetFilepath = testItem.uri!.fsPath
+  const targetFilepath = normalizeDriveLetter(testItem.uri!.fsPath)
   for (const stack of stacks) {
     const { sourceFilepath, line, column } = getSourceFilepathAndLocationFromStack(stack)
     const sourceNormalizedPath = sourceFilepath && normalizeDriveLetter(sourceFilepath)
