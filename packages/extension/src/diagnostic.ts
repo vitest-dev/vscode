@@ -15,7 +15,7 @@ export class ExtensionDiagnostic {
         error.message.toString(),
         vscode.DiagnosticSeverity.Error,
       )
-      diagnostic.source = 'Vitest';
+      diagnostic.source = 'Vitest'
       diagnostics.push(diagnostic)
     })
     this.diagnostic.set(testFile, diagnostics)
