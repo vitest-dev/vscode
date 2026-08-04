@@ -8,8 +8,13 @@ abstract class WorkerEventEmitter {
   abstract on(event: string, listener: (...args: any[]) => void): void
   abstract off(event: string, listener: (...args: any[]) => void): void
 
-  ready(projects: SerializedProject[], workspaceSource: string | false, legacy: boolean) {
-    this.sendWorkerEvent({ type: 'ready', projects, workspaceSource, legacy })
+  ready(
+    projects: SerializedProject[],
+    workspaceSource: string | false,
+    legacy: boolean,
+    version: string | undefined,
+  ) {
+    this.sendWorkerEvent({ type: 'ready', projects, workspaceSource, legacy, version })
   }
 
   error(err: any) {

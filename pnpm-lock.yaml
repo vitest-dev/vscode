@@ -37,8 +37,8 @@ catalogs:
       specifier: ^0.0.6
       version: 0.0.6
     '@vscode/test-electron':
-      specifier: ^2.3.9
-      version: 2.5.2
+      specifier: ^3.1.0
+      version: 3.1.0
     '@vscode/vsce':
       specifier: ^3.1.0
       version: 3.7.1
@@ -195,7 +195,7 @@ importers:
         version: 0.0.6
       '@vscode/test-electron':
         specifier: 'catalog:'
-        version: 2.5.2
+        version: 3.1.0
       '@vscode/vsce':
         specifier: 'catalog:'
         version: 3.7.1
@@ -1944,9 +1944,9 @@ packages:
     resolution: {integrity: sha512-4i61OUv5PQr3GxhHOuUgHdgBDfIO/kXTPCsEyFiMaY4SOqQTgkTmyZLagHehjOgCfsXdcrJa3zgQ7zoc+Dh6hQ==}
     hasBin: true
 
-  '@vscode/test-electron@2.5.2':
-    resolution: {integrity: sha512-8ukpxv4wYe0iWMRQU18jhzJOHkeGKbnw7xWRX3Zw1WJA4cEKbHcmmLPdPrPtL6rhDcrlCZN+xKRpv09n4gRHYg==}
-    engines: {node: '>=16'}
+  '@vscode/test-electron@3.1.0':
+    resolution: {integrity: sha512-CRqv5u+YYoseuNVJ6Tyo4k0sF0mx4qnKMihRB0PjsUF8Dc0WKtCXo6CNL6nWWm5esfFQsQA/pejMj4ZbpJVLTw==}
+    engines: {node: '>=22'}
 
   '@vscode/vsce-sign-alpine-arm64@2.0.6':
     resolution: {integrity: sha512-wKkJBsvKF+f0GfsUuGT0tSW0kZL87QggEiqNqK6/8hvqsXvpx8OsTEc3mnE1kejkh5r+qUyQ7PtF8jZYN0mo8Q==}
@@ -6220,7 +6220,7 @@ snapshots:
       supports-color: 9.4.0
       yargs: 17.7.2
 
-  '@vscode/test-electron@2.5.2':
+  '@vscode/test-electron@3.1.0':
     dependencies:
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6

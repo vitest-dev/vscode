@@ -11,51 +11,67 @@ import {
 
 describe('TestData', () => {
   const ctrl = vscode.tests.createTestController('mocha', 'Vitest')
+
+  function createTestTree(id: string, api: { usesJestTestNamePattern: boolean }) {
+    const filepath = path.resolve(__dirname, `./fixtures/discover/00_simple_${id}.ts`)
+    const uri = vscode.Uri.file(filepath)
+    const folderItem = ctrl.createTestItem(
+      path.dirname(filepath),
+      path.basename(path.dirname(filepath)),
+      uri,
+    )
+    TestFolder.register(folderItem)
+    const testItem = ctrl.createTestItem(filepath, path.basename(filepath), uri)
+    ctrl.items.add(testItem)
+    const file = TestFile.register(testItem, folderItem, filepath, api as any, {
+      project: '',
+      pool: 'trheads',
+    })
+    const suiteItem = ctrl.createTestItem(`${filepath}_1`, 'describe', uri)
+    testItem.children.add(suiteItem)
+
+    const testItem1 = ctrl.createTestItem(`${filepath}_1_1`, 'test', uri)
+
+    const testItem2 = ctrl.createTestItem(`${filepath}_1_2`, 'test 1', uri)
+
+    const testItem3 = ctrl.createTestItem(`${filepath}_1_3`, 'test 2', uri)
+
+    suiteItem.children.add(testItem1)
+    suiteItem.children.add(testItem2)
+    suiteItem.children.add(testItem3)
+
+    const suite = TestSuite.register(suiteItem, testItem, file, false)
+
+    const test1 = TestCase.register(testItem1, suiteItem, file, false)
+    const test2 = TestCase.register(testItem2, suiteItem, file, false)
+    const test3 = TestCase.register(testItem3, suiteItem, file, false)
+
+    expect(testItem1.parent).to.exist
+
+    return { suite, test1, test2, test3 }
+  }
+
   describe('TestFile', () => {
-    it('getTestNamePattern', async () => {
-      const filepath = path.resolve(__dirname, './fixtures/discover/00_simple.ts')
-      const uri = vscode.Uri.file(filepath)
-      const folderItem = ctrl.createTestItem(
-        path.dirname(filepath),
-        path.basename(path.dirname(filepath)),
-        uri,
-      )
-      TestFolder.register(folderItem)
-      const testItem = ctrl.createTestItem(filepath, path.basename(filepath), uri)
-      ctrl.items.add(testItem)
-      const file = TestFile.register(
-        testItem,
-        folderItem,
-        filepath,
-        null as any, // not used yet
-        { project: '', pool: 'trheads' },
-      )
-      const suiteItem = ctrl.createTestItem(`${filepath}_1`, 'describe', uri)
-      testItem.children.add(suiteItem)
-
-      const testItem1 = ctrl.createTestItem(`${filepath}_1_1`, 'test', uri)
-
-      const testItem2 = ctrl.createTestItem(`${filepath}_1_2`, 'test 1', uri)
-
-      const testItem3 = ctrl.createTestItem(`${filepath}_1_3`, 'test 2', uri)
-
-      suiteItem.children.add(testItem1)
-      suiteItem.children.add(testItem2)
-      suiteItem.children.add(testItem3)
-
-      const suite = TestSuite.register(suiteItem, testItem, file, false)
+    it('getTestNamePattern with jest pattern (vitest < 5)', async () => {
+      const { suite, test1, test2, test3 } = createTestTree('jest', {
+        usesJestTestNamePattern: true,
+      })
 
       expect(suite.getTestNamePattern()).to.equal('^\\s?describe')
-
-      const test1 = TestCase.register(testItem1, suiteItem, file, false)
-      const test2 = TestCase.register(testItem2, suiteItem, file, false)
-      const test3 = TestCase.register(testItem3, suiteItem, file, false)
-
-      expect(testItem1.parent).to.exist
-
       expect(test1.getTestNamePattern()).to.equal('^\\s?describe test$')
       expect(test2.getTestNamePattern()).to.equal('^\\s?describe test 1$')
       expect(test3.getTestNamePattern()).to.equal('^\\s?describe test 2$')
+    })
+
+    it('getTestNamePattern (vitest 5)', async () => {
+      const { suite, test1, test2, test3 } = createTestTree('vitest', {
+        usesJestTestNamePattern: false,
+      })
+
+      expect(suite.getTestNamePattern()).to.equal('^describe')
+      expect(test1.getTestNamePattern()).to.equal('^describe > test$')
+      expect(test2.getTestNamePattern()).to.equal('^describe > test 1$')
+      expect(test3.getTestNamePattern()).to.equal('^describe > test 2$')
     })
 
     it('throws an error if data was not set', () => {
