@@ -44,10 +44,13 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
       const trace = (options.trace ?? defaultConfig.VSCODE_E2E_TRACE) === 'on'
 
       const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'vscode-e2e-'))
+      // inherited from the extension host when tests run in a terminal inside
+      // VS Code; it would force the spawned VS Code to run as plain Node
+      const { ELECTRON_RUN_AS_NODE: _, ...env } = process.env
       const app = await _electron.launch({
         executablePath,
         env: {
-          ...process.env,
+          ...env,
           VITEST_VSCODE_E2E_LOG_FILE: logPath,
           VITEST_VSCODE_LOG: 'verbose',
         },
