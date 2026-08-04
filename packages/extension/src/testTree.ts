@@ -394,7 +394,9 @@ export class TestTree extends vscode.Disposable {
           ids.add(fileId)
         })
       } else if (task.each) {
-        const fullName = getTaskFullName(task)
+        // the separator has to match the one used in getTestNamePattern
+        const separator = fileData.api.usesJestTestNamePattern ? ' ' : ' > '
+        const fullName = getTaskFullName(task, separator)
         // order in the opposite order so we only match one item with the longest name
         const orderedTests = Object.entries(fileCachedTests).sort(([a1], [a2]) =>
           a2.localeCompare(a1),
@@ -491,6 +493,6 @@ function getAPIFromTestItem(testItem: vscode.TestItem): VitestProcessAPI | null 
   return data.file.api
 }
 
-function getTaskFullName(task: RunnerTask): string {
-  return `${task.suite ? `${getTaskFullName(task.suite)} ` : ''}${task.name}`
+function getTaskFullName(task: RunnerTask, separator: string): string {
+  return `${task.suite ? `${getTaskFullName(task.suite, separator)}${separator}` : ''}${task.name}`
 }

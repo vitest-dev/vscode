@@ -1,5 +1,6 @@
 import type { SerializedProject } from 'vitest-vscode-shared'
 import type { VitestPackage } from './spawn/pkg'
+import { usesJestTestNamePattern } from './spawn/pkg'
 import type { ExtensionWorkerEvents, VitestExtensionRPC } from './spawn/rpc'
 import type { ExtensionWorkerProcess } from './spawn/types'
 import type { ProcessSpawnOptions } from './spawn/ws'
@@ -43,6 +44,10 @@ export class VitestProjectConfig {
 
   get version() {
     return this.pkg.version
+  }
+
+  get usesJestTestNamePattern() {
+    return usesJestTestNamePattern(this.pkg)
   }
 
   get package() {
@@ -140,6 +145,10 @@ export class VitestProcessAPI {
 
   get package() {
     return this.config.package
+  }
+
+  get usesJestTestNamePattern() {
+    return this.config.usesJestTestNamePattern
   }
 
   getPersistentProcessMeta() {

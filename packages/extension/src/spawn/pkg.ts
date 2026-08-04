@@ -30,6 +30,15 @@ export interface VitestPackage {
   runtime: 'deno' | 'node'
 }
 
+// Before 5.0.0-rc.1 `testNamePattern` was matched the same way Jest does it:
+// against task names joined with " ", starting with the empty name of the root suite.
+// Since 5.0.0-rc.1 the pattern is tested against names joined with " > " instead.
+// If the version is not known yet ("pnp"), it is updated from the "ready"
+// event when the worker reports the actual runtime version.
+export function usesJestTestNamePattern(pkg: VitestPackage): boolean {
+  return pkg.version === 'pnp' || !gte(pkg.version, '5.0.0-rc.1')
+}
+
 function isVitestInPackageJson(root: string) {
   const pkgJson = resolve(dirname(root), 'package.json')
   if (existsSync(pkgJson)) {

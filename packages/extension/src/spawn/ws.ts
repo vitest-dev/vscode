@@ -81,6 +81,11 @@ export function onWsConnection(
     if (message.type === 'debug') log.worker('info', ...message.args)
 
     if (message.type === 'ready') {
+      // the worker reports the version it actually runs; "pkg.version" can be
+      // a "pnp" placeholder when the package.json is not readable from the fs
+      if (message.version) {
+        pkg.version = message.version
+      }
       const { api, handlers } = createVitestRpc({
         on: (listener) => ws.on('message', listener),
         send: (message) => ws.send(message),

@@ -82,7 +82,7 @@ export class TestFile extends BaseTestData {
 
 class TaskName {
   constructor(
-    private readonly data: TestData,
+    private readonly data: TestCase | TestSuite,
     public readonly dynamic: boolean,
   ) {}
 
@@ -99,9 +99,13 @@ class TaskName {
       patterns.push(escapeTestName(iter.label, iter.name.dynamic))
       iter = iter.parent
     }
-    // vitest's test task name starts with ' ' of root suite
-    // It's considered as a bug, but it's not fixed yet for backward compatibility
-    return `\\s?${patterns.reverse().join(' ')}`
+    if (this.data.file.api.usesJestTestNamePattern) {
+      // vitest's test task name starts with ' ' of root suite
+      // It's considered as a bug, but it's not fixed until Vitest 5 for backward compatibility
+      return `\\s?${patterns.reverse().join(' ')}`
+    }
+    // since 5.0.0-rc.1 the pattern is matched against names joined with " > "
+    return patterns.reverse().join(' > ')
   }
 }
 

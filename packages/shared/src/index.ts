@@ -194,6 +194,9 @@ export interface EventReady {
   projects: SerializedProject[]
   workspaceSource: string | false
   legacy: boolean
+  // the actual runtime version, unlike VitestPackage.version
+  // this is also defined when vitest is resolved via yarn pnp
+  version: string | undefined
 }
 
 export interface EventDebug {
