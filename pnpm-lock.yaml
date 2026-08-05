@@ -462,6 +462,15 @@ importers:
         specifier: catalog:latest
         version: 4.1.0(@types/node@24.10.1)(@vitest/browser-playwright@4.1.0)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@7.2.6(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
 
+  samples/monorepo-base-config:
+    devDependencies:
+      vite:
+        specifier: catalog:latest
+        version: 7.2.6(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      vitest:
+        specifier: catalog:latest
+        version: 4.1.0(@types/node@24.10.1)(@vitest/browser-playwright@4.1.0)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@7.2.6(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+
   samples/monorepo-vitest-workspace:
     devDependencies:
       '@vitest/coverage-v8':

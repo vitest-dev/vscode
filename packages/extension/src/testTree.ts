@@ -8,6 +8,7 @@ import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { basename, dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
+import { isCloserConfig } from './configOwnership'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { ExtensionWatcher } from './watcher'
@@ -146,7 +147,10 @@ export class TestTree extends vscode.Disposable {
     const normalizedFile = normalize(file)
     const fileId = `${normalizedFile}${project}`
     const cached = this.fileItems.get(fileId)
-    if (cached) return cached
+    if (cached) {
+      this.retagFileItemIfCloser(cached, api, metadata, file)
+      return cached
+    }
 
     const fileUri = vscode.Uri.file(resolve(file))
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
@@ -167,6 +171,36 @@ export class TestTree extends vscode.Disposable {
     vscode.commands.executeCommand('setContext', 'vitest.testFiles', [...this.testFiles])
 
     return testFileItem
+  }
+
+  /**
+   * Several instances can claim the same test item - e.g. a shared base config at
+   * the root and a package config both match the same file. The item's tag decides
+   * which run profile VSCode picks for ambiguous runs (gutter, tree run button), so
+   * the instance whose config is closest to the file tags the item. Every instance
+   * still runs the file in its own full runs - nothing is deduplicated away, and any
+   * profile can still be chosen explicitly via "Execute Using Profile...".
+   */
+  private retagFileItemIfCloser(
+    item: vscode.TestItem,
+    api: VitestProcessAPI,
+    metadata: TestFileMetadata,
+    file: string,
+  ) {
+    const data = getTestData(item)
+    if (!(data instanceof TestFile) || data.api === api) return
+
+    const currentConfig = data.api.package.id
+    const candidateConfig = api.package.id
+    if (!isCloserConfig(candidateConfig, currentConfig, data.filepath)) return
+
+    log.info(
+      '[TEST TREE]',
+      `"${candidateConfig}" now provides the default run profile for "${data.filepath}" because it is defined closer to the test file than "${currentConfig}".`,
+    )
+    const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
+    item.tags = [api.tag]
+    TestFile.register(item, parentItem, data.filepath, api, metadata)
   }
 
   getOrCreateFolderTestItem(api: VitestProcessAPI, normalizedFolder: string) {

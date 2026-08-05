@@ -88,6 +88,43 @@ test('workspaces', async ({ launch }) => {
   await expect(tester.tree.getResultsLocator()).toHaveText('4/4')
 })
 
+test('the closest config provides the default profile when a base config claims the same test files', async ({
+  launch,
+}) => {
+  const { page, tester } = await launch({
+    workspacePath: './samples/monorepo-base-config',
+  })
+
+  // expanding both folders guarantees both Vitest instances finished discovery,
+  // so the shared file item is already tagged by the closest config
+  await tester.tree.expand('packages/foo/test')
+  await tester.tree.expand('test')
+
+  const taggedTests = tester.tree.getFileItem('tagged.test.ts')
+  const baseTests = tester.tree.getFileItem('base.test.ts')
+
+  await expect(taggedTests.locator).toBeVisible()
+  await expect(baseTests.locator).toBeVisible()
+
+  // run the first test from the editor gutter: VSCode resolves this "ambiguous"
+  // run to the first default profile whose tag matches the test item - it must be
+  // packages/foo/vitest.config.ts (which defines the "integration" tag), not the
+  // root vitest.config.base.ts instance, which fails with "The Vitest config
+  // doesn't define any tags"
+  await taggedTests.navigate()
+  const gutterRunButton = page.locator('.testing-run-glyph').first()
+  await expect(gutterRunButton).toBeVisible()
+  await gutterRunButton.click()
+
+  await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+
+  // the base config instance still runs its own tests
+  await baseTests.run()
+
+  await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+  await expect(baseTests).toHaveState('passed')
+})
+
 test('running a project does not update other projects', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/projects',

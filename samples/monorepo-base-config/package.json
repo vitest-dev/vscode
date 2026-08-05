@@ -1,0 +1,15 @@
+{
+  "name": "monorepo-base-config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vite": "catalog:latest",
+    "vitest": "catalog:latest"
+  }
+}
