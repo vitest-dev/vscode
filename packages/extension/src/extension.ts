@@ -1,5 +1,6 @@
 import type { VitestAPI } from './api'
 import type { VitestProcessAPI } from './apiProcess'
+import type { VitestPackage } from './spawn/pkg'
 import { basename, normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { version } from '../../../package.json'
@@ -128,6 +129,7 @@ class VitestExtension {
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()
+    const resolvedConfigs = new Set<string>()
 
     try {
       await this.api?.dispose()
@@ -140,6 +142,8 @@ class VitestExtension {
         profile.dispose()
       }
 
+      this.registerRunProfiles([...workspaces, ...configs])
+
       this.api = await resolveVitestAPI(
         workspaces,
         configs,
@@ -149,6 +153,7 @@ class VitestExtension {
             return
           }
 
+          resolvedConfigs.add(vitest.id)
           this.testTree.watchTestFilesInWorkspace(vitest, files)
           this.setupProcessAPI(vitest)
 
@@ -165,6 +170,15 @@ class VitestExtension {
       return
     } finally {
       this.testController.items.delete(this.loadingTestItem.id)
+
+      // dispose profiles of configs that never resolved
+      for (const [key, profile] of this.runProfiles) {
+        const configId = key.slice(0, key.lastIndexOf(':'))
+        if (!resolvedConfigs.has(configId)) {
+          profile.dispose()
+          this.runProfiles.delete(key)
+        }
+      }
     }
 
     this.api.processes.forEach((process) => {
@@ -191,6 +205,43 @@ class VitestExtension {
         log.error('Failed to collect tests from visible text editors', err)
       })
     })
+  }
+
+  private registerRunProfiles(packages: VitestPackage[]) {
+    // when several profiles can run the same test item, vscode invokes the one
+    // that was registered first, so the most specific config has to go first (#799)
+    const sortedPackages = [...packages].sort((a, b) => {
+      return normalize(b.id).split('/').length - normalize(a.id).split('/').length
+    })
+
+    const kinds: [string, vscode.TestRunProfileKind, boolean][] = [
+      ['run', vscode.TestRunProfileKind.Run, true],
+      // continuous run is not supported for debug and coverage
+      ['debug', vscode.TestRunProfileKind.Debug, false],
+      ['coverage', vscode.TestRunProfileKind.Coverage, false],
+    ]
+
+    for (const pkg of sortedPackages) {
+      const id = normalize(pkg.id)
+      const tag = new vscode.TestTag(pkg.prefix)
+      for (const [name, kind, supportsContinuousRun] of kinds) {
+        const key = `${id}:${name}`
+        if (this.runProfiles.has(key)) {
+          continue
+        }
+        const profile = this.testController.createRunProfile(
+          pkg.prefix,
+          kind,
+          () => {
+            log.error('Run handler is not defined')
+          },
+          true,
+          tag,
+          supportsContinuousRun,
+        )
+        this.runProfiles.set(key, profile)
+      }
+    }
   }
 
   private setupProcessAPI(vitest: VitestProcessAPI) {
