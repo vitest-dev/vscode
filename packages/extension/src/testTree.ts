@@ -9,7 +9,6 @@ import { resolve } from 'node:path'
 import { basename, dirname, normalize } from 'pathe'
 import * as vscode from 'vscode'
 import { log } from './log'
-import { addProfileHint } from './profileError'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { ExtensionWatcher } from './watcher'
 
@@ -319,9 +318,7 @@ export class TestTree extends vscode.Disposable {
     const data = getTestData(fileTestItem) as TestFile
     this.collectTasks(api.tag, data, file.tasks, fileTestItem)
     if (file.result?.errors) {
-      const error = file.result.errors
-        .map((error) => addProfileHint(error.stack || error.message, api.prefix))
-        .join('\n')
+      const error = file.result.errors.map((error) => error.stack || error.message).join('\n')
       fileTestItem.error = error
       log.error(`Error in ${file.filepath}`, error)
     } else if (!file.tasks.length) {
@@ -451,9 +448,7 @@ export class TestTree extends vscode.Disposable {
       // errors during collection are not test failures, they need to be
       // displayed as errors in the tree
       if (task.result?.errors) {
-        const error = task.result.errors
-          .map((error) => addProfileHint(error.stack || error.message, tag.id))
-          .join('\n')
+        const error = task.result.errors.map((error) => error.stack).join('\n')
         testItem.error = error
       }
 

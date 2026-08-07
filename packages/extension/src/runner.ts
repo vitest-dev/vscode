@@ -14,7 +14,6 @@ import * as vscode from 'vscode'
 import { getConfig } from './config'
 import { coverageContext } from './coverage'
 import { log } from './log'
-import { addProfileHint } from './profileError'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { getErrorMessage, showVitestError } from './utils'
 
@@ -277,9 +276,7 @@ export class TestRunner extends vscode.Disposable {
     switch (result.state) {
       case 'fail': {
         const errors =
-          result.errors?.map((err) =>
-            testMessageForTestError(test, err as TestError, this.api.prefix),
-          ) || []
+          result.errors?.map((err) => testMessageForTestError(test, err as TestError)) || []
         if (!errors.length) {
           log.verbose?.(`Test failed, but no errors found for "${test.label}"`)
           return
@@ -324,9 +321,7 @@ export class TestRunner extends vscode.Disposable {
     }
 
     // errors in a suite are stored only if it happens during discovery
-    const errors = result.errors?.map((err) =>
-      testMessageForTestError(test, err as TestError, this.api.prefix),
-    )
+    const errors = result.errors?.map((err) => testMessageForTestError(test, err as TestError))
     if (!errors?.length) {
       log.verbose?.(`No errors found for "${test.label}"`)
       return
@@ -507,20 +502,18 @@ function setTestErrors(test: vscode.TestItem, errors: TestError[] | undefined) {
 function testMessageForTestError(
   testItem: vscode.TestItem,
   error: TestError | undefined,
-  profile: string,
 ): vscode.TestMessage {
   if (!error) return new vscode.TestMessage('Unknown error')
 
   let testMessage
-  const message = addProfileHint(getErrorMessage(error), profile)
   if (
     error.actual != null &&
     error.expected != null &&
     error.actual !== 'undefined' &&
     error.expected !== 'undefined'
   )
-    testMessage = vscode.TestMessage.diff(message, error.expected, error.actual)
-  else testMessage = new vscode.TestMessage(message)
+    testMessage = vscode.TestMessage.diff(getErrorMessage(error), error.expected, error.actual)
+  else testMessage = new vscode.TestMessage(getErrorMessage(error))
 
   setMessageStackFramesFromErrorStacks(testMessage, error.stacks)
 
