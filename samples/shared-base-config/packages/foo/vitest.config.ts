@@ -5,9 +5,12 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
-      env: {
-        CONFIG_NAME: 'leaf',
-      },
+      tags: [
+        {
+          description: 'Defined only in the package config.',
+          name: 'leaf',
+        },
+      ],
     },
   }),
 )
