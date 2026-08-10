@@ -88,6 +88,25 @@ test('workspaces', async ({ launch }) => {
   await expect(tester.tree.getResultsLocator()).toHaveText('4/4')
 })
 
+test('gutter uses the nested config for shared test files', async ({ launch }) => {
+  const { page, tester } = await launch({
+    workspacePath: './samples/multiple-configs',
+  })
+
+  await tester.tree.expand('z-leaf/test/selected-config.test.ts')
+  const nestedTest = tester.tree.getFileItem('selected-config.test.ts')
+
+  await expect(nestedTest).toHaveTests({
+    'uses the leaf config': 'waiting',
+  })
+
+  await nestedTest.navigate()
+  await page.locator('.testing-run-glyph').first().click()
+
+  await expect(tester.tree.getResultsLocator()).toHaveText('1/1')
+  await expect(nestedTest).toHaveState('passed')
+})
+
 test('running a project does not update other projects', async ({ launch }) => {
   const { tester } = await launch({
     workspacePath: './samples/projects',
