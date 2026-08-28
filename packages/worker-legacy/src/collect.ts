@@ -24,7 +24,7 @@ interface ParsedSuite extends RunnerTestSuite {
   dynamic: boolean
 }
 
-interface LocalCallDefinition {
+export interface LocalCallDefinition {
   start: number
   end: number
   name: string
@@ -96,6 +96,12 @@ export function astParseFile(filepath: string, code: string) {
       return getName(callee.tag)
     }
     if (callee.type === 'MemberExpression') {
+      // Vitest chains always use dot access (`test.skip`, `describe.each`).
+      // A computed access like `it[1].call(it[2])` comes from esbuild's
+      // `using` helper (`__callDispose`) and is not a Vitest call.
+      if (callee.computed) {
+        return null
+      }
       if (callee.object?.type === 'Identifier' && isVitestFunctionName(callee.object.name)) {
         return callee.object?.name
       }
