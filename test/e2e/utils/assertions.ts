@@ -47,6 +47,12 @@ expect.extend({
   },
   async toHaveTests(item: TesterTestItem, tests: TestsTree) {
     const page = item.page
+    // the "Resolving Vitest..." item stays in the tree until every config is
+    // resolved, but roots are added as soon as their own config is resolved.
+    // Wait for it to go away, otherwise every row index shifts by one later.
+    await expect(page.locator('[aria-label*="Resolving Vitest..."]')).not.toBeAttached({
+      timeout: 10_000,
+    })
     const depth = Number(await item.locator.getAttribute('aria-level'))
     const currentIndex = Number(await item.locator.getAttribute('data-index'))
 

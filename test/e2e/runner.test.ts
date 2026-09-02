@@ -1,4 +1,6 @@
 import { readFileSync, rmSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { resolve } from 'node:path'
 import { beforeAll, beforeEach, describe, onTestFailed } from 'vitest'
 import { expect } from '@playwright/test'
 import { test } from './utils/helper'
@@ -193,8 +195,19 @@ test('watcher updates the file if there are several config files', async ({ laun
   })
 })
 
+// Vitest 5 formats the values in `test.each` titles with pretty-format
+// instead of loupe, so strings are no longer wrapped in quotes
+function getVitestMajor(sample: string): number {
+  const { version } = createRequire(resolve(sample, 'package.json'))('vitest/package.json')
+  return Number(version.split('.')[0])
+}
+
 test('ast collector keeps the pattern on rerun', async ({ launch }) => {
   const sample = 'samples/ast-collector'
+  const tableTestName =
+    getVitestMajor(sample) >= 5
+      ? 'table1: returns ab when a is added b'
+      : "table1: returns 'ab' when 'a' is added 'b'"
 
   const { tester } = await launch({
     workspacePath: sample,
@@ -235,7 +248,7 @@ test('ast collector keeps the pattern on rerun', async ({ launch }) => {
       // table1: returns $expected when $a is added $b
       'pattern|6': 'waiting',
       'table1: returns 2 when 1 is added 1': 'passed',
-      "table1: returns 'ab' when 'a' is added 'b'": 'passed',
+      [tableTestName]: 'passed',
     },
     // testing %s
     'pattern|9': 'waiting',
