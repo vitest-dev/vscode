@@ -1,4 +1,4 @@
-import type { ParsedStack, RunnerTaskResult, TestError } from 'vitest'
+import type { ParsedStack, RunnerTask, RunnerTaskResult, TestError } from 'vitest'
 import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
 import type { RunHandle, VitestProcessAPI } from './apiProcess'
 import type { ExtensionDiagnostic } from './diagnostic'
@@ -7,7 +7,6 @@ import type { TestTree } from './testTree'
 import crypto from 'node:crypto'
 import path from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
-import { getTasks } from '@vitest/runner/utils'
 import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
@@ -16,6 +15,16 @@ import { coverageContext } from './coverage'
 import { log } from './log'
 import { getTestData, TestCase, TestFile, TestFolder, TestSuite } from './testTreeData'
 import { getErrorMessage, showVitestError } from './utils'
+
+// Local copy of `getTasks` from `@vitest/runner/utils`. The extension host
+// must not bundle `@vitest/runner` because the extension supports multiple
+// Vitest majors and the bundled copy would not match the user's version.
+function getTasks(task: RunnerTask): RunnerTask[] {
+  if (task.type === 'test') {
+    return [task]
+  }
+  return [task, ...task.tasks.flatMap(getTasks)]
+}
 
 export class TestRunner extends vscode.Disposable {
   protected testRun: vscode.TestRun | undefined

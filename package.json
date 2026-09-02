@@ -37,8 +37,8 @@
     "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
     "test-e2e": "vitest --root test/e2e",
     "test-e2e:legacy": "TEST_LEGACY=true vitest --root test/e2e",
-    "ecosystem-ci:build": "pnpm build",
-    "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
+    "ecosystem-ci:build": "SKIP_LEGACY=true pnpm build",
+    "ecosystem-ci:test": "SKIP_LEGACY=true tsx ./scripts/ecosystem-ci.mts",
     "typecheck": "tsc -b ./ --noEmit",
     "fmt": "oxfmt --check",
     "fmt:fix": "oxfmt"
@@ -414,6 +414,6 @@
   "engines": {
     "vscode": "^1.88.0"
   },
-  "packageManager": "pnpm@10.11.1",
+  "packageManager": "pnpm@10.34.5",
   "pricing": "Free"
 }

@@ -5,7 +5,6 @@
   "dependencies": {
     "@types/picomatch": "catalog:latest",
     "@vitest/browser": "catalog:v3",
-    "@vitest/runner": "catalog:v3",
     "picomatch": "catalog:latest",
     "vitest": "catalog:v3",
     "vitest-vscode-shared": "workspace:*"
