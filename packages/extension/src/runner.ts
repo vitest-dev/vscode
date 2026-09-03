@@ -8,7 +8,7 @@ import type { TraceReportManager } from './traceReport'
 import crypto from 'node:crypto'
 import path from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
-import { basename, normalize, relative, resolve } from 'pathe'
+import { basename, normalize, relative } from 'pathe'
 import { normalizeDriveLetter } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { getConfig } from './config'
@@ -112,9 +112,9 @@ export class TestRunner extends vscode.Disposable {
     })
 
     handle.handlers.onTestRunEnd(async (files, unhandledError, collecting, coverage) => {
-      if (!collecting) {
-        const reportPath = resolve(this.api.config.cwd, '.vitest/index.html')
-        this.traceReports?.update(this.api.id, reportPath, files, this.tree)
+      const htmlReportPath = this.api.config.htmlReportPath
+      if (!collecting && htmlReportPath) {
+        this.traceReports?.update(this.api.id, htmlReportPath, files, this.tree)
       }
       const testRun = this.testRun
 

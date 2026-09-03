@@ -43,6 +43,10 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     )
   }
 
+  getExtensionConfig() {
+    return { root: this.vitest.config.root }
+  }
+
   private get configOverride(): Partial<ResolvedConfig> {
     return (this.vitest as any).configOverride
   }

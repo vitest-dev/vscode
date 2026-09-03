@@ -50,7 +50,15 @@ export interface ExtensionEnvironment {
   }[]
 }
 
+export interface ExtensionWorkerConfig {
+  root: string
+  htmlReporter?: {
+    outputDir?: string
+  }
+}
+
 export interface ExtensionWorkerTransport {
+  getExtensionConfig: () => ExtensionWorkerConfig
   getFiles: () => Promise<ExtensionTestFileSpecification[]>
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
   cancelRun: () => Promise<void>

@@ -1,4 +1,4 @@
-import type { SerializedProject } from 'vitest-vscode-shared'
+import type { ExtensionWorkerConfig, SerializedProject } from 'vitest-vscode-shared'
 import type { VitestPackage } from './spawn/pkg'
 import { usesJestTestNamePattern } from './spawn/pkg'
 import type { ExtensionWorkerEvents, VitestExtensionRPC } from './spawn/rpc'
@@ -6,7 +6,7 @@ import type { ExtensionWorkerProcess } from './spawn/types'
 import type { ProcessSpawnOptions } from './spawn/ws'
 import type { TestFileMetadata } from './testTreeData'
 import { readFileSync } from 'node:fs'
-import { normalize, relative } from 'pathe'
+import { normalize, relative, resolve } from 'pathe'
 import pm from 'picomatch'
 import { createQueuedHandler } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
@@ -24,6 +24,7 @@ export class VitestProjectConfig {
     readonly pkg: VitestPackage,
     readonly projects: SerializedProject[],
     readonly workspaceSource: string | false,
+    readonly workerConfig?: ExtensionWorkerConfig,
   ) {
     this.id = normalize(pkg.id)
     this.workspaceFolder = pkg.folder
@@ -48,6 +49,12 @@ export class VitestProjectConfig {
 
   get usesJestTestNamePattern() {
     return usesJestTestNamePattern(this.pkg)
+  }
+
+  get htmlReportPath() {
+    const config = this.workerConfig
+    if (!config?.htmlReporter) return
+    return resolve(config.root, config.htmlReporter.outputDir || '.vitest', 'index.html')
   }
 
   get package() {
