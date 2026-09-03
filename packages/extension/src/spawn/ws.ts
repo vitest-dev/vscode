@@ -115,7 +115,6 @@ export function onWsConnection(
       onStart({
         rpc: api,
         workspaceSource: message.workspaceSource,
-        htmlReportPath: message.htmlReportPath,
         handlers,
         projects: message.projects.map((p) => {
           if (p.dir) {

@@ -16,6 +16,7 @@ import type {
   Vitest as VitestCore,
 } from 'vitest/node'
 import { parseErrorStacktrace } from '@vitest/utils/source-map'
+import { resolve } from 'pathe'
 import { ExtensionWorker } from './worker'
 
 export class VSCodeReporter implements Reporter {
@@ -29,6 +30,7 @@ export class VSCodeReporter implements Reporter {
   private debuggerAttached: boolean | undefined = undefined
   private coverageData: Record<string, unknown> | undefined = undefined
   private silent: boolean | 'passed-only' = false
+  private htmlReportPath: string | undefined
 
   constructor(meta: WorkerInitMetadata, debug: WorkerRunnerOptions['debug']) {
     this.setupFilePaths = meta.setupFilePaths
@@ -42,6 +44,18 @@ export class VSCodeReporter implements Reporter {
     this.vitest = vitest
     this.configureAttachDebugging(vitest)
     this.silent = vitest.config.silent
+
+    for (const reporter of vitest.config.reporters) {
+      if (Array.isArray(reporter) && reporter[0] === 'html') {
+        const options = reporter[1] as { outputDir?: string }
+        this.htmlReportPath = resolve(
+          vitest.config.root,
+          options.outputDir || '.vitest',
+          'index.html',
+        )
+        break
+      }
+    }
 
     vitest.projects.forEach((project) => {
       this.ensureSetupFileIsAllowed(project.vite.config)
@@ -189,7 +203,7 @@ export class VSCodeReporter implements Reporter {
 
     // as any because Vitest types are different between v3 and v4,
     // and shared packages uses the lowest Vitest version
-    this.rpc.onTestRunEnd(files as any, '', false, coverage)
+    this.rpc.onTestRunEnd(files as any, '', false, coverage, this.htmlReportPath)
   }
 
   onTestModuleCollected(testModule: TestModule) {

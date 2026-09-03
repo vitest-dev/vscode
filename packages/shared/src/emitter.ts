@@ -11,18 +11,10 @@ abstract class WorkerEventEmitter {
   ready(
     projects: SerializedProject[],
     workspaceSource: string | false,
-    htmlReportPath: string | undefined,
     legacy: boolean,
     version: string | undefined,
   ) {
-    this.sendWorkerEvent({
-      type: 'ready',
-      projects,
-      workspaceSource,
-      htmlReportPath,
-      legacy,
-      version,
-    })
+    this.sendWorkerEvent({ type: 'ready', projects, workspaceSource, legacy, version })
   }
 
   error(err: any) {

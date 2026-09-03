@@ -90,6 +90,7 @@ export interface ExtensionWorkerEvents {
     unhandledError: string,
     collecting?: boolean,
     coverage?: unknown,
+    htmlReportPath?: string,
   ) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
   onTestRunStart: (files: string[]) => void
@@ -193,7 +194,6 @@ export interface EventReady {
   type: 'ready'
   projects: SerializedProject[]
   workspaceSource: string | false
-  htmlReportPath?: string
   legacy: boolean
   // the actual runtime version, unlike VitestPackage.version
   // this is also defined when vitest is resolved via yarn pnp

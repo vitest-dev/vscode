@@ -96,7 +96,6 @@ export async function createVitestTerminalProcess(
     handlers: meta.handlers,
     pkg,
     workspaceSource: meta.workspaceSource,
-    htmlReportPath: meta.htmlReportPath,
     process: vitestProcess,
     projects: meta.projects,
     dispose: meta.dispose,
