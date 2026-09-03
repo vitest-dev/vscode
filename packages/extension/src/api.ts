@@ -91,10 +91,11 @@ export async function resolveVitestAPI(
   const resolvedApisPromises = await Promise.allSettled(workspacePromises)
   const errors: unknown[] = []
   const apis: VitestProcessAPI[] = []
+  const resolvedResults: DiscoveryResult[] = []
   for (const result of resolvedApisPromises) {
     if (result.status === 'fulfilled') {
       apis.push(result.value.api)
-      onResolved?.(result.value)
+      resolvedResults.push(result.value)
     } else {
       errors.push(result.reason)
     }
@@ -144,7 +145,7 @@ export async function resolveVitestAPI(
     try {
       const result = await createVitestProcessAPI(usedConfigs, pkg)
       apis.push(result.api)
-      onResolved?.(result)
+      resolvedResults.push(result)
       if (result.api.workspaceSource) {
         workspaceRoots.push(dirname(result.api.workspaceSource))
       }
@@ -166,6 +167,10 @@ export async function resolveVitestAPI(
     errors.forEach((e) => log.error(e))
     showVitestError('The extension could not load some configs')
   }
+
+  resolvedResults
+    .sort((a, b) => b.api.package.cwd.split('/').length - a.api.package.cwd.split('/').length)
+    .forEach((result) => onResolved?.(result))
 
   return new VitestAPI(apis)
 }

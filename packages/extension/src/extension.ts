@@ -199,7 +199,11 @@ class VitestExtension {
       this.testTree.collectFile(vitest, file)
     })
 
-    const prefix = vitest.prefix
+    // VS Code sorts default profiles by label, so indent nested configs first.
+    const depth = relative(vitest.workspaceFolder.uri.fsPath, vitest.package.cwd)
+      .split('/')
+      .filter(Boolean).length
+    const prefix = `${' '.repeat(depth)}${vitest.prefix}`
 
     let runProfile = this.runProfiles.get(`${vitest.id}:run`)
     if (!runProfile) {
