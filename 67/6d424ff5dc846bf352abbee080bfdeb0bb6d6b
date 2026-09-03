@@ -1,0 +1,19 @@
+packages/extension/src/runner.ts
+  s_cc38b43a5d90e5::t_834623a71879b1 114-119,121-125,127-131,133,135-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "676d424ff5dc846bf352abbee080bfdeb0bb6d6b",
+  "prompts": {},
+  "sessions": {
+    "s_cc38b43a5d90e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f999534f4ffe4RwWjHRmHKp784",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Hiroshi Ogawa <4232207+hi-ogawa@users.noreply.github.com>"
+    }
+  }
+}
