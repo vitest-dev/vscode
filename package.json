@@ -122,6 +122,11 @@
         "category": "Vitest"
       },
       {
+        "title": "Open Trace Report",
+        "command": "vitest.openTraceReport",
+        "category": "Vitest"
+      },
+      {
         "title": "Show Shell Terminal",
         "command": "vitest.showShellTerminal",
         "category": "Vitest"
@@ -190,6 +195,10 @@
       ],
       "commandPalette": [
         {
+          "command": "vitest.openTraceReport",
+          "when": "false"
+        },
+        {
           "command": "vitest.toggleContinuousRun",
           "when": "false"
         },
@@ -203,6 +212,11 @@
         }
       ],
       "testing/item/context": [
+        {
+          "command": "vitest.openTraceReport",
+          "when": "controllerId == 'vitest'",
+          "group": "vitest"
+        },
         {
           "command": "vitest.updateSnapshot",
           "when": "controllerId == 'vitest'"

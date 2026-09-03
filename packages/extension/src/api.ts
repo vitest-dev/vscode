@@ -193,7 +193,12 @@ async function createVitestProcessAPI(
       }
     })
     const files = await meta.rpc.getFiles()
-    const config = new VitestProjectConfig(pkg, meta.projects, meta.workspaceSource)
+    const config = new VitestProjectConfig(
+      pkg,
+      meta.projects,
+      meta.workspaceSource,
+      meta.htmlReportPath,
+    )
     const api = new VitestProcessAPI(config)
     return { api, files }
   })

@@ -19,6 +19,7 @@ import { ExtensionTerminalProcess } from './spawn/terminal'
 import { ExtensionState } from './state'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
+import { TraceReportManager } from './traceReport'
 import { getTestData, TestFile } from './testTreeData'
 import { debounce, showVitestError } from './utils'
 import './polyfills'
@@ -52,6 +53,7 @@ class VitestExtension {
   private debugManager: DebugManager
   private schemaProvider: TransformSchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
+  private traceReports = new TraceReportManager()
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -106,6 +108,7 @@ class VitestExtension {
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     this.importsBreakdownProvider.clear()
     this.testTree.reset([])
+    this.traceReports.clear()
     this.runQueues.forEach((q) => q.dispose())
     this.runQueues.clear()
 
@@ -222,6 +225,7 @@ class VitestExtension {
       vitest,
       this.diagnostic,
       this.importsBreakdownProvider,
+      this.traceReports,
     )
     const runQueueId = `${vitest.id}:run`
     this.runQueues.set(runQueueId, runQueue)
@@ -284,6 +288,7 @@ class VitestExtension {
       vitest,
       this.diagnostic,
       this.importsBreakdownProvider,
+      this.traceReports,
     )
     const coverageQueueId = `${vitest.id}:coverage`
     this.runQueues.set(coverageQueueId, coverageQueue)
@@ -342,6 +347,9 @@ class VitestExtension {
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOutput()
       }),
+      vscode.commands.registerCommand('vitest.openTraceReport', (testItem?: vscode.TestItem) =>
+        this.traceReports.open(testItem),
+      ),
       vscode.commands.registerCommand('vitest.runRelatedTests', async (uri?: vscode.Uri) => {
         const currentUri = uri || vscode.window.activeTextEditor?.document.uri
         if (!currentUri) {

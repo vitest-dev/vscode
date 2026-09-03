@@ -24,6 +24,7 @@ export class VitestProjectConfig {
     readonly pkg: VitestPackage,
     readonly projects: SerializedProject[],
     readonly workspaceSource: string | false,
+    readonly htmlReportPath?: string,
   ) {
     this.id = normalize(pkg.id)
     this.workspaceFolder = pkg.folder
@@ -111,7 +112,12 @@ export class VitestProcessAPI {
    * a handle wrapping the existing process (without closing it).
    */
   static forDebug(pkg: VitestPackage, meta: ResolvedMeta): VitestProcessAPI {
-    const config = new VitestProjectConfig(pkg, meta.projects, meta.workspaceSource)
+    const config = new VitestProjectConfig(
+      pkg,
+      meta.projects,
+      meta.workspaceSource,
+      meta.htmlReportPath,
+    )
     const api = new VitestProcessAPI(config)
     api.currentMeta = meta
     return api
@@ -141,6 +147,10 @@ export class VitestProcessAPI {
 
   get workspaceSource() {
     return this.config.workspaceSource
+  }
+
+  get htmlReportPath() {
+    return this.config.htmlReportPath
   }
 
   get package() {
@@ -323,6 +333,7 @@ export interface ResolvedMeta {
   rpc: VitestExtensionRPC
   process: ExtensionWorkerProcess
   workspaceSource: string | false
+  htmlReportPath?: string
   pkg: VitestPackage
   projects: SerializedProject[]
   handlers: {
