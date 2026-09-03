@@ -2,14 +2,14 @@ import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { TestTree } from './testTree'
 import * as vscode from 'vscode'
 
-export interface TraceReportTarget {
+interface TraceReportTarget {
   apiId: string
   reportPath: string
   fileId: string
   testId: string
 }
 
-export function findTraceReportTargets(
+function findTraceReportTargets(
   apiId: string,
   reportPath: string,
   files: RunnerTestFile[],
@@ -31,7 +31,7 @@ export function findTraceReportTargets(
   return targets
 }
 
-export function createTraceReportUri(target: TraceReportTarget) {
+function createTraceReportUri(target: TraceReportTarget) {
   const params = new URLSearchParams({
     file: target.fileId,
     view: 'editor',

@@ -90,7 +90,6 @@ export interface ExtensionWorkerEvents {
     unhandledError: string,
     collecting?: boolean,
     coverage?: unknown,
-    htmlReportPath?: string,
   ) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
   onTestRunStart: (files: string[]) => void
