@@ -1,0 +1,23 @@
+packages/extension/src/traceReport.ts
+  s_cc38b43a5d90e5::t_5c28f2eae146e0 1-92
+packages/extension/src/worker/index.ts
+  s_cc38b43a5d90e5::t_66e13791d66781 42-43,73
+packages/shared/src/emitter.ts
+  s_cc38b43a5d90e5::t_383c19a5592989 14,18-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dcb65a13f9288e45a0083504f2c18f5c9ac9abb7",
+  "prompts": {},
+  "sessions": {
+    "s_cc38b43a5d90e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f999534f4ffe4RwWjHRmHKp784",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Hiroshi Ogawa <4232207+hi-ogawa@users.noreply.github.com>"
+    }
+  }
+}
