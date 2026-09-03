@@ -31,14 +31,14 @@ function findTraceReportTargets(
   return targets
 }
 
-function createTraceReportUri(target: TraceReportTarget) {
+function createTraceReportUrl(target: TraceReportTarget) {
   const params = new URLSearchParams({
     file: target.fileId,
     view: 'editor',
     test: target.testId,
     traceStep: '0',
   })
-  return vscode.Uri.file(target.reportPath).with({ fragment: `/?${params}` })
+  return `${vscode.Uri.file(target.reportPath).toString(true)}#/?${params}`
 }
 
 export class TraceReportManager {
@@ -72,9 +72,9 @@ export class TraceReportManager {
       return
     }
 
-    const uri = createTraceReportUri(target)
+    const reportUri = vscode.Uri.file(target.reportPath)
     try {
-      await vscode.workspace.fs.stat(uri.with({ fragment: '' }))
+      await vscode.workspace.fs.stat(reportUri)
     } catch {
       await vscode.window.showWarningMessage(
         `The Vitest HTML report does not exist at ${target.reportPath}.`,
@@ -83,10 +83,11 @@ export class TraceReportManager {
     }
 
     const commands = await vscode.commands.getCommands(true)
-    if (commands.includes('workbench.action.browser.openFile')) {
-      await vscode.commands.executeCommand('workbench.action.browser.openFile', uri)
+    const url = createTraceReportUrl(target)
+    if (commands.includes('workbench.action.browser.open')) {
+      await vscode.commands.executeCommand('workbench.action.browser.open', url)
     } else {
-      await vscode.env.openExternal(uri)
+      await vscode.env.openExternal(vscode.Uri.parse(url))
     }
   }
 }
