@@ -114,7 +114,7 @@ export class TestRunner extends vscode.Disposable {
     handle.handlers.onTestRunEnd(async (files, unhandledError, collecting, coverage) => {
       const htmlReportPath = this.api.config.htmlReportPath
       if (!collecting && htmlReportPath) {
-        this.traceReports?.update(this.api.id, htmlReportPath, files, this.tree)
+        await this.traceReports?.update(this.api.id, htmlReportPath, files, this.tree)
       }
       const testRun = this.testRun
 

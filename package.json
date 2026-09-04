@@ -214,7 +214,7 @@
       "testing/item/context": [
         {
           "command": "vitest.openTraceReport",
-          "when": "controllerId == 'vitest'",
+          "when": "controllerId == 'vitest' && testId in vitest.traceReportTests",
           "group": "vitest"
         },
         {

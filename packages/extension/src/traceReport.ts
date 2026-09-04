@@ -46,9 +46,10 @@ export class TraceReportManager {
 
   clear() {
     this.targets.clear()
+    void this.updateContext()
   }
 
-  update(apiId: string, reportPath: string, files: RunnerTestFile[], tree: TestTree) {
+  async update(apiId: string, reportPath: string, files: RunnerTestFile[], tree: TestTree) {
     for (const [item, target] of this.targets) {
       if (target.apiId === apiId) {
         this.targets.delete(item)
@@ -61,6 +62,15 @@ export class TraceReportManager {
         this.targets.set(item, target)
       }
     }
+    await this.updateContext()
+  }
+
+  private updateContext() {
+    return vscode.commands.executeCommand(
+      'setContext',
+      'vitest.traceReportTests',
+      [...this.targets.keys()].map((item) => item.id),
+    )
   }
 
   async open(testItem: vscode.TestItem | undefined) {
