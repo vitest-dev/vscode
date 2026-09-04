@@ -321,9 +321,12 @@ importers:
       '@vitest/utils':
         specifier: catalog:latest
         version: 4.1.0
+      vite:
+        specifier: catalog:latest
+        version: 7.2.6(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: catalog:latest
-        version: 4.1.0(@types/node@24.10.1)(@vitest/browser-playwright@4.1.0)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.10.1)(esbuild@0.27.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.1.0(@types/node@24.10.1)(@vitest/browser-playwright@4.1.0)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@7.2.6(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.8.2))
       vitest-vscode-shared:
         specifier: workspace:*
         version: link:../shared
