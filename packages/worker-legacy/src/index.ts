@@ -203,13 +203,11 @@ export async function initVitest(
     : vitest.config.workspace != null || vitest.config.projects != null
       ? vitest.server.config.configFile || false
       : false
-  const config: ExtensionWorkerConfig = { root: vitest.config.root }
+  const config: ExtensionWorkerConfig = { root: vitest.config.root, projects, workspaceSource }
   return {
     vitest,
     reporter,
     config,
-    workspaceSource,
-    projects,
     meta,
     createWorker() {
       return new ExtensionWorker(vitest, !!data.debug, emitter)

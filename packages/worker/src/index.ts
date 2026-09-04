@@ -168,7 +168,7 @@ export async function initVitest(
 
   const workspaceSource: string | false =
     vitest.config.projects != null ? vitest.vite.config.configFile || false : false
-  const config: ExtensionWorkerConfig = { root: vitest.config.root }
+  const config: ExtensionWorkerConfig = { root: vitest.config.root, projects, workspaceSource }
   for (const reporter of vitest.config.reporters) {
     if (Array.isArray(reporter) && reporter[0] === 'html') {
       const options = reporter[1] as { outputDir?: string }
@@ -180,8 +180,6 @@ export async function initVitest(
     vitest,
     reporter,
     config,
-    workspaceSource,
-    projects,
     meta,
     createWorker() {
       return new ExtensionWorker(vitest, !!data.debug, emitter)

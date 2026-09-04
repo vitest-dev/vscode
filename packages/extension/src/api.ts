@@ -187,13 +187,13 @@ async function createVitestProcessAPI(
   pkg: VitestPackage,
 ): Promise<DiscoveryResult> {
   return withProcess(pkg, async (meta) => {
-    meta.projects.forEach((project) => {
+    meta.config.projects.forEach((project) => {
       if (project.config) {
         usedConfigs.add(project.config)
       }
     })
     const files = await meta.rpc.getFiles()
-    const config = new VitestProjectConfig(pkg, meta.projects, meta.workspaceSource, meta.config)
+    const config = new VitestProjectConfig(pkg, meta.config)
     const api = new VitestProcessAPI(config)
     return { api, files }
   })

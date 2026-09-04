@@ -52,6 +52,8 @@ export interface ExtensionEnvironment {
 
 export interface ExtensionWorkerConfig {
   root: string
+  projects: SerializedProject[]
+  workspaceSource: string | false
   htmlReporter?: {
     outputDir?: string
   }
@@ -199,8 +201,6 @@ export interface SerializedProject {
 export interface EventReady {
   type: 'ready'
   config: ExtensionWorkerConfig
-  projects: SerializedProject[]
-  workspaceSource: string | false
   legacy: boolean
   // the actual runtime version, unlike VitestPackage.version
   // this is also defined when vitest is resolved via yarn pnp
