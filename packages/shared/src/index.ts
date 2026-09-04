@@ -50,12 +50,6 @@ export interface ExtensionEnvironment {
   }[]
 }
 
-export interface ExtensionWorkerConfig {
-  projects: SerializedProject[]
-  workspaceSource: string | false
-  htmlReportPath?: string
-}
-
 export interface ExtensionWorkerTransport {
   getFiles: () => Promise<ExtensionTestFileSpecification[]>
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
@@ -193,6 +187,12 @@ export interface SerializedProject {
     name: string
     webRoot: string
   }
+}
+
+export interface ExtensionWorkerConfig {
+  projects: SerializedProject[]
+  workspaceSource: string | false
+  htmlReportPath?: string
 }
 
 export interface EventReady {
