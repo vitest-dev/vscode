@@ -1,0 +1,19 @@
+packages/extension/src/worker/index.ts
+  s_9dd584fdad704c::t_51cf120deb7448 42-43,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bc3245d67b9c70a17b00f8b4964f690cbb236cbe",
+  "prompts": {},
+  "sessions": {
+    "s_9dd584fdad704c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f95e1c592ffeTGOZ7RlzgZ3g4X",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Hiroshi Ogawa <4232207+hi-ogawa@users.noreply.github.com>"
+    }
+  }
+}
