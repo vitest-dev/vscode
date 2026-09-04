@@ -51,12 +51,9 @@ export interface ExtensionEnvironment {
 }
 
 export interface ExtensionWorkerConfig {
-  root: string
   projects: SerializedProject[]
   workspaceSource: string | false
-  htmlReporter?: {
-    outputDir?: string
-  }
+  htmlReportPath?: string
 }
 
 export interface ExtensionWorkerTransport {

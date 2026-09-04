@@ -6,7 +6,7 @@ import type { ExtensionWorkerProcess } from './spawn/types'
 import type { ProcessSpawnOptions } from './spawn/ws'
 import type { TestFileMetadata } from './testTreeData'
 import { readFileSync } from 'node:fs'
-import { normalize, relative, resolve } from 'pathe'
+import { normalize, relative } from 'pathe'
 import pm from 'picomatch'
 import { createQueuedHandler } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
@@ -58,9 +58,7 @@ export class VitestProjectConfig {
   }
 
   get htmlReportPath() {
-    const config = this.extensionConfig
-    if (!config.htmlReporter) return
-    return resolve(config.root, config.htmlReporter.outputDir || '.vitest', 'index.html')
+    return this.extensionConfig.htmlReportPath
   }
 
   get package() {

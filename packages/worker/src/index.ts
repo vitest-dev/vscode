@@ -8,6 +8,7 @@ import type { Reporter, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
 import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
+import { resolve } from 'pathe'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -168,11 +169,15 @@ export async function initVitest(
 
   const workspaceSource: string | false =
     vitest.config.projects != null ? vitest.vite.config.configFile || false : false
-  const config: ExtensionWorkerConfig = { root: vitest.config.root, projects, workspaceSource }
+  const config: ExtensionWorkerConfig = { projects, workspaceSource }
   for (const reporter of vitest.config.reporters) {
     if (Array.isArray(reporter) && reporter[0] === 'html') {
       const options = reporter[1] as { outputDir?: string }
-      config.htmlReporter = { outputDir: options.outputDir }
+      config.htmlReportPath = resolve(
+        vitest.config.root,
+        options.outputDir || '.vitest',
+        'index.html',
+      )
       break
     }
   }
