@@ -56,9 +56,12 @@ export class TraceReportManager {
 
     const commands = await vscode.commands.getCommands(true)
     const url = createTraceReportUrl(target)
+    // The Integrated Browser command is internal; follow Simple Browser's feature detection before using it.
+    // https://github.com/microsoft/vscode/blob/008427a901bf4aa79b47f175ccc8da1731750f78/extensions/simple-browser/src/extension.ts#L15-L35
     if (commands.includes('workbench.action.browser.open')) {
       await vscode.commands.executeCommand('workbench.action.browser.open', url)
     } else {
+      // TODO: Support a single-file fallback because external browsers may block file:// metadata requests.
       await vscode.env.openExternal(vscode.Uri.parse(url))
     }
   }
