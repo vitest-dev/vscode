@@ -1,0 +1,31 @@
+packages/extension/src/api.ts
+  s_90cd412a75a2be::t_1700323bca0082 190,196
+packages/extension/src/spawn/terminal.ts
+  s_90cd412a75a2be::t_651596dce2afe2 96
+packages/extension/src/spawn/ws.ts
+  s_90cd412a75a2be::t_076ac7cf4f5591 117-119
+packages/extension/src/worker/index.ts
+  s_90cd412a75a2be::t_1b8a5df2022fbd 42,76
+packages/shared/src/emitter.ts
+  s_90cd412a75a2be::t_b4528fb438843f 1,11-12
+packages/shared/src/index.ts
+  s_90cd412a75a2be::t_ca86d1db6e4e9d 192,200
+packages/worker-legacy/src/index.ts
+  s_90cd412a75a2be::t_0d565f9635a954 3,206,210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "84387c90261fdc5a80fc114380385c4f414d1837",
+  "prompts": {},
+  "sessions": {
+    "s_90cd412a75a2be": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f95635c3bffecrDpJ4UoYZ4gZR",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Hiroshi Ogawa <4232207+hi-ogawa@users.noreply.github.com>"
+    }
+  }
+}
