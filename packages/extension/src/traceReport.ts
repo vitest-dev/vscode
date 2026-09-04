@@ -34,6 +34,7 @@ export class TraceReportManager {
   }
 
   private updateContext() {
+    // Limit the test-item context menu action to tests with a trace report.
     return vscode.commands.executeCommand(
       'setContext',
       'vitest.traceReportTests',
