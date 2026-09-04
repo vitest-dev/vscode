@@ -24,7 +24,7 @@ export class VitestProjectConfig {
     readonly pkg: VitestPackage,
     readonly projects: SerializedProject[],
     readonly workspaceSource: string | false,
-    readonly extensionConfig?: ExtensionWorkerConfig,
+    readonly extensionConfig: ExtensionWorkerConfig,
   ) {
     this.id = normalize(pkg.id)
     this.workspaceFolder = pkg.folder
@@ -53,7 +53,7 @@ export class VitestProjectConfig {
 
   get htmlReportPath() {
     const config = this.extensionConfig
-    if (!config?.htmlReporter) return
+    if (!config.htmlReporter) return
     return resolve(config.root, config.htmlReporter.outputDir || '.vitest', 'index.html')
   }
 
