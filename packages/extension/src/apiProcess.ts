@@ -1,4 +1,4 @@
-import type { SerializedProject } from 'vitest-vscode-shared'
+import type { SerializedProject, WorkerReadyMetadata } from 'vitest-vscode-shared'
 import type { VitestPackage } from './spawn/pkg'
 import { usesJestTestNamePattern } from './spawn/pkg'
 import type { ExtensionWorkerEvents, VitestExtensionRPC } from './spawn/rpc'
@@ -22,8 +22,7 @@ export class VitestProjectConfig {
 
   constructor(
     readonly pkg: VitestPackage,
-    readonly projects: SerializedProject[],
-    readonly workspaceSource: string | false,
+    readonly metadata: WorkerReadyMetadata,
   ) {
     this.id = normalize(pkg.id)
     this.workspaceFolder = pkg.folder
@@ -40,6 +39,14 @@ export class VitestProjectConfig {
 
   get configs() {
     return this.projects.map((p) => p.config).filter((n) => n != null)
+  }
+
+  get projects(): SerializedProject[] {
+    return this.metadata.projects
+  }
+
+  get workspaceSource() {
+    return this.metadata.workspaceSource
   }
 
   get version() {
@@ -111,7 +118,7 @@ export class VitestProcessAPI {
    * a handle wrapping the existing process (without closing it).
    */
   static forDebug(pkg: VitestPackage, meta: ResolvedMeta): VitestProcessAPI {
-    const config = new VitestProjectConfig(pkg, meta.projects, meta.workspaceSource)
+    const config = new VitestProjectConfig(pkg, meta.metadata)
     const api = new VitestProcessAPI(config)
     api.currentMeta = meta
     return api
@@ -321,10 +328,9 @@ export interface RunHandlers {
 
 export interface ResolvedMeta {
   rpc: VitestExtensionRPC
+  metadata: WorkerReadyMetadata
   process: ExtensionWorkerProcess
-  workspaceSource: string | false
   pkg: VitestPackage
-  projects: SerializedProject[]
   handlers: {
     onProcessLog: (listener: ExtensionWorkerEvents['onProcessLog']) => void
     onConsoleLog: (listener: ExtensionWorkerEvents['onConsoleLog']) => void

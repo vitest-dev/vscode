@@ -1,5 +1,6 @@
 import type {
   SerializedProject,
+  WorkerReadyMetadata,
   WorkerRunnerOptions,
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
@@ -202,11 +203,11 @@ export async function initVitest(
     : vitest.config.workspace != null || vitest.config.projects != null
       ? vitest.server.config.configFile || false
       : false
+  const metadata: WorkerReadyMetadata = { projects, workspaceSource }
   return {
     vitest,
     reporter,
-    workspaceSource,
-    projects,
+    metadata,
     meta,
     createWorker() {
       return new ExtensionWorker(vitest, !!data.debug, emitter)

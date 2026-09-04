@@ -189,10 +189,14 @@ export interface SerializedProject {
   }
 }
 
-export interface EventReady {
-  type: 'ready'
+export interface WorkerReadyMetadata {
   projects: SerializedProject[]
   workspaceSource: string | false
+}
+
+export interface EventReady {
+  type: 'ready'
+  metadata: WorkerReadyMetadata
   legacy: boolean
   // the actual runtime version, unlike VitestPackage.version
   // this is also defined when vitest is resolved via yarn pnp
