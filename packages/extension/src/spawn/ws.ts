@@ -114,9 +114,9 @@ export function onWsConnection(
       }
       onStart({
         rpc: api,
-        config: {
-          ...message.config,
-          projects: message.config.projects.map((p) => {
+        metadata: {
+          ...message.metadata,
+          projects: message.metadata.projects.map((p) => {
             if (p.dir) {
               p.dir = resolve(pkg.cwd, p.dir)
             }

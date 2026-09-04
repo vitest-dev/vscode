@@ -1,6 +1,6 @@
 import type {
-  ExtensionWorkerConfig,
   SerializedProject,
+  WorkerReadyMetadata,
   WorkerRunnerOptions,
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
@@ -169,11 +169,11 @@ export async function initVitest(
 
   const workspaceSource: string | false =
     vitest.config.projects != null ? vitest.vite.config.configFile || false : false
-  const config: ExtensionWorkerConfig = { projects, workspaceSource }
+  const metadata: WorkerReadyMetadata = { projects, workspaceSource }
   for (const reporter of vitest.config.reporters) {
     if (Array.isArray(reporter) && reporter[0] === 'html') {
       const options = reporter[1] as { outputDir?: string }
-      config.htmlReportPath = resolve(
+      metadata.htmlReportPath = resolve(
         vitest.config.root,
         options.outputDir || '.vitest',
         'index.html',
@@ -184,7 +184,7 @@ export async function initVitest(
   return {
     vitest,
     reporter,
-    config,
+    metadata,
     meta,
     createWorker() {
       return new ExtensionWorker(vitest, !!data.debug, emitter)
