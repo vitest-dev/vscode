@@ -78,6 +78,7 @@
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:latest",
     "vitest": "catalog:latest",
     "which": "catalog:",
     "ws": "catalog:"
@@ -119,6 +120,11 @@
       {
         "title": "Show Output Channel",
         "command": "vitest.openOutput",
+        "category": "Vitest"
+      },
+      {
+        "title": "Open Trace View",
+        "command": "vitest.openTraceView",
         "category": "Vitest"
       },
       {
@@ -190,6 +196,10 @@
       ],
       "commandPalette": [
         {
+          "command": "vitest.openTraceView",
+          "when": "false"
+        },
+        {
           "command": "vitest.toggleContinuousRun",
           "when": "false"
         },
@@ -204,6 +214,11 @@
       ],
       "testing/item/context": [
         {
+          "command": "vitest.openTraceView",
+          "when": "controllerId == 'vitest' && testId in vitest.traceViewTests",
+          "group": "vitest"
+        },
+        {
           "command": "vitest.updateSnapshot",
           "when": "controllerId == 'vitest'"
         },
@@ -213,6 +228,11 @@
         }
       ],
       "testing/item/gutter": [
+        {
+          "command": "vitest.openTraceView",
+          "when": "controllerId == 'vitest' && testId in vitest.traceViewTests",
+          "group": "vitest"
+        },
         {
           "command": "vitest.updateSnapshot",
           "when": "controllerId == 'vitest'"
