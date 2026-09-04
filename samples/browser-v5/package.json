@@ -1,0 +1,14 @@
+{
+  "name": "browser-v5",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@vitest/browser-playwright": "catalog:v5",
+    "@vitest/ui": "catalog:v5",
+    "playwright": "^1.55.0",
+    "vitest": "catalog:v5"
+  }
+}

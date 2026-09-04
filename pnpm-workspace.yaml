@@ -56,6 +56,10 @@ catalogs:
     '@vitest/utils': ^3.2.4
     vite: ^7.2.6
     vitest: ^3.2.4
+  v5:
+    '@vitest/browser-playwright': ^5.0.0
+    '@vitest/ui': ^5.0.0
+    vitest: ^5.0.0
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
   - esbuild

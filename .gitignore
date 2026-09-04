@@ -9,5 +9,6 @@ test-results
 .yarn
 .pnp.*
 samples/**/coverage
+samples/**/.vitest
 tests-logs-*
 *.tsbuildinfo
