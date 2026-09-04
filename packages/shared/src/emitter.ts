@@ -1,4 +1,4 @@
-import type { ExtensionWorkerConfig, WorkerEvent } from 'vitest-vscode-shared'
+import type { WorkerEvent, WorkerReadyMetadata } from 'vitest-vscode-shared'
 import type WebSocket from 'ws'
 
 abstract class WorkerEventEmitter {
@@ -8,8 +8,8 @@ abstract class WorkerEventEmitter {
   abstract on(event: string, listener: (...args: any[]) => void): void
   abstract off(event: string, listener: (...args: any[]) => void): void
 
-  ready(config: ExtensionWorkerConfig, legacy: boolean, version: string | undefined) {
-    this.sendWorkerEvent({ type: 'ready', config, legacy, version })
+  ready(metadata: WorkerReadyMetadata, legacy: boolean, version: string | undefined) {
+    this.sendWorkerEvent({ type: 'ready', metadata, legacy, version })
   }
 
   error(err: any) {
