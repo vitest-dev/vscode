@@ -347,7 +347,7 @@ class VitestExtension {
       vscode.commands.registerCommand('vitest.openOutput', () => {
         log.openOutput()
       }),
-      vscode.commands.registerCommand('vitest.openTraceReport', (testItem?: vscode.TestItem) =>
+      vscode.commands.registerCommand('vitest.openTraceReport', (testItem: vscode.TestItem) =>
         this.traceReports.open(testItem),
       ),
       vscode.commands.registerCommand('vitest.runRelatedTests', async (uri?: vscode.Uri) => {

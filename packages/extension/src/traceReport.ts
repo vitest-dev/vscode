@@ -41,14 +41,8 @@ export class TraceReportManager {
     )
   }
 
-  async open(testItem: vscode.TestItem | undefined) {
-    const target = testItem && this.targets.get(testItem)
-    if (!target) {
-      await vscode.window.showInformationMessage(
-        'No trace report is available for this test. Run it with browser.traceView and the HTML reporter enabled.',
-      )
-      return
-    }
+  async open(testItem: vscode.TestItem) {
+    const target = this.targets.get(testItem)!
 
     const reportUri = vscode.Uri.file(target.reportPath)
     try {
