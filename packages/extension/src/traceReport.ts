@@ -78,6 +78,8 @@ function findTraceReportTargets(
     for (let index = 0; index < queue.length; index++) {
       const task = queue[index]
       if (task.type === 'test') {
+        // Vitest 3 does not type artifacts, while the field is provided by Vitest 5.
+        // https://github.com/vitest-dev/vitest/blob/c666d149a4516761bae92ca56ce1336d2fd352c3/packages/runner/src/types/tasks.ts#L265-L279
         const { artifacts } = task as typeof task & { artifacts?: { type: string }[] }
         // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/vitest/src/runtime/runner/types.ts#L1479-L1485
         if (artifacts?.some((artifact) => artifact.type === 'internal:browserTrace')) {
