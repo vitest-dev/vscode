@@ -26,18 +26,6 @@ export class ExtensionWorker implements ExtensionWorkerTransport {
     this.watcher = new ExtensionWorkerWatcher(vitest, this.runner)
   }
 
-  getExtensionConfig() {
-    let htmlReporter: { outputDir?: string } | undefined
-    for (const reporter of this.vitest.config.reporters) {
-      if (Array.isArray(reporter) && reporter[0] === 'html') {
-        const options = reporter[1] as { outputDir?: string }
-        htmlReporter = { outputDir: options.outputDir }
-        break
-      }
-    }
-    return { root: this.vitest.config.root, htmlReporter }
-  }
-
   async getFiles(): Promise<ExtensionTestFileSpecification[]> {
     return this.runner.getFiles()
   }

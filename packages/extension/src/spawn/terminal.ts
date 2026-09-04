@@ -93,6 +93,7 @@ export async function createVitestTerminalProcess(
   const vitestProcess = new ExtensionTerminalProcess(terminal, server, meta.ws)
   return {
     rpc: meta.rpc,
+    config: meta.config,
     handlers: meta.handlers,
     pkg,
     workspaceSource: meta.workspaceSource,

@@ -1,4 +1,5 @@
 import type {
+  ExtensionWorkerConfig,
   SerializedProject,
   WorkerRunnerOptions,
   WorkerWSEventEmitter,
@@ -202,9 +203,11 @@ export async function initVitest(
     : vitest.config.workspace != null || vitest.config.projects != null
       ? vitest.server.config.configFile || false
       : false
+  const config: ExtensionWorkerConfig = { root: vitest.config.root }
   return {
     vitest,
     reporter,
+    config,
     workspaceSource,
     projects,
     meta,

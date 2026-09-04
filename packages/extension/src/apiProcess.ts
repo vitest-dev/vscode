@@ -24,7 +24,7 @@ export class VitestProjectConfig {
     readonly pkg: VitestPackage,
     readonly projects: SerializedProject[],
     readonly workspaceSource: string | false,
-    readonly workerConfig?: ExtensionWorkerConfig,
+    readonly extensionConfig?: ExtensionWorkerConfig,
   ) {
     this.id = normalize(pkg.id)
     this.workspaceFolder = pkg.folder
@@ -52,7 +52,7 @@ export class VitestProjectConfig {
   }
 
   get htmlReportPath() {
-    const config = this.workerConfig
+    const config = this.extensionConfig
     if (!config?.htmlReporter) return
     return resolve(config.root, config.htmlReporter.outputDir || '.vitest', 'index.html')
   }
@@ -118,7 +118,7 @@ export class VitestProcessAPI {
    * a handle wrapping the existing process (without closing it).
    */
   static forDebug(pkg: VitestPackage, meta: ResolvedMeta): VitestProcessAPI {
-    const config = new VitestProjectConfig(pkg, meta.projects, meta.workspaceSource)
+    const config = new VitestProjectConfig(pkg, meta.projects, meta.workspaceSource, meta.config)
     const api = new VitestProcessAPI(config)
     api.currentMeta = meta
     return api
@@ -328,6 +328,7 @@ export interface RunHandlers {
 
 export interface ResolvedMeta {
   rpc: VitestExtensionRPC
+  config: ExtensionWorkerConfig
   process: ExtensionWorkerProcess
   workspaceSource: string | false
   pkg: VitestPackage

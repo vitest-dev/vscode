@@ -58,7 +58,6 @@ export interface ExtensionWorkerConfig {
 }
 
 export interface ExtensionWorkerTransport {
-  getExtensionConfig: () => ExtensionWorkerConfig
   getFiles: () => Promise<ExtensionTestFileSpecification[]>
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
   cancelRun: () => Promise<void>
@@ -199,6 +198,7 @@ export interface SerializedProject {
 
 export interface EventReady {
   type: 'ready'
+  config: ExtensionWorkerConfig
   projects: SerializedProject[]
   workspaceSource: string | false
   legacy: boolean

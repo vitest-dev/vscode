@@ -114,6 +114,7 @@ export function onWsConnection(
       }
       onStart({
         rpc: api,
+        config: message.config,
         workspaceSource: message.workspaceSource,
         handlers,
         projects: message.projects.map((p) => {
