@@ -73,19 +73,21 @@ function findTraceReportTargets(
   files: RunnerTestFile[],
 ): TraceReportTarget[] {
   const targets: TraceReportTarget[] = []
-
-  function visit(task: RunnerTask, fileId: string) {
+  const queue: { task: RunnerTask; fileId: string }[] = files.map((file) => ({
+    task: file,
+    fileId: file.id,
+  }))
+  for (let index = 0; index < queue.length; index++) {
+    const { task, fileId } = queue[index]
     if (task.type === 'test') {
       const artifacts = (task as any).artifacts as { type: string }[] | undefined
       if (artifacts?.some((artifact) => artifact.type === 'internal:browserTrace')) {
         targets.push({ apiId, reportPath, fileId, testId: task.id })
       }
-      return
+    } else {
+      queue.push(...task.tasks.map((task) => ({ task, fileId })))
     }
-    task.tasks.forEach((child) => visit(child, fileId))
   }
-
-  files.forEach((file) => visit(file, file.id))
   return targets
 }
 
