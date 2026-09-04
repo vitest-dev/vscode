@@ -123,8 +123,8 @@
         "category": "Vitest"
       },
       {
-        "title": "Open Trace Report",
-        "command": "vitest.openTraceReport",
+        "title": "Open Trace View",
+        "command": "vitest.openTraceView",
         "category": "Vitest"
       },
       {
@@ -196,7 +196,7 @@
       ],
       "commandPalette": [
         {
-          "command": "vitest.openTraceReport",
+          "command": "vitest.openTraceView",
           "when": "false"
         },
         {
@@ -214,8 +214,8 @@
       ],
       "testing/item/context": [
         {
-          "command": "vitest.openTraceReport",
-          "when": "controllerId == 'vitest' && testId in vitest.traceReportTests",
+          "command": "vitest.openTraceView",
+          "when": "controllerId == 'vitest' && testId in vitest.traceViewTests",
           "group": "vitest"
         },
         {
@@ -229,8 +229,8 @@
       ],
       "testing/item/gutter": [
         {
-          "command": "vitest.openTraceReport",
-          "when": "controllerId == 'vitest' && testId in vitest.traceReportTests",
+          "command": "vitest.openTraceView",
+          "when": "controllerId == 'vitest' && testId in vitest.traceViewTests",
           "group": "vitest"
         },
         {

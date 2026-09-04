@@ -2,15 +2,15 @@ import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { TestTree } from './testTree'
 import * as vscode from 'vscode'
 
-interface TraceReportTarget {
+interface TraceViewTarget {
   apiId: string
   reportPath: string
   fileId: string
   testId: string
 }
 
-export class TraceReportManager {
-  private targets = new Map<vscode.TestItem, TraceReportTarget>()
+export class TraceViewManager {
+  private targets = new Map<vscode.TestItem, TraceViewTarget>()
 
   clear() {
     this.targets.clear()
@@ -24,7 +24,7 @@ export class TraceReportManager {
       }
     }
 
-    for (const target of findTraceReportTargets(apiId, reportPath, files)) {
+    for (const target of findTraceViewTargets(apiId, reportPath, files)) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
         this.targets.set(item, target)
@@ -34,10 +34,10 @@ export class TraceReportManager {
   }
 
   private updateContext() {
-    // Limit the test-item context menu action to tests with a trace report.
+    // Limit the test-item actions to tests with a recorded trace.
     return vscode.commands.executeCommand(
       'setContext',
-      'vitest.traceReportTests',
+      'vitest.traceViewTests',
       [...this.targets.keys()].map((item) => item.id),
     )
   }
@@ -56,7 +56,7 @@ export class TraceReportManager {
     }
 
     const commands = await vscode.commands.getCommands(true)
-    const url = createTraceReportUrl(target)
+    const url = createTraceViewUrl(target)
     // The Integrated Browser command is internal; follow Simple Browser's feature detection before using it.
     // https://github.com/microsoft/vscode/blob/008427a901bf4aa79b47f175ccc8da1731750f78/extensions/simple-browser/src/extension.ts#L15-L35
     if (commands.includes('workbench.action.browser.open')) {
@@ -68,12 +68,12 @@ export class TraceReportManager {
   }
 }
 
-function findTraceReportTargets(
+function findTraceViewTargets(
   apiId: string,
   reportPath: string,
   files: RunnerTestFile[],
-): TraceReportTarget[] {
-  const targets: TraceReportTarget[] = []
+): TraceViewTarget[] {
+  const targets: TraceViewTarget[] = []
   for (const file of files) {
     const queue: RunnerTask[] = [file]
     for (let index = 0; index < queue.length; index++) {
@@ -94,7 +94,7 @@ function findTraceReportTargets(
   return targets
 }
 
-function createTraceReportUrl(target: TraceReportTarget) {
+function createTraceViewUrl(target: TraceViewTarget) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
     file: target.fileId,
