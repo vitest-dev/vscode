@@ -78,6 +78,7 @@
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:latest",
     "vitest": "catalog:latest",
     "which": "catalog:",
     "ws": "catalog:"
