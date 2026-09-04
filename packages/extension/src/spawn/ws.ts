@@ -114,14 +114,16 @@ export function onWsConnection(
       }
       onStart({
         rpc: api,
-        workspaceSource: message.workspaceSource,
+        config: {
+          ...message.config,
+          projects: message.config.projects.map((p) => {
+            if (p.dir) {
+              p.dir = resolve(pkg.cwd, p.dir)
+            }
+            return p
+          }),
+        },
         handlers,
-        projects: message.projects.map((p) => {
-          if (p.dir) {
-            p.dir = resolve(pkg.cwd, p.dir)
-          }
-          return p
-        }),
         ws,
         pkg,
         async dispose() {
