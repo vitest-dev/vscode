@@ -228,6 +228,11 @@
       ],
       "testing/item/gutter": [
         {
+          "command": "vitest.openTraceReport",
+          "when": "controllerId == 'vitest' && testId in vitest.traceReportTests",
+          "group": "vitest"
+        },
+        {
           "command": "vitest.updateSnapshot",
           "when": "controllerId == 'vitest'"
         },
