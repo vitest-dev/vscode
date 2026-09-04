@@ -78,7 +78,7 @@ function findTraceReportTargets(
     for (let index = 0; index < queue.length; index++) {
       const task = queue[index]
       if (task.type === 'test') {
-        const artifacts = (task as any).artifacts as { type: string }[] | undefined
+        const { artifacts } = task as typeof task & { artifacts?: { type: string }[] }
         // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/vitest/src/runtime/runner/types.ts#L1479-L1485
         if (artifacts?.some((artifact) => artifact.type === 'internal:browserTrace')) {
           targets.push({ apiId, reportPath, fileId: file.id, testId: task.id })
