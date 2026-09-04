@@ -1,9 +1,9 @@
 import { playwright } from '@vitest/browser-playwright'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    reporters: ['default', 'html'],
+    reporters: [...configDefaults.reporters, 'html'],
     browser: {
       enabled: true,
       provider: playwright(),
