@@ -9,38 +9,6 @@ interface TraceReportTarget {
   testId: string
 }
 
-function findTraceReportTargets(
-  apiId: string,
-  reportPath: string,
-  files: RunnerTestFile[],
-): TraceReportTarget[] {
-  const targets: TraceReportTarget[] = []
-
-  function visit(task: RunnerTask, fileId: string) {
-    if (task.type === 'test') {
-      const artifacts = (task as any).artifacts as { type: string }[] | undefined
-      if (artifacts?.some((artifact) => artifact.type === 'internal:browserTrace')) {
-        targets.push({ apiId, reportPath, fileId, testId: task.id })
-      }
-      return
-    }
-    task.tasks.forEach((child) => visit(child, fileId))
-  }
-
-  files.forEach((file) => visit(file, file.id))
-  return targets
-}
-
-function createTraceReportUrl(target: TraceReportTarget) {
-  const params = new URLSearchParams({
-    file: target.fileId,
-    view: 'editor',
-    test: target.testId,
-    traceStep: '0',
-  })
-  return `${vscode.Uri.file(target.reportPath).toString(true)}#/?${params}`
-}
-
 export class TraceReportManager {
   private targets = new Map<vscode.TestItem, TraceReportTarget>()
 
@@ -100,4 +68,36 @@ export class TraceReportManager {
       await vscode.env.openExternal(vscode.Uri.parse(url))
     }
   }
+}
+
+function findTraceReportTargets(
+  apiId: string,
+  reportPath: string,
+  files: RunnerTestFile[],
+): TraceReportTarget[] {
+  const targets: TraceReportTarget[] = []
+
+  function visit(task: RunnerTask, fileId: string) {
+    if (task.type === 'test') {
+      const artifacts = (task as any).artifacts as { type: string }[] | undefined
+      if (artifacts?.some((artifact) => artifact.type === 'internal:browserTrace')) {
+        targets.push({ apiId, reportPath, fileId, testId: task.id })
+      }
+      return
+    }
+    task.tasks.forEach((child) => visit(child, fileId))
+  }
+
+  files.forEach((file) => visit(file, file.id))
+  return targets
+}
+
+function createTraceReportUrl(target: TraceReportTarget) {
+  const params = new URLSearchParams({
+    file: target.fileId,
+    view: 'editor',
+    test: target.testId,
+    traceStep: '0',
+  })
+  return `${vscode.Uri.file(target.reportPath).toString(true)}#/?${params}`
 }
