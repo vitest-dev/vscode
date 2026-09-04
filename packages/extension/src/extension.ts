@@ -53,7 +53,7 @@ class VitestExtension {
   private debugManager: DebugManager
   private schemaProvider: TransformSchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
-  private traceView = new TraceViewManager()
+  private traceViewManager = new TraceViewManager()
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
@@ -108,7 +108,7 @@ class VitestExtension {
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     this.importsBreakdownProvider.clear()
     this.testTree.reset([])
-    this.traceView.clear()
+    this.traceViewManager.clear()
     this.runQueues.forEach((q) => q.dispose())
     this.runQueues.clear()
 
@@ -225,7 +225,7 @@ class VitestExtension {
       vitest,
       this.diagnostic,
       this.importsBreakdownProvider,
-      this.traceView,
+      this.traceViewManager,
     )
     const runQueueId = `${vitest.id}:run`
     this.runQueues.set(runQueueId, runQueue)
@@ -288,7 +288,7 @@ class VitestExtension {
       vitest,
       this.diagnostic,
       this.importsBreakdownProvider,
-      this.traceView,
+      this.traceViewManager,
     )
     const coverageQueueId = `${vitest.id}:coverage`
     this.runQueues.set(coverageQueueId, coverageQueue)
@@ -348,7 +348,7 @@ class VitestExtension {
         log.openOutput()
       }),
       vscode.commands.registerCommand('vitest.openTraceView', (testItem: vscode.TestItem) =>
-        this.traceView.open(testItem),
+        this.traceViewManager.open(testItem),
       ),
       vscode.commands.registerCommand('vitest.runRelatedTests', async (uri?: vscode.Uri) => {
         const currentUri = uri || vscode.window.activeTextEditor?.document.uri

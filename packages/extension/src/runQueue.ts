@@ -34,7 +34,7 @@ export class RunQueue {
     private readonly api: VitestProcessAPI,
     private readonly diagnostic: ExtensionDiagnostic | undefined,
     private readonly importsBreakdown: ImportsBreakdownProvider,
-    private readonly traceView: TraceViewManager,
+    private readonly traceViewManager: TraceViewManager,
   ) {}
 
   public isContinuousTestItem(testItem: vscode.TestItem): boolean {
@@ -207,7 +207,7 @@ export class RunQueue {
       api || this.api,
       this.diagnostic,
       this.importsBreakdown,
-      this.traceView,
+      this.traceViewManager,
     )
   }
 
@@ -219,7 +219,7 @@ export class RunQueue {
       this.api,
       this.diagnostic,
       this.importsBreakdown,
-      this.traceView,
+      this.traceViewManager,
       this.testRunProfile,
       this.continuousRequests,
     )
