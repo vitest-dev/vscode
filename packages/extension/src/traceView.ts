@@ -1,5 +1,6 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { TestTree } from './testTree'
+import { randomBytes } from 'node:crypto'
 import * as vscode from 'vscode'
 
 interface TraceViewTarget {
@@ -11,6 +12,19 @@ interface TraceViewTarget {
 
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
+  private panel?: vscode.WebviewPanel
+  private reportPath?: string
+  private selection = ''
+  private watcher?: vscode.FileSystemWatcher
+  private refreshTimer?: ReturnType<typeof setTimeout>
+  private revision = 0
+
+  dispose() {
+    this.panel?.dispose()
+    this.watcher?.dispose()
+    clearTimeout(this.refreshTimer)
+    this.revision++
+  }
 
   clear() {
     this.targets.clear()
@@ -43,7 +57,9 @@ export class TraceViewManager {
   }
 
   async open(testItem: vscode.TestItem) {
-    const target = this.targets.get(testItem)!
+    const target = this.targets.get(testItem)
+    if (!target)
+      return
 
     const reportUri = vscode.Uri.file(target.reportPath)
     try {
@@ -55,15 +71,94 @@ export class TraceViewManager {
       return
     }
 
-    const commands = await vscode.commands.getCommands(true)
-    const url = createTraceViewUrl(target)
-    // The Integrated Browser command is internal; follow Simple Browser's feature detection before using it.
-    // https://github.com/microsoft/vscode/blob/008427a901bf4aa79b47f175ccc8da1731750f78/extensions/simple-browser/src/extension.ts#L15-L35
-    if (commands.includes('workbench.action.browser.open')) {
-      await vscode.commands.executeCommand('workbench.action.browser.open', url)
-    } else {
-      // TODO: Support a single-file fallback because external browsers may block file:// metadata requests.
-      await vscode.env.openExternal(vscode.Uri.parse(url))
+    const sameReport = this.reportPath === target.reportPath
+    this.reportPath = target.reportPath
+    this.selection = createTraceViewUrl(target).split('#')[1]
+    if (!this.panel) {
+      const panel = vscode.window.createWebviewPanel(
+        'vitest.traceView',
+        'Vitest Trace View',
+        { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+        { enableScripts: true, retainContextWhenHidden: true },
+      )
+      this.panel = panel
+      panel.webview.onDidReceiveMessage((message) => {
+        if (message.type === 'selection' && typeof message.hash === 'string')
+          this.selection = message.hash.replace(/^#/, '')
+      })
+      panel.onDidDispose(() => {
+        this.panel = undefined
+        this.watcher?.dispose()
+        clearTimeout(this.refreshTimer)
+        this.revision++
+      })
+    }
+    this.panel.reveal(undefined, true)
+    if (sameReport && this.panel.webview.html) {
+      await this.panel.webview.postMessage({ type: 'select', hash: this.selection })
+      return
+    }
+    this.watcher?.dispose()
+    this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(
+      vscode.Uri.joinPath(reportUri, '..'),
+      '{index.html,ui/html.meta.json.gz}',
+    ))
+    const refresh = () => {
+      clearTimeout(this.refreshTimer)
+      this.refreshTimer = setTimeout(() => void this.refresh(), 150)
+    }
+    this.watcher.onDidChange(refresh)
+    this.watcher.onDidCreate(refresh)
+    await this.refresh()
+  }
+
+  private async refresh() {
+    const panel = this.panel
+    const reportPath = this.reportPath
+    if (!panel || !reportPath)
+      return
+    const revision = ++this.revision
+    try {
+      const reportUri = vscode.Uri.file(reportPath)
+      const directory = vscode.Uri.joinPath(reportUri, '..')
+      const bytes = await vscode.workspace.fs.readFile(reportUri)
+      if (revision !== this.revision || panel !== this.panel)
+        return
+      panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
+      const base = `${panel.webview.asWebviewUri(directory).toString()}/`
+      const nonce = randomBytes(16).toString('hex')
+      const source = panel.webview.cspSource
+      // Adapt the reporter's generated bootstrap, which explicitly uses location
+      // rather than document.baseURI. Bust metadata cache after regeneration.
+      const metadata = panel.webview.asWebviewUri(vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'))
+      let html = Buffer.from(bytes).toString('utf8').replace(
+        /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
+        JSON.stringify(`${metadata.toString()}?v=${Date.now()}`),
+      )
+      html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
+      const hash = JSON.stringify(this.selection).replace(/</g, '\\u003c')
+      html = html.replace(/<head\b[^>]*>/i, `$&
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
+        <base href="${base.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">
+        <script nonce="${nonce}">
+          (() => {
+            const vscode = acquireVsCodeApi();
+            window.location.hash = ${hash};
+            window.addEventListener('message', ({ data }) => {
+              if (data.type === 'select') window.location.hash = data.hash;
+            });
+            const reportSelection = () => vscode.postMessage({ type: 'selection', hash: window.location.hash });
+            window.addEventListener('hashchange', reportSelection);
+            for (const method of ['replaceState', 'pushState']) {
+              const original = history[method].bind(history);
+              history[method] = (...args) => { original(...args); reportSelection(); };
+            }
+          })();
+        </script>`)
+      panel.webview.html = html
+    } catch (error) {
+      if (revision === this.revision)
+        void vscode.window.showWarningMessage(`Could not load Vitest trace report: ${String(error)}`)
     }
   }
 }
