@@ -130,11 +130,21 @@ export class TraceViewManager {
         /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
         JSON.stringify(`${metadata.toString()}?v=${Date.now()}`),
       )
+      // Keep the document base on the webview origin so history updates stay
+      // same-origin. Only resource URLs should point at the report directory.
+      html = html.replace(/<(script|link|img|source)\b[^>]*>/gi, tag => tag.replace(
+        /(\s)(src|href)\s*=\s*(['"])(.*?)\3/gi,
+        (attribute, space, name, quote, value) => {
+          if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value))
+            return attribute
+          const url = new URL(value.replace(/&amp;/g, '&'), base).href
+          return `${space}${name}=${quote}${url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}${quote}`
+        },
+      ))
       html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
       const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
       html = html.replace(/<head\b[^>]*>/i, `$&
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
-        <base href="${base.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} https://fonts.googleapis.com 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
         <script nonce="${nonce}">
           (() => {
             window.location.hash = ${hash};
