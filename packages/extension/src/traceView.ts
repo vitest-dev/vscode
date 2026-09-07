@@ -14,6 +14,7 @@ export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
   private latestTargets = new Map<string, TraceViewTarget[]>()
   private currentTarget?: TraceViewTarget
+  private traceStep = 0
   private panel?: vscode.WebviewPanel
   private reportPath?: string
   private watcher?: vscode.FileSystemWatcher
@@ -78,6 +79,7 @@ export class TraceViewManager {
     const sameReport = this.reportPath === target.reportPath && !!this.currentTarget
     this.reportPath = target.reportPath
     this.currentTarget = target
+    this.traceStep = 0
     const selection = createTraceViewUrl(target).split('#')[1]
     if (!this.panel) {
       const panel = vscode.window.createWebviewPanel(
@@ -87,6 +89,16 @@ export class TraceViewManager {
         { enableScripts: true, retainContextWhenHidden: true },
       )
       this.panel = panel
+      panel.webview.onDidReceiveMessage((message) => {
+        if (message?.type === 'traceStep'
+          && panel === this.panel
+          && message.revision === this.revision
+          && message.testId === this.currentTarget?.testId
+          && Number.isSafeInteger(message.step)
+          && message.step >= 0) {
+          this.traceStep = message.step
+        }
+      })
       panel.onDidDispose(() => {
         this.panel = undefined
         this.watcher?.dispose()
@@ -121,8 +133,11 @@ export class TraceViewManager {
     const revision = ++this.revision
     if (selection === undefined) {
       const targets = this.latestTargets.get(reportPath) ?? []
+      const previousTarget = this.currentTarget
       this.currentTarget = targets.find(target => target.testId === this.currentTarget?.testId)
         ?? (targets.length === 1 ? targets[0] : undefined)
+      if (this.currentTarget?.testId !== previousTarget?.testId)
+        this.traceStep = 0
       if (!this.currentTarget) {
         panel.webview.html = `<!DOCTYPE html><html><head>
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
@@ -130,7 +145,7 @@ export class TraceViewManager {
           Open Trace View on a test to select one.</p></body></html>`
         return
       }
-      selection = createTraceViewUrl(this.currentTarget).split('#')[1]
+      selection = createTraceViewUrl(this.currentTarget, this.traceStep).split('#')[1]
     }
     try {
       const reportUri = vscode.Uri.file(reportPath)
@@ -166,6 +181,27 @@ export class TraceViewManager {
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} https://fonts.googleapis.com 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
         <script nonce="${nonce}">
           (() => {
+            const vscode = acquireVsCodeApi();
+            const reportStep = () => {
+              const params = new URLSearchParams(window.location.hash.split('?')[1]);
+              const step = params.get('traceStep');
+              if (step !== null) vscode.postMessage({
+                type: 'traceStep', revision: ${revision},
+                testId: params.get('test'), step: Number(step),
+              });
+            };
+            // Vitest updates URL parameters through History, which does not
+            // emit hashchange events.
+            for (const method of ['replaceState', 'pushState']) {
+              const original = window.history[method];
+              window.history[method] = function (...args) {
+                const result = original.apply(this, args);
+                reportStep();
+                return result;
+              };
+            }
+            window.addEventListener('hashchange', reportStep);
+            window.addEventListener('popstate', reportStep);
             window.location.hash = ${hash};
             window.addEventListener('message', ({ data }) => {
               if (data.type === 'select') window.location.hash = data.hash;
@@ -206,13 +242,13 @@ function findTraceViewTargets(
   return targets
 }
 
-function createTraceViewUrl(target: TraceViewTarget) {
+function createTraceViewUrl(target: TraceViewTarget, traceStep = 0) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
     file: target.fileId,
     view: 'editor',
     test: target.testId,
-    traceStep: '0',
+    traceStep: String(traceStep),
   })
   return `${vscode.Uri.file(target.reportPath).toString(true)}#/?${params}`
 }
