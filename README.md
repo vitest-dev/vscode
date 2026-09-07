@@ -15,6 +15,7 @@
 - **Coverage** support
 - **Inline console.log display**: Console logs appear inline in the editor next to the code that produced them
 - **Imports duration**: Displays the execution time for each import during continuous test runs.
+- **Trace View**: Opens recorded Vitest 5 browser interactions for a selected test.
 
 ## Requirements
 
@@ -64,6 +65,30 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
   - `Run with coverage`: Execute the selected test case while also collecting code coverage information.
   - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
   - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
+
+### Trace View
+
+With Vitest 5, the extension can open recorded browser interactions for a selected test in [Vitest Trace View](https://vitest.dev/guide/browser/trace-view.html). Enable Trace View and the HTML reporter in your existing Browser Mode configuration:
+
+```ts
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    reporters: ['default', 'html'],
+    browser: {
+      // Your existing Browser Mode configuration
+      traceView: true,
+    },
+  },
+})
+```
+
+After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the generated HTML report at that test's first recorded step, using Visual Studio Code's Integrated Browser when available.
+
+The HTML reporter persists the recorded trace for replay. Normal test results remain available in Visual Studio Code's Testing view.
+
+<!-- TODO: Add a screenshot showing the Open Trace View action and Integrated Browser. -->
 
 ## Configuration
 
