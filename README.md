@@ -153,7 +153,7 @@ export default defineConfig({
 })
 ```
 
-After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the generated HTML report in a reusable editor webview beside your code. Opening another test updates the same tab. Changes to the report reload the current test at its selected trace step if its trace is still available. Vitest falls back to the first step if that step is no longer valid. Otherwise, the view switches to the latest run's only recorded test at its first step, or asks you to select a test if there is no unambiguous target. Retry and repeat selections are not preserved across refreshes.
+After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the trace view of the selected test from the generated HTML report in an editor tab.
 
 This webview prototype loads report resources through VS Code's local-resource API without a static server. Canvas replay and snapshots referencing external resources have not been verified.
 
