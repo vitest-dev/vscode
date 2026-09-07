@@ -157,7 +157,7 @@ After running a browser test through the extension, right-click the test in the 
 
 The HTML reporter persists the recorded trace for replay. Normal test results remain available in Visual Studio Code's Testing view.
 
-![Vitest Trace View open in Visual Studio Code](https://github.com/user-attachments/assets/91268887-aa95-4181-aa83-e78d169f9ee5)
+![Vitest Trace View open in Visual Studio Code](./img/trace-view.png)
 
 ## FAQs (Frequently Asked Questions)
 
