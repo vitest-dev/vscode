@@ -155,8 +155,6 @@ export default defineConfig({
 
 After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the trace view of the selected test from the generated HTML report in an editor tab.
 
-This webview prototype loads report resources through VS Code's local-resource API without a static server. Canvas replay and snapshots referencing external resources have not been verified.
-
 ![Vitest Trace View open in Visual Studio Code](./img/trace-view.png)
 
 ## FAQs (Frequently Asked Questions)
