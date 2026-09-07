@@ -66,30 +66,6 @@ When viewing a test file, you'll notice test icons in the gutter next to each te
   - `Reveal in Test Explorer`: Locate and highlight the test in the centralized Testing view.
   - `Breakpoint Settings`: Set breakpoints to pause execution during debugging. You can add a standard breakpoint, a conditional breakpoint, a logpoint, or a triggered breakpoint.
 
-### Trace View
-
-With Vitest 5, the extension can open recorded browser interactions for a selected test in [Vitest Trace View](https://vitest.dev/guide/browser/trace-view.html). Enable Trace View and the HTML reporter in your existing Browser Mode configuration:
-
-```ts
-import { defineConfig } from 'vitest/config'
-
-export default defineConfig({
-  test: {
-    reporters: ['default', 'html'],
-    browser: {
-      // Your existing Browser Mode configuration
-      traceView: true,
-    },
-  },
-})
-```
-
-After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the generated HTML report at that test's first recorded step, using Visual Studio Code's Integrated Browser when available.
-
-The HTML reporter persists the recorded trace for replay. Normal test results remain available in Visual Studio Code's Testing view.
-
-<!-- TODO: Add a screenshot showing the Open Trace View action and Integrated Browser. -->
-
 ## Configuration
 
 You can identify if your config is loaded by the extension with `process.env.VITEST_VSCODE` and change the configuration accordingly.
@@ -158,6 +134,30 @@ If you hover over it, you can get a more detailed diagnostic.
 ![Import breakdown example](./img/import-breakdown.png 'Import breakdown example')
 
 You can disable this feature by turning off `vitest.showImportsDuration`.
+
+### Trace View
+
+With Vitest 5, the extension can open recorded browser interactions for a selected test in [Vitest Trace View](https://vitest.dev/guide/browser/trace-view.html). Enable Trace View and the HTML reporter in your existing Browser Mode configuration:
+
+```ts
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    reporters: ['default', 'html'],
+    browser: {
+      // Your existing Browser Mode configuration
+      traceView: true,
+    },
+  },
+})
+```
+
+After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the generated HTML report at that test's first recorded step, using Visual Studio Code's Integrated Browser when available.
+
+The HTML reporter persists the recorded trace for replay. Normal test results remain available in Visual Studio Code's Testing view.
+
+<img width="1323" height="730" alt="Vitest Trace View open in Visual Studio Code" src="https://github.com/user-attachments/assets/91268887-aa95-4181-aa83-e78d169f9ee5" />
 
 ## FAQs (Frequently Asked Questions)
 
