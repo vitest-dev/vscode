@@ -12,6 +12,8 @@ interface TraceViewTarget {
 
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
+  private latestTargets = new Map<string, TraceViewTarget[]>()
+  private currentTarget?: TraceViewTarget
   private panel?: vscode.WebviewPanel
   private reportPath?: string
   private watcher?: vscode.FileSystemWatcher
@@ -27,6 +29,7 @@ export class TraceViewManager {
 
   clear() {
     this.targets.clear()
+    this.latestTargets.clear()
     void this.updateContext()
   }
 
@@ -37,7 +40,9 @@ export class TraceViewManager {
       }
     }
 
-    for (const target of findTraceViewTargets(apiId, reportPath, files)) {
+    const targets = findTraceViewTargets(apiId, reportPath, files)
+    this.latestTargets.set(reportPath, targets)
+    for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
         this.targets.set(item, target)
@@ -70,8 +75,9 @@ export class TraceViewManager {
       return
     }
 
-    const sameReport = this.reportPath === target.reportPath
+    const sameReport = this.reportPath === target.reportPath && !!this.currentTarget
     this.reportPath = target.reportPath
+    this.currentTarget = target
     const selection = createTraceViewUrl(target).split('#')[1]
     if (!this.panel) {
       const panel = vscode.window.createWebviewPanel(
@@ -107,12 +113,25 @@ export class TraceViewManager {
     await this.refresh(selection)
   }
 
-  private async refresh(selection = '') {
+  private async refresh(selection?: string) {
     const panel = this.panel
     const reportPath = this.reportPath
     if (!panel || !reportPath)
       return
     const revision = ++this.revision
+    if (selection === undefined) {
+      const targets = this.latestTargets.get(reportPath) ?? []
+      this.currentTarget = targets.find(target => target.testId === this.currentTarget?.testId)
+        ?? (targets.length === 1 ? targets[0] : undefined)
+      if (!this.currentTarget) {
+        panel.webview.html = `<!DOCTYPE html><html><head>
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
+          </head><body><p>The selected test has no trace in the latest run.
+          Open Trace View on a test to select one.</p></body></html>`
+        return
+      }
+      selection = createTraceViewUrl(this.currentTarget).split('#')[1]
+    }
     try {
       const reportUri = vscode.Uri.file(reportPath)
       const directory = vscode.Uri.joinPath(reportUri, '..')

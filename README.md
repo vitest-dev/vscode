@@ -153,7 +153,7 @@ export default defineConfig({
 })
 ```
 
-After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the generated HTML report in a reusable editor webview beside your code. Opening another test updates the same tab. Changes to the report reload the view and reset its selection.
+After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the generated HTML report in a reusable editor webview beside your code. Opening another test updates the same tab. Changes to the report reload the current test at its first trace step if its trace is still available. Otherwise, the view switches to the latest run's only recorded test, or asks you to select a test if there is no unambiguous target.
 
 This webview prototype loads report resources through VS Code's local-resource API without a static server. Canvas replay and snapshots referencing external resources have not been verified.
 
