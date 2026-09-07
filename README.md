@@ -140,11 +140,11 @@ You can disable this feature by turning off `vitest.showImportsDuration`.
 With Vitest 5, the extension can open recorded browser interactions for a selected test in [Vitest Trace View](https://vitest.dev/guide/browser/trace-view.html). Enable Trace View and the HTML reporter in your existing Browser Mode configuration:
 
 ```ts
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    reporters: ['default', 'html'],
+    reporters: [...configDefaults.reporters, 'html'],
     browser: {
       // Your existing Browser Mode configuration
       traceView: true,
