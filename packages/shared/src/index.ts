@@ -1,9 +1,5 @@
 import type { BirpcReturn } from 'birpc'
-import type {
-  RunnerTaskResultPack,
-  RunnerTestFile,
-  UserConsoleLog,
-} from 'vitest'
+import type { RunnerTaskResultPack, RunnerTestFile, UserConsoleLog } from 'vitest'
 
 export { WorkerWSEventEmitter } from './emitter'
 export { createWorkerRPC } from './rpc'
@@ -15,9 +11,14 @@ export {
   normalizeDriveLetter,
 } from './utils'
 
+export type ExtensionTestSpecificationOptions = {
+  testNamePattern?: string
+}
+
 export type ExtensionTestSpecification = [
   project: string,
   file: string,
+  options?: ExtensionTestSpecificationOptions,
 ]
 
 export interface ExtensionTestFileMetadata {
@@ -30,10 +31,7 @@ export interface ExtensionTestFileMetadata {
   }
 }
 
-export type ExtensionTestFileSpecification = [
-  file: string,
-  ExtensionTestFileMetadata,
-]
+export type ExtensionTestFileSpecification = [file: string, ExtensionTestFileMetadata]
 
 export interface ExtensionUserConsoleLog extends UserConsoleLog {
   // Parsed location from stack trace for inline display
@@ -57,18 +55,22 @@ export interface ExtensionWorkerTransport {
   collectTests: (testFile: ExtensionTestSpecification[]) => Promise<void>
   cancelRun: () => Promise<void>
   // accepts files with the project or folders (project doesn't matter for them)
-  runTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
-  updateSnapshots: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => Promise<void>
+  runTests: (
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ) => Promise<void>
+  updateSnapshots: (
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ) => Promise<void>
 
-  watchTests: (filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string) => void
-  unwatchTests: () => void
+  watchTests: (
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ) => Promise<void>
   getSourceModuleDiagnostic: (moduleId: string) => Promise<SourceModuleDiagnostic>
 
-  invalidateIstanbulTestModules: (modules: string[] | null) => Promise<void>
-  enableCoverage: () => void
-  disableCoverage: () => void
-  waitForCoverageReport: () => Promise<string | null>
-  close: () => void
+  exit: () => void
 
   onFilesCreated: (files: string[]) => void
   onFilesChanged: (files: string[]) => void
@@ -77,15 +79,20 @@ export interface ExtensionWorkerTransport {
   getModuleEnvironments: (moduleId: string) => ExtensionEnvironment[]
   getTransformedModule: (project: string, environment: string, moduleId: string) => string | null
 
-  onBrowserDebug: (fulfilled: boolean) => void
+  onDebugAttached: (fulfilled: boolean) => void
 }
 
 export interface ExtensionWorkerEvents {
   onConsoleLog: (log: ExtensionUserConsoleLog) => void
   onTaskUpdate: (task: RunnerTaskResultPack[]) => void
-  onTestRunEnd: (files: RunnerTestFile[], unhandledError: string, collecting?: boolean) => void
+  onTestRunEnd: (
+    files: RunnerTestFile[],
+    unhandledError: string,
+    collecting?: boolean,
+    coverage?: unknown,
+  ) => void
   onCollected: (file: RunnerTestFile, collecting?: boolean) => void
-  onTestRunStart: (files: string[], collecting?: boolean) => void
+  onTestRunStart: (files: string[]) => void
 
   onProcessLog: (type: 'stdout' | 'stderr', log: string) => void
 }
@@ -136,6 +143,7 @@ export interface WorkerInitMetadata {
   id: string
   cwd: string
   arguments?: string
+  runtime: 'node' | 'deno'
   configFile?: string
   workspaceFile?: string
   env: Record<string, any> | undefined
@@ -144,12 +152,15 @@ export interface WorkerInitMetadata {
   pnpLoader?: string
   setupFilePaths: {
     browserDebug: string
+    browserDebugLegacy: string
   }
   finalCoverageFileName: string
+  projectFilter?: string[]
+  related?: string
 }
 
 export interface WorkerRunnerDebugOptions {
-  browser: string
+  browser?: string
   port: number
   host: string
 }
@@ -157,7 +168,9 @@ export interface WorkerRunnerDebugOptions {
 export interface WorkerRunnerOptions {
   type: 'init'
   meta: WorkerInitMetadata
+  sendLog?: boolean
   debug?: WorkerRunnerDebugOptions | boolean
+  coverage?: boolean
 }
 
 export interface SerializedProject {
@@ -176,11 +189,18 @@ export interface SerializedProject {
   }
 }
 
-export interface EventReady {
-  type: 'ready'
+export interface WorkerReadyMetadata {
   projects: SerializedProject[]
   workspaceSource: string | false
+}
+
+export interface EventReady {
+  type: 'ready'
+  metadata: WorkerReadyMetadata
   legacy: boolean
+  // the actual runtime version, unlike VitestPackage.version
+  // this is also defined when vitest is resolved via yarn pnp
+  version: string | undefined
 }
 
 export interface EventDebug {

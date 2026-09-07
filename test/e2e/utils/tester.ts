@@ -1,24 +1,24 @@
 import { basename } from 'node:path'
-import fs from 'node:fs'
+import fs, { readFileSync } from 'node:fs'
 import type { Locator, Page } from '@playwright/test'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 
 export class VSCodeTester {
   public tree: TesterTree
   public errors: TesterErrorOutput
 
   constructor(
-    private page: Page,
+    public page: Page,
+    private logPath: string,
   ) {
-    this.tree = new TesterTree(page)
+    this.tree = new TesterTree(page, logPath)
     this.errors = new TesterErrorOutput(page)
   }
 
   async openTestTab() {
     const tabLocator = this.page.getByRole('tab', { name: 'Testing' })
     const attribute = await tabLocator.getAttribute('aria-selected')
-    if (attribute !== 'true')
-      await tabLocator.locator('a').click()
+    if (attribute !== 'true') await tabLocator.locator('a').click()
   }
 
   async runAllTests() {
@@ -33,6 +33,7 @@ export class VSCodeTester {
 class TesterTree {
   constructor(
     private page: Page,
+    private logPath: string,
   ) {}
 
   getResultsLocator() {
@@ -42,7 +43,13 @@ class TesterTree {
   getFileItem(file: string, project?: string) {
     const name = basename(file)
     const label = project ? `${name} [${project}]` : name
-    return new TesterTestItem(name, this.page.locator(`[aria-label*="${label} ("]`), this.page, project)
+    return new TesterTestItem(
+      name,
+      this.page.locator(`[aria-label*="${label} ("]`),
+      this.page,
+      project,
+      this.logPath,
+    )
   }
 
   async expand(path: string) {
@@ -55,34 +62,31 @@ class TesterTree {
         // test already run
         .or(this.page.locator(`[aria-label="${segment}"][aria-level="${i + 1}"]`))
       const state = await locator.getAttribute('aria-expanded')
-      if (state === 'true')
-        continue
+      if (state === 'true') continue
       await locator.click({ force: true })
     }
   }
 }
 
 class TesterErrorOutput {
-  constructor(
-    private page: Page,
-  ) {}
+  constructor(private page: Page) {}
 
   async getInlineErrors() {
     const locator = this.page.locator('.test-error-content-widget')
     const text = await locator.allInnerTexts()
-    return text.map(t => t.trim().replace(/\s/g, ' '))
+    return text.map((t) => t.trim().replace(/\s/g, ' '))
   }
 
   async getInlineExpectedOutput() {
-    return await this.page.locator(
-      '.test-output-peek .editor.original .view-lines[role="presentation"]',
-    ).textContent()
+    return await this.page
+      .locator('.test-output-peek .editor.original .view-lines[role="presentation"]')
+      .textContent()
   }
 
   async getInlineActualOutput() {
-    return await this.page.locator(
-      '.test-output-peek .editor.modified .view-lines[role="presentation"]',
-    ).textContent()
+    return await this.page
+      .locator('.test-output-peek .editor.modified .view-lines[role="presentation"]')
+      .textContent()
   }
 }
 
@@ -92,6 +96,7 @@ export class TesterTestItem {
     public locator: Locator,
     public page: Page,
     public project: string | undefined,
+    private logPath: string,
   ) {}
 
   async run() {
@@ -112,6 +117,15 @@ export class TesterTestItem {
   async toggleContinuousRun() {
     await this.locator.hover()
     await this.locator.getByLabel(/Turn (on|off) Continuous Run/).click()
+    await vi.waitUntil(
+      () => {
+        const log = readFileSync(this.logPath, 'utf-8')
+        return log.includes('Watching test files') || log.includes('Watching all test files')
+      },
+      {
+        timeout: 5_000,
+      },
+    )
   }
 
   async navigate() {
@@ -125,21 +139,40 @@ export class TesterTestItem {
 
 const originalFiles = new Map<string, string>()
 const createdFiles = new Set<string>()
+const renamedPaths = new Map<string, string>()
 afterEach(() => {
   originalFiles.forEach((content, file) => {
     fs.writeFileSync(file, content, 'utf-8')
   })
   createdFiles.forEach((file) => {
-    if (fs.existsSync(file))
-      fs.unlinkSync(file)
+    if (fs.existsSync(file)) fs.unlinkSync(file)
+  })
+  renamedPaths.forEach((originalPath, currentPath) => {
+    if (fs.existsSync(currentPath)) fs.renameSync(currentPath, originalPath)
   })
   originalFiles.clear()
   createdFiles.clear()
+  renamedPaths.clear()
 })
+
+export function addFile(file: string, content: string) {
+  createdFiles.add(file)
+  fs.writeFileSync(file, content, 'utf-8')
+}
+
+export function deleteFile(file: string) {
+  const content = fs.readFileSync(file, 'utf-8')
+  if (!originalFiles.has(file)) originalFiles.set(file, content)
+  fs.unlinkSync(file)
+}
 
 export function editFile(file: string, callback: (content: string) => string) {
   const content = fs.readFileSync(file, 'utf-8')
-  if (!originalFiles.has(file))
-    originalFiles.set(file, content)
+  if (!originalFiles.has(file)) originalFiles.set(file, content)
   fs.writeFileSync(file, callback(content), 'utf-8')
+}
+
+export function renameFile(from: string, to: string) {
+  if (!renamedPaths.has(from)) renamedPaths.set(to, from)
+  fs.renameSync(from, to)
 }

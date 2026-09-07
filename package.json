@@ -1,43 +1,87 @@
 {
-  "publisher": "vitest",
   "name": "explorer",
   "displayName": "Vitest",
-  "type": "commonjs",
-  "version": "1.44.0",
-  "packageManager": "pnpm@10.11.1",
+  "version": "1.50.8",
   "description": "A Vite-native testing framework. It's fast!",
-  "author": "Vitest Team",
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "javascript",
+    "test",
+    "typescript",
+    "vitest"
+  ],
+  "bugs": {
+    "url": "https://github.com/vitest-dev/vscode/issues"
+  },
   "license": "MIT",
+  "author": "Vitest Team",
   "repository": {
     "type": "git",
     "url": "https://github.com/vitest-dev/vscode.git"
   },
-  "bugs": {
-    "url": "https://github.com/vitest-dev/vscode/issues"
-  },
   "sponsor": {
     "url": "https://opencollective.com/vitest"
   },
-  "keywords": [
-    "vitest",
-    "test",
-    "typescript",
-    "javascript"
-  ],
-  "categories": [
-    "Testing"
-  ],
+  "publisher": "vitest",
+  "type": "commonjs",
   "main": "./dist/extension.js",
-  "icon": "img/icon.png",
-  "pricing": "Free",
-  "engines": {
-    "vscode": "^1.77.0"
+  "scripts": {
+    "vscode:prepublish": "pnpm build",
+    "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
+    "build": "tsdown --minify --clean",
+    "package": "vsce package --no-dependencies",
+    "dev": "EXTENSION_NODE_ENV=dev tsdown --watch --sourcemap",
+    "test": "vscode-test",
+    "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
+    "test-e2e": "vitest --root test/e2e",
+    "test-e2e:legacy": "TEST_LEGACY=true vitest --root test/e2e",
+    "ecosystem-ci:build": "SKIP_LEGACY=true pnpm build",
+    "ecosystem-ci:test": "SKIP_LEGACY=true tsx ./scripts/ecosystem-ci.mts",
+    "typecheck": "tsc -b ./ --noEmit",
+    "fmt": "oxfmt --check",
+    "fmt:fix": "oxfmt"
   },
-  "activationEvents": [
-    "workspaceContains:**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}",
-    "workspaceContains:**/*vitest.{workspace,projects}*.{ts,js,mjs,cjs,cts,mts,json}",
-    "workspaceContains:node_modules/.bin/vitest"
-  ],
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/chai": "catalog:",
+    "@types/micromatch": "catalog:",
+    "@types/mocha": "catalog:",
+    "@types/node": "catalog:",
+    "@types/prompts": "catalog:",
+    "@types/semver": "catalog:",
+    "@types/vscode": "^1.77.0",
+    "@types/which": "catalog:",
+    "@types/ws": "catalog:",
+    "@vscode/test-cli": "catalog:",
+    "@vscode/test-electron": "catalog:",
+    "@vscode/vsce": "catalog:",
+    "@vue/reactivity": "catalog:",
+    "acorn": "catalog:",
+    "acorn-walk": "catalog:",
+    "birpc": "catalog:",
+    "bumpp": "catalog:",
+    "chai": "catalog:",
+    "changelogithub": "catalog:",
+    "execa": "catalog:",
+    "find-up": "catalog:",
+    "istanbul-to-vscode": "catalog:",
+    "micromatch": "catalog:",
+    "mighty-promise": "catalog:",
+    "mocha": "catalog:",
+    "oxfmt": "^0.37.0",
+    "pathe": "catalog:",
+    "picocolors": "catalog:",
+    "prompts": "catalog:",
+    "semver": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:latest",
+    "which": "catalog:",
+    "ws": "catalog:"
+  },
   "contributes": {
     "languages": [
       {
@@ -68,6 +112,11 @@
         "category": "Vitest"
       },
       {
+        "title": "Toggle Continuous Run",
+        "command": "vitest.toggleContinuousRun",
+        "category": "Vitest"
+      },
+      {
         "title": "Show Output Channel",
         "command": "vitest.openOutput",
         "category": "Vitest"
@@ -80,6 +129,11 @@
       {
         "title": "Reveal in Test Explorer",
         "command": "vitest.revealInTestExplorer",
+        "category": "Vitest"
+      },
+      {
+        "title": "Run Related Tests",
+        "command": "vitest.runRelatedTests",
         "category": "Vitest"
       },
       {
@@ -97,37 +151,48 @@
         "title": "Copy Test Errors",
         "command": "vitest.copyTestItemErrors",
         "category": "Vitest"
+      },
+      {
+        "title": "Toggle Configs",
+        "command": "vitest.toggleConfigs",
+        "category": "Vitest"
       }
     ],
     "menus": {
-      "testing/item/result": [
-        {
-          "command": "vitest.copyTestItemErrors"
-        }
-      ],
       "testing/message/content": [
         {
-          "command": "vitest.copyErrorOutput"
+          "command": "vitest.copyErrorOutput",
+          "when": "resourcePath in vitest.testFiles"
         }
       ],
       "testing/message/context": [
         {
-          "command": "vitest.copyErrorOutput"
+          "command": "vitest.copyErrorOutput",
+          "when": "resourcePath in vitest.testFiles"
         }
       ],
       "editor/title/context": [
         {
           "command": "vitest.revealInTestExplorer",
-          "when": "vitest.testFiles && resourcePath in vitest.testFiles",
+          "when": "resourcePath in vitest.testFiles",
           "group": "vitest"
         },
         {
           "command": "vitest.openTransformedModule",
           "when": "vitest.environmentsSupported",
           "group": "vitest"
+        },
+        {
+          "command": "vitest.runRelatedTests",
+          "when": "vitest.testFiles && !(resourcePath in vitest.testFiles)",
+          "group": "vitest"
         }
       ],
       "commandPalette": [
+        {
+          "command": "vitest.toggleContinuousRun",
+          "when": "false"
+        },
         {
           "command": "vitest.updateSnapshot",
           "when": "false"
@@ -154,6 +219,10 @@
         },
         {
           "command": "vitest.copyTestItemErrors",
+          "when": "controllerId == 'vitest'"
+        },
+        {
+          "command": "vitest.toggleContinuousRun",
           "when": "controllerId == 'vitest'"
         }
       ]
@@ -226,18 +295,11 @@
           "default": false,
           "scope": "resource"
         },
-        "vitest.maximumConfigs": {
-          "description": "The maximum amount of configs that Vitest extension can load. If exceeded, the extension will show a warning suggesting to use a workspace config file.",
-          "type": "number",
-          "default": 5,
-          "scope": "window"
-        },
         "vitest.debugExclude": {
           "markdownDescription": "Automatically skip files covered by these glob patterns.",
           "type": "array",
           "default": [
-            "<node_internals>/**",
-            "**/node_modules/**"
+            "<node_internals>/**"
           ],
           "scope": "resource"
         },
@@ -323,6 +385,21 @@
           "type": "number",
           "default": 1000,
           "scope": "resource"
+        },
+        "vitest.runtime": {
+          "description": "Which runtime to use by default.",
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "node",
+            "deno"
+          ]
+        },
+        "vitest.watchOnStartup": {
+          "description": "Watch every test file after the extension is loaded. This is the same as enabling continuous run.",
+          "type": "boolean",
+          "default": false
         }
       }
     },
@@ -339,66 +416,16 @@
       ]
     }
   },
-  "scripts": {
-    "vscode:prepublish": "pnpm build",
-    "release": "tsx ./scripts/release.mts && git update-ref refs/heads/release refs/heads/main && git push origin release",
-    "build": "tsdown --minify --clean",
-    "package": "vsce package --no-dependencies",
-    "dev": "EXTENSION_NODE_ENV=dev tsdown --watch --sourcemap",
-    "test": "vscode-test",
-    "test:watch": "vscode-test --watch-files src/**/*.ts --watch-files test/**/*.test.ts",
-    "test-e2e": "vitest --root test/e2e",
-    "test-e2e:legacy": "TEST_LEGACY=true vitest --root test/e2e",
-    "ecosystem-ci:build": "pnpm build",
-    "ecosystem-ci:test": "tsx ./scripts/ecosystem-ci.mts",
-    "typecheck": "tsc -b ./ --noEmit",
-    "lint": "eslint --cache .",
-    "lint:fix": "eslint --cache --fix ."
+  "activationEvents": [
+    "workspaceContains:**/*vitest.{workspace,projects}*.{ts,js,mjs,cjs,cts,mts,json}",
+    "workspaceContains:**/*{vite,vitest}*.config*.{ts,js,mjs,cjs,cts,mts}",
+    "workspaceContains:node_modules/.bin/vitest",
+    "workspaceContains:node_modules/.bin/vp"
+  ],
+  "icon": "img/icon.png",
+  "engines": {
+    "vscode": "^1.88.0"
   },
-  "devDependencies": {
-    "@antfu/eslint-config": "^4.14.1",
-    "@playwright/test": "^1.42.1",
-    "@types/chai": "^5.2.2",
-    "@types/micromatch": "^4.0.6",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "^24.0.0",
-    "@types/prompts": "^2.4.9",
-    "@types/semver": "^7.3.9",
-    "@types/vscode": "^1.77.0",
-    "@types/which": "^3.0.3",
-    "@types/ws": "^8.5.10",
-    "@vscode/test-cli": "^0.0.6",
-    "@vscode/test-electron": "^2.3.9",
-    "@vscode/vsce": "^3.1.0",
-    "@vue/reactivity": "^3.2.33",
-    "acorn": "^8.12.0",
-    "acorn-walk": "^8.3.3",
-    "birpc": "^2.4.0",
-    "bumpp": "^10.1.1",
-    "chai": "^5.1.0",
-    "changelogithub": "^13.15.0",
-    "eslint": "^9.7.0",
-    "execa": "^8.0.1",
-    "find-up": "^7.0.0",
-    "get-port": "^6.1.2",
-    "istanbul-to-vscode": "^2.1.0",
-    "micromatch": "^4.0.5",
-    "mighty-promise": "^0.0.8",
-    "mocha": "^10.3.0",
-    "pathe": "^1.1.2",
-    "picocolors": "^1.0.0",
-    "prompts": "^2.4.2",
-    "semver": "^7.3.5",
-    "tsdown": "^0.20.3",
-    "tsx": "^4.7.1",
-    "typescript": "^5.6.2",
-    "vitest": "catalog:latest",
-    "which": "^4.0.0",
-    "ws": "^8.16.0"
-  },
-  "lint-staged": {
-    "*.{js,ts,tsx,vue,md}": [
-      "eslint --fix"
-    ]
-  }
+  "packageManager": "pnpm@10.34.5",
+  "pricing": "Free"
 }

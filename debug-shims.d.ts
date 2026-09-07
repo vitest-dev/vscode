@@ -15,7 +15,9 @@ declare module '@vscode/js-debug' {
      * try to modify options in a additive way. For example prefer appending
      * to rather than reading and overwriting `options.env.PATH`.
      */
-    provideTerminalOptions(options: vscode.TerminalOptions): vscode.ProviderResult<vscode.TerminalOptions>
+    provideTerminalOptions(
+      options: vscode.TerminalOptions,
+    ): vscode.ProviderResult<vscode.TerminalOptions>
   }
 
   /**

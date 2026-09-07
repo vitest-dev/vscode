@@ -1,6 +1,6 @@
 import type { TestError } from 'vitest'
 import type * as vscode from 'vscode'
-import type { VitestFolderAPI } from './api'
+import type { VitestProcessAPI } from './apiProcess'
 
 export type TestData = TestFolder | TestFile | TestCase | TestSuite
 
@@ -9,7 +9,9 @@ const WEAKMAP_TEST_DATA = new WeakMap<vscode.TestItem, TestData>()
 export function getTestData(item: vscode.TestItem): TestData {
   const data = WEAKMAP_TEST_DATA.get(item)
   if (!data)
-    throw new Error(`Test data not found for "${item.label}". This is a bug in Vitest extension. Please report it to https://github.com/vitest-dev/vscode`)
+    throw new Error(
+      `Test data not found for "${item.label}". This is a bug in Vitest extension. Please report it to https://github.com/vitest-dev/vscode`,
+    )
   return data
 }
 
@@ -23,10 +25,7 @@ class BaseTestData {
   public readonly parent: TestData | undefined
   public readonly id: string
 
-  constructor(
-    item: vscode.TestItem,
-    parent?: vscode.TestItem,
-  ) {
+  constructor(item: vscode.TestItem, parent?: vscode.TestItem) {
     this.label = item.label
     this.id = item.id
     this.parent = parent ? WEAKMAP_TEST_DATA.get(parent) : undefined
@@ -36,10 +35,7 @@ class BaseTestData {
 export class TestFolder extends BaseTestData {
   public readonly type = 'folder'
 
-  private constructor(
-    item: vscode.TestItem,
-    parent?: vscode.TestItem,
-  ) {
+  private constructor(item: vscode.TestItem, parent?: vscode.TestItem) {
     super(item, parent)
   }
 
@@ -66,7 +62,7 @@ export class TestFile extends BaseTestData {
     item: vscode.TestItem,
     parent: vscode.TestItem,
     public readonly filepath: string,
-    public readonly api: VitestFolderAPI,
+    public readonly api: VitestProcessAPI,
     public readonly metadata: TestFileMetadata,
   ) {
     super(item, parent)
@@ -77,7 +73,7 @@ export class TestFile extends BaseTestData {
     item: vscode.TestItem,
     parent: vscode.TestItem,
     filepath: string,
-    api: VitestFolderAPI,
+    api: VitestProcessAPI,
     metadata: TestFileMetadata,
   ) {
     return addTestData(item, new TestFile(item, parent, filepath, api, metadata))
@@ -86,7 +82,7 @@ export class TestFile extends BaseTestData {
 
 class TaskName {
   constructor(
-    private readonly data: TestData,
+    private readonly data: TestCase | TestSuite,
     public readonly dynamic: boolean,
   ) {}
 
@@ -99,14 +95,17 @@ class TaskName {
     let iter = this.data.parent
     while (iter) {
       // if we reached test file, then stop
-      if (iter instanceof TestFile || iter instanceof TestFolder)
-        break
+      if (iter instanceof TestFile || iter instanceof TestFolder) break
       patterns.push(escapeTestName(iter.label, iter.name.dynamic))
       iter = iter.parent
     }
-    // vitest's test task name starts with ' ' of root suite
-    // It's considered as a bug, but it's not fixed yet for backward compatibility
-    return `\\s?${patterns.reverse().join(' ')}`
+    if (this.data.file.api.usesJestTestNamePattern) {
+      // vitest's test task name starts with ' ' of root suite
+      // It's considered as a bug, but it's not fixed until Vitest 5 for backward compatibility
+      return `\\s?${patterns.reverse().join(' ')}`
+    }
+    // since 5.0.0-rc.1 the pattern is matched against names joined with " > "
+    return patterns.reverse().join(' > ')
   }
 }
 
@@ -125,7 +124,12 @@ export class TestCase extends BaseTestData {
     this.name = new TaskName(this, dynamic)
   }
 
-  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile, dynamic: boolean) {
+  public static register(
+    item: vscode.TestItem,
+    parent: vscode.TestItem,
+    file: TestFile,
+    dynamic: boolean,
+  ) {
     return addTestData(item, new TestCase(item, parent, file, dynamic))
   }
 
@@ -152,7 +156,12 @@ export class TestSuite extends BaseTestData {
     this.name = new TaskName(this, dynamic)
   }
 
-  public static register(item: vscode.TestItem, parent: vscode.TestItem, file: TestFile, dynamic: boolean) {
+  public static register(
+    item: vscode.TestItem,
+    parent: vscode.TestItem,
+    file: TestFile,
+    dynamic: boolean,
+  ) {
     return addTestData(item, new TestSuite(item, parent, file, dynamic))
   }
 
@@ -185,6 +194,6 @@ function escapeTestName(label: string, dynamic: boolean) {
   let pattern = label.replace(/\$[a-z_.]+/gi, '%s')
   pattern = escapeRegex(pattern)
   // Replace percent placeholders with their respective regex
-  pattern = pattern.replace(/%[i#dfsjo%]/g, m => kReplacers.get(m) || m)
+  pattern = pattern.replace(/%[i#dfsjo%]/g, (m) => kReplacers.get(m) || m)
   return pattern
 }

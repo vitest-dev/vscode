@@ -1,46 +1,56 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import type { Server } from 'node:http'
 import type WebSocket from 'ws'
-import type { ResolvedMeta } from '../api'
+import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import type { ExtensionWorkerProcess } from './types'
+import type { ProcessSpawnOptions } from './ws'
 import { spawn } from 'node:child_process'
-import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import getPort from 'get-port'
 import { WebSocketServer } from 'ws'
+import type { AddressInfo } from 'node:net'
+import { createBoundServer } from '../net'
 import { getConfig } from '../config'
 import { workerPath } from '../constants'
 import { createErrorLogger, log } from '../log'
-import { findNode, formatPkg, showVitestError } from '../utils'
+import { findRuntimeExecutable, formatPkg, showVitestError } from '../utils'
 import { waitForWsConnection } from './ws'
 
-export async function createVitestProcess(pkg: VitestPackage) {
+export async function createVitestProcess(pkg: VitestPackage, options?: ProcessSpawnOptions) {
   const pnpLoader = pkg.loader
   const pnp = pkg.pnp
-  if (pnpLoader && !pnp)
-    throw new Error('pnp file is required if loader option is used')
+  if (pnpLoader && !pnp) throw new Error('pnp file is required if loader option is used')
   const env = getConfig().env || {}
-  const runtimeArgs = getConfig(pkg.folder).nodeExecArgs || []
-  const execArgv = pnpLoader && pnp
-    ? [
-        '--require',
-        pnp,
-        '--experimental-loader',
-        pathToFileURL(pnpLoader).toString(),
-        ...runtimeArgs,
-      ]
-    : runtimeArgs
+  const folderConfig = getConfig(pkg.folder)
+  const runtimeArgs = folderConfig.nodeExecArgs || []
+  const execArgv =
+    pnpLoader && pnp
+      ? [
+          '--require',
+          pnp,
+          '--experimental-loader',
+          pathToFileURL(pnpLoader).toString(),
+          ...runtimeArgs,
+        ]
+      : runtimeArgs
+  const executable = await findRuntimeExecutable(pkg.runtime, pkg.cwd)
+  if (executable.endsWith('.CMD')) {
+    log.error(`Executable resolved to CMD instead of EXE. The PATH: ${process.env.PATH}`)
+  }
+  let executablePath = workerPath
+  if (folderConfig.runtime === 'deno') {
+    execArgv.push('-A')
+    executablePath = pathToFileURL(workerPath).toString()
+  }
   const arvString = execArgv.join(' ')
-  const executable = await findNode(pkg.cwd)
-  const script = `${executable} ${arvString ? `${arvString} ` : ''}${workerPath}`.trim()
+  const script = `${executable} ${arvString ? `${arvString} ` : ''}${executablePath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
-  const logLevel = getConfig(pkg.folder).logLevel
-  const port = await getPort()
-  const server = createServer().listen(port).unref()
+  const logLevel = folderConfig.logLevel
+  const server = await createBoundServer()
+  const { port } = server.address() as AddressInfo
   const wss = new WebSocketServer({ server })
   const wsAddress = `ws://localhost:${port}`
-  const vitest = spawn(executable, [...execArgv, workerPath], {
+  const vitest = spawn(executable, [...execArgv, executablePath], {
     env: {
       ...process.env,
       ...env,
@@ -83,11 +93,12 @@ export async function createVitestProcess(pkg: VitestPackage) {
     vitest.on('exit', onExit)
     vitest.on('error', onError)
 
-    waitForWsConnection(wss, pkg, 'child_process')
-      .then((resolved) => {
+    waitForWsConnection(wss, pkg, 'child_process', options)
+      .then((meta) => {
+        const process = new ExtensionChildProcess(vitest, server, meta.ws)
         resolve({
-          ...resolved,
-          process: new ExtensionChildProcess(vitest, server, resolved.ws),
+          ...meta,
+          process,
         })
       }, reject)
       .finally(() => {
@@ -98,22 +109,13 @@ export async function createVitestProcess(pkg: VitestPackage) {
 }
 
 class ExtensionChildProcess implements ExtensionWorkerProcess {
-  public id: number
-  private stopped: Promise<void>
-
   constructor(
     private child: ChildProcessWithoutNullStreams,
     server: Server,
     ws: WebSocket,
   ) {
-    // the execution process cannot be created without a pid
-    this.id = child.pid!
-    this.stopped = new Promise<void>((resolve, reject) => {
-      child.on('exit', () => {
-        server.close(createErrorLogger('Failed to close server'))
-        resolve()
-      })
-      child.on('error', reject)
+    child.on('exit', () => {
+      server.close(createErrorLogger('Failed to close server'))
     })
     // stop the process if websocket connection was somehow closed
     ws.on('close', () => {
@@ -124,27 +126,7 @@ class ExtensionChildProcess implements ExtensionWorkerProcess {
   }
 
   get closed(): boolean {
-    return this.child.killed
-  }
-
-  close() {
-    this.child.kill()
-    return new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error('The extension child process did not exit in time.'))
-      }, 5_000)
-      this.stopped
-        .finally(() => clearTimeout(timer))
-        .then(resolve, reject)
-    })
-  }
-
-  onError(listener: (error: Error) => void, options?: { once?: boolean }) {
-    const method = options?.once ? 'once' : 'on'
-    this.child[method]('error', listener)
-    return () => {
-      this.child.off('error', listener)
-    }
+    return this.child.exitCode != null
   }
 
   onExit(listener: (code: number | null) => void, options?: { once?: boolean }) {

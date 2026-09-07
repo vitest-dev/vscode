@@ -1,15 +1,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
-const AGENTS = [
-  'npm',
-  'yarn',
-  'yarn@berry',
-  'pnpm',
-  'pnpm@6',
-  'bun',
-  'deno',
-]
+const AGENTS = ['npm', 'yarn', 'yarn@berry', 'pnpm', 'pnpm@6', 'bun', 'deno']
 
 const LOCKS = {
   'bun.lock': 'bun',
@@ -26,8 +18,7 @@ function pathExists(path: string, type: 'file' | 'directory') {
   try {
     const stat = statSync(path)
     return type === 'file' ? stat.isFile() : stat.isDirectory()
-  }
-  catch {
+  } catch {
     return false
   }
 }
@@ -42,10 +33,8 @@ export function detectPackageManager(cwd: string) {
             if (pathExists(path.join(directory, lock), 'file')) {
               const name = LOCKS[lock as 'bun.lock']
               const result = parsePackageJson(path.join(directory, 'package.json'))
-              if (result)
-                return result
-              else
-                return { name, agent: name }
+              if (result) return result
+              else return { name, agent: name }
             }
           }
           break
@@ -53,8 +42,7 @@ export function detectPackageManager(cwd: string) {
         case 'packageManager-field':
         case 'devEngines-field': {
           const result = parsePackageJson(path.join(directory, 'package.json'))
-          if (result)
-            return result
+          if (result) return result
           break
         }
       }
@@ -64,8 +52,7 @@ export function detectPackageManager(cwd: string) {
 }
 
 function parsePackageJson(filepath: string) {
-  if (!filepath || !pathExists(filepath, 'file'))
-    return null
+  if (!filepath || !pathExists(filepath, 'file')) return null
   return handlePackageManager(filepath)
 }
 
@@ -92,22 +79,17 @@ function handlePackageManager(filepath: string) {
         agent = 'yarn@berry'
         version = 'berry'
         return { name, agent, version }
-      }
-      else if (name === 'pnpm' && ver && Number.parseInt(ver) < 7) {
+      } else if (name === 'pnpm' && ver && Number.parseInt(ver) < 7) {
         agent = 'pnpm@6'
         return { name, agent, version }
-      }
-      else if (AGENTS.includes(name)) {
+      } else if (AGENTS.includes(name)) {
         agent = name
         return { name, agent, version }
-      }
-      else {
+      } else {
         return null
       }
     }
-  }
-  catch {
-  }
+  } catch {}
   return null
 }
 

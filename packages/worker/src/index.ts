@@ -1,9 +1,11 @@
-import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
-import type { CoverageIstanbulOptions, TestUserConfig } from 'vitest/node'
+import type {
+  SerializedProject,
+  WorkerReadyMetadata,
+  WorkerRunnerOptions,
+  WorkerWSEventEmitter,
+} from 'vitest-vscode-shared'
+import type { Reporter, TestUserConfig } from 'vitest/node'
 import { Console } from 'node:console'
-import { randomUUID } from 'node:crypto'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
 import { VSCodeReporter } from './reporter'
@@ -20,12 +22,11 @@ export async function initVitest(
   let stdout: Writable | undefined
   let stderr: Writable | undefined
 
-  if (data.debug) {
+  if (data.sendLog) {
     stdout = new Writable({
       write(chunk, __, callback) {
         const log = chunk.toString()
         reporter.sendTerminalLog('stdout', log)
-        // process.stdout.write(log)
         callback()
       },
     })
@@ -34,7 +35,6 @@ export async function initVitest(
       write(chunk, __, callback) {
         const log = chunk.toString()
         reporter.sendTerminalLog('stderr', log)
-        // process.stderr.write(log)
         callback()
       },
     })
@@ -43,8 +43,8 @@ export async function initVitest(
 
   const args = meta.arguments
     ? vitestModule.parseCLI(meta.arguments, {
-      allowUnknownOptions: false,
-    }).options
+        allowUnknownOptions: false,
+      }).options
     : {}
   const options = data.debug
     ? {
@@ -58,15 +58,14 @@ export async function initVitest(
     config: meta.configFile,
     ...args,
     ...options,
+    project: meta.projectFilter ?? args.project,
     watch: true,
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,
-    inspect: typeof data.debug === 'object'
-      ? `${data.debug.host}:${data.debug.port}`
-      : undefined,
+    related: meta.related ? [meta.related] : undefined,
     experimental: {
       importDurations: {
         limit: Infinity,
@@ -74,6 +73,14 @@ export async function initVitest(
         print: false,
       },
     },
+  }
+  if (typeof data.debug === 'object') {
+    const inspect = `${data.debug.host}:${data.debug.port}`
+    if (data.debug.browser) {
+      cliOptions.inspect = inspect
+    } else {
+      cliOptions.inspectBrk = inspect
+    }
   }
   const vitest = await vitestModule.createVitest(
     'test',
@@ -89,17 +96,6 @@ export async function initVitest(
           config(userConfig) {
             userConfig.test ??= {}
 
-            const testConfig = userConfig.test
-            const coverageOptions = (testConfig.coverage ??= {}) as CoverageIstanbulOptions
-            const coverageReporters = coverageOptions.reporter && Array.isArray(coverageOptions.reporter)
-              ? coverageOptions.reporter
-              : [coverageOptions.reporter]
-            const jsonReporter = coverageReporters.find(r => r && r[0] === 'json')
-            const jsonReporterOptions = typeof jsonReporter?.[1] === 'object' ? jsonReporter[1] : {}
-            coverageOptions.reporter = [
-              ['json', { ...jsonReporterOptions, file: meta.finalCoverageFileName }],
-            ]
-
             const testReporters = toArray(userConfig.test.reporters)
             if (!testReporters.length) {
               testReporters.push(['default', { isTTY: false }])
@@ -111,8 +107,9 @@ export async function initVitest(
               test: {
                 printConsoleTrace: true,
                 coverage: {
+                  enabled: !!data.coverage,
                   reportOnFailure: true,
-                  reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
+                  reporter: [['json', { file: meta.finalCoverageFileName }]],
                 },
               },
             }
@@ -142,7 +139,11 @@ export async function initVitest(
       stdout,
     },
   )
-  await (vitest as any).report('onInit', vitest)
+  ;((vitest as any).reporters as Reporter[]).forEach((reporter) => {
+    if (!(reporter instanceof VSCodeReporter)) {
+      reporter.onUserConsoleLog = () => {}
+    }
+  })
 
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config
@@ -165,21 +166,16 @@ export async function initVitest(
     }
   })
 
-  const workspaceSource: string | false = (vitest.config.projects != null)
-    ? vitest.vite.config.configFile || false
-    : false
+  const workspaceSource: string | false =
+    vitest.config.projects != null ? vitest.vite.config.configFile || false : false
+  const metadata: WorkerReadyMetadata = { projects, workspaceSource }
   return {
     vitest,
     reporter,
-    workspaceSource,
-    projects,
+    metadata,
     meta,
     createWorker() {
-      return new ExtensionWorker(
-        vitest,
-        !!data.debug,
-        emitter,
-      )
+      return new ExtensionWorker(vitest, !!data.debug, emitter)
     },
   }
 }

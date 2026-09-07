@@ -26,10 +26,11 @@ expect.extend({
 
     return {
       pass,
-      message: () => `${this.utils.matcherHint('toHaveState', title, state, { isNot: this.isNot })}\n\n`
-      + `Locator: ${item.locator}\n`
-      + `Expected: ${this.isNot ? 'not ' : ''}to have state: ${this.utils.printExpected(state)}\n`
-      + `Received: ${this.utils.printReceived(title)}\n`,
+      message: () =>
+        `${this.utils.matcherHint('toHaveState', title, state, { isNot: this.isNot })}\n\n` +
+        `Locator: ${item.locator}\n` +
+        `Expected: ${this.isNot ? 'not ' : ''}to have state: ${this.utils.printExpected(state)}\n` +
+        `Received: ${this.utils.printReceived(title)}\n`,
       name: 'toHaveState',
     }
   },
@@ -46,6 +47,12 @@ expect.extend({
   },
   async toHaveTests(item: TesterTestItem, tests: TestsTree) {
     const page = item.page
+    // the "Resolving Vitest..." item stays in the tree until every config is
+    // resolved, but roots are added as soon as their own config is resolved.
+    // Wait for it to go away, otherwise every row index shifts by one later.
+    await expect(page.locator('[aria-label*="Resolving Vitest..."]')).not.toBeAttached({
+      timeout: 10_000,
+    })
     const depth = Number(await item.locator.getAttribute('aria-level'))
     const currentIndex = Number(await item.locator.getAttribute('data-index'))
 
@@ -55,7 +62,7 @@ expect.extend({
       if (index) {
         locator += `[data-index="${index}"]`
       }
-      await expect(page.locator(locator)).toBeAttached()
+      await expect(page.locator(locator)).toBeAttached({ timeout: 10_000 })
     }
 
     const counter = { index: currentIndex }
@@ -67,8 +74,7 @@ expect.extend({
         const item = tests[test]
         if (typeof item === 'string') {
           await assert(test, level, item, counter.index)
-        }
-        else {
+        } else {
           const [name, index = counter.index] = test.split('|')
           let locator = `[aria-label*="${name}"][aria-level="${level}"]`
           if (index) {

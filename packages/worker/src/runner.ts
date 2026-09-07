@@ -1,4 +1,9 @@
-import type { ExtensionTestFileSpecification, ExtensionTestSpecification, VitestWorkerRPC, WorkerWSEventEmitter } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestFileSpecification,
+  ExtensionTestSpecification,
+  VitestWorkerRPC,
+  WorkerWSEventEmitter,
+} from 'vitest-vscode-shared'
 import type { TestSpecification, Vitest as VitestCore } from 'vitest/node'
 
 export class ExtensionWorkerRunner {
@@ -39,7 +44,7 @@ export class ExtensionWorkerRunner {
 
   public async collectSpecifications(specifications: TestSpecification[]): Promise<void> {
     const testModules = await this.vitest.experimental_parseSpecifications(specifications)
-    const promises = testModules.map(module =>
+    const promises = testModules.map((module) =>
       // TODO: fix "as any"
       this.rpc.onCollected((module as any).task, true),
     )
@@ -54,17 +59,25 @@ export class ExtensionWorkerRunner {
     return this.vitest.cancelCurrentRun('keyboard-input')
   }
 
-  async runTests(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+  async runTests(
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ): Promise<void> {
     const currentTestNamePattern = this.getGlobalTestNamePattern()
     if (testNamePattern) {
       this.vitest.setGlobalTestNamePattern(testNamePattern)
     }
 
-    if (!filesOrDirectories || this.isOnlyDirectories(filesOrDirectories)) {
-      const specifications = await this.vitest.getRelevantTestSpecifications(filesOrDirectories)
-      await this.vitest.rerunTestSpecifications(specifications, true)
+    if (this.vitest.config.coverage.enabled) {
+      await this.vitest.enableCoverage()
     }
-    else {
+
+    if (!filesOrDirectories || this.isOnlyDirectories(filesOrDirectories)) {
+      const specifications = await this.vitest.getRelevantTestSpecifications(
+        filesOrDirectories || [],
+      )
+      await this.vitest.rerunTestSpecifications(specifications, true)
+    } else {
       const specifications = await this.resolveTestSpecifications(filesOrDirectories)
       await this.vitest.rerunTestSpecifications(specifications, false)
     }
@@ -77,8 +90,7 @@ export class ExtensionWorkerRunner {
 
     if (currentTestNamePattern) {
       this.vitest.setGlobalTestNamePattern(currentTestNamePattern)
-    }
-    else {
+    } else {
       this.vitest.resetGlobalTestNamePattern()
     }
   }
@@ -91,27 +103,33 @@ export class ExtensionWorkerRunner {
     return this.vitest.config.testNamePattern
   }
 
-  async resolveTestSpecifications(files: ExtensionTestSpecification[]): Promise<TestSpecification[]> {
+  async resolveTestSpecifications(
+    files: ExtensionTestSpecification[],
+  ): Promise<TestSpecification[]> {
     const specifications: TestSpecification[] = []
     files.forEach((file) => {
-      const [projectName, filepath] = file
+      const [projectName, filepath, options] = file
       const project = this.vitest.getProjectByName(projectName)
-      specifications.push(project.createSpecification(filepath))
+      const specification = project.createSpecification(filepath)
+      // @ts-expect-error testNamePattern is readonly and supported only in v4.1
+      specification.testNamePattern = options?.testNamePattern
+      specifications.push(specification)
     })
     return specifications
   }
 
-  async updateSnapshots(filesOrDirectories?: ExtensionTestSpecification[] | string[], testNamePattern?: string): Promise<void> {
+  async updateSnapshots(
+    filesOrDirectories?: ExtensionTestSpecification[] | string[],
+    testNamePattern?: string,
+  ): Promise<void> {
     const currentTestNamePattern = this.getGlobalTestNamePattern()
     this.vitest.enableSnapshotUpdate()
     try {
       return await this.runTests(filesOrDirectories, testNamePattern)
-    }
-    finally {
+    } finally {
       if (currentTestNamePattern) {
         this.vitest.setGlobalTestNamePattern(currentTestNamePattern)
-      }
-      else {
+      } else {
         this.vitest.resetSnapshotUpdate()
       }
     }

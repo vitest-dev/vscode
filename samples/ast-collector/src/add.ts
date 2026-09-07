@@ -1,10 +1,9 @@
-
 export function add(a: number, b: number) {
   return a + b
 }
 
 export function sum(from: number, to: number) {
-  return (from + to) * (to - from + 1) / 2
+  return ((from + to) * (to - from + 1)) / 2
 }
 
 export function addError(from: number, to: number) {
@@ -13,5 +12,5 @@ export function addError(from: number, to: number) {
 }
 
 function doSomething() {
-  throw new Error('Something went wrong');
+  throw new Error('Something went wrong')
 }

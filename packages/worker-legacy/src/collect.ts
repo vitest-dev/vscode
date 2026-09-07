@@ -1,11 +1,7 @@
 import type { SourceMap } from 'node:module'
 import type { RunnerTestCase, RunnerTestFile, RunnerTestSuite, TaskBase, TestError } from 'vitest'
 import type { Vite, WorkspaceProject } from 'vitest/node'
-import {
-  calculateSuiteHash,
-  generateHash,
-  someTasksAreOnly,
-} from '@vitest/runner/utils'
+import { calculateSuiteHash, generateHash, someTasksAreOnly } from '@vitest/runner/utils'
 import { originalPositionFor, TraceMap } from '@vitest/utils/source-map'
 import { parse } from 'acorn'
 import { ancestor as walkAst } from 'acorn-walk'
@@ -28,7 +24,7 @@ interface ParsedSuite extends RunnerTestSuite {
   dynamic: boolean
 }
 
-interface LocalCallDefinition {
+export interface LocalCallDefinition {
   start: number
   end: number
   name: string
@@ -36,6 +32,8 @@ interface LocalCallDefinition {
   mode: 'run' | 'skip' | 'only' | 'todo' | 'queued'
   task: ParsedSuite | ParsedFile | ParsedTest
   dynamic: boolean
+  concurrent: boolean
+  sequential: boolean
 }
 
 export interface FileInformation {
@@ -46,19 +44,21 @@ export interface FileInformation {
   definitions: LocalCallDefinition[]
 }
 
-const debug = process.env.VITEST_VSCODE_LOG !== 'info'
-  ? (...args: any[]) => {
-    // eslint-disable-next-line no-console
-      console.info(...args)
-    }
-  : undefined
+const debug =
+  process.env.VITEST_VSCODE_LOG !== 'info'
+    ? (...args: any[]) => {
+        // eslint-disable-next-line no-console
+        console.info(...args)
+      }
+    : undefined
 
-const verbose = process.env.VITEST_VSCODE_LOG === 'verbose'
-  ? (...args: any[]) => {
-      // eslint-disable-next-line no-console
-      console.info(...args)
-    }
-  : undefined
+const verbose =
+  process.env.VITEST_VSCODE_LOG === 'verbose'
+    ? (...args: any[]) => {
+        // eslint-disable-next-line no-console
+        console.info(...args)
+      }
+    : undefined
 
 function isTestFunctionName(name: string) {
   return name === 'it' || name === 'test' || name.startsWith('test') || name.endsWith('Test')
@@ -77,13 +77,8 @@ export function astParseFile(filepath: string, code: string) {
   })
 
   if (verbose) {
-    verbose(
-      'Collecting',
-      filepath,
-      code,
-    )
-  }
-  else {
+    verbose('Collecting', filepath, code)
+  } else {
     debug?.('Collecting', filepath)
   }
   const definitions: LocalCallDefinition[] = []
@@ -101,23 +96,27 @@ export function astParseFile(filepath: string, code: string) {
       return getName(callee.tag)
     }
     if (callee.type === 'MemberExpression') {
-      if (
-        callee.object?.type === 'Identifier'
-        && isVitestFunctionName(callee.object.name)
-      ) {
+      // Vitest chains always use dot access (`test.skip`, `describe.each`).
+      // A computed access like `it[1].call(it[2])` comes from esbuild's
+      // `using` helper (`__callDispose`) and is not a Vitest call.
+      if (callee.computed) {
+        return null
+      }
+      if (callee.object?.type === 'Identifier' && isVitestFunctionName(callee.object.name)) {
         return callee.object?.name
       }
       if (
         // direct call as `__vite_ssr_exports_0__.test()`
-        callee.object?.name?.startsWith('__vite_ssr_')
+        callee.object?.name?.startsWith('__vite_ssr_') ||
         // call as `__vite_ssr_exports_0__.Vitest.test`,
         // this is a special case for using Vitest namespaces popular in Effect
-        || (callee.object?.object?.name?.startsWith('__vite_ssr_') && callee.object?.property?.name === 'Vitest')
+        (callee.object?.object?.name?.startsWith('__vite_ssr_') &&
+          callee.object?.property?.name === 'Vitest')
       ) {
         return getName(callee.property)
       }
-      // call as `__vite_ssr__.test.skip()`
-      return getName(callee.object?.property)
+      // call as `__vite_ssr__.test.skip()` or `describe.concurrent.each()`
+      return getName(callee.object)
     }
     // unwrap (0, ...)
     if (callee.type === 'SequenceExpression' && callee.expressions.length === 2) {
@@ -127,6 +126,29 @@ export function astParseFile(filepath: string, code: string) {
       }
     }
     return null
+  }
+
+  const getProperties = (callee: any): string[] => {
+    if (!callee) {
+      return []
+    }
+    if (callee.type === 'Identifier') {
+      return []
+    }
+    if (callee.type === 'CallExpression') {
+      return getProperties(callee.callee)
+    }
+    if (callee.type === 'TaggedTemplateExpression') {
+      return getProperties(callee.tag)
+    }
+    if (callee.type === 'MemberExpression') {
+      const props = getProperties(callee.object)
+      if (callee.property?.name) {
+        props.push(callee.property.name)
+      }
+      return props
+    }
+    return []
   }
 
   walkAst(ast as any, {
@@ -140,24 +162,38 @@ export function astParseFile(filepath: string, code: string) {
         verbose?.(`Skipping ${name} (unknown call)`)
         return
       }
+      const properties = getProperties(callee)
       const property = callee?.property?.name
-      let mode = !property || property === name ? 'run' : property
-      // they will be picked up in the next iteration
-      if (['each', 'for', 'skipIf', 'runIf', 'extend', 'scoped'].includes(mode)) {
+      // intermediate calls like .each(), .for() will be picked up in the next iteration
+      if (property && ['each', 'for', 'skipIf', 'runIf', 'extend', 'scoped'].includes(property)) {
         return
       }
+      // skip properties on return values of calls - e.g., test('name', fn).skip()
+      if (callee.type === 'MemberExpression' && callee.object?.type === 'CallExpression') {
+        return
+      }
+      // derive mode from the full chain (handles any order like .skip.concurrent or .concurrent.skip)
+      let mode: 'run' | 'skip' | 'only' | 'todo' = 'run'
+      for (const prop of properties) {
+        if (prop === 'skip' || prop === 'only' || prop === 'todo') {
+          mode = prop
+        } else if (['skipIf', 'runIf'].includes(prop)) {
+          mode = 'skip'
+        }
+      }
+      let isConcurrent = properties.includes('concurrent')
+      let isSequential = properties.includes('sequential')
 
       let start: number
       const end = node.end
       // .each or (0, __vite_ssr_exports_0__.test)()
       if (
-        callee.type === 'CallExpression'
-        || callee.type === 'SequenceExpression'
-        || callee.type === 'TaggedTemplateExpression'
+        callee.type === 'CallExpression' ||
+        callee.type === 'SequenceExpression' ||
+        callee.type === 'TaggedTemplateExpression'
       ) {
         start = callee.end
-      }
-      else {
+      } else {
         start = node.start
       }
 
@@ -171,8 +207,7 @@ export function astParseFile(filepath: string, code: string) {
       let message: string
       if (messageNode?.type === 'Literal' || messageNode?.type === 'TemplateLiteral') {
         message = code.slice(messageNode.start + 1, messageNode.end - 1)
-      }
-      else {
+      } else {
         message = code.slice(messageNode.start, messageNode.end)
       }
 
@@ -188,16 +223,34 @@ export function astParseFile(filepath: string, code: string) {
         // Vitest module mocker injects these
         .replace(/__vi_import_\d+__\./g, '')
 
-      // cannot statically analyze, so we always skip it
-      if (mode === 'skipIf' || mode === 'runIf') {
-        mode = 'skip'
-      }
-
-      const parentCalleeName = typeof callee?.callee === 'object' && callee?.callee.type === 'MemberExpression' && callee?.callee.property?.name
+      const parentCalleeName =
+        typeof callee?.callee === 'object' &&
+        callee?.callee.type === 'MemberExpression' &&
+        callee?.callee.property?.name
       let isDynamicEach = parentCalleeName === 'each' || parentCalleeName === 'for'
       if (!isDynamicEach && callee.type === 'TaggedTemplateExpression') {
         const property = callee.tag?.property?.name
         isDynamicEach = property === 'each' || property === 'for'
+      }
+
+      // Extract options from the second argument if it's an options object
+      const secondArg = node.arguments?.[1]
+      if (secondArg?.type === 'ObjectExpression') {
+        for (const prop of (secondArg.properties || []) as any[]) {
+          if (prop.type !== 'Property' || prop.key?.type !== 'Identifier') {
+            continue
+          }
+          const keyName = prop.key.name
+          if (prop.value?.type === 'Literal' && prop.value.value === true) {
+            if (keyName === 'skip' || keyName === 'only' || keyName === 'todo') {
+              mode = keyName
+            } else if (keyName === 'concurrent') {
+              isConcurrent = true
+            } else if (keyName === 'sequential') {
+              isSequential = true
+            }
+          }
+        }
       }
 
       debug?.('Found', name, message, `(${mode})`)
@@ -209,6 +262,8 @@ export function astParseFile(filepath: string, code: string) {
         mode,
         task: null as any,
         dynamic: isDynamicEach,
+        concurrent: isConcurrent,
+        sequential: isSequential,
       } satisfies LocalCallDefinition)
     },
   })
@@ -328,8 +383,7 @@ export function createFileTask(
             `${originalLocation.line}:${originalLocation.column}`,
           )
           location = originalLocation
-        }
-        else {
+        } else {
           debug?.(
             'Cannot find original location for',
             definition.type,
@@ -337,8 +391,7 @@ export function createFileTask(
             `${processedLocation.column}:${processedLocation.line}`,
           )
         }
-      }
-      else {
+      } else {
         debug?.(
           'Cannot find original location for',
           definition.type,
@@ -346,6 +399,11 @@ export function createFileTask(
           `${definition.start}`,
         )
       }
+      // resolve concurrent/sequential: sequential cancels inherited concurrent
+      const concurrent = definition.sequential
+        ? undefined
+        : definition.concurrent || (latestSuite as any).concurrent || undefined
+
       if (definition.type === 'suite') {
         const task: ParsedSuite = {
           type: definition.type,
@@ -354,6 +412,7 @@ export function createFileTask(
           file,
           tasks: [],
           mode,
+          concurrent,
           name: definition.name,
           end: definition.end,
           start: definition.start,
@@ -372,6 +431,7 @@ export function createFileTask(
         suite: latestSuite,
         file,
         mode,
+        concurrent,
         context: {} as any, // not used on the server
         name: definition.name,
         end: definition.end,
@@ -387,13 +447,7 @@ export function createFileTask(
     })
   calculateSuiteHash(file)
   const hasOnly = someTasksAreOnly(file)
-  interpretTaskModes(
-    file,
-    options.testNamePattern,
-    hasOnly,
-    false,
-    options.allowOnly,
-  )
+  interpretTaskModes(file, options.testNamePattern, hasOnly, false, options.allowOnly)
   markDynamicTests(file.tasks)
   if (!file.tasks.length) {
     file.result = {
@@ -416,7 +470,7 @@ export async function astCollectTests(
   const request = await transformSSR(project, filepath)
   const testFilepath = relative(project.config.root, filepath)
   if (!request) {
-    debug?.('Cannot parse', testFilepath, '(vite didn\'t return anything)')
+    debug?.('Cannot parse', testFilepath, "(vite didn't return anything)")
     return createFailedFileTask(
       project,
       filepath,
@@ -450,8 +504,7 @@ function createIndexMap(source: string) {
     if (char === '\n' || char === '\r\n') {
       line++
       column = 0
-    }
-    else {
+    } else {
       column++
     }
   }
@@ -480,11 +533,9 @@ function interpretTaskModes(
           checkAllowOnly(t, allowOnly)
           t.mode = 'run'
         }
-      }
-      else if (t.mode === 'run' && !includeTask) {
+      } else if (t.mode === 'run' && !includeTask) {
         t.mode = 'skip'
-      }
-      else if (t.mode === 'only') {
+      } else if (t.mode === 'only') {
         checkAllowOnly(t, allowOnly)
         t.mode = 'run'
       }
@@ -493,12 +544,10 @@ function interpretTaskModes(
       if (namePattern && !getTaskFullName(t).match(namePattern)) {
         t.mode = 'skip'
       }
-    }
-    else if (t.type === 'suite') {
+    } else if (t.type === 'suite') {
       if (t.mode === 'skip') {
         skipAllTasks(t)
-      }
-      else {
+      } else {
         interpretTaskModes(t, namePattern, onlyMode, includeTask, allowOnly)
       }
     }
@@ -506,7 +555,7 @@ function interpretTaskModes(
 
   // if all subtasks are skipped, mark as skip
   if (suite.mode === 'run') {
-    if (suite.tasks.length && suite.tasks.every(i => i.mode !== 'run')) {
+    if (suite.tasks.length && suite.tasks.every((i) => i.mode !== 'run')) {
       suite.mode = 'skip'
     }
   }

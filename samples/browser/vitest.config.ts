@@ -3,9 +3,10 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig(async () => {
-  const provider: any = process.env.TEST_LEGACY !== 'true'
-    ? (await import('@vitest/browser-playwright')).playwright()
-    : 'playwright'
+  const provider: any =
+    process.env.TEST_LEGACY !== 'true'
+      ? (await import('@vitest/browser-playwright')).playwright()
+      : 'playwright'
   return {
     esbuild: {
       target: 'es2020',
@@ -17,10 +18,8 @@ export default defineConfig(async () => {
         enabled: true,
         headless: true,
         provider,
-        instances: [
-          { browser: 'chromium' as const },
-        ],
-      }
+        instances: [{ browser: 'chromium' as const }],
+      },
     },
   }
 })

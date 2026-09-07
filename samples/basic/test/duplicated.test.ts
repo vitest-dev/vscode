@@ -1,8 +1,8 @@
-import { describe, test } from "vitest";
+import { describe, test } from 'vitest'
 
-describe("testing", () => {
-  test("number 1", () => { })
-});
-describe("testing", () => {
-  test("number 2", () => { })
-});
+describe('testing', () => {
+  test('number 1', () => {})
+})
+describe('testing', () => {
+  test('number 2', () => {})
+})

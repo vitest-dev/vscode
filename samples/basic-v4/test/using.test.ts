@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 
-(Symbol as any).dispose ??= Symbol('Symbol.dispose');
-(Symbol as any).asyncDispose ??= Symbol('Symbol.asyncDispose')
+;(Symbol as any).dispose ??= Symbol('Symbol.dispose')
+;(Symbol as any).asyncDispose ??= Symbol('Symbol.asyncDispose')
 
 describe('using keyword', () => {
   it('dispose', () => {
@@ -37,7 +37,7 @@ class SomeAsyncDisposableResource implements AsyncDisposable {
   public isDisposed = false
 
   async [Symbol.asyncDispose](): Promise<void> {
-    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
     this.isDisposed = true
   }
 }

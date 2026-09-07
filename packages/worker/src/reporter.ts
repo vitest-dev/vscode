@@ -4,10 +4,14 @@ import type {
   BrowserCommand,
   Reporter,
   ResolvedConfig,
+  RunnerTask,
   RunnerTestFile,
+  TestCase,
   TestModule,
   TestProject,
+  TestResult,
   TestSpecification,
+  TestSuite,
   Vite,
   Vitest as VitestCore,
 } from 'vitest/node'
@@ -23,23 +27,21 @@ export class VSCodeReporter implements Reporter {
   private execArgv: string[] = []
 
   private debuggerAttached: boolean | undefined = undefined
+  private coverageData: Record<string, unknown> | undefined = undefined
+  private silent: boolean | 'passed-only' = false
 
   constructor(meta: WorkerInitMetadata, debug: WorkerRunnerOptions['debug']) {
     this.setupFilePaths = meta.setupFilePaths
     this.debug = debug
     if (meta.pnpApi && meta.pnpLoader) {
-      this.execArgv.push(
-        '--require',
-        meta.pnpApi,
-        '--experimental-loader',
-        meta.pnpLoader,
-      )
+      this.execArgv.push('--require', meta.pnpApi, '--experimental-loader', meta.pnpLoader)
     }
   }
 
   onInit(vitest: VitestCore) {
     this.vitest = vitest
-    this.configureBrowserDebugging(vitest)
+    this.configureAttachDebugging(vitest)
+    this.silent = vitest.config.silent
 
     vitest.projects.forEach((project) => {
       this.ensureSetupFileIsAllowed(project.vite.config)
@@ -56,34 +58,18 @@ export class VSCodeReporter implements Reporter {
     this.ensureSetupFileIsAllowed(config)
 
     const __vscode_waitForDebugger: BrowserCommand<[]> = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (this.debuggerAttached !== undefined) {
-          if (this.debuggerAttached) {
-            resolve()
-            return
-          }
-          else if (this.debuggerAttached === false) {
-            reject(new Error(`Browser Debugger failed to connect.`))
-            return
-          }
-        }
-
-        ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
-          if (fullfilled) {
-            resolve()
-          }
-          else {
-            reject(new Error(`Browser Debugger failed to connect.`))
-          }
-        })
-      })
+      return this.createAttachPromise()
     }
     // TODO: move this command init to configureVitest when Vitest 4 is out
     // @ts-expect-error private "parent" property
     project.browser!.parent.commands.__vscode_waitForDebugger = __vscode_waitForDebugger
   }
 
-  onUserConsoleLog(log: UserConsoleLog) {
+  onUserConsoleLog(log: UserConsoleLog, taskState?: TestResult['state']) {
+    if (!this.shouldLog(log, taskState)) {
+      return
+    }
+
     // Parse stack trace to extract file location for inline display
     const extendedLog = log as any
     if (log.origin) {
@@ -106,12 +92,57 @@ export class VSCodeReporter implements Reporter {
             }
           }
         }
-      }
-      catch {
+      } catch {
         // If parsing fails, continue without parsed location
       }
     }
-    this.rpc.onConsoleLog(extendedLog)
+    return this.rpc.onConsoleLog(extendedLog)
+  }
+
+  onTestCaseResult(testCase: TestCase): void {
+    if (testCase.result().state === 'failed') {
+      this.logFailedTask(getRunnerTask(testCase))
+    }
+  }
+
+  onTestSuiteResult(testSuite: TestSuite): void {
+    if (testSuite.state() === 'failed') {
+      this.logFailedTask(getRunnerTask(testSuite))
+    }
+  }
+
+  onTestModuleEnd(testModule: TestModule): void {
+    if (testModule.state() === 'failed') {
+      this.logFailedTask(getRunnerTask(testModule))
+    }
+  }
+
+  protected logFailedTask(task: RunnerTask): void {
+    if (this.silent === 'passed-only') {
+      for (const log of task.logs || []) {
+        this.onUserConsoleLog(log, 'failed')
+      }
+    }
+  }
+
+  shouldLog(log: UserConsoleLog, taskState?: TestResult['state']): boolean {
+    if (this.silent === true) {
+      return false
+    }
+
+    if (this.silent === 'passed-only' && taskState !== 'failed') {
+      return false
+    }
+
+    if (this.vitest.config.onConsoleLog) {
+      const task = log.taskId ? this.vitest.state.idMap.get(log.taskId) : undefined
+      const entity = task && this.vitest.state.getReportedEntity(task)
+      const shouldLog = this.vitest.config.onConsoleLog(log.content, log.type, entity)
+      if (shouldLog === false) {
+        return false
+      }
+    }
+    return true
   }
 
   onTaskUpdate(packs: RunnerTaskResultPack[]) {
@@ -135,13 +166,17 @@ export class VSCodeReporter implements Reporter {
   }
 
   onTestRunStart(specifications: ReadonlyArray<TestSpecification>) {
-    const files = specifications.map(spec => spec.moduleId)
-    this.rpc.onTestRunStart(Array.from(new Set(files)), false)
+    const files = specifications.map((spec) => spec.moduleId)
+    this.rpc.onTestRunStart([...new Set(files)])
     this.vitest.state.filesMap.clear()
   }
 
+  onCoverage(coverage: unknown) {
+    this.coverageData = (coverage as any).toJSON()
+  }
+
   async onTestRunEnd(testModules: ReadonlyArray<TestModule>) {
-    const files = testModules.map(m => getEntityJSONTask(m))
+    const files = testModules.map((m) => getEntityJSONTask(m))
 
     // Make sure we rendered everything before ending the test run
     // If test run is no active, the log will be lost
@@ -149,9 +184,12 @@ export class VSCodeReporter implements Reporter {
       await Promise.all([...this.logPromises])
     }
 
+    const coverage = this.coverageData
+    this.coverageData = undefined
+
     // as any because Vitest types are different between v3 and v4,
     // and shared packages uses the lowest Vitest version
-    this.rpc.onTestRunEnd(files as any, '', false)
+    this.rpc.onTestRunEnd(files as any, '', false, coverage)
   }
 
   onTestModuleCollected(testModule: TestModule) {
@@ -171,8 +209,30 @@ export class VSCodeReporter implements Reporter {
     config.execArgv.push(...this.execArgv)
   }
 
-  configureBrowserDebugging(vitest: VitestCore) {
-    ExtensionWorker.emitter.on('onBrowserDebug', (fullfilled) => {
+  private createAttachPromise() {
+    return new Promise<void>((resolve, reject) => {
+      if (this.debuggerAttached !== undefined) {
+        if (this.debuggerAttached) {
+          resolve()
+          return
+        } else if (this.debuggerAttached === false) {
+          reject(new Error(`Browser Debugger failed to connect.`))
+          return
+        }
+      }
+
+      ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
+        if (fullfilled) {
+          resolve()
+        } else {
+          reject(new Error(`Browser Debugger failed to connect.`))
+        }
+      })
+    })
+  }
+
+  configureAttachDebugging(vitest: VitestCore) {
+    ExtensionWorker.emitter.on('onDebugAttached', (fullfilled) => {
       this.debuggerAttached = fullfilled
     })
 
@@ -195,9 +255,12 @@ export class VSCodeReporter implements Reporter {
       return
     }
 
-    const promise = this.rpc.onProcessLog(type, message).catch(() => {}).finally(() => {
-      this.logPromises.delete(promise)
-    })
+    const promise = this.rpc
+      .onProcessLog(type, message)
+      .catch(() => {})
+      .finally(() => {
+        this.logPromises.delete(promise)
+      })
 
     this.logPromises.add(promise)
   }
@@ -205,4 +268,8 @@ export class VSCodeReporter implements Reporter {
 
 function getEntityJSONTask(entity: TestModule) {
   return (entity as any).task as RunnerTestFile
+}
+
+function getRunnerTask(value: any): RunnerTask {
+  return value.task
 }

@@ -1,6 +1,16 @@
-import type { SerializedProject, WorkerRunnerOptions, WorkerWSEventEmitter } from 'vitest-vscode-shared'
-import type { UserConfig } from 'vitest/node'
+import type {
+  SerializedProject,
+  WorkerReadyMetadata,
+  WorkerRunnerOptions,
+  WorkerWSEventEmitter,
+} from 'vitest-vscode-shared'
+import type { Reporter, UserConfig } from 'vitest/node'
+import { Console } from 'node:console'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
+import { join } from 'pathe'
 import { VSCodeReporter } from './reporter'
 import { ExtensionWorker } from './worker'
 
@@ -13,23 +23,41 @@ export async function initVitest(
   const reporter = new VSCodeReporter({
     setupFilePaths: [
       typeof data.debug === 'object' && data.debug.browser
-        ? meta.setupFilePaths.browserDebug
+        ? meta.setupFilePaths.browserDebugLegacy
         : null,
-    ].filter(v => v != null),
+    ].filter((v) => v != null),
   })
 
-  const pnpExecArgv = meta.pnpApi && meta.pnpLoader
-    ? [
-        '--require',
-        meta.pnpApi,
-        '--experimental-loader',
-        meta.pnpLoader,
-      ]
-    : undefined
+  let stdout: Writable | undefined
+  let stderr: Writable | undefined
+
+  if (data.sendLog) {
+    stdout = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        reporter.sendTerminalLog('stdout', log)
+        callback()
+      },
+    })
+
+    stderr = new Writable({
+      write(chunk, __, callback) {
+        const log = chunk.toString()
+        reporter.sendTerminalLog('stderr', log)
+        callback()
+      },
+    })
+    globalThis.console = new Console(stdout, stderr)
+  }
+
+  const pnpExecArgv =
+    meta.pnpApi && meta.pnpLoader
+      ? ['--require', meta.pnpApi, '--experimental-loader', meta.pnpLoader]
+      : undefined
   const args = meta.arguments
     ? vitestModule.parseCLI(meta.arguments, {
-      allowUnknownOptions: false,
-    }).options
+        allowUnknownOptions: false,
+      }).options
     : {}
   const options = data.debug
     ? {
@@ -44,28 +72,38 @@ export async function initVitest(
     ...(meta.workspaceFile ? { workspace: meta.workspaceFile } : {}),
     ...args,
     ...options,
+    project: meta.projectFilter ?? args.project,
     watch: true,
     api: false,
     // @ts-expect-error private property
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,
-    poolOptions: meta.pnpApi && meta.pnpLoader
-      ? {
-          threads: {
-            execArgv: pnpExecArgv,
-          },
-          forks: {
-            execArgv: pnpExecArgv,
-          },
-          vmForks: {
-            execArgv: pnpExecArgv,
-          },
-          vmThreads: {
-            execArgv: pnpExecArgv,
-          },
-        }
-      : {},
+    poolOptions:
+      meta.pnpApi && meta.pnpLoader
+        ? {
+            threads: {
+              execArgv: pnpExecArgv,
+            },
+            forks: {
+              execArgv: pnpExecArgv,
+            },
+            vmForks: {
+              execArgv: pnpExecArgv,
+            },
+            vmThreads: {
+              execArgv: pnpExecArgv,
+            },
+          }
+        : {},
+  }
+  if (typeof data.debug === 'object') {
+    const inspect = `${data.debug.host}:${data.debug.port}`
+    if (data.debug.browser) {
+      cliOptions.inspect = inspect
+    } else {
+      cliOptions.inspectBrk = inspect
+    }
   }
   const vitest = await vitestModule.createVitest(
     'test',
@@ -95,6 +133,16 @@ export async function initVitest(
             }
             testReporters.push(reporter as any)
             test.reporters = testReporters
+            return {
+              test: {
+                coverage: {
+                  enabled: !!data.coverage,
+                  reportOnFailure: true,
+                  reportsDirectory: join(tmpdir(), `vitest-coverage-${randomUUID()}`),
+                  reporter: [['json', { file: meta.finalCoverageFileName }]],
+                },
+              },
+            }
           },
           configResolved(config) {
             // stub a server so Vite doesn't start a websocket connection,
@@ -110,23 +158,24 @@ export async function initVitest(
             // Enable printConsoleTrace for inline console log display
             context.project.config.printConsoleTrace = true
 
-            const options = context.project.config.browser
-            if (options?.enabled && typeof data.debug === 'object') {
-              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebug)
-              context.vitest.config.inspector = {
-                enabled: true,
-                port: data.debug.port,
-                host: data.debug.host,
-                waitForDebugger: false,
-              }
-              context.project.config.inspector = context.vitest.config.inspector
+            const browser = context.project.config.browser
+            if (browser?.enabled && typeof data.debug === 'object') {
+              context.project.config.setupFiles.push(meta.setupFilePaths.browserDebugLegacy)
             }
           },
         },
       ],
     },
+    {
+      stderr,
+      stdout,
+    },
   )
-  await (vitest as any).report('onInit', vitest)
+  ;((vitest as any).reporters as Reporter[]).forEach((reporter) => {
+    if (!(reporter instanceof VSCodeReporter)) {
+      reporter.onUserConsoleLog = undefined
+    }
+  })
 
   const projects: SerializedProject[] = vitest.projects.map((project) => {
     const config = project.config
@@ -151,22 +200,17 @@ export async function initVitest(
 
   const workspaceSource: string | false = meta.workspaceFile
     ? meta.workspaceFile
-    : (vitest.config.workspace != null || vitest.config.projects != null)
-        ? vitest.server.config.configFile || false
-        : false
+    : vitest.config.workspace != null || vitest.config.projects != null
+      ? vitest.server.config.configFile || false
+      : false
+  const metadata: WorkerReadyMetadata = { projects, workspaceSource }
   return {
     vitest,
     reporter,
-    workspaceSource,
-    projects,
+    metadata,
     meta,
     createWorker() {
-      return new ExtensionWorker(
-        vitest,
-        !!data.debug,
-        emitter,
-        data.meta.finalCoverageFileName,
-      )
+      return new ExtensionWorker(vitest, !!data.debug, emitter)
     },
   }
 }

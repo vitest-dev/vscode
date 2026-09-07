@@ -95,8 +95,7 @@ export class ImportsBreakdownProvider {
       let color: string | undefined
       if (overallTime >= 500) {
         color = 'rgb(248 113 113 / 0.8)'
-      }
-      else if (overallTime >= 100) {
+      } else if (overallTime >= 100) {
         color = 'rgb(251 146 60 / 0.8)'
       }
 
@@ -136,7 +135,7 @@ export class ImportsBreakdownProvider {
 
   dispose() {
     this.decorationType.dispose()
-    this.disposables.forEach(d => d.dispose())
+    this.disposables.forEach((d) => d.dispose())
   }
 }
 

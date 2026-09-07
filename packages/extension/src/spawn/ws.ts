@@ -1,23 +1,41 @@
-import type { WorkerEvent, WorkerRunnerDebugOptions, WorkerRunnerOptions } from 'vitest-vscode-shared'
+import type {
+  WorkerEvent,
+  WorkerRunnerDebugOptions,
+  WorkerRunnerOptions,
+} from 'vitest-vscode-shared'
 import type { WebSocket, WebSocketServer } from 'ws'
-import type { ResolvedMeta } from '../api'
+import type { ResolvedMeta } from '../apiProcess'
 import type { VitestPackage } from './pkg'
 import { pathToFileURL } from 'node:url'
 import { gte } from 'semver'
 import vscode from 'vscode'
 import { getConfig } from '../config'
-import { browserSetupFilePath, finalCoverageFileName } from '../constants'
+import {
+  browserSetupFilePath,
+  browserSetupFilePathLegacy,
+  finalCoverageFileName,
+} from '../constants'
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
+import { resolve } from 'pathe'
+import { parse, stringify } from 'flatted'
 
 export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
   ws: WebSocket
+}
+
+export interface ProcessSpawnOptions {
+  coverage?: boolean
+  sendLog?: boolean
+  projects?: string[]
+  related?: string
 }
 
 export function waitForWsConnection(
   wss: WebSocketServer,
   pkg: VitestPackage,
   shellType: 'terminal' | 'child_process',
+  options?: ProcessSpawnOptions,
 ) {
   return new Promise<WsConnectionMetadata>((resolve, reject) => {
     wss.once('connection', (ws) => {
@@ -26,8 +44,9 @@ export function waitForWsConnection(
         pkg,
         false,
         shellType,
-        meta => resolve(meta),
-        err => reject(err),
+        (meta) => resolve(meta),
+        (err) => reject(err),
+        options,
       )
 
       wss.off('error', onUnexpectedError)
@@ -54,36 +73,70 @@ export function onWsConnection(
   shellType: 'terminal' | 'child_process',
   onStart: (meta: WsConnectionMetadata) => unknown,
   onFail: (err: Error) => unknown,
+  options?: ProcessSpawnOptions,
 ) {
   function onMessage(_message: any) {
     const message = JSON.parse(_message.toString()) as WorkerEvent
 
-    if (message.type === 'debug')
-      log.worker('info', ...message.args)
+    if (message.type === 'debug') log.worker('info', ...message.args)
 
     if (message.type === 'ready') {
+      // the worker reports the version it actually runs; "pkg.version" can be
+      // a "pnp" placeholder when the package.json is not readable from the fs
+      if (message.version) {
+        pkg.version = message.version
+      }
       const { api, handlers } = createVitestRpc({
-        on: listener => ws.on('message', listener),
-        send: message => ws.send(message),
+        on: (listener) => ws.on('message', listener),
+        send: (message) => ws.send(message),
+        serialize:
+          pkg.runtime !== 'node'
+            ? (e) =>
+                stringify(e, (_, v) => {
+                  if (v instanceof Error) {
+                    return {
+                      name: v.name,
+                      message: v.message,
+                      stack: v.stack,
+                    }
+                  }
+                  return v
+                })
+            : undefined,
+        deserialize: pkg.runtime !== 'node' ? parse : undefined,
       })
       ws.once('close', () => {
         log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
         api.$close()
       })
       if (!message.legacy) {
-        vscode.commands.executeCommand(
-          'setContext',
-          'vitest.environmentsSupported',
-          true,
-        )
+        vscode.commands.executeCommand('setContext', 'vitest.environmentsSupported', true)
       }
       onStart({
         rpc: api,
-        workspaceSource: message.workspaceSource,
+        metadata: {
+          ...message.metadata,
+          projects: message.metadata.projects.map((p) => {
+            if (p.dir) {
+              p.dir = resolve(pkg.cwd, p.dir)
+            }
+            return p
+          }),
+        },
         handlers,
-        projects: message.projects,
         ws,
         pkg,
+        async dispose() {
+          if (!api.$closed) {
+            // Closing the process will also automatically close the WS server
+            // This is done in the server itself to catch unexpected close events too
+            await api.exit().catch((error) => {
+              if (!error.message.startsWith('[birpc] rpc is closed')) {
+                log.error('Failed to close the process', error)
+              }
+            })
+          }
+        },
       })
     }
 
@@ -123,19 +176,26 @@ export function onWsConnection(
       env: getConfig(pkg.folder).env || undefined,
       configFile: pkg.configFile,
       cwd: pkg.cwd,
+      runtime: pkg.runtime,
       arguments: pkg.arguments,
       workspaceFile: pkg.workspaceFile,
       id: pkg.id,
       pnpApi: pnp,
-      pnpLoader: pnpLoader && gte(process.version, '18.19.0')
-        ? pathToFileURL(pnpLoader).toString()
-        : undefined,
+      pnpLoader:
+        pnpLoader && gte(process.version, '18.19.0')
+          ? pathToFileURL(pnpLoader).toString()
+          : undefined,
       setupFilePaths: {
         browserDebug: browserSetupFilePath,
+        browserDebugLegacy: browserSetupFilePathLegacy,
       },
       finalCoverageFileName,
+      projectFilter: options?.projects,
+      related: options?.related,
     },
     debug,
+    coverage: options?.coverage,
+    sendLog: options?.sendLog,
   }
 
   ws.send(JSON.stringify(runnerOptions))

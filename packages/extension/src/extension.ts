@@ -1,27 +1,31 @@
 import type { VitestAPI } from './api'
-import { normalize } from 'pathe'
+import type { VitestProcessAPI } from './apiProcess'
+import { basename, normalize, relative } from 'pathe'
 import * as vscode from 'vscode'
 import { version } from '../../../package.json'
 import { resolveVitestAPI } from './api'
-import { resolveVitestPackages } from './api/pkg'
-import { ExtensionTerminalProcess } from './api/terminal'
-import { copyErrorOutput, copyTestItemErrors } from './commands/copyErrors'
+import { copyOutput, copyTestItemErrors } from './commands/copyOutput'
 import { getConfig, testControllerId } from './config'
 import { configGlob, workspaceGlob } from './constants'
 import { coverageContext } from './coverage'
 import { DebugManager, debugTests } from './debug'
 import { ExtensionDiagnostic } from './diagnostic'
 import { ImportsBreakdownProvider } from './importsBreakdownProvider'
-import { InlineConsoleLogManager } from './inlineConsoleLog'
 import { log } from './log'
-import { TestRunner } from './runner'
-import { SchemaProvider } from './schemaProvider'
-import { SettingsWebview } from './settingsWebview'
+import { RunQueue } from './runQueue'
+import { TransformSchemaProvider } from './schemaProvider'
+import { resolveVitestPackages } from './spawn/pkg'
+import { ExtensionTerminalProcess } from './spawn/terminal'
+import { ExtensionState } from './state'
 import { TagsManager } from './tagsManager'
 import { TestTree } from './testTree'
 import { getTestData, TestFile } from './testTreeData'
 import { debounce, showVitestError } from './utils'
 import './polyfills'
+import { SnapshotEntryTool } from './snapshot/tools'
+import { SnapshotDocumentSymbolProvider } from './snapshot/documentSymbolProvider'
+import { SnapshotFoldingRangeProvider } from './snapshot/foldingRangeProvider'
+import { SettingsWebview } from './settingsWebview'
 
 export async function activate(context: vscode.ExtensionContext) {
   const extension = new VitestExtension(context)
@@ -41,35 +45,37 @@ class VitestExtension {
   private tagsManager: TagsManager
   private api: VitestAPI | undefined
 
-  private runners: TestRunner[] = []
+  private runQueues = new Map<string, RunQueue>()
+  private state: ExtensionState
 
   private disposables: vscode.Disposable[] = []
   private diagnostic: ExtensionDiagnostic | undefined
   private debugManager: DebugManager
-  private schemaProvider: SchemaProvider
+  private schemaProvider: TransformSchemaProvider
   private importsBreakdownProvider: ImportsBreakdownProvider
-  private inlineConsoleLog: InlineConsoleLogManager
   private settingsWebview: SettingsWebview
 
   /** @internal */
   _debugDisposable: vscode.Disposable | undefined
 
   constructor(context: vscode.ExtensionContext) {
-    log.info(`[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`)
+    log.info(
+      `[v${version}] Vitest extension is activated because Vitest is installed or there is a Vite/Vitest config file in the workspace.`,
+    )
 
+    this.state = new ExtensionState(context)
     this.testController = vscode.tests.createTestController(testControllerId, 'Vitest')
-    this.testController.refreshHandler = cancelToken => this.defineTestProfiles(true, cancelToken).catch((err) => {
-      showVitestError('Failed to refresh Vitest', err)
-    })
-    this.testController.resolveHandler = item => this.resolveTestFile(item)
+    this.testController.refreshHandler = (cancelToken) =>
+      this.defineTestProfiles(true, cancelToken).catch((err) => {
+        showVitestError('Failed to refresh Vitest', err)
+      })
+    this.testController.resolveHandler = (item) => this.resolveTestFile(item)
     this.loadingTestItem = this.testController.createTestItem('_resolving', 'Resolving Vitest...')
     this.loadingTestItem.sortText = '.0' // show it first
-    this.schemaProvider = new SchemaProvider(
-      async (apiId, project, environment, file) => {
-        const api = this.api?.folderAPIs.find(a => a.id === apiId)
-        return api?.getTransformedModule(project, environment, file) ?? null
-      },
-    )
+    this.schemaProvider = new TransformSchemaProvider(async (apiId, project, environment, file) => {
+      const api = this.api?.processes.find((a) => a.id === apiId)
+      return api?.getTransformedModule(project, environment, file) ?? null
+    })
     this.tagsManager = new TagsManager()
     this.testTree = new TestTree(
       this.testController,
@@ -79,12 +85,12 @@ class VitestExtension {
     )
     this.debugManager = new DebugManager()
     this.importsBreakdownProvider = new ImportsBreakdownProvider(
-      async (moduleId: string) => this.api?.getSourceModuleDiagnostic(moduleId) || {
-        modules: [],
-        untrackedModules: [],
-      },
+      async (moduleId: string) =>
+        this.api?.getSourceModuleDiagnostic(moduleId) || {
+          modules: [],
+          untrackedModules: [],
+        },
     )
-    this.inlineConsoleLog = new InlineConsoleLogManager(this.testTree)
     this.settingsWebview = new SettingsWebview(context.extensionUri)
   }
 
@@ -92,7 +98,8 @@ class VitestExtension {
 
   private async defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     if (!this._defineTestProfilePromise) {
-      this._defineTestProfilePromise = (() => this._defineTestProfiles(showWarning, cancelToken))().finally(() => {
+      this._defineTestProfilePromise = (() =>
+        this._defineTestProfiles(showWarning, cancelToken))().finally(() => {
         this._defineTestProfilePromise = undefined
       })
     }
@@ -101,10 +108,9 @@ class VitestExtension {
 
   private async _defineTestProfiles(showWarning: boolean, cancelToken?: vscode.CancellationToken) {
     this.importsBreakdownProvider.clear()
-    this.inlineConsoleLog.clear()
     this.testTree.reset([])
-    this.runners.forEach(runner => runner.dispose())
-    this.runners = []
+    this.runQueues.forEach((q) => q.dispose())
+    this.runQueues.clear()
 
     const { workspaces, configs } = await resolveVitestPackages(showWarning)
 
@@ -120,8 +126,8 @@ class VitestExtension {
       return
     }
 
-    const folders = new Set([...workspaces, ...configs].map(x => x.folder))
-    this.testTree.reset(Array.from(folders))
+    const folders = new Set([...workspaces, ...configs].map((x) => x.folder))
+    this.testTree.reset([...folders])
 
     const previousRunProfiles = this.runProfiles
     this.runProfiles = new Map()
@@ -133,136 +139,46 @@ class VitestExtension {
         return
       }
 
-      this.api = await resolveVitestAPI(workspaces, configs)
-
-      this.api.onUnexpectedExit((code) => {
-        if (code) {
-          showVitestError('Vitest process exited unexpectedly')
-          this.testTree.reset([])
-          this.testController.items.delete(this.loadingTestItem.id)
-          this.api?.dispose()
-          this.api = undefined
-        }
-        else {
-          log.info('[API] Reloading API due to unexpected empty exit code.')
-          this.api?.dispose()
-          this.api = undefined
-          this.defineTestProfiles(false).catch((err) => {
-            log.error('[API]', 'Failed to refresh Vitest', err)
-          })
-        }
-      })
-
-      for (const api of this.api.folderAPIs) {
-        const files = await api.getFiles()
-        await this.testTree.watchTestFilesInWorkspace(
-          api,
-          files,
-        )
+      for (const [_, profile] of previousRunProfiles) {
+        profile.dispose()
       }
 
-      this.testController.items.forEach((item) => {
-        item.busy = false
-      })
-    }
-    catch (err) {
+      this.api = await resolveVitestAPI(
+        workspaces,
+        configs,
+        cancelToken,
+        ({ api: vitest, files }) => {
+          if (this.state.hasDisabledConfigs() && this.state.isConfigDisabled(vitest.id)) {
+            return
+          }
+
+          this.testTree.watchTestFilesInWorkspace(vitest, files)
+          this.setupProcessAPI(vitest)
+
+          this.testController.items.forEach((item) => {
+            if (item.children.size) {
+              item.busy = false
+            }
+          })
+        },
+      )
+    } catch (err) {
       this.testTree.reset([])
       showVitestError('Failed to start Vitest', err)
       return
-    }
-    finally {
+    } finally {
       this.testController.items.delete(this.loadingTestItem.id)
     }
 
-    this.api.forEach((api) => {
-      const runner = new TestRunner(
-        this.testController,
-        this.testTree,
-        api,
-        this.diagnostic,
-        this.importsBreakdownProvider,
-        this.inlineConsoleLog,
-      )
-      this.runners.push(runner)
-
-      const prefix = api.prefix
-      let runProfile = previousRunProfiles.get(`${api.id}:run`)
-      if (!runProfile) {
-        runProfile = this.testController.createRunProfile(
-          prefix,
-          vscode.TestRunProfileKind.Run,
-          () => {
-            log.error('Run handler is not defined')
-          },
-          false,
-          undefined,
-          true,
-        )
-      }
-      runProfile.tag = api.tag
-      runProfile.runHandler = (request, token) => runner.runTests(request, token)
-      this.runProfiles.set(`${api.id}:run`, runProfile)
-      let debugProfile = previousRunProfiles.get(`${api.id}:debug`)
-      if (!debugProfile) {
-        debugProfile = this.testController.createRunProfile(
-          prefix,
-          vscode.TestRunProfileKind.Debug,
-          () => {
-            log.error('Run handler is not defined')
-          },
-          false,
-          undefined,
-          false, // continues debugging is not supported
-        )
-      }
-      debugProfile.tag = api.tag
-      debugProfile.runHandler = async (request, token) => {
-        await this.registerDebugOptions()
-
-        await debugTests(
-          this.testController,
-          this.testTree,
-          api.package,
-          this.diagnostic,
-          this.importsBreakdownProvider,
-          this.inlineConsoleLog,
-
-          request,
-          token,
-          this.debugManager,
-        ).catch((error) => {
-          vscode.window.showErrorMessage(error.message)
-        })
-      }
-      this.runProfiles.set(`${api.id}:debug`, debugProfile)
-
-      // coverage is supported since VS Code 1.88
-      // @ts-expect-error check for 1.88
-      if (vscode.TestRunProfileKind.Coverage && 'FileCoverage' in vscode) {
-        let coverageProfile = previousRunProfiles.get(`${api.id}:coverage`)
-        if (!coverageProfile) {
-          coverageProfile = this.testController.createRunProfile(
-            prefix,
-            vscode.TestRunProfileKind.Coverage,
-            () => {
-              log.error('Run handler is not defined')
-            },
-            false,
-            undefined,
-            true,
-          )
+    this.api.processes.forEach((process) => {
+      const config = getConfig(process.workspaceFolder)
+      if (config.watchOnStartup) {
+        const profile = this.runProfiles.get(`${process.id}:run`)
+        if (profile) {
+          vscode.commands.executeCommand('testing.startContinuousRun', profile)
         }
-        coverageProfile.tag = api.tag
-        coverageProfile.runHandler = (request, token) => runner.runCoverage(request, token)
-        coverageProfile.loadDetailedCoverage = coverageContext.loadDetailedCoverage
-        this.runProfiles.set(`${api.id}:coverage`, coverageProfile)
       }
     })
-
-    for (const [id, profile] of previousRunProfiles) {
-      if (!this.runProfiles.has(id))
-        profile.dispose()
-    }
 
     // collect tests inside a test file
     vscode.window.visibleTextEditors.forEach(async (editor) => {
@@ -280,21 +196,118 @@ class VitestExtension {
     })
   }
 
-  private async resolveTestFile(item?: vscode.TestItem) {
-    if (!item)
-      return
-    try {
-      await this.testTree.discoverFileTests(item)
+  private setupProcessAPI(vitest: VitestProcessAPI) {
+    // Register collection listener so test tree gets notified when tests are collected
+    vitest.onCollected((file) => {
+      this.testTree.collectFile(vitest, file)
+    })
+
+    const prefix = vitest.prefix
+
+    let runProfile = this.runProfiles.get(`${vitest.id}:run`)
+    if (!runProfile) {
+      runProfile = this.testController.createRunProfile(
+        prefix,
+        vscode.TestRunProfileKind.Run,
+        () => {
+          log.error('Run handler is not defined')
+        },
+        true,
+        undefined,
+        true,
+      )
     }
-    catch (err) {
+
+    const runQueue = new RunQueue(
+      this.testController,
+      runProfile,
+      this.testTree,
+      vitest,
+      this.diagnostic,
+      this.importsBreakdownProvider,
+    )
+    const runQueueId = `${vitest.id}:run`
+    this.runQueues.set(runQueueId, runQueue)
+
+    runProfile.tag = vitest.tag
+    runProfile.runHandler = (request, token) => runQueue.enqueue(request, token, false)
+    this.runProfiles.set(runQueueId, runProfile)
+
+    let debugProfile = this.runProfiles.get(`${vitest.id}:debug`)
+    if (!debugProfile) {
+      debugProfile = this.testController.createRunProfile(
+        prefix,
+        vscode.TestRunProfileKind.Debug,
+        () => {
+          log.error('Run handler is not defined')
+        },
+        true,
+        undefined,
+        false, // continues debugging is not supported
+      )
+    }
+    debugProfile.tag = vitest.tag
+    debugProfile.runHandler = async (request, token) => {
+      await this.registerDebugOptions()
+
+      await debugTests(
+        this.testController,
+        this.testTree,
+        vitest.package,
+        this.diagnostic,
+        this.importsBreakdownProvider,
+
+        request,
+        token,
+        this.debugManager,
+      ).catch((error) => {
+        vscode.window.showErrorMessage(error.message)
+      })
+    }
+    this.runProfiles.set(`${vitest.id}:debug`, debugProfile)
+
+    let coverageProfile = this.runProfiles.get(`${vitest.id}:coverage`)
+    if (!coverageProfile) {
+      coverageProfile = this.testController.createRunProfile(
+        prefix,
+        vscode.TestRunProfileKind.Coverage,
+        () => {
+          log.error('Run handler is not defined')
+        },
+        true,
+        undefined,
+        false, // continues run with coverage is not supported because we want to keep a single running process per API
+      )
+    }
+
+    const coverageQueue = new RunQueue(
+      this.testController,
+      coverageProfile,
+      this.testTree,
+      vitest,
+      this.diagnostic,
+      this.importsBreakdownProvider,
+    )
+    const coverageQueueId = `${vitest.id}:coverage`
+    this.runQueues.set(coverageQueueId, coverageQueue)
+
+    coverageProfile.tag = vitest.tag
+    coverageProfile.runHandler = (request, token) => coverageQueue.enqueue(request, token, true)
+    coverageProfile.loadDetailedCoverage = coverageContext.loadDetailedCoverage
+    this.runProfiles.set(coverageQueueId, coverageProfile)
+  }
+
+  private async resolveTestFile(item?: vscode.TestItem) {
+    if (!item) return
+    try {
+      await this.testTree.discoverTestsInFile(item)
+    } catch (err) {
       showVitestError('There was an error during test discovery', err)
     }
   }
 
   async activate() {
-    this.diagnostic = getConfig().applyDiagnostic
-      ? new ExtensionDiagnostic()
-      : undefined
+    this.diagnostic = getConfig().applyDiagnostic ? new ExtensionDiagnostic() : undefined
 
     this.loadingTestItem.busy = true
     this.testController.items.replace([this.loadingTestItem])
@@ -310,52 +323,114 @@ class VitestExtension {
       'vitest.terminalShellPath',
       'vitest.filesWatcherInclude',
       'vitest.cliArguments',
+      'vitest.runtime',
+      'deno.enabled',
     ]
+    const snapshotEntryTool = new SnapshotEntryTool()
 
     this.disposables = [
       vscode.workspace.onDidChangeConfiguration((event) => {
-        const configName = reloadConfigNames.find(x => event.affectsConfiguration(x))
+        const configName = reloadConfigNames.find((x) => event.affectsConfiguration(x))
         if (configName) {
           this.defineTestProfiles(false).catch((error) => {
             log.error('[API]', `Failed to reload Vitest after "${configName}" has changed`, error)
           })
         }
       }),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.defineTestProfiles(false).catch((error) => {
-        log.error('[API]', `Failed to reload Vitest after workspaces changed`, error)
-      })),
+      vscode.workspace.onDidChangeWorkspaceFolders(() =>
+        this.defineTestProfiles(false).catch((error) => {
+          log.error('[API]', `Failed to reload Vitest after workspaces changed`, error)
+        }),
+      ),
       vscode.commands.registerCommand('vitest.openOutput', () => {
-        log.openOuput()
+        log.openOutput()
       }),
-      vscode.commands.registerCommand('vitest.revealInTestExplorer', async (uri: vscode.Uri | undefined) => {
-        if (uri === undefined) {
-          uri = vscode.window.activeTextEditor?.document.uri
-        }
-        if (!(uri instanceof vscode.Uri)) {
+      vscode.commands.registerCommand('vitest.runRelatedTests', async (uri?: vscode.Uri) => {
+        const currentUri = uri || vscode.window.activeTextEditor?.document.uri
+        if (!currentUri) {
           return
         }
-        const testItems = this.testTree.getFileTestItems(uri.fsPath)
-        if (testItems[0]) {
-          vscode.commands.executeCommand('vscode.revealTestInExplorer', testItems[0])
+        const fsPath = normalize(currentUri.fsPath)
+        if (this.testTree.getFileTestItems(fsPath).length) {
+          vscode.window.showWarningMessage(
+            `"${basename(fsPath)}" is a test file. Pick a source file to run related tests`,
+          )
+          return
         }
+        const promises = this.api?.processes.map(async (process) => {
+          const runProfile = this.runProfiles.get(`${process.id}:run`)
+          if (!runProfile) {
+            return
+          }
+
+          const request = new vscode.TestRunRequest(undefined, undefined, runProfile, false, false)
+          const tokenSource = new vscode.CancellationTokenSource()
+          Object.assign(request, { related: fsPath })
+          log.info(
+            '[COMMAND] Running tests that import',
+            relative(process.workspaceFolder.uri.fsPath, fsPath),
+          )
+          await runProfile.runHandler(request, tokenSource.token)
+        })
+        await Promise.all(promises || [])
       }),
+      vscode.commands.registerCommand(
+        'vitest.toggleContinuousRun',
+        async (testItem?: vscode.TestItem) => {
+          if (!testItem) {
+            return
+          }
+          this.api?.processes.forEach((process) => {
+            const processId = `${process.id}:run`
+            const runProfile = this.runProfiles.get(processId)
+            const queue = this.runQueues.get(processId)
+            if (runProfile && testItem.tags.includes(runProfile.tag!) && queue) {
+              if (queue.isContinuousTestItem(testItem)) {
+                vscode.commands.executeCommand('vscode.stopContinuousTestRun', [testItem])
+              } else {
+                vscode.commands.executeCommand('vscode.startContinuousTestRun', runProfile, [
+                  testItem,
+                ])
+              }
+            }
+          })
+        },
+      ),
+      vscode.commands.registerCommand(
+        'vitest.revealInTestExplorer',
+        async (uri: vscode.Uri | undefined) => {
+          if (uri === undefined) {
+            uri = vscode.window.activeTextEditor?.document.uri
+          }
+          if (!(uri instanceof vscode.Uri)) {
+            return
+          }
+          const testItems = this.testTree.getFileTestItems(uri.fsPath)
+          if (testItems[0]) {
+            vscode.commands.executeCommand('vscode.revealTestInExplorer', testItems[0])
+          }
+        },
+      ),
       vscode.commands.registerCommand('vitest.showShellTerminal', async () => {
-        const apis = this.api?.folderAPIs
-          .filter(api => api.process instanceof ExtensionTerminalProcess)
+        const apis = this.api?.processes.filter(
+          (api) => api.getPersistentProcessMeta()?.process instanceof ExtensionTerminalProcess,
+        )
         if (!apis?.length) {
-          vscode.window.showInformationMessage('No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration?')
+          vscode.window.showInformationMessage(
+            'No shell terminals found. Did you change `vitest.shellType` to `terminal` in the configuration? Do you have any continuous runs active?',
+          )
           return
         }
         if (apis.length === 1) {
-          log.info('Showing the only available shell terminal');
-          (apis[0].process as ExtensionTerminalProcess).show()
+          log.info('Showing the only available shell terminal')
+          ;(apis[0].getPersistentProcessMeta()?.process as ExtensionTerminalProcess).show()
           return
         }
         const pick = await vscode.window.showQuickPick(
           apis.map((api) => {
             return {
               label: api.prefix,
-              process: api.process as ExtensionTerminalProcess,
+              process: api.getPersistentProcessMeta()?.process as ExtensionTerminalProcess,
             }
           }),
         )
@@ -364,72 +439,119 @@ class VitestExtension {
           pick.process.show()
         }
       }),
-      vscode.commands.registerCommand('vitest.updateSnapshot', async (testItem: vscode.TestItem | undefined) => {
-        if (!testItem)
-          return
-        const api = this.testTree.getAPIFromTestItem(testItem)
-        if (!api)
-          return
-        const profile = this.runProfiles.get(`${api.id}:run`)
-        if (!profile)
-          return
-        const request = new vscode.TestRunRequest(
-          [testItem],
-          undefined,
-          profile,
-          false,
-        )
-        Object.assign(request, { updateSnapshots: true })
-        const tokenSource = new vscode.CancellationTokenSource()
-        await profile.runHandler(request, tokenSource.token)
-      }),
-      vscode.commands.registerCommand('vitest.openTransformedModule', async (uri: vscode.Uri | undefined) => {
-        const currentUri = uri || vscode.window.activeTextEditor?.document.uri
-        if (!this.api || !currentUri || currentUri.scheme === 'vitest-transform') {
-          return
-        }
-        const environments = await this.api.getModuleEnvironments(currentUri.fsPath)
-        const options = environments.map(({ api, projects }) => {
-          return projects.map((project) => {
-            return project.environments.map((environment) => {
-              let label = ''
-              if (environments.length > 1) {
-                label += `${api.prefix}: `
-              }
-              if (project.name) {
-                label += `[${project.name}] `
-              }
-              label += environment
-              return {
-                label,
-                uriParts: [api.id, project.name, environment.name, environment.transformTimestamp],
-              }
+      vscode.commands.registerCommand(
+        'vitest.updateSnapshot',
+        async (testItem: vscode.TestItem | undefined) => {
+          if (!testItem) return
+          const api = this.testTree.getAPIFromTestItem(testItem)
+          if (!api) return
+          const profile = this.runProfiles.get(`${api.id}:run`)
+          if (!profile) return
+          const request = new vscode.TestRunRequest([testItem], undefined, profile, false)
+          Object.assign(request, { updateSnapshots: true })
+          const tokenSource = new vscode.CancellationTokenSource()
+          await profile.runHandler(request, tokenSource.token)
+        },
+      ),
+      vscode.commands.registerCommand(
+        'vitest.openTransformedModule',
+        async (uri: vscode.Uri | undefined) => {
+          const currentUri = uri || vscode.window.activeTextEditor?.document.uri
+          if (!this.api || !currentUri || currentUri.scheme === 'vitest-transform') {
+            return
+          }
+          const environments = await this.api.getModuleEnvironments(currentUri.fsPath)
+          const options = environments
+            .map(({ api, projects }) => {
+              return projects.map((project) => {
+                return project.environments.map((environment) => {
+                  let label = ''
+                  if (environments.length > 1) {
+                    label += `${api.prefix}: `
+                  }
+                  if (project.name) {
+                    label += `[${project.name}] `
+                  }
+                  label += environment
+                  return {
+                    label,
+                    uriParts: [
+                      api.id,
+                      project.name,
+                      environment.name,
+                      environment.transformTimestamp,
+                    ],
+                  }
+                })
+              })
             })
+            .flat(2)
+          if (options.length === 0) {
+            vscode.window.showWarningMessage('All module graphs are empty, nothing to show.')
+            return
+          }
+          const pick =
+            options.length === 1 ? options[0] : await vscode.window.showQuickPick(options)
+          if (!pick) {
+            return
+          }
+          try {
+            const [apiId, projectName, environment, t] = pick.uriParts
+            const uri = vscode.Uri.parse(
+              `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}&t=${t}`,
+            )
+            const doc = await vscode.workspace.openTextDocument(uri)
+            await vscode.window.showTextDocument(doc, { preview: false })
+          } catch (err) {
+            log.error(err)
+            vscode.window.showErrorMessage(
+              `Vitest: The file was not processed by Vite yet. Try starting the continuous run first${options.length > 1 ? ' or select a different environment' : ''}.`,
+            )
+          }
+        },
+      ),
+      vscode.commands.registerCommand('vitest.copyTestItemErrors', (testItem) =>
+        copyTestItemErrors(this.testController, testItem),
+      ),
+      vscode.commands.registerCommand('vitest.copyErrorOutput', copyOutput),
+      vscode.commands.registerCommand('vitest.toggleConfigs', async () => {
+        if (!this.api) {
+          return
+        }
+
+        const items: (vscode.QuickPickItem & { key: string })[] = []
+        for (const api of this.api.processes) {
+          items.push({
+            label: relative(api.workspaceFolder.uri.fsPath, api.id),
+            picked: !this.state.isConfigDisabled(api.id),
+            key: api.id,
           })
-        }).flat(2)
-        if (options.length === 0) {
-          vscode.window.showWarningMessage('All module graphs are empty, nothing to show.')
+        }
+
+        const result = await vscode.window.showQuickPick(items, {
+          canPickMany: true,
+          title: 'Toggle Vitest Configs',
+        })
+
+        if (!result) {
           return
         }
-        const pick = options.length === 1 ? options[0] : await vscode.window.showQuickPick(options)
-        if (!pick) {
-          return
-        }
-        try {
-          const [apiId, projectName, environment, t] = pick.uriParts
-          const uri = vscode.Uri.parse(
-            `vitest-transform://${currentUri.fsPath}.js?apiId=${apiId}&project=${projectName}&environment=${environment}&t=${t}`,
-          )
-          const doc = await vscode.workspace.openTextDocument(uri)
-          await vscode.window.showTextDocument(doc, { preview: false })
-        }
-        catch (err) {
-          log.error(err)
-          vscode.window.showErrorMessage(`Vitest: The file was not processed by Vite yet. Try running the tests first${options.length > 1 ? ' or select a different environment' : ''}.`)
-        }
+
+        const enabledKeys = new Set(result.map((i) => i.key))
+        await this.state.setDisabledConfigs(
+          new Set(items.filter((i) => !enabledKeys.has(i.key)).map((i) => i.key)),
+        )
+
+        await this.defineTestProfiles(false)
       }),
-      vscode.commands.registerCommand('vitest.copyTestItemErrors', testItem => copyTestItemErrors(this.testController, testItem)),
-      vscode.commands.registerCommand('vitest.copyErrorOutput', copyErrorOutput),
+      vscode.languages.registerDocumentSymbolProvider(
+        { language: 'vitest-snapshot' },
+        new SnapshotDocumentSymbolProvider(snapshotEntryTool),
+      ),
+      vscode.languages.registerFoldingRangeProvider(
+        { language: 'vitest-snapshot' },
+        new SnapshotFoldingRangeProvider(snapshotEntryTool),
+      ),
     ]
 
     // if the config changes, re-define all test profiles
@@ -439,39 +561,44 @@ class VitestExtension {
     ]
     this.disposables.push(...configWatchers)
 
-    const redefineTestProfiles = debounce((uri: vscode.Uri, event: 'create' | 'delete' | 'change') => {
-      if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
-        return
-      // if new config is created, always check if it should be respected
-      if (event === 'create') {
-        this.defineTestProfiles(false).catch((err) => {
-          log.error('Failed to define test profiles after a new config file was created', err)
-        })
-        return
-      }
-      // otherwise ignore changes to unrelated configs
-      const filePath = normalize(uri.fsPath)
-      for (const api of this.api.folderAPIs) {
-        if (
-          api.package.workspaceFile === filePath
-          || api.configs.includes(filePath)
-        ) {
+    const redefineTestProfiles = debounce(
+      (uri: vscode.Uri, event: 'create' | 'delete' | 'change') => {
+        if (!this.api || uri.fsPath.includes('node_modules') || uri.fsPath.includes('.timestamp-'))
+          return
+        // if new config is created, always check if it should be respected
+        if (event === 'create') {
           this.defineTestProfiles(false).catch((err) => {
-            log.error('Failed to define test profiles after a new config file was updated', err)
+            log.error('Failed to define test profiles after a new config file was created', err)
           })
           return
         }
-      }
-    }, 300)
+        // otherwise ignore changes to unrelated configs
+        const filePath = normalize(uri.fsPath)
+        for (const api of this.api.processes) {
+          if (api.package.workspaceFile === filePath || api.configs.includes(filePath)) {
+            this.defineTestProfiles(false).catch((err) => {
+              log.error('Failed to define test profiles after a new config file was updated', err)
+            })
+            return
+          }
+        }
+      },
+      300,
+    )
 
-    configWatchers.forEach(watcher => watcher.onDidChange(uri => redefineTestProfiles(uri, 'change')))
-    configWatchers.forEach(watcher => watcher.onDidCreate(uri => redefineTestProfiles(uri, 'create')))
-    configWatchers.forEach(watcher => watcher.onDidDelete(uri => redefineTestProfiles(uri, 'delete')))
+    configWatchers.forEach((watcher) =>
+      watcher.onDidChange((uri) => redefineTestProfiles(uri, 'change')),
+    )
+    configWatchers.forEach((watcher) =>
+      watcher.onDidCreate((uri) => redefineTestProfiles(uri, 'create')),
+    )
+    configWatchers.forEach((watcher) =>
+      watcher.onDidDelete((uri) => redefineTestProfiles(uri, 'delete')),
+    )
 
     try {
       await this.defineTestProfiles(true)
-    }
-    catch (err) {
+    } catch (err) {
       showVitestError('There was an error during Vitest startup', err)
     }
   }
@@ -485,7 +612,9 @@ class VitestExtension {
       return
     }
     try {
-      const jsDebugExt = vscode.extensions.getExtension('ms-vscode.js-debug-nightly') || vscode.extensions.getExtension('ms-vscode.js-debug')
+      const jsDebugExt =
+        vscode.extensions.getExtension('ms-vscode.js-debug-nightly') ||
+        vscode.extensions.getExtension('ms-vscode.js-debug')
       await jsDebugExt?.activate()
       const jsDebug: import('@vscode/js-debug').IExports = jsDebugExt?.exports
 
@@ -498,12 +627,10 @@ class VitestExtension {
           },
         })
         this.disposables.push(this._debugDisposable)
-      }
-      else {
+      } else {
         log.error('Failed to connect to the debug extension. Debugger will open a terminal window.')
       }
-    }
-    catch (err) {
+    } catch (err) {
       log.error('Cannot create debug options provider.', err)
     }
   }
@@ -514,13 +641,12 @@ class VitestExtension {
     this.testController.dispose()
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
-    this.inlineConsoleLog.dispose()
     this.settingsWebview.dispose()
-    this.runProfiles.forEach(profile => profile.dispose())
+    this.runProfiles.forEach((p) => p.dispose())
     this.runProfiles.clear()
-    this.disposables.forEach(d => d.dispose())
+    this.disposables.forEach((d) => d.dispose())
     this.disposables = []
-    this.runners.forEach(runner => runner.dispose())
-    this.runners = []
+    this.runQueues.forEach((q) => q.dispose())
+    this.runQueues.clear()
   }
 }

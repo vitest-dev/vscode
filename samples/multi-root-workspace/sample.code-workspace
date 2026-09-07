@@ -2,26 +2,26 @@
   "folders": [
     {
       "name": "rust",
-      "path": "./rust-project"
+      "path": "./rust-project",
     },
     {
       "name": "basic",
-      "path": "../basic"
+      "path": "../basic",
     },
     {
       "name": "react",
-      "path": "../monorepo/packages/react"
+      "path": "../monorepo/packages/react",
     },
     {
       "name": "no-root-config",
-      "path": "../monorepo-no-root"
+      "path": "../monorepo-no-root",
     },
     {
       "name": "react-no-root",
-      "path": "../monorepo-no-root/packages/react"
-    }
+      "path": "../monorepo-no-root/packages/react",
+    },
   ],
   "settings": {
-    "vitest.disabledWorkspaceFolders": ["no-root-config"]
-  }
+    "vitest.disabledWorkspaceFolders": ["no-root-config"],
+  },
 }

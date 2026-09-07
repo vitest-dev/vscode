@@ -1,4 +1,4 @@
-import { commands, server } from '@vitest/browser/context'
+import { commands, server } from 'vitest/browser'
 
 if (server.config.inspector.enabled) {
   // @ts-expect-error __vscode_waitForDebugger is not defined

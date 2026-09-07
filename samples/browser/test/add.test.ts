@@ -16,21 +16,20 @@ describe('addition', () => {
 
   it.todo('todo')
   it('async task', async () => {
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100))
   })
 
   it('async task 0.5s', async () => {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 500))
   })
 
   it('async task 1s', async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
   })
 
   it('long task', () => {
     let sum = 0
-    for (let i = 0; i < 2e8; i++)
-      sum += i
+    for (let i = 0; i < 2e8; i++) sum += i
 
     expect(sum).toBeGreaterThan(1)
   })
@@ -46,7 +45,7 @@ describe('testing', () => {
     expect(5 * 5).toBe(25)
   })
 
-  it("mul fail", () => {
+  it('mul fail', () => {
     expect(5 * 5).toBe(25)
   })
 })

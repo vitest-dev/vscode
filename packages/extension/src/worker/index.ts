@@ -4,12 +4,13 @@ import { pathToFileURL } from 'node:url'
 import v8 from 'node:v8'
 import { createWorkerRPC, normalizeDriveLetter, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import { WebSocket } from 'ws'
+import { parse, stringify } from 'flatted'
 
 // this is the file that will be executed with "node <path>"
 
-const emitter = new WorkerWSEventEmitter(
-  new WebSocket(process.env.VITEST_WS_ADDRESS!),
-)
+const emitter = new WorkerWSEventEmitter(new WebSocket(process.env.VITEST_WS_ADDRESS!))
+
+process.title = 'vitest-vscode'
 
 if (process.platform === 'win32') {
   const cwd = process.cwd()
@@ -29,16 +30,16 @@ emitter.on('message', async function onMessage(message: any) {
     const data = message as WorkerRunnerOptions
 
     try {
-      const vitestModule = await import(
+      const vitestModule = (await import(
         pathToFileURL(normalizeDriveLetter(data.meta.vitestNodePath)).toString()
-      ) as typeof import('vitest/node')
+      )) as typeof import('vitest/node')
 
-      const isLegacy = !vitestModule.version || (Number(vitestModule.version[0]) < 4)
+      const isLegacy = !vitestModule.version || Number(vitestModule.version[0]) < 4
       const workerName = isLegacy ? './workerLegacy.js' : './workerNew.js'
       const workerPath = pathToFileURL(join(__dirname, workerName))
       const initModule = await import(workerPath.toString())
 
-      const { createWorker, reporter, projects, workspaceSource } = await initModule.initVitest(
+      const { createWorker, metadata, reporter } = await initModule.initVitest(
         vitestModule,
         data,
         emitter,
@@ -46,24 +47,36 @@ emitter.on('message', async function onMessage(message: any) {
 
       const worker = createWorker()
 
-      const rpc = createWorkerRPC(
-        worker,
-        {
-          on(listener) {
-            emitter.on('message', listener)
-          },
-          post(message) {
-            emitter.send(message)
-          },
-          serialize: v8.serialize,
-          deserialize: v => v8.deserialize(Buffer.from(v) as any),
+      const rpc = createWorkerRPC(worker, {
+        on(listener) {
+          emitter.on('message', listener)
         },
-      )
+        post(message) {
+          emitter.send(message)
+        },
+        serialize:
+          data.meta.runtime !== 'node'
+            ? (e) =>
+                stringify(e, (_, v) => {
+                  if (v instanceof Error) {
+                    return {
+                      name: v.name,
+                      message: v.message,
+                      stack: v.stack,
+                    }
+                  }
+                  return v
+                })
+            : v8.serialize,
+        deserialize:
+          data.meta.runtime !== 'node' ? parse : (v) => v8.deserialize(Buffer.from(v) as any),
+      })
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
-      emitter.ready(projects, workspaceSource, isLegacy)
-    }
-    catch (err: any) {
+      emitter.ready(metadata, isLegacy, vitestModule.version)
+
+      await worker.vitest.report('onInit', worker.vitest)
+    } catch (err: any) {
       emitter.error(err)
     }
   }

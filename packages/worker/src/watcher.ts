@@ -1,4 +1,7 @@
-import type { ExtensionTestSpecification } from 'vitest-vscode-shared'
+import type {
+  ExtensionTestSpecification,
+  ExtensionTestSpecificationOptions,
+} from 'vitest-vscode-shared'
 import type { TestSpecification, Vitest } from 'vitest/node'
 import type { ExtensionWorkerRunner } from './runner'
 import { createQueuedHandler } from 'vitest-vscode-shared'
@@ -6,10 +9,13 @@ import { createQueuedHandler } from 'vitest-vscode-shared'
 export class ExtensionWorkerWatcher {
   private enabled = false
   private trackingEveryFile = false
-  private trackedTestItems: Record<string, string[]> = {}
+  private trackedTestItems: Record<string, Map<string, ExtensionTestSpecificationOptions>> = {}
   private trackedDirectories: string[] = []
 
-  constructor(vitest: Vitest, private runner: ExtensionWorkerRunner) {
+  constructor(
+    vitest: Vitest,
+    private runner: ExtensionWorkerRunner,
+  ) {
     vitest.onFilterWatchedSpecification((specification) => {
       const shouldRun = this.shouldRunSpecification(specification)
       if (shouldRun) {
@@ -39,24 +45,29 @@ export class ExtensionWorkerWatcher {
 
     const project = specification.project.name
     const files = this.trackedTestItems[project]
-    if (!files?.length) {
+    if (!files?.size) {
       return false
     }
 
-    return files.includes(specification.moduleId)
+    const options = files.get(specification.moduleId)
+    if (options) {
+      // @ts-expect-error testNamePattern is readonly and available only in v4.1
+      specification.testNamePattern = options.testNamePattern
+      return true
+    }
+    return false
   }
 
   trackTestItems(filesOrDirectories: ExtensionTestSpecification[] | string[]) {
     this.enabled = true
     if (typeof filesOrDirectories[0] === 'string') {
       this.trackedDirectories = filesOrDirectories as string[]
-    }
-    else {
-      for (const [project, file] of filesOrDirectories) {
+    } else {
+      for (const [project, file, options] of filesOrDirectories as ExtensionTestSpecification[]) {
         if (!this.trackedTestItems[project]) {
-          this.trackedTestItems[project] = []
+          this.trackedTestItems[project] = new Map()
         }
-        this.trackedTestItems[project].push(file)
+        this.trackedTestItems[project].set(file, options || {})
       }
     }
   }
@@ -74,14 +85,11 @@ export class ExtensionWorkerWatcher {
   }
 
   private isTestFileWatched(testFile: string, files: string[]) {
-    if (!files?.length)
-      return false
+    if (!files?.length) return false
 
     return files.some((file) => {
-      if (file === testFile)
-        return true
-      if (file[file.length - 1] === '/')
-        return testFile.startsWith(file)
+      if (file === testFile) return true
+      if (file.at(-1) === '/') return testFile.startsWith(file)
       return false
     })
   }

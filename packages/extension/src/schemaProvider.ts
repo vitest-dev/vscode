@@ -1,17 +1,27 @@
 import * as vscode from 'vscode'
 
-export class SchemaProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
+export class TransformSchemaProvider
+  implements vscode.TextDocumentContentProvider, vscode.Disposable
+{
   private disposables: vscode.Disposable[] = []
 
   private _onDidChangeEvents = new vscode.EventEmitter<vscode.Uri>()
 
   constructor(
-    private getTransformedModule: (apiId: string, project: string, environment: string, file: string) => Promise<string | null>,
+    private getTransformedModule: (
+      apiId: string,
+      project: string,
+      environment: string,
+      file: string,
+    ) => Promise<string | null>,
   ) {
-    this.disposables.push(vscode.workspace.registerTextDocumentContentProvider('vitest-transform', this))
+    this.disposables.push(
+      vscode.workspace.registerTextDocumentContentProvider('vitest-transform', this),
+    )
     this.disposables.push(this._onDidChangeEvents)
   }
 
+  // This is called by vscode to clear the internal cache
   public onDidChange = this._onDidChangeEvents.event
 
   public emitChange(uri: vscode.Uri) {
@@ -38,8 +48,7 @@ export class SchemaProvider implements vscode.TextDocumentContentProvider, vscod
     let _cachedUris = this._cachedFsPaths.get(fsPath)
     if (!_cachedUris) {
       _cachedUris = new Set()
-    }
-    else {
+    } else {
       // remove older files from the same environment
       _cachedUris.forEach((uri) => {
         const query = uri.query.replace(/&t=\d+/, '')
@@ -61,6 +70,6 @@ export class SchemaProvider implements vscode.TextDocumentContentProvider, vscod
 
   dispose() {
     this._cachedFsPaths.clear()
-    this.disposables.forEach(d => d.dispose())
+    this.disposables.forEach((d) => d.dispose())
   }
 }

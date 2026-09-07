@@ -1,0 +1,12 @@
+{
+  "name": "@vitest/vscode-sample-deno",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "catalog:latest"
+  }
+}

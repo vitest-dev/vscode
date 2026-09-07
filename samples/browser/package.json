@@ -2,8 +2,8 @@
   "name": "basic",
   "version": "1.0.0",
   "description": "",
-  "author": "",
   "license": "ISC",
+  "author": "",
   "scripts": {
     "test": "vitest run"
   },
@@ -11,8 +11,8 @@
     "birpc": "^0.2.2"
   },
   "devDependencies": {
-    "@vitest/browser-playwright": "catalog:latest",
     "@vitest/browser": "catalog:latest",
+    "@vitest/browser-playwright": "catalog:latest",
     "@vitest/coverage-v8": "catalog:latest",
     "playwright": "^1.47.0",
     "vite": "catalog:latest",
