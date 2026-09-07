@@ -14,7 +14,6 @@ export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
   private panel?: vscode.WebviewPanel
   private reportPath?: string
-  private selection = ''
   private watcher?: vscode.FileSystemWatcher
   private refreshTimer?: ReturnType<typeof setTimeout>
   private revision = 0
@@ -73,7 +72,7 @@ export class TraceViewManager {
 
     const sameReport = this.reportPath === target.reportPath
     this.reportPath = target.reportPath
-    this.selection = createTraceViewUrl(target).split('#')[1]
+    const selection = createTraceViewUrl(target).split('#')[1]
     if (!this.panel) {
       const panel = vscode.window.createWebviewPanel(
         'vitest.traceView',
@@ -82,10 +81,6 @@ export class TraceViewManager {
         { enableScripts: true, retainContextWhenHidden: true },
       )
       this.panel = panel
-      panel.webview.onDidReceiveMessage((message) => {
-        if (message.type === 'selection' && typeof message.hash === 'string')
-          this.selection = message.hash.replace(/^#/, '')
-      })
       panel.onDidDispose(() => {
         this.panel = undefined
         this.watcher?.dispose()
@@ -95,7 +90,7 @@ export class TraceViewManager {
     }
     this.panel.reveal(undefined, true)
     if (sameReport && this.panel.webview.html) {
-      await this.panel.webview.postMessage({ type: 'select', hash: this.selection })
+      await this.panel.webview.postMessage({ type: 'select', hash: selection })
       return
     }
     this.watcher?.dispose()
@@ -109,10 +104,10 @@ export class TraceViewManager {
     }
     this.watcher.onDidChange(refresh)
     this.watcher.onDidCreate(refresh)
-    await this.refresh()
+    await this.refresh(selection)
   }
 
-  private async refresh() {
+  private async refresh(selection = '') {
     const panel = this.panel
     const reportPath = this.reportPath
     if (!panel || !reportPath)
@@ -136,23 +131,16 @@ export class TraceViewManager {
         JSON.stringify(`${metadata.toString()}?v=${Date.now()}`),
       )
       html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
-      const hash = JSON.stringify(this.selection).replace(/</g, '\\u003c')
+      const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
       html = html.replace(/<head\b[^>]*>/i, `$&
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
         <base href="${base.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">
         <script nonce="${nonce}">
           (() => {
-            const vscode = acquireVsCodeApi();
             window.location.hash = ${hash};
             window.addEventListener('message', ({ data }) => {
               if (data.type === 'select') window.location.hash = data.hash;
             });
-            const reportSelection = () => vscode.postMessage({ type: 'selection', hash: window.location.hash });
-            window.addEventListener('hashchange', reportSelection);
-            for (const method of ['replaceState', 'pushState']) {
-              const original = history[method].bind(history);
-              history[method] = (...args) => { original(...args); reportSelection(); };
-            }
           })();
         </script>`)
       panel.webview.html = html
