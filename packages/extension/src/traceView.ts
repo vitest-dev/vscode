@@ -42,12 +42,14 @@ export class TraceViewManager {
   }
 
   async update(apiId: string, reportPath: string, files: RunnerTestFile[], tree: TestTree) {
+    // Remove trace actions from the previous run of this process.
     for (const [item, target] of this.targets) {
       if (target.apiId === apiId) {
         this.targets.delete(item)
       }
     }
 
+    // An open panel follows the first traced test. Report writes trigger the reload.
     const targets = findTraceViewTargets(apiId, reportPath, files)
     const viewState = this.viewState
     const target = targets[0]
@@ -63,6 +65,8 @@ export class TraceViewManager {
         viewState.traceStep = 0
       }
     }
+
+    // Register trace actions for the latest results.
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
@@ -82,6 +86,7 @@ export class TraceViewManager {
   }
 
   async open(testItem: vscode.TestItem) {
+    // Resolve the requested test and check that its report exists.
     const target = this.targets.get(testItem)
     if (!target) return
 
@@ -95,6 +100,7 @@ export class TraceViewManager {
       return
     }
 
+    // Create the panel and its listeners on the first open.
     let viewState = this.viewState
     if (!viewState) {
       const panel = vscode.window.createWebviewPanel(
@@ -110,6 +116,7 @@ export class TraceViewManager {
         traceStep: 0,
       }
       this.viewState = viewState
+      // Remember attempt and step changes for the next report reload.
       panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
         const viewState = this.viewState
         if (
@@ -122,6 +129,7 @@ export class TraceViewManager {
           viewState.traceStep = message.traceStep
         }
       })
+      // Release the watcher and pending reload when the panel closes.
       panel.onDidDispose(() => {
         const viewState = this.viewState
         if (viewState?.panel !== panel) return
@@ -131,6 +139,7 @@ export class TraceViewManager {
         this.revision++
       })
     } else {
+      // Reuse the panel for the requested test with its initial attempt and step.
       clearTimeout(viewState.refreshTimer)
       viewState.watcher.dispose()
       viewState.watcher = this.watchReport(target.reportPath)
@@ -138,6 +147,7 @@ export class TraceViewManager {
       viewState.traceAttempt = undefined
       viewState.traceStep = 0
     }
+    // Explicit opens load immediately. Later report changes reload through the watcher.
     viewState.panel.reveal(undefined, true)
     await this.refresh()
   }
@@ -161,10 +171,13 @@ export class TraceViewManager {
   }
 
   private async refresh() {
+    // Capture the active view and invalidate older loads.
     const viewState = this.viewState
     if (!viewState) return
     const { panel, target } = viewState
     const revision = ++this.revision
+
+    // Show an empty state if the selected test has no trace in the latest results.
     const hasTrace = [...this.targets.values()].some(
       (candidate) => candidate.apiId === target.apiId && candidate.testId === target.testId,
     )
@@ -175,6 +188,7 @@ export class TraceViewManager {
         Open Trace View on a test to select one.</p></body></html>`
       return
     }
+    // Restore the current test, attempt, and step in the new document.
     const traceViewUrlHash = createTraceViewUrlHash(
       target,
       viewState.traceStep,
@@ -182,9 +196,11 @@ export class TraceViewManager {
     )
     try {
       const reportUri = vscode.Uri.file(target.reportPath)
+      // Read the generated report and discard it if the view changed while loading.
       const bytes = await vscode.workspace.fs.readFile(reportUri)
       if (revision !== this.revision || viewState !== this.viewState || target !== viewState.target)
         return
+      // Adapt report resources and bootstrap code for the webview.
       const directory = vscode.Uri.joinPath(reportUri, '..')
       panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
       panel.webview.html = transformTraceViewHtml(
