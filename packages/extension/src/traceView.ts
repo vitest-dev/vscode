@@ -184,17 +184,6 @@ export class TraceViewManager {
     const { panel, target } = viewState
     const revision = ++this.revision
 
-    // Show an empty state if the selected test has no trace in the latest results.
-    const hasTrace = [...this.targets.values()].some(
-      (candidate) => candidate.apiId === target.apiId && candidate.testId === target.testId,
-    )
-    if (!hasTrace) {
-      panel.webview.html = `<!DOCTYPE html><html><head>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
-        </head><body><p>The selected test has no trace in the latest run.
-        Open Trace View on a test to select one.</p></body></html>`
-      return
-    }
     // Restore the current test, attempt, and step in the new document.
     const traceViewUrlHash = createTraceViewUrlHash(
       target,
