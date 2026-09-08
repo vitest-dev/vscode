@@ -76,7 +76,6 @@ export class TraceViewManager {
       return
     }
 
-    const sameReport = this.reportPath === target.reportPath && !!this.currentTarget
     this.reportPath = target.reportPath
     this.currentTarget = target
     this.traceAttempt = undefined
@@ -112,10 +111,6 @@ export class TraceViewManager {
       })
     }
     this.panel.reveal(undefined, true)
-    if (sameReport && this.panel.webview.html) {
-      await this.panel.webview.postMessage({ type: 'select', hash: selection })
-      return
-    }
     this.watcher?.dispose()
     this.watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(
@@ -303,9 +298,4 @@ function initializeTraceView(vscode: any, window: any, hash: string, revision: n
   window.addEventListener('hashchange', reportSelection)
   window.addEventListener('popstate', reportSelection)
   window.location.hash = hash
-  window.addEventListener('message', ({ data }: any) => {
-    if (data.type === 'select') {
-      window.location.hash = data.hash
-    }
-  })
 }
