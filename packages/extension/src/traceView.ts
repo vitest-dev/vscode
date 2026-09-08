@@ -10,6 +10,14 @@ interface TraceViewTarget {
   testId: string
 }
 
+type TraceSelectionMessage = {
+  type: 'traceSelection'
+  revision: number
+  testId: string | null
+  traceAttempt: string | null
+  step: number
+}
+
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
   private currentTarget?: TraceViewTarget
@@ -281,7 +289,7 @@ function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string,
         testId: params.get('test'),
         traceAttempt: params.get('traceAttempt'),
         step: Number(step),
-      })
+      } satisfies TraceSelectionMessage)
     }
   }
   // Vitest updates URL parameters through History, which does not
