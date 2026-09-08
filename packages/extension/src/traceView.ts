@@ -211,22 +211,12 @@ function transformTraceViewHtml(
     }),
   )
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
-  const css = `
-    body {
-      padding: 0;
-      color: var(--color-text);
-    }
-    html:not(.dark) {
-      background-color: white;
-      color-scheme: light;
-    }
-  `
   const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
   html = html.replace(
     /<head\b[^>]*>/i,
     `$&
     <meta http-equiv="Content-Security-Policy" content="${csp}">
-    <style>${css}</style>
+    <style>${TRACE_VIEW_CSS}</style>
     <script nonce="${nonce}">
       (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${hash}, ${revision});
     </script>`,
@@ -234,11 +224,22 @@ function transformTraceViewHtml(
   return html
 }
 
+const TRACE_VIEW_CSS = `
+  body {
+    padding: 0;
+    color: var(--color-text);
+  }
+  html:not(.dark) {
+    background-color: white;
+    color-scheme: light;
+  }
+`
+
 function initializeTraceView(vscode: any, window: any, hash: string, revision: number) {
   const reportSelection = () => {
     const params = new URLSearchParams(window.location.hash.split('?')[1])
     const step = params.get('traceStep')
-    if (step !== null)
+    if (step !== null) {
       vscode.postMessage({
         type: 'traceSelection',
         revision,
@@ -246,6 +247,7 @@ function initializeTraceView(vscode: any, window: any, hash: string, revision: n
         traceAttempt: params.get('traceAttempt'),
         step: Number(step),
       })
+    }
   }
   // Vitest updates URL parameters through History, which does not
   // emit hashchange events.
@@ -261,7 +263,9 @@ function initializeTraceView(vscode: any, window: any, hash: string, revision: n
   window.addEventListener('popstate', reportSelection)
   window.location.hash = hash
   window.addEventListener('message', ({ data }: any) => {
-    if (data.type === 'select') window.location.hash = data.hash
+    if (data.type === 'select') {
+      window.location.hash = data.hash
+    }
   })
 }
 
@@ -300,6 +304,8 @@ function createTraceViewHash(target: TraceViewTarget, traceStep = 0, traceAttemp
     test: target.testId,
     traceStep: String(traceStep),
   })
-  if (traceAttempt) params.set('traceAttempt', traceAttempt)
+  if (traceAttempt) {
+    params.set('traceAttempt', traceAttempt)
+  }
   return `/?${params}`
 }
