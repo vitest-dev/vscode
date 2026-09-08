@@ -247,6 +247,7 @@ function createTraceViewUrl(target: TraceViewTarget, traceStep = 0) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
     file: target.fileId,
+    layout: 'trace',
     view: 'editor',
     test: target.testId,
     traceStep: String(traceStep),
