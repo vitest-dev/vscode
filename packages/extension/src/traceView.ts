@@ -42,7 +42,7 @@ export class TraceViewManager {
   }
 
   async update(apiId: string, reportPath: string, files: RunnerTestFile[], tree: TestTree) {
-    // Remove trace actions from the previous run of this process.
+    // Remove Open Trace View actions from the previous run of this process.
     for (const [item, target] of this.targets) {
       if (target.apiId === apiId) {
         this.targets.delete(item)
@@ -66,7 +66,7 @@ export class TraceViewManager {
       }
     }
 
-    // Register trace actions for the latest results.
+    // Register Open Trace View actions for the latest results.
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
