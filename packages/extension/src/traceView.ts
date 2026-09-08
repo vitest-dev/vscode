@@ -18,7 +18,7 @@ type TraceSelectionMessage = {
   traceStep: number
 }
 
-interface TraceView {
+interface TraceViewState {
   panel: vscode.WebviewPanel
   target: TraceViewTarget
   watcher: vscode.FileSystemWatcher
@@ -29,11 +29,11 @@ interface TraceView {
 
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
-  private view?: TraceView
+  private viewState?: TraceViewState
   private revision = 0
 
   dispose() {
-    this.view?.panel.dispose()
+    this.viewState?.panel.dispose()
   }
 
   clear() {
@@ -49,11 +49,11 @@ export class TraceViewManager {
     }
 
     const targets = findTraceViewTargets(apiId, reportPath, files)
-    const view = this.view
-    if (view && view.target.apiId === apiId) {
-      const target = targets.find((target) => target.testId === view.target.testId)
+    const viewState = this.viewState
+    if (viewState && viewState.target.apiId === apiId) {
+      const target = targets.find((target) => target.testId === viewState.target.testId)
       if (target) {
-        view.target = target
+        viewState.target = target
       }
     }
     for (const target of targets) {
@@ -88,50 +88,50 @@ export class TraceViewManager {
       return
     }
 
-    let view = this.view
-    if (!view) {
+    let viewState = this.viewState
+    if (!viewState) {
       const panel = vscode.window.createWebviewPanel(
         'vitest.traceView',
         'Vitest Trace View',
         { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true },
       )
-      view = {
+      viewState = {
         panel,
         target,
         watcher: this.watchReport(target.reportPath),
         traceStep: 0,
       }
-      this.view = view
+      this.viewState = viewState
       panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
-        const view = this.view
+        const viewState = this.viewState
         if (
-          view?.panel === panel &&
+          viewState?.panel === panel &&
           message.type === 'traceSelection' &&
           message.revision === this.revision &&
-          message.testId === view.target.testId
+          message.testId === viewState.target.testId
         ) {
-          view.traceAttempt = message.traceAttempt ?? undefined
-          view.traceStep = message.traceStep
+          viewState.traceAttempt = message.traceAttempt ?? undefined
+          viewState.traceStep = message.traceStep
         }
       })
       panel.onDidDispose(() => {
-        const view = this.view
-        if (view?.panel !== panel) return
-        view.watcher.dispose()
-        clearTimeout(view.refreshTimer)
-        this.view = undefined
+        const viewState = this.viewState
+        if (viewState?.panel !== panel) return
+        viewState.watcher.dispose()
+        clearTimeout(viewState.refreshTimer)
+        this.viewState = undefined
         this.revision++
       })
     } else {
-      clearTimeout(view.refreshTimer)
-      view.watcher.dispose()
-      view.watcher = this.watchReport(target.reportPath)
-      view.target = target
-      view.traceAttempt = undefined
-      view.traceStep = 0
+      clearTimeout(viewState.refreshTimer)
+      viewState.watcher.dispose()
+      viewState.watcher = this.watchReport(target.reportPath)
+      viewState.target = target
+      viewState.traceAttempt = undefined
+      viewState.traceStep = 0
     }
-    view.panel.reveal(undefined, true)
+    viewState.panel.reveal(undefined, true)
     await this.refresh()
   }
 
@@ -143,10 +143,10 @@ export class TraceViewManager {
       ),
     )
     const debouncedRefresh = () => {
-      const view = this.view
-      if (view?.watcher !== watcher) return
-      clearTimeout(view.refreshTimer)
-      view.refreshTimer = setTimeout(() => void this.refresh(), 150)
+      const viewState = this.viewState
+      if (viewState?.watcher !== watcher) return
+      clearTimeout(viewState.refreshTimer)
+      viewState.refreshTimer = setTimeout(() => void this.refresh(), 150)
     }
     watcher.onDidChange(debouncedRefresh)
     watcher.onDidCreate(debouncedRefresh)
@@ -154,9 +154,9 @@ export class TraceViewManager {
   }
 
   private async refresh() {
-    const view = this.view
-    if (!view) return
-    const { panel, target } = view
+    const viewState = this.viewState
+    if (!viewState) return
+    const { panel, target } = viewState
     const revision = ++this.revision
     const hasTrace = [...this.targets.values()].some(
       (candidate) => candidate.apiId === target.apiId && candidate.testId === target.testId,
@@ -168,11 +168,16 @@ export class TraceViewManager {
         Open Trace View on a test to select one.</p></body></html>`
       return
     }
-    const traceViewUrlHash = createTraceViewUrlHash(target, view.traceStep, view.traceAttempt)
+    const traceViewUrlHash = createTraceViewUrlHash(
+      target,
+      viewState.traceStep,
+      viewState.traceAttempt,
+    )
     try {
       const reportUri = vscode.Uri.file(target.reportPath)
       const bytes = await vscode.workspace.fs.readFile(reportUri)
-      if (revision !== this.revision || view !== this.view || target !== view.target) return
+      if (revision !== this.revision || viewState !== this.viewState || target !== viewState.target)
+        return
       const directory = vscode.Uri.joinPath(reportUri, '..')
       panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
       panel.webview.html = transformTraceViewHtml(
@@ -183,7 +188,11 @@ export class TraceViewManager {
         revision,
       )
     } catch (error) {
-      if (revision === this.revision && view === this.view && target === view.target) {
+      if (
+        revision === this.revision &&
+        viewState === this.viewState &&
+        target === viewState.target
+      ) {
         void vscode.window.showWarningMessage(
           `Could not load Vitest trace report: ${String(error)}`,
         )
