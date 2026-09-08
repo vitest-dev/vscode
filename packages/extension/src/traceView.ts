@@ -126,12 +126,7 @@ export class TraceViewManager {
       // Remember attempt and step changes for the next report reload.
       panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
         const viewState = this.viewState
-        if (
-          viewState?.panel === panel &&
-          message.type === 'traceSelection' &&
-          message.revision === this.revision &&
-          message.testId === viewState.target.testId
-        ) {
+        if (viewState && message.type === 'traceSelection' && message.revision === this.revision) {
           viewState.traceAttempt = message.traceAttempt ?? undefined
           viewState.traceStep = message.traceStep
         }
@@ -196,9 +191,7 @@ export class TraceViewManager {
     try {
       reportHtml = await vscode.workspace.fs.readFile(reportUri)
     } catch (error) {
-      await vscode.window.showWarningMessage(
-        `Failed to load Vitest trace report: ${String(error)}`,
-      )
+      await vscode.window.showWarningMessage(`Failed to load Vitest trace report: ${String(error)}`)
       return
     }
     if (revision !== this.revision) return
