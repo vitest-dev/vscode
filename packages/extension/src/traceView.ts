@@ -80,7 +80,7 @@ export class TraceViewManager {
     this.currentTarget = target
     this.traceAttempt = undefined
     this.traceStep = 0
-    const selection = createTraceViewHash(target)
+    const traceViewUrlHash = createTraceViewUrlHash(target)
     if (!this.panel) {
       const panel = vscode.window.createWebviewPanel(
         'vitest.traceView',
@@ -124,15 +124,15 @@ export class TraceViewManager {
     }
     this.watcher.onDidChange(debouncedRefresh)
     this.watcher.onDidCreate(debouncedRefresh)
-    await this.refresh(selection)
+    await this.refresh(traceViewUrlHash)
   }
 
-  private async refresh(selection?: string) {
+  private async refresh(traceViewUrlHash?: string) {
     const panel = this.panel
     const reportPath = this.reportPath
     if (!panel || !reportPath) return
     const revision = ++this.revision
-    if (selection === undefined) {
+    if (traceViewUrlHash === undefined) {
       const targets = this.latestTargets.get(reportPath) ?? []
       const previousTarget = this.currentTarget
       this.currentTarget =
@@ -149,7 +149,11 @@ export class TraceViewManager {
           Open Trace View on a test to select one.</p></body></html>`
         return
       }
-      selection = createTraceViewHash(this.currentTarget, this.traceStep, this.traceAttempt)
+      traceViewUrlHash = createTraceViewUrlHash(
+        this.currentTarget,
+        this.traceStep,
+        this.traceAttempt,
+      )
     }
     try {
       const reportUri = vscode.Uri.file(reportPath)
@@ -161,7 +165,7 @@ export class TraceViewManager {
         Buffer.from(bytes).toString('utf8'),
         panel.webview,
         directory,
-        selection,
+        traceViewUrlHash,
         revision,
       )
     } catch (error) {
@@ -199,7 +203,7 @@ function findTraceViewTargets(
   return targets
 }
 
-function createTraceViewHash(target: TraceViewTarget, traceStep = 0, traceAttempt?: string) {
+function createTraceViewUrlHash(target: TraceViewTarget, traceStep = 0, traceAttempt?: string) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
     file: target.fileId,
@@ -218,7 +222,7 @@ function transformTraceViewHtml(
   html: string,
   webview: vscode.Webview,
   directory: vscode.Uri,
-  selection: string,
+  traceViewUrlHash: string,
   revision: number,
 ) {
   const base = `${webview.asWebviewUri(directory).toString()}/`
@@ -247,14 +251,14 @@ function transformTraceViewHtml(
     }),
   )
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
-  const hash = JSON.stringify(selection)
+  const serializedUrlHash = JSON.stringify(traceViewUrlHash)
   html = html.replace(
     /<head\b[^>]*>/i,
     `$&
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <style>${TRACE_VIEW_CSS}</style>
     <script nonce="${nonce}">
-      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${hash}, ${revision});
+      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${serializedUrlHash}, ${revision});
     </script>`,
   )
   return html
@@ -271,7 +275,7 @@ const TRACE_VIEW_CSS = `
   }
 `
 
-function initializeTraceView(vscode: any, window: any, hash: string, revision: number) {
+function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string, revision: number) {
   const reportSelection = () => {
     const params = new URLSearchParams(window.location.hash.split('?')[1])
     const step = params.get('traceStep')
@@ -297,5 +301,5 @@ function initializeTraceView(vscode: any, window: any, hash: string, revision: n
   }
   window.addEventListener('hashchange', reportSelection)
   window.addEventListener('popstate', reportSelection)
-  window.location.hash = hash
+  window.location.hash = traceViewUrlHash
 }
