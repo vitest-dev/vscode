@@ -49,13 +49,6 @@ export class TraceViewManager {
     }
 
     const targets = findTraceViewTargets(apiId, reportPath, files)
-    const viewState = this.viewState
-    if (viewState && viewState.target.apiId === apiId) {
-      const target = targets.find((target) => target.testId === viewState.target.testId)
-      if (target) {
-        viewState.target = target
-      }
-    }
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
