@@ -164,71 +164,13 @@ export class TraceViewManager {
       const bytes = await vscode.workspace.fs.readFile(reportUri)
       if (revision !== this.revision || panel !== this.panel) return
       panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
-      const base = `${panel.webview.asWebviewUri(directory).toString()}/`
-      const nonce = randomBytes(16).toString('hex')
-      const source = panel.webview.cspSource
-      // Adapt the reporter's generated bootstrap, which explicitly uses location
-      // rather than document.baseURI. Bust metadata cache after regeneration.
-      const metadata = panel.webview.asWebviewUri(
-        vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'),
+      panel.webview.html = transformTraceViewHtml(
+        Buffer.from(bytes).toString('utf8'),
+        panel.webview,
+        directory,
+        selection,
+        revision,
       )
-      let html = Buffer.from(bytes)
-        .toString('utf8')
-        .replace(
-          /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
-          JSON.stringify(`${metadata.toString()}?v=${Date.now()}`),
-        )
-      // Keep the document base on the webview origin so history updates stay
-      // same-origin. Only resource URLs should point at the report directory.
-      html = html.replace(/<(script|link|img|source)\b[^>]*>/gi, (tag) =>
-        tag.replace(
-          /(\s)(src|href)\s*=\s*(['"])(.*?)\3/gi,
-          (attribute, space, name, quote, value) => {
-            if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value)) return attribute
-            const url = new URL(value.replace(/&amp;/g, '&'), base).href
-            return `${space}${name}=${quote}${url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}${quote}`
-          },
-        ),
-      )
-      html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
-      const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
-      html = html.replace(
-        /<head\b[^>]*>/i,
-        `$&
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} https://fonts.googleapis.com 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
-        <style>body { padding: 0; color: var(--color-text); } html:not(.dark) { background-color: white; color-scheme: light; }</style>
-        <script nonce="${nonce}">
-          (() => {
-            const vscode = acquireVsCodeApi();
-            const reportSelection = () => {
-              const params = new URLSearchParams(window.location.hash.split('?')[1]);
-              const step = params.get('traceStep');
-              if (step !== null) vscode.postMessage({
-                type: 'traceSelection', revision: ${revision},
-                testId: params.get('test'),
-                traceAttempt: params.get('traceAttempt'), step: Number(step),
-              });
-            };
-            // Vitest updates URL parameters through History, which does not
-            // emit hashchange events.
-            for (const method of ['replaceState', 'pushState']) {
-              const original = window.history[method];
-              window.history[method] = function (...args) {
-                const result = original.apply(this, args);
-                reportSelection();
-                return result;
-              };
-            }
-            window.addEventListener('hashchange', reportSelection);
-            window.addEventListener('popstate', reportSelection);
-            window.location.hash = ${hash};
-            window.addEventListener('message', ({ data }) => {
-              if (data.type === 'select') window.location.hash = data.hash;
-            });
-          })();
-        </script>`,
-      )
-      panel.webview.html = html
     } catch (error) {
       if (revision === this.revision)
         void vscode.window.showWarningMessage(
@@ -236,6 +178,73 @@ export class TraceViewManager {
         )
     }
   }
+}
+
+function transformTraceViewHtml(
+  html: string,
+  webview: vscode.Webview,
+  directory: vscode.Uri,
+  selection: string,
+  revision: number,
+) {
+  const base = `${webview.asWebviewUri(directory).toString()}/`
+  const nonce = randomBytes(16).toString('hex')
+  const source = webview.cspSource
+  // Adapt the reporter's generated bootstrap, which explicitly uses location
+  // rather than document.baseURI. Bust metadata cache after regeneration.
+  const metadata = webview.asWebviewUri(vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'))
+  html = html.replace(
+    /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
+    JSON.stringify(`${metadata.toString()}?v=${Date.now()}`),
+  )
+  // Keep the document base on the webview origin so history updates stay
+  // same-origin. Only resource URLs should point at the report directory.
+  html = html.replace(/<(script|link|img|source)\b[^>]*>/gi, (tag) =>
+    tag.replace(/(\s)(src|href)\s*=\s*(['"])(.*?)\3/gi, (attribute, space, name, quote, value) => {
+      if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value)) return attribute
+      const url = new URL(value.replace(/&amp;/g, '&'), base).href
+      return `${space}${name}=${quote}${url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}${quote}`
+    }),
+  )
+  html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
+  const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
+  html = html.replace(
+    /<head\b[^>]*>/i,
+    `$&
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} https://fonts.googleapis.com 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
+    <style>body { padding: 0; color: var(--color-text); } html:not(.dark) { background-color: white; color-scheme: light; }</style>
+    <script nonce="${nonce}">
+      (() => {
+        const vscode = acquireVsCodeApi();
+        const reportSelection = () => {
+          const params = new URLSearchParams(window.location.hash.split('?')[1]);
+          const step = params.get('traceStep');
+          if (step !== null) vscode.postMessage({
+            type: 'traceSelection', revision: ${revision},
+            testId: params.get('test'),
+            traceAttempt: params.get('traceAttempt'), step: Number(step),
+          });
+        };
+        // Vitest updates URL parameters through History, which does not
+        // emit hashchange events.
+        for (const method of ['replaceState', 'pushState']) {
+          const original = window.history[method];
+          window.history[method] = function (...args) {
+            const result = original.apply(this, args);
+            reportSelection();
+            return result;
+          };
+        }
+        window.addEventListener('hashchange', reportSelection);
+        window.addEventListener('popstate', reportSelection);
+        window.location.hash = ${hash};
+        window.addEventListener('message', ({ data }) => {
+          if (data.type === 'select') window.location.hash = data.hash;
+        });
+      })();
+    </script>`,
+  )
+  return html
 }
 
 function findTraceViewTargets(
