@@ -190,28 +190,31 @@ export class TraceViewManager {
       viewState.traceStep,
       viewState.traceAttempt,
     )
+    const reportUri = vscode.Uri.file(target.reportPath)
+    // Read the generated report and discard it if the view changed while loading.
+    let bytes: Uint8Array
     try {
-      const reportUri = vscode.Uri.file(target.reportPath)
-      // Read the generated report and discard it if the view changed while loading.
-      const bytes = await vscode.workspace.fs.readFile(reportUri)
-      if (revision !== this.revision) return
-      // Adapt report resources and bootstrap code for the webview.
-      const directory = vscode.Uri.joinPath(reportUri, '..')
-      panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
-      panel.webview.html = transformTraceViewHtml(
-        Buffer.from(bytes).toString('utf8'),
-        panel.webview,
-        directory,
-        traceViewUrlHash,
-        revision,
-      )
+      bytes = await vscode.workspace.fs.readFile(reportUri)
     } catch (error) {
       if (revision === this.revision) {
         void vscode.window.showWarningMessage(
           `Could not load Vitest trace report: ${String(error)}`,
         )
       }
+      return
     }
+    if (revision !== this.revision) return
+
+    // Adapt report resources and bootstrap code for the webview.
+    const directory = vscode.Uri.joinPath(reportUri, '..')
+    panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
+    panel.webview.html = transformTraceViewHtml(
+      Buffer.from(bytes).toString('utf8'),
+      panel.webview,
+      directory,
+      traceViewUrlHash,
+      revision,
+    )
   }
 }
 
