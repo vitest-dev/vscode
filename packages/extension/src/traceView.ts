@@ -211,12 +211,22 @@ function transformTraceViewHtml(
     }),
   )
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
+  const css = `
+    body {
+      padding: 0;
+      color: var(--color-text);
+    }
+    html:not(.dark) {
+      background-color: white;
+      color-scheme: light;
+    }
+  `
   const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
   html = html.replace(
     /<head\b[^>]*>/i,
     `$&
     <meta http-equiv="Content-Security-Policy" content="${csp}">
-    <style>body { padding: 0; color: var(--color-text); } html:not(.dark) { background-color: white; color-scheme: light; }</style>
+    <style>${css}</style>
     <script nonce="${nonce}">
       (() => {
         const vscode = acquireVsCodeApi();
