@@ -61,8 +61,9 @@ export class TraceViewManager {
         this.traceAttempt = undefined
         this.traceStep = 0
       }
-      this.watchReport(reportPath)
-      void this.refresh()
+      if (this.reportPath !== reportPath) {
+        this.watchReport(reportPath)
+      }
     }
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
