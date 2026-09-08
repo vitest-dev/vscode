@@ -187,14 +187,13 @@ function transformTraceViewHtml(
 ) {
   const base = `${webview.asWebviewUri(directory).toString()}/`
   const nonce = randomBytes(16).toString('hex')
-  const source = webview.cspSource
   const csp = [
     `default-src 'none'`,
-    `script-src ${source} 'nonce-${nonce}'`,
-    `style-src ${source} https://fonts.googleapis.com 'unsafe-inline'`,
-    `img-src ${source} data: blob: https:`,
-    `font-src ${source} data: https:`,
-    `connect-src ${source}`,
+    `script-src ${webview.cspSource} 'nonce-${nonce}'`,
+    `style-src ${webview.cspSource} https://fonts.googleapis.com 'unsafe-inline'`,
+    `img-src ${webview.cspSource} data: blob: https:`,
+    `font-src ${webview.cspSource} data: https:`,
+    `connect-src ${webview.cspSource}`,
     `frame-src 'self' blob: data:;`,
   ].join('; ')
   // Resolve metadata from the report directory instead of the webview URL.
