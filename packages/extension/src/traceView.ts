@@ -247,7 +247,7 @@ function transformTraceViewHtml(
     }),
   )
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
-  const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
+  const hash = JSON.stringify(selection)
   html = html.replace(
     /<head\b[^>]*>/i,
     `$&
