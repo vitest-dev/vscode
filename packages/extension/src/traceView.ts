@@ -228,37 +228,41 @@ function transformTraceViewHtml(
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <style>${css}</style>
     <script nonce="${nonce}">
-      (() => {
-        const vscode = acquireVsCodeApi();
-        const reportSelection = () => {
-          const params = new URLSearchParams(window.location.hash.split('?')[1]);
-          const step = params.get('traceStep');
-          if (step !== null) vscode.postMessage({
-            type: 'traceSelection', revision: ${revision},
-            testId: params.get('test'),
-            traceAttempt: params.get('traceAttempt'), step: Number(step),
-          });
-        };
-        // Vitest updates URL parameters through History, which does not
-        // emit hashchange events.
-        for (const method of ['replaceState', 'pushState']) {
-          const original = window.history[method];
-          window.history[method] = function (...args) {
-            const result = original.apply(this, args);
-            reportSelection();
-            return result;
-          };
-        }
-        window.addEventListener('hashchange', reportSelection);
-        window.addEventListener('popstate', reportSelection);
-        window.location.hash = ${hash};
-        window.addEventListener('message', ({ data }) => {
-          if (data.type === 'select') window.location.hash = data.hash;
-        });
-      })();
+      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${hash}, ${revision});
     </script>`,
   )
   return html
+}
+
+function initializeTraceView(vscode: any, window: any, hash: string, revision: number) {
+  const reportSelection = () => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1])
+    const step = params.get('traceStep')
+    if (step !== null)
+      vscode.postMessage({
+        type: 'traceSelection',
+        revision,
+        testId: params.get('test'),
+        traceAttempt: params.get('traceAttempt'),
+        step: Number(step),
+      })
+  }
+  // Vitest updates URL parameters through History, which does not
+  // emit hashchange events.
+  for (const method of ['replaceState', 'pushState']) {
+    const original = window.history[method]
+    window.history[method] = function (...args: any[]) {
+      const result = original.apply(this, args)
+      reportSelection()
+      return result
+    }
+  }
+  window.addEventListener('hashchange', reportSelection)
+  window.addEventListener('popstate', reportSelection)
+  window.location.hash = hash
+  window.addEventListener('message', ({ data }: any) => {
+    if (data.type === 'select') window.location.hash = data.hash
+  })
 }
 
 function findTraceViewTargets(
