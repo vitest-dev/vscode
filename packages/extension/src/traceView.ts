@@ -189,11 +189,11 @@ function transformTraceViewHtml(
   const nonce = randomBytes(16).toString('hex')
   const source = webview.cspSource
   // Adapt the reporter's generated bootstrap, which explicitly uses location
-  // rather than document.baseURI. Bust metadata cache after regeneration.
+  // rather than document.baseURI.
   const metadata = webview.asWebviewUri(vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'))
   html = html.replace(
     /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
-    JSON.stringify(`${metadata.toString()}?v=${Date.now()}`),
+    JSON.stringify(metadata.toString()),
   )
   // Keep the document base on the webview origin so history updates stay
   // same-origin. Only resource URLs should point at the report directory.
