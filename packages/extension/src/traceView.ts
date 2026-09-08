@@ -50,7 +50,7 @@ export class TraceViewManager {
     }
 
     // Keep the selected test when available, otherwise follow the first traced test.
-    // Report writes trigger the reload.
+    // HTML report file writes trigger the reload.
     const targets = findTraceViewTargets(apiId, reportPath, files)
     const viewState = this.viewState
     const target =
