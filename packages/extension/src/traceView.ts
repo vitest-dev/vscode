@@ -105,8 +105,8 @@ export class TraceViewManager {
       this.panel = panel
       panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
         if (
-          message.type === 'traceSelection' &&
           panel === this.panel &&
+          message.type === 'traceSelection' &&
           message.revision === this.revision &&
           message.testId === this.currentTarget?.testId
         ) {
