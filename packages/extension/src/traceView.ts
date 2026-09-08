@@ -49,15 +49,20 @@ export class TraceViewManager {
     }
 
     const targets = findTraceViewTargets(apiId, reportPath, files)
-    if (this.reportPath === reportPath) {
+    if (this.panel) {
       const previousTarget = this.currentTarget
       this.currentTarget =
         targets.find((target) => target.testId === previousTarget?.testId) ??
         (targets.length === 1 ? targets[0] : undefined)
-      if (this.currentTarget?.testId !== previousTarget?.testId) {
+      if (
+        previousTarget?.reportPath !== reportPath ||
+        this.currentTarget?.testId !== previousTarget?.testId
+      ) {
         this.traceAttempt = undefined
         this.traceStep = 0
       }
+      this.watchReport(reportPath)
+      void this.refresh()
     }
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
@@ -91,7 +96,6 @@ export class TraceViewManager {
       return
     }
 
-    this.reportPath = target.reportPath
     this.currentTarget = target
     this.traceAttempt = undefined
     this.traceStep = 0
@@ -122,10 +126,17 @@ export class TraceViewManager {
       })
     }
     this.panel.reveal(undefined, true)
+    this.watchReport(target.reportPath)
+    await this.refresh()
+  }
+
+  private watchReport(reportPath: string) {
+    this.reportPath = reportPath
+    clearTimeout(this.refreshTimer)
     this.watcher?.dispose()
     this.watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(
-        vscode.Uri.joinPath(reportUri, '..'),
+        vscode.Uri.joinPath(vscode.Uri.file(reportPath), '..'),
         '{index.html,ui/html.meta.json.gz}',
       ),
     )
@@ -135,7 +146,6 @@ export class TraceViewManager {
     }
     this.watcher.onDidChange(debouncedRefresh)
     this.watcher.onDidCreate(debouncedRefresh)
-    await this.refresh()
   }
 
   private async refresh() {
