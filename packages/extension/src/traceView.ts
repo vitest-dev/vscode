@@ -251,14 +251,13 @@ function transformTraceViewHtml(
     }),
   )
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
-  const serializedUrlHash = JSON.stringify(traceViewUrlHash)
   html = html.replace(
     /<head\b[^>]*>/i,
     `$&
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <style>${TRACE_VIEW_CSS}</style>
     <script nonce="${nonce}">
-      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${serializedUrlHash}, ${revision});
+      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${JSON.stringify(traceViewUrlHash)}, ${revision});
     </script>`,
   )
   return html
