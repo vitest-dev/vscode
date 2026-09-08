@@ -103,7 +103,7 @@ export class TraceViewManager {
         { enableScripts: true, retainContextWhenHidden: true },
       )
       this.panel = panel
-      panel.webview.onDidReceiveMessage((message) => {
+      panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
         if (
           message?.type === 'traceSelection' &&
           panel === this.panel &&
