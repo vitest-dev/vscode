@@ -49,10 +49,15 @@ export class TraceViewManager {
       }
     }
 
-    // An open panel follows the first traced test. Report writes trigger the reload.
+    // Keep the selected test when available, otherwise follow the first traced test.
+    // Report writes trigger the reload.
     const targets = findTraceViewTargets(apiId, reportPath, files)
     const viewState = this.viewState
-    const target = targets[0]
+    const target =
+      targets.find(
+        (target) =>
+          target.apiId === viewState?.target.apiId && target.testId === viewState.target.testId,
+      ) ?? targets[0]
     if (viewState && target) {
       if (viewState.target.reportPath !== target.reportPath) {
         clearTimeout(viewState.refreshTimer)
