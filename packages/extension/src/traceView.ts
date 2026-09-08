@@ -192,9 +192,9 @@ export class TraceViewManager {
     )
     const reportUri = vscode.Uri.file(target.reportPath)
     // Read the generated report and discard it if the view changed while loading.
-    let bytes: Uint8Array
+    let reportHtml: Uint8Array
     try {
-      bytes = await vscode.workspace.fs.readFile(reportUri)
+      reportHtml = await vscode.workspace.fs.readFile(reportUri)
     } catch (error) {
       await vscode.window.showWarningMessage(
         `Failed to load Vitest trace report: ${String(error)}`,
@@ -207,7 +207,7 @@ export class TraceViewManager {
     const directory = vscode.Uri.joinPath(reportUri, '..')
     panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
     panel.webview.html = transformTraceViewHtml(
-      Buffer.from(bytes).toString('utf8'),
+      Buffer.from(reportHtml).toString('utf8'),
       panel.webview,
       directory,
       traceViewUrlHash,
