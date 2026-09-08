@@ -42,6 +42,9 @@ export async function createVitestProcess(pkg: VitestPackage, options?: ProcessS
     execArgv.push('-A')
     executablePath = pathToFileURL(workerPath).toString()
   }
+  if (folderConfig.runtime === 'bun') {
+    execArgv.push('--bun')
+  }
   const arvString = execArgv.join(' ')
   const script = `${executable} ${arvString ? `${arvString} ` : ''}${executablePath}`.trim()
   log.info('[API]', `Running ${formatPkg(pkg)} with "${script}"`)
