@@ -12,7 +12,6 @@ interface TraceViewTarget {
 
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
-  private latestTargets = new Map<string, TraceViewTarget[]>()
   private currentTarget?: TraceViewTarget
   private traceAttempt?: string
   private traceStep = 0
@@ -31,7 +30,6 @@ export class TraceViewManager {
 
   clear() {
     this.targets.clear()
-    this.latestTargets.clear()
     void this.updateContext()
   }
 
@@ -43,7 +41,16 @@ export class TraceViewManager {
     }
 
     const targets = findTraceViewTargets(apiId, reportPath, files)
-    this.latestTargets.set(reportPath, targets)
+    if (this.reportPath === reportPath) {
+      const previousTarget = this.currentTarget
+      this.currentTarget =
+        targets.find((target) => target.testId === previousTarget?.testId) ??
+        (targets.length === 1 ? targets[0] : undefined)
+      if (this.currentTarget?.testId !== previousTarget?.testId) {
+        this.traceAttempt = undefined
+        this.traceStep = 0
+      }
+    }
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
@@ -119,19 +126,7 @@ export class TraceViewManager {
     )
     const debouncedRefresh = () => {
       clearTimeout(this.refreshTimer)
-      this.refreshTimer = setTimeout(() => {
-        if (!this.reportPath) return
-        const targets = this.latestTargets.get(this.reportPath) ?? []
-        const previousTarget = this.currentTarget
-        this.currentTarget =
-          targets.find((target) => target.testId === previousTarget?.testId) ??
-          (targets.length === 1 ? targets[0] : undefined)
-        if (this.currentTarget?.testId !== previousTarget?.testId) {
-          this.traceAttempt = undefined
-          this.traceStep = 0
-        }
-        void this.refresh()
-      }, 150)
+      this.refreshTimer = setTimeout(() => void this.refresh(), 150)
     }
     this.watcher.onDidChange(debouncedRefresh)
     this.watcher.onDidCreate(debouncedRefresh)
