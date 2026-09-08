@@ -118,12 +118,12 @@ export class TraceViewManager {
         '{index.html,ui/html.meta.json.gz}',
       ),
     )
-    const refresh = () => {
+    const debouncedRefresh = () => {
       clearTimeout(this.refreshTimer)
       this.refreshTimer = setTimeout(() => void this.refresh(), 150)
     }
-    this.watcher.onDidChange(refresh)
-    this.watcher.onDidCreate(refresh)
+    this.watcher.onDidChange(debouncedRefresh)
+    this.watcher.onDidCreate(debouncedRefresh)
     await this.refresh(selection)
   }
 
