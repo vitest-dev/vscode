@@ -30,6 +30,7 @@ interface TraceViewState {
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
   private viewState?: TraceViewState
+  // Invalidate older documents on refresh, target changes, and panel disposal.
   private revision = 0
 
   dispose() {
@@ -65,6 +66,7 @@ export class TraceViewManager {
         viewState.watcher = this.watchReport(target.reportPath)
       }
       if (viewState.target.apiId !== target.apiId || viewState.target.testId !== target.testId) {
+        this.revision++
         viewState.target = target
         viewState.traceAttempt = undefined
         viewState.traceStep = 0
@@ -203,8 +205,7 @@ export class TraceViewManager {
       const reportUri = vscode.Uri.file(target.reportPath)
       // Read the generated report and discard it if the view changed while loading.
       const bytes = await vscode.workspace.fs.readFile(reportUri)
-      if (revision !== this.revision || viewState !== this.viewState || target !== viewState.target)
-        return
+      if (revision !== this.revision) return
       // Adapt report resources and bootstrap code for the webview.
       const directory = vscode.Uri.joinPath(reportUri, '..')
       panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
@@ -216,11 +217,7 @@ export class TraceViewManager {
         revision,
       )
     } catch (error) {
-      if (
-        revision === this.revision &&
-        viewState === this.viewState &&
-        target === viewState.target
-      ) {
+      if (revision === this.revision) {
         void vscode.window.showWarningMessage(
           `Could not load Vitest trace report: ${String(error)}`,
         )
