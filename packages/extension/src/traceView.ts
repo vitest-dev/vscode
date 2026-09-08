@@ -188,8 +188,7 @@ function transformTraceViewHtml(
   const base = `${webview.asWebviewUri(directory).toString()}/`
   const nonce = randomBytes(16).toString('hex')
   const source = webview.cspSource
-  // Adapt the reporter's generated bootstrap, which explicitly uses location
-  // rather than document.baseURI.
+  // Resolve metadata from the report directory instead of the webview URL.
   const metadata = webview.asWebviewUri(vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'))
   html = html.replace(
     /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
