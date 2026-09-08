@@ -196,11 +196,9 @@ export class TraceViewManager {
     try {
       bytes = await vscode.workspace.fs.readFile(reportUri)
     } catch (error) {
-      if (revision === this.revision) {
-        void vscode.window.showWarningMessage(
-          `Could not load Vitest trace report: ${String(error)}`,
-        )
-      }
+      await vscode.window.showWarningMessage(
+        `Failed to load Vitest trace report: ${String(error)}`,
+      )
       return
     }
     if (revision !== this.revision) return
