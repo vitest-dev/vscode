@@ -646,6 +646,7 @@ class VitestExtension {
     this.testController.dispose()
     this.schemaProvider.dispose()
     this.importsBreakdownProvider.dispose()
+    this.traceViewManager.dispose()
     this.runProfiles.forEach((p) => p.dispose())
     this.runProfiles.clear()
     this.disposables.forEach((d) => d.dispose())

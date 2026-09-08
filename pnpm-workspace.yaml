@@ -57,9 +57,9 @@ catalogs:
     vite: ^7.2.6
     vitest: ^3.2.4
   v5:
-    '@vitest/browser-playwright': 5.0.0
-    '@vitest/ui': 5.0.0
-    vitest: 5.0.0
+    '@vitest/browser-playwright': https://pkg.pr.new/@vitest/browser-playwright@0ae5d17
+    '@vitest/ui': https://pkg.pr.new/@vitest/ui@0ae5d17
+    vitest: https://pkg.pr.new/vitest@0ae5d17
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
   - esbuild

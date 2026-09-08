@@ -1,5 +1,6 @@
 import type { RunnerTask, RunnerTestFile } from 'vitest'
 import type { TestTree } from './testTree'
+import { randomBytes } from 'node:crypto'
 import * as vscode from 'vscode'
 
 interface TraceViewTarget {
@@ -9,8 +10,32 @@ interface TraceViewTarget {
   testId: string
 }
 
+type TraceSelectionMessage = {
+  type: 'traceSelection'
+  revision: number
+  testId: string | null
+  traceAttempt: string | null
+  traceStep: number
+}
+
+interface TraceViewState {
+  panel: vscode.WebviewPanel
+  target: TraceViewTarget
+  watcher: vscode.FileSystemWatcher
+  traceAttempt?: string
+  traceStep: number
+  refreshTimer?: ReturnType<typeof setTimeout>
+}
+
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
+  private viewState?: TraceViewState
+  // Invalidate older documents on refresh, target changes, and panel disposal.
+  private revision = 0
+
+  dispose() {
+    this.viewState?.panel.dispose()
+  }
 
   clear() {
     this.targets.clear()
@@ -18,13 +43,38 @@ export class TraceViewManager {
   }
 
   async update(apiId: string, reportPath: string, files: RunnerTestFile[], tree: TestTree) {
+    // Remove Open Trace View actions from the previous run of this process.
     for (const [item, target] of this.targets) {
       if (target.apiId === apiId) {
         this.targets.delete(item)
       }
     }
 
-    for (const target of findTraceViewTargets(apiId, reportPath, files)) {
+    // Keep the selected test when available, otherwise follow the first traced test.
+    // HTML report file writes trigger the reload.
+    const targets = findTraceViewTargets(apiId, reportPath, files)
+    const viewState = this.viewState
+    const target =
+      targets.find(
+        (target) =>
+          target.apiId === viewState?.target.apiId && target.testId === viewState.target.testId,
+      ) ?? targets[0]
+    if (viewState && target) {
+      if (viewState.target.reportPath !== target.reportPath) {
+        clearTimeout(viewState.refreshTimer)
+        viewState.watcher.dispose()
+        viewState.watcher = this.watchReport(target.reportPath)
+      }
+      if (viewState.target.apiId !== target.apiId || viewState.target.testId !== target.testId) {
+        this.revision++
+        viewState.target = target
+        viewState.traceAttempt = undefined
+        viewState.traceStep = 0
+      }
+    }
+
+    // Register Open Trace View actions for the latest results.
+    for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
       if (item) {
         this.targets.set(item, target)
@@ -43,7 +93,9 @@ export class TraceViewManager {
   }
 
   async open(testItem: vscode.TestItem) {
-    const target = this.targets.get(testItem)!
+    // Resolve the requested test and check that its report exists.
+    const target = this.targets.get(testItem)
+    if (!target) return
 
     const reportUri = vscode.Uri.file(target.reportPath)
     try {
@@ -55,16 +107,105 @@ export class TraceViewManager {
       return
     }
 
-    const commands = await vscode.commands.getCommands(true)
-    const url = createTraceViewUrl(target)
-    // The Integrated Browser command is internal; follow Simple Browser's feature detection before using it.
-    // https://github.com/microsoft/vscode/blob/008427a901bf4aa79b47f175ccc8da1731750f78/extensions/simple-browser/src/extension.ts#L15-L35
-    if (commands.includes('workbench.action.browser.open')) {
-      await vscode.commands.executeCommand('workbench.action.browser.open', url)
+    // Create the panel and its listeners on the first open.
+    let viewState = this.viewState
+    if (!viewState) {
+      const panel = vscode.window.createWebviewPanel(
+        'vitest.traceView',
+        'Vitest Trace View',
+        { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+        { enableScripts: true, retainContextWhenHidden: true },
+      )
+      viewState = {
+        panel,
+        target,
+        watcher: this.watchReport(target.reportPath),
+        traceStep: 0,
+      }
+      this.viewState = viewState
+      // Remember attempt and step changes for the next report reload.
+      panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
+        const viewState = this.viewState
+        if (viewState && message.type === 'traceSelection' && message.revision === this.revision) {
+          viewState.traceAttempt = message.traceAttempt ?? undefined
+          viewState.traceStep = message.traceStep
+        }
+      })
+      // Release the watcher and pending reload when the panel closes.
+      panel.onDidDispose(() => {
+        const viewState = this.viewState
+        if (viewState?.panel !== panel) return
+        viewState.watcher.dispose()
+        clearTimeout(viewState.refreshTimer)
+        this.viewState = undefined
+        this.revision++
+      })
     } else {
-      // TODO: Support a single-file fallback because external browsers may block file:// metadata requests.
-      await vscode.env.openExternal(vscode.Uri.parse(url))
+      // Reuse the panel for the requested test with its initial attempt and step.
+      clearTimeout(viewState.refreshTimer)
+      viewState.watcher.dispose()
+      viewState.watcher = this.watchReport(target.reportPath)
+      viewState.target = target
+      viewState.traceAttempt = undefined
+      viewState.traceStep = 0
     }
+    // Explicit opens load immediately. Later report changes reload through the watcher.
+    viewState.panel.reveal(undefined, true)
+    await this.refresh()
+  }
+
+  private watchReport(reportPath: string) {
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(
+        vscode.Uri.joinPath(vscode.Uri.file(reportPath), '..'),
+        '{index.html,ui/html.meta.json.gz}',
+      ),
+    )
+    const debouncedRefresh = () => {
+      const viewState = this.viewState
+      if (viewState?.watcher !== watcher) return
+      clearTimeout(viewState.refreshTimer)
+      viewState.refreshTimer = setTimeout(() => void this.refresh(), 150)
+    }
+    watcher.onDidChange(debouncedRefresh)
+    watcher.onDidCreate(debouncedRefresh)
+    return watcher
+  }
+
+  private async refresh() {
+    // Capture the active view and invalidate older loads.
+    const viewState = this.viewState
+    if (!viewState) return
+    const { panel, target } = viewState
+    const revision = ++this.revision
+
+    // Restore the current test, attempt, and step in the new document.
+    const traceViewUrlHash = createTraceViewUrlHash(
+      target,
+      viewState.traceStep,
+      viewState.traceAttempt,
+    )
+    const reportUri = vscode.Uri.file(target.reportPath)
+    // Read the generated report and discard it if the view changed while loading.
+    let reportHtml: Uint8Array
+    try {
+      reportHtml = await vscode.workspace.fs.readFile(reportUri)
+    } catch (error) {
+      await vscode.window.showWarningMessage(`Failed to load Vitest trace report: ${String(error)}`)
+      return
+    }
+    if (revision !== this.revision) return
+
+    // Adapt report resources and bootstrap code for the webview.
+    const directory = vscode.Uri.joinPath(reportUri, '..')
+    panel.webview.options = { enableScripts: true, localResourceRoots: [directory] }
+    panel.webview.html = transformTraceViewHtml(
+      Buffer.from(reportHtml).toString('utf8'),
+      panel.webview,
+      directory,
+      traceViewUrlHash,
+      revision,
+    )
   }
 }
 
@@ -94,13 +235,102 @@ function findTraceViewTargets(
   return targets
 }
 
-function createTraceViewUrl(target: TraceViewTarget) {
+function createTraceViewUrlHash(target: TraceViewTarget, traceStep = 0, traceAttempt?: string) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
     file: target.fileId,
+    layout: 'trace',
     view: 'editor',
     test: target.testId,
-    traceStep: '0',
+    traceStep: String(traceStep),
   })
-  return `${vscode.Uri.file(target.reportPath).toString(true)}#/?${params}`
+  if (traceAttempt) {
+    params.set('traceAttempt', traceAttempt)
+  }
+  return `/?${params}`
+}
+
+function transformTraceViewHtml(
+  html: string,
+  webview: vscode.Webview,
+  directory: vscode.Uri,
+  traceViewUrlHash: string,
+  revision: number,
+) {
+  const base = `${webview.asWebviewUri(directory).toString()}/`
+  const nonce = randomBytes(16).toString('hex')
+  const csp = [
+    `default-src 'none'`,
+    `script-src ${webview.cspSource} 'nonce-${nonce}'`,
+    `style-src ${webview.cspSource} https://fonts.googleapis.com 'unsafe-inline'`,
+    `img-src ${webview.cspSource} data: blob: https:`,
+    `font-src ${webview.cspSource} data: https:`,
+    `connect-src ${webview.cspSource}`,
+    `frame-src 'self' blob: data:;`,
+  ].join('; ')
+  // Resolve metadata from the report directory instead of the webview URL.
+  const metadata = webview.asWebviewUri(vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'))
+  html = html.replace(
+    /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
+    JSON.stringify(metadata.toString()),
+  )
+  // Resolve relative asset URLs from the report directory.
+  html = html.replace(/<(script|link|img|source)\b[^>]*>/gi, (tag) =>
+    tag.replace(/(\s)(src|href)\s*=\s*(['"])(.*?)\3/gi, (attribute, space, name, quote, value) => {
+      if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value)) return attribute
+      const url = new URL(value.replace(/&amp;/g, '&'), base).href
+      return `${space}${name}=${quote}${url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}${quote}`
+    }),
+  )
+  html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
+  html = html.replace(
+    /<head\b[^>]*>/i,
+    `$&
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
+    <style>${TRACE_VIEW_CSS}</style>
+    <script nonce="${nonce}">
+      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${JSON.stringify(traceViewUrlHash)}, ${revision});
+    </script>`,
+  )
+  return html
+}
+
+const TRACE_VIEW_CSS = `
+  body {
+    padding: 0;
+    color: var(--color-text);
+  }
+  html:not(.dark) {
+    background-color: white;
+    color-scheme: light;
+  }
+`
+
+function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string, revision: number) {
+  const reportSelection = () => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1])
+    const step = params.get('traceStep')
+    if (step !== null) {
+      vscode.postMessage({
+        type: 'traceSelection',
+        revision,
+        testId: params.get('test'),
+        traceAttempt: params.get('traceAttempt'),
+        traceStep: Number(step),
+      } satisfies TraceSelectionMessage)
+    }
+  }
+  // Vitest updates URL parameters through History, which does not
+  // emit hashchange events.
+  for (const method of ['replaceState', 'pushState']) {
+    const original = window.history[method]
+    window.history[method] = function (...args: any[]) {
+      const result = original.apply(this, args)
+      reportSelection()
+      return result
+    }
+  }
+  window.addEventListener('hashchange', reportSelection)
+  window.addEventListener('popstate', reportSelection)
+  window.location.hash = traceViewUrlHash
 }
