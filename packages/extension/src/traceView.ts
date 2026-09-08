@@ -80,7 +80,6 @@ export class TraceViewManager {
     this.currentTarget = target
     this.traceAttempt = undefined
     this.traceStep = 0
-    const traceViewUrlHash = createTraceViewUrlHash(target)
     if (!this.panel) {
       const panel = vscode.window.createWebviewPanel(
         'vitest.traceView',
@@ -120,41 +119,42 @@ export class TraceViewManager {
     )
     const debouncedRefresh = () => {
       clearTimeout(this.refreshTimer)
-      this.refreshTimer = setTimeout(() => void this.refresh(), 150)
+      this.refreshTimer = setTimeout(() => {
+        if (!this.reportPath) return
+        const targets = this.latestTargets.get(this.reportPath) ?? []
+        const previousTarget = this.currentTarget
+        this.currentTarget =
+          targets.find((target) => target.testId === previousTarget?.testId) ??
+          (targets.length === 1 ? targets[0] : undefined)
+        if (this.currentTarget?.testId !== previousTarget?.testId) {
+          this.traceAttempt = undefined
+          this.traceStep = 0
+        }
+        void this.refresh()
+      }, 150)
     }
     this.watcher.onDidChange(debouncedRefresh)
     this.watcher.onDidCreate(debouncedRefresh)
-    await this.refresh(traceViewUrlHash)
+    await this.refresh()
   }
 
-  private async refresh(traceViewUrlHash?: string) {
+  private async refresh() {
     const panel = this.panel
     const reportPath = this.reportPath
     if (!panel || !reportPath) return
     const revision = ++this.revision
-    if (traceViewUrlHash === undefined) {
-      const targets = this.latestTargets.get(reportPath) ?? []
-      const previousTarget = this.currentTarget
-      this.currentTarget =
-        targets.find((target) => target.testId === this.currentTarget?.testId) ??
-        (targets.length === 1 ? targets[0] : undefined)
-      if (this.currentTarget?.testId !== previousTarget?.testId) {
-        this.traceAttempt = undefined
-        this.traceStep = 0
-      }
-      if (!this.currentTarget) {
-        panel.webview.html = `<!DOCTYPE html><html><head>
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
-          </head><body><p>The selected test has no trace in the latest run.
-          Open Trace View on a test to select one.</p></body></html>`
-        return
-      }
-      traceViewUrlHash = createTraceViewUrlHash(
-        this.currentTarget,
-        this.traceStep,
-        this.traceAttempt,
-      )
+    if (!this.currentTarget) {
+      panel.webview.html = `<!DOCTYPE html><html><head>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
+        </head><body><p>The selected test has no trace in the latest run.
+        Open Trace View on a test to select one.</p></body></html>`
+      return
     }
+    const traceViewUrlHash = createTraceViewUrlHash(
+      this.currentTarget,
+      this.traceStep,
+      this.traceAttempt,
+    )
     try {
       const reportUri = vscode.Uri.file(reportPath)
       const directory = vscode.Uri.joinPath(reportUri, '..')
