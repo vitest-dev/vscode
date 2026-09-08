@@ -81,7 +81,7 @@ export class TraceViewManager {
     this.currentTarget = target
     this.traceAttempt = undefined
     this.traceStep = 0
-    const selection = createTraceViewUrl(target).split('#')[1]
+    const selection = createTraceViewHash(target)
     if (!this.panel) {
       const panel = vscode.window.createWebviewPanel(
         'vitest.traceView',
@@ -154,9 +154,7 @@ export class TraceViewManager {
           Open Trace View on a test to select one.</p></body></html>`
         return
       }
-      selection = createTraceViewUrl(this.currentTarget, this.traceStep, this.traceAttempt).split(
-        '#',
-      )[1]
+      selection = createTraceViewHash(this.currentTarget, this.traceStep, this.traceAttempt)
     }
     try {
       const reportUri = vscode.Uri.file(reportPath)
@@ -273,7 +271,7 @@ function findTraceViewTargets(
   return targets
 }
 
-function createTraceViewUrl(target: TraceViewTarget, traceStep = 0, traceAttempt?: string) {
+function createTraceViewHash(target: TraceViewTarget, traceStep = 0, traceAttempt?: string) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
     file: target.fileId,
@@ -283,5 +281,5 @@ function createTraceViewUrl(target: TraceViewTarget, traceStep = 0, traceAttempt
     traceStep: String(traceStep),
   })
   if (traceAttempt) params.set('traceAttempt', traceAttempt)
-  return `${vscode.Uri.file(target.reportPath).toString(true)}#/?${params}`
+  return `/?${params}`
 }
