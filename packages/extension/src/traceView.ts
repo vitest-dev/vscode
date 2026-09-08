@@ -169,10 +169,11 @@ export class TraceViewManager {
         revision,
       )
     } catch (error) {
-      if (revision === this.revision)
+      if (revision === this.revision) {
         void vscode.window.showWarningMessage(
           `Could not load Vitest trace report: ${String(error)}`,
         )
+      }
     }
   }
 }
