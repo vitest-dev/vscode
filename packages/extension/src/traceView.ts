@@ -179,7 +179,7 @@ export class TraceViewManager {
       const hash = JSON.stringify(selection).replace(/</g, '\\u003c')
       html = html.replace(/<head\b[^>]*>/i, `$&
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} 'nonce-${nonce}'; style-src ${source} https://fonts.googleapis.com 'unsafe-inline'; img-src ${source} data: blob: https:; font-src ${source} data: https:; connect-src ${source}; frame-src 'self' blob: data:;">
-        <style>body { padding: 0; }</style>
+        <style>body { padding: 0; color: var(--color-text); } html:not(.dark) { background-color: white; color-scheme: light; }</style>
         <script nonce="${nonce}">
           (() => {
             const vscode = acquireVsCodeApi();
