@@ -194,8 +194,7 @@ function transformTraceViewHtml(
     /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
     JSON.stringify(metadata.toString()),
   )
-  // Keep the document base on the webview origin so history updates stay
-  // same-origin. Only resource URLs should point at the report directory.
+  // Resolve relative asset URLs from the report directory.
   html = html.replace(/<(script|link|img|source)\b[^>]*>/gi, (tag) =>
     tag.replace(/(\s)(src|href)\s*=\s*(['"])(.*?)\3/gi, (attribute, space, name, quote, value) => {
       if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value)) return attribute
