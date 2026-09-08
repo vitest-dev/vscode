@@ -52,14 +52,9 @@ export class TraceViewManager {
     const view = this.view
     if (view && view.target.apiId === apiId) {
       const target = targets.find((target) => target.testId === view.target.testId)
-      if (view.target.reportPath !== reportPath) {
-        clearTimeout(view.refreshTimer)
-        view.watcher.dispose()
-        view.watcher = this.watchReport(reportPath)
-        view.traceAttempt = undefined
-        view.traceStep = 0
+      if (target) {
+        view.target = target
       }
-      view.target = target ?? { ...view.target, reportPath }
     }
     for (const target of targets) {
       const item = tree.getTestItemByTaskId(target.testId)
