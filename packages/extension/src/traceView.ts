@@ -15,7 +15,7 @@ type TraceSelectionMessage = {
   revision: number
   testId: string | null
   traceAttempt: string | null
-  step: number
+  traceStep: number
 }
 
 export class TraceViewManager {
@@ -111,7 +111,7 @@ export class TraceViewManager {
           message.testId === this.currentTarget?.testId
         ) {
           this.traceAttempt = message.traceAttempt ?? undefined
-          this.traceStep = message.step
+          this.traceStep = message.traceStep
         }
       })
       panel.onDidDispose(() => {
@@ -285,7 +285,7 @@ function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string,
         revision,
         testId: params.get('test'),
         traceAttempt: params.get('traceAttempt'),
-        step: Number(step),
+        traceStep: Number(step),
       } satisfies TraceSelectionMessage)
     }
   }
