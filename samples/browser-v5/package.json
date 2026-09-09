@@ -9,7 +9,7 @@
   "devDependencies": {
     "@vitest/browser-playwright": "catalog:v5",
     "@vitest/ui": "catalog:v5",
-    "playwright": "1.62.1",
+    "playwright": "catalog:",
     "vite": "8.2.2",
     "vitest": "catalog:v5"
   }

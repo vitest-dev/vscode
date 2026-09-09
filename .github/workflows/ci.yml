@@ -48,6 +48,7 @@ jobs:
           deno-version: v2.x
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
       - run: pnpm build
 
       - name: test

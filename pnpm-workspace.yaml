@@ -4,7 +4,7 @@ packages:
   - samples/*
   - samples/monorepo-vitest-workspace/packages/*
 catalog:
-  '@playwright/test': ^1.42.1
+  '@playwright/test': 1.62.1
   '@types/chai': ^5.2.2
   '@types/micromatch': ^4.0.6
   '@types/mocha': ^10.0.6
@@ -31,6 +31,7 @@ catalog:
   mocha: ^10.3.0
   pathe: ^1.1.2
   picocolors: ^1.0.0
+  playwright: 1.62.1
   prompts: ^2.4.2
   semver: ^7.3.5
   tsdown: ^0.20.3

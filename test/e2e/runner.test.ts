@@ -442,7 +442,7 @@ test('renaming a folder back preserves test items', async ({ launch }) => {
   await expect(restoredTest.locator).toBeVisible()
 })
 
-test('opens trace view', async ({ launch }) => {
+test.skipIf(process.env.TEST_LEGACY)('opens trace view', async ({ launch }) => {
   const { page, tester } = await launch({
     workspacePath: './samples/browser-v5',
   })
