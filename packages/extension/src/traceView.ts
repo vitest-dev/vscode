@@ -155,12 +155,8 @@ export class TraceViewManager {
   }
 
   private watchReport(reportPath: string) {
-    const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(
-        vscode.Uri.joinPath(vscode.Uri.file(reportPath), '..'),
-        '{index.html,ui/html.meta.json.gz}',
-      ),
-    )
+    // Watch only index.html because the HTML reporter writes it after ui/html.meta.json.gz.
+    const watcher = vscode.workspace.createFileSystemWatcher(reportPath)
     const debouncedRefresh = () => {
       const viewState = this.viewState
       if (viewState?.watcher !== watcher) return
@@ -173,9 +169,9 @@ export class TraceViewManager {
   }
 
   private async refresh() {
-    // Capture the active view and invalidate older loads.
     const viewState = this.viewState
     if (!viewState) return
+
     const { panel, target } = viewState
     const revision = ++this.revision
 
@@ -270,18 +266,12 @@ function transformTraceViewHtml(
   ].join('; ')
   // Resolve metadata from the report directory instead of the webview URL.
   const metadata = webview.asWebviewUri(vscode.Uri.joinPath(directory, 'ui', 'html.meta.json.gz'))
-  html = html.replace(
-    /new URL\("\.\/ui\/html\.meta\.json\.gz", window\.location\.href\)/g,
+  html = html.replaceAll(
+    'new URL("./ui/html.meta.json.gz", window.location.href)',
     JSON.stringify(metadata.toString()),
   )
   // Resolve relative asset URLs from the report directory.
-  html = html.replace(/<(script|link|img|source)\b[^>]*>/gi, (tag) =>
-    tag.replace(/(\s)(src|href)\s*=\s*(['"])(.*?)\3/gi, (attribute, space, name, quote, value) => {
-      if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value)) return attribute
-      const url = new URL(value.replace(/&amp;/g, '&'), base).href
-      return `${space}${name}=${quote}${url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}${quote}`
-    }),
-  )
+  html = html.replaceAll('src="./', `src="${base}`).replaceAll('href="./', `href="${base}`)
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`)
   html = html.replace(
     /<head\b[^>]*>/i,
@@ -295,6 +285,7 @@ function transformTraceViewHtml(
   return html
 }
 
+// fixup vscode webview default styles
 const TRACE_VIEW_CSS = `
   body {
     padding: 0;
