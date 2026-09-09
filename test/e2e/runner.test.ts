@@ -456,12 +456,11 @@ test('opens trace view', async ({ launch }) => {
   // VS Code enables menu mouse-up handlers 100ms after rendering.
   await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
 
-  const trace = page
+  const traceView = page
     .frameLocator('iframe.webview')
     .frameLocator('#active-frame')
     .getByTestId('trace-view')
-  await expect(trace).toBeVisible()
-  await expect(
-    trace.frameLocator('iframe').getByRole('button', { name: 'Submit FOO' }),
-  ).toBeVisible()
+  const traceViewFrame = traceView.frameLocator('iframe')
+  await expect(traceView).toBeVisible()
+  await expect(traceViewFrame.getByRole('button', { name: 'Submit FOO' })).toBeVisible()
 })
