@@ -28,11 +28,12 @@ interface TraceViewState {
 }
 
 /**
- * Manages one trace webview panel:
- * - Opens beside the active editor without taking focus, then reuses its current editor group.
- * - Displays the generated HTML report with layout=trace and webview resource URLs.
- * - Reloads when the report changes, preserving the selected test, attempt, and step.
- * - Explicit opens select the requested test with its initial attempt and step.
+ * Keeps the active trace selection across report regeneration:
+ * - Test results update available targets, while report file changes trigger reloads.
+ * - Webview messages track the attempt and step, which reloads restore through URL parameters.
+ * - Explicit opens reset the attempt and step. If the selected test disappears, follow the first available trace.
+ * - Revision numbers discard stale report reads and messages from older documents.
+ * - Closing the panel clears its selection, watcher, and pending reload.
  */
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
