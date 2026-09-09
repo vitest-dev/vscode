@@ -33,7 +33,6 @@ interface TraceViewState {
  * - Tracks selection through webview messages and restores it through URL parameters so the attempt and step survive reloads.
  * - Explicit opens reset the attempt and step. If the selected test disappears, follow the first available trace.
  * - Revision numbers discard stale report reads and messages from older documents.
- * - Closing the panel clears its selection, watcher, and pending reload.
  */
 export class TraceViewManager {
   private traceReportEntries = new Map<vscode.TestItem, TraceReportEntry>()
