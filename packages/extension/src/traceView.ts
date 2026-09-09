@@ -3,7 +3,7 @@ import type { TestTree } from './testTree'
 import { randomBytes } from 'node:crypto'
 import * as vscode from 'vscode'
 
-interface TraceViewTarget {
+interface TraceReportEntry {
   apiId: string
   reportPath: string
   fileId: string
@@ -20,7 +20,7 @@ type TraceSelectionMessage = {
 
 interface TraceViewState {
   panel: vscode.WebviewPanel
-  target: TraceViewTarget
+  entry: TraceReportEntry
   watcher: vscode.FileSystemWatcher
   traceAttempt?: string
   traceStep: number
@@ -29,7 +29,7 @@ interface TraceViewState {
 
 /**
  * Keeps the active trace selection across report regeneration:
- * - Test results update available targets, while report file changes trigger reloads.
+ * - Test results update available trace report entries, while report file changes trigger reloads.
  * - Runs started outside the extension also reload the panel when they write to the same report path.
  * - Preserves the selected attempt and step across reloads using webview messages and URL parameters.
  * - Explicit opens reset the attempt and step. If the selected test disappears, follow the first available trace.
@@ -37,9 +37,9 @@ interface TraceViewState {
  * - Closing the panel clears its selection, watcher, and pending reload.
  */
 export class TraceViewManager {
-  private targets = new Map<vscode.TestItem, TraceViewTarget>()
+  private traceReportEntries = new Map<vscode.TestItem, TraceReportEntry>()
   private viewState?: TraceViewState
-  // Invalidate older documents on refresh, target changes, and panel disposal.
+  // Invalidate older documents on refresh, entry changes, and panel disposal.
   private revision = 0
 
   dispose() {
@@ -47,46 +47,46 @@ export class TraceViewManager {
   }
 
   clear() {
-    this.targets.clear()
+    this.traceReportEntries.clear()
     void this.updateContext()
   }
 
   async update(apiId: string, reportPath: string, files: RunnerTestFile[], tree: TestTree) {
     // Remove Open Trace View actions from the previous run of this process.
-    for (const [item, target] of this.targets) {
-      if (target.apiId === apiId) {
-        this.targets.delete(item)
+    for (const [item, entry] of this.traceReportEntries) {
+      if (entry.apiId === apiId) {
+        this.traceReportEntries.delete(item)
       }
     }
 
     // Keep the selected test when available, otherwise follow the first traced test.
     // HTML report file writes trigger the reload.
-    const targets = findTraceViewTargets(apiId, reportPath, files)
+    const entries = findTraceReportEntries(apiId, reportPath, files)
     const viewState = this.viewState
-    const target =
-      targets.find(
-        (target) =>
-          target.apiId === viewState?.target.apiId && target.testId === viewState.target.testId,
-      ) ?? targets[0]
-    if (viewState && target) {
-      if (viewState.target.reportPath !== target.reportPath) {
+    const entry =
+      entries.find(
+        (entry) =>
+          entry.apiId === viewState?.entry.apiId && entry.testId === viewState.entry.testId,
+      ) ?? entries[0]
+    if (viewState && entry) {
+      if (viewState.entry.reportPath !== entry.reportPath) {
         clearTimeout(viewState.refreshTimer)
         viewState.watcher.dispose()
-        viewState.watcher = this.watchReport(target.reportPath)
+        viewState.watcher = this.watchReport(entry.reportPath)
       }
-      if (viewState.target.apiId !== target.apiId || viewState.target.testId !== target.testId) {
+      if (viewState.entry.apiId !== entry.apiId || viewState.entry.testId !== entry.testId) {
         this.revision++
-        viewState.target = target
+        viewState.entry = entry
         viewState.traceAttempt = undefined
         viewState.traceStep = 0
       }
     }
 
     // Register Open Trace View actions for the latest results.
-    for (const target of targets) {
-      const item = tree.getTestItemByTaskId(target.testId)
+    for (const entry of entries) {
+      const item = tree.getTestItemByTaskId(entry.testId)
       if (item) {
-        this.targets.set(item, target)
+        this.traceReportEntries.set(item, entry)
       }
     }
     await this.updateContext()
@@ -97,21 +97,21 @@ export class TraceViewManager {
     return vscode.commands.executeCommand(
       'setContext',
       'vitest.traceViewTests',
-      [...this.targets.keys()].map((item) => item.id),
+      [...this.traceReportEntries.keys()].map((item) => item.id),
     )
   }
 
   async open(testItem: vscode.TestItem) {
     // Resolve the requested test and check that its report exists.
-    const target = this.targets.get(testItem)
-    if (!target) return
+    const entry = this.traceReportEntries.get(testItem)
+    if (!entry) return
 
-    const reportUri = vscode.Uri.file(target.reportPath)
+    const reportUri = vscode.Uri.file(entry.reportPath)
     try {
       await vscode.workspace.fs.stat(reportUri)
     } catch {
       await vscode.window.showWarningMessage(
-        `The Vitest HTML report does not exist at ${target.reportPath}.`,
+        `The Vitest HTML report does not exist at ${entry.reportPath}.`,
       )
       return
     }
@@ -127,8 +127,8 @@ export class TraceViewManager {
       )
       viewState = {
         panel,
-        target,
-        watcher: this.watchReport(target.reportPath),
+        entry,
+        watcher: this.watchReport(entry.reportPath),
         traceStep: 0,
       }
       this.viewState = viewState
@@ -153,8 +153,8 @@ export class TraceViewManager {
       // Reuse the panel for the requested test with its initial attempt and step.
       clearTimeout(viewState.refreshTimer)
       viewState.watcher.dispose()
-      viewState.watcher = this.watchReport(target.reportPath)
-      viewState.target = target
+      viewState.watcher = this.watchReport(entry.reportPath)
+      viewState.entry = entry
       viewState.traceAttempt = undefined
       viewState.traceStep = 0
     }
@@ -181,16 +181,16 @@ export class TraceViewManager {
     const viewState = this.viewState
     if (!viewState) return
 
-    const { panel, target } = viewState
+    const { panel, entry } = viewState
     const revision = ++this.revision
 
     // Restore the current test, attempt, and step in the new document.
     const traceViewUrlHash = createTraceViewUrlHash(
-      target,
+      entry,
       viewState.traceStep,
       viewState.traceAttempt,
     )
-    const reportUri = vscode.Uri.file(target.reportPath)
+    const reportUri = vscode.Uri.file(entry.reportPath)
     // Read the generated report and discard it if the view changed while loading.
     let reportHtml: Uint8Array
     try {
@@ -214,12 +214,12 @@ export class TraceViewManager {
   }
 }
 
-function findTraceViewTargets(
+function findTraceReportEntries(
   apiId: string,
   reportPath: string,
   files: RunnerTestFile[],
-): TraceViewTarget[] {
-  const targets: TraceViewTarget[] = []
+): TraceReportEntry[] {
+  const entries: TraceReportEntry[] = []
   for (const file of files) {
     const queue: RunnerTask[] = [file]
     for (let index = 0; index < queue.length; index++) {
@@ -230,23 +230,23 @@ function findTraceViewTargets(
         const { artifacts } = task as typeof task & { artifacts?: { type: string }[] }
         // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/vitest/src/runtime/runner/types.ts#L1479-L1485
         if (artifacts?.some((artifact) => artifact.type === 'internal:browserTrace')) {
-          targets.push({ apiId, reportPath, fileId: file.id, testId: task.id })
+          entries.push({ apiId, reportPath, fileId: file.id, testId: task.id })
         }
       } else {
         queue.push(...task.tasks)
       }
     }
   }
-  return targets
+  return entries
 }
 
-function createTraceViewUrlHash(target: TraceViewTarget, traceStep = 0, traceAttempt?: string) {
+function createTraceViewUrlHash(entry: TraceReportEntry, traceStep = 0, traceAttempt?: string) {
   // https://github.com/vitest-dev/vitest/blob/decfeb61c71a93372f84b6d43893df86a1756308/packages/ui/client/composables/params.ts#L3-L24
   const params = new URLSearchParams({
-    file: target.fileId,
+    file: entry.fileId,
     layout: 'trace',
     view: 'editor',
-    test: target.testId,
+    test: entry.testId,
     traceStep: String(traceStep),
   })
   if (traceAttempt) {
