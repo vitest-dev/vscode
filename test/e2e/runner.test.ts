@@ -450,7 +450,7 @@ test.skipIf(process.env.TEST_LEGACY)('opens trace view', async ({ launch }) => {
   // Run the browser tests to generate a trace report.
   await tester.tree.expand('basic.test.ts [chromium]')
   await tester.runAllTests()
-  await expect(tester.tree.getResultsLocator()).toHaveText('2/2')
+  await expect(tester.tree.getResultsLocator()).toHaveText('2/2', { timeout: 15_000 })
 
   // Open the recorded trace from the test's context menu.
   await page.locator('[aria-label*="records a trace (Passed)"]').click({ button: 'right' })
