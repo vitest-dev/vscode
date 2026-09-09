@@ -196,6 +196,10 @@
       ],
       "commandPalette": [
         {
+          "command": "vitest.openTraceView",
+          "when": "false"
+        },
+        {
           "command": "vitest.toggleContinuousRun",
           "when": "false"
         },

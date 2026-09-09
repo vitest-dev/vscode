@@ -442,7 +442,7 @@ test('renaming a folder back preserves test items', async ({ launch }) => {
   await expect(restoredTest.locator).toBeVisible()
 })
 
-test.for(['menu', 'palette'])('opens trace view from %s', async (source, { launch }) => {
+test('opens trace view', async ({ launch }) => {
   const { page, tester } = await launch({
     workspacePath: './samples/browser-v5',
   })
@@ -450,19 +450,11 @@ test.for(['menu', 'palette'])('opens trace view from %s', async (source, { launc
   await tester.tree.expand('basic.test.ts [chromium]')
   await tester.runAllTests()
   await expect(tester.tree.getResultsLocator()).toHaveText('2/2')
-  if (source === 'menu') {
-    await page
-      .getByRole('treeitem', { name: /^records a trace \(Passed\)/ })
-      .click({ button: 'right' })
-    // VS Code enables menu mouse-up handlers 100ms after rendering.
-    await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
-  } else {
-    await page.keyboard.press('F1')
-    await page
-      .getByRole('textbox', { name: 'Type the name of a command to run.' })
-      .fill('>Vitest: Open Trace View')
-    await page.getByRole('option', { name: /Vitest: Open Trace View/ }).click()
-  }
+  await page
+    .getByRole('treeitem', { name: /^records a trace \(Passed\)/ })
+    .click({ button: 'right' })
+  // VS Code enables menu mouse-up handlers 100ms after rendering.
+  await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
 
   const traceView = page
     .frameLocator('iframe.webview')

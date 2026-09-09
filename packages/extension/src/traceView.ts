@@ -99,11 +99,9 @@ export class TraceViewManager {
     )
   }
 
-  async open(testItem?: vscode.TestItem) {
+  async open(testItem: vscode.TestItem) {
     // Resolve the requested test and check that its report exists.
-    const entry = testItem
-      ? this.traceReportEntries.get(testItem)
-      : (this.viewState?.entry ?? this.traceReportEntries.values().next().value)
+    const entry = this.traceReportEntries.get(testItem)
     if (!entry) return
 
     const reportUri = vscode.Uri.file(entry.reportPath)
