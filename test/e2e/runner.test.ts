@@ -453,9 +453,7 @@ test('opens trace view', async ({ launch }) => {
   await expect(tester.tree.getResultsLocator()).toHaveText('2/2')
 
   // Open the recorded trace from the test's context menu.
-  await page
-    .getByRole('treeitem', { name: /^records a trace \(Passed\)/ })
-    .click({ button: 'right' })
+  await page.locator('[aria-label*="records a trace (Passed)"]').click({ button: 'right' })
   // VS Code enables menu mouse-up handlers 100ms after rendering.
   await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
 
