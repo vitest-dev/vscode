@@ -27,6 +27,13 @@ interface TraceViewState {
   refreshTimer?: ReturnType<typeof setTimeout>
 }
 
+/**
+ * Manages one trace webview panel:
+ * - Opens beside the active editor without taking focus, then reuses its current editor group.
+ * - Displays the generated HTML report with layout=trace and webview resource URLs.
+ * - Reloads when the report changes, preserving the selected test, attempt, and step.
+ * - Explicit opens select the requested test with its initial attempt and step.
+ */
 export class TraceViewManager {
   private targets = new Map<vscode.TestItem, TraceViewTarget>()
   private viewState?: TraceViewState
