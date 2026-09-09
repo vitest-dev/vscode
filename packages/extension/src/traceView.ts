@@ -255,9 +255,10 @@ function transformTraceViewHtml(
   const csp = [
     `default-src 'none'`,
     `script-src ${webview.cspSource} 'nonce-${nonce}'`,
-    `style-src ${webview.cspSource} https://fonts.googleapis.com 'unsafe-inline'`,
-    `img-src ${webview.cspSource} data: blob: https:`,
-    `font-src ${webview.cspSource} data: https:`,
+    `style-src ${webview.cspSource} http: https: 'unsafe-inline'`,
+    `img-src ${webview.cspSource} data: blob: http: https:`,
+    `font-src ${webview.cspSource} data: http: https:`,
+    `media-src ${webview.cspSource} data: blob: http: https:`,
     `connect-src ${webview.cspSource}`,
     `frame-src 'self' blob: data:;`,
   ].join('; ')
