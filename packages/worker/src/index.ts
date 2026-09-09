@@ -5,6 +5,8 @@ import type {
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
 import type { Reporter, TestUserConfig } from 'vitest/node'
+// Extend Vite's UserConfig with Vitest options.
+import type {} from 'vitest/config'
 import { Console } from 'node:console'
 import { Writable } from 'node:stream'
 import { toArray } from '@vitest/utils/helpers'
