@@ -44,6 +44,7 @@ export const test = baseTest.extend<{ launch: LaunchFixture; taskName: string; l
       const trace = (options.trace ?? defaultConfig.VSCODE_E2E_TRACE) === 'on'
 
       const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'vscode-e2e-'))
+      // Use DOM menus so Playwright can interact with context menus on macOS.
       await fs.promises.mkdir(path.join(tempDir, 'user-data', 'User'), { recursive: true })
       await fs.promises.writeFile(
         path.join(tempDir, 'user-data', 'User', 'settings.json'),
