@@ -30,6 +30,7 @@ interface TraceViewState {
 /**
  * Keeps the active trace selection across report regeneration:
  * - Test results update available targets, while report file changes trigger reloads.
+ * - Runs started outside the extension also reload the panel when they write to the same report path.
  * - Preserves the selected attempt and step across reloads using webview messages and URL parameters.
  * - Explicit opens reset the attempt and step. If the selected test disappears, follow the first available trace.
  * - Revision numbers discard stale report reads and messages from older documents.
