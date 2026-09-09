@@ -12,7 +12,6 @@ interface TraceReportEntry {
 
 type TraceSelectionMessage = {
   type: 'traceSelection'
-  revision: number
   testId: string | null
   traceAttempt: string | null
   traceStep: number
@@ -32,13 +31,10 @@ interface TraceViewState {
  * - Test results update available entries. Report file changes trigger reloads, so external runs writing the same report also refresh the panel.
  * - Tracks selection through webview messages and restores it through URL parameters so the attempt and step survive reloads.
  * - Explicit opens reset the attempt and step. If the selected test disappears, follow the first available trace.
- * - Revision numbers discard stale report reads and messages from older documents.
  */
 export class TraceViewManager {
   private traceReportEntries = new Map<vscode.TestItem, TraceReportEntry>()
   private viewState?: TraceViewState
-  // Invalidate older documents on refresh, entry changes, and panel disposal.
-  private revision = 0
 
   dispose() {
     this.viewState?.panel.dispose()
@@ -73,7 +69,6 @@ export class TraceViewManager {
         viewState.watcher = this.watchReport(entry.reportPath)
       }
       if (viewState.entry.apiId !== entry.apiId || viewState.entry.testId !== entry.testId) {
-        this.revision++
         viewState.entry = entry
         viewState.traceAttempt = undefined
         viewState.traceStep = 0
@@ -133,7 +128,7 @@ export class TraceViewManager {
       // Remember attempt and step changes for the next report reload.
       panel.webview.onDidReceiveMessage((message: TraceSelectionMessage) => {
         const viewState = this.viewState
-        if (viewState && message.type === 'traceSelection' && message.revision === this.revision) {
+        if (viewState && message.type === 'traceSelection') {
           viewState.traceAttempt = message.traceAttempt ?? undefined
           viewState.traceStep = message.traceStep
         }
@@ -145,7 +140,6 @@ export class TraceViewManager {
         viewState.watcher.dispose()
         clearTimeout(viewState.refreshTimer)
         this.viewState = undefined
-        this.revision++
       })
     } else {
       // Reuse the panel for the requested test with its initial attempt and step.
@@ -180,7 +174,6 @@ export class TraceViewManager {
     if (!viewState) return
 
     const { panel, entry } = viewState
-    const revision = ++this.revision
 
     // Restore the current test, attempt, and step in the new document.
     const traceViewUrlHash = createTraceViewUrlHash(
@@ -189,7 +182,7 @@ export class TraceViewManager {
       viewState.traceAttempt,
     )
     const reportUri = vscode.Uri.file(entry.reportPath)
-    // Read the generated report and discard it if the view changed while loading.
+    // Read the generated report.
     let reportHtml: Uint8Array
     try {
       reportHtml = await vscode.workspace.fs.readFile(reportUri)
@@ -197,7 +190,6 @@ export class TraceViewManager {
       await vscode.window.showWarningMessage(`Failed to load Vitest trace report: ${String(error)}`)
       return
     }
-    if (revision !== this.revision) return
 
     // Adapt report resources and bootstrap code for the webview.
     const directory = vscode.Uri.joinPath(reportUri, '..')
@@ -207,7 +199,6 @@ export class TraceViewManager {
       panel.webview,
       directory,
       traceViewUrlHash,
-      revision,
     )
   }
 }
@@ -258,7 +249,6 @@ function transformTraceViewHtml(
   webview: vscode.Webview,
   directory: vscode.Uri,
   traceViewUrlHash: string,
-  revision: number,
 ) {
   const base = `${webview.asWebviewUri(directory).toString()}/`
   const nonce = randomBytes(16).toString('hex')
@@ -286,7 +276,7 @@ function transformTraceViewHtml(
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <style>${TRACE_VIEW_CSS}</style>
     <script nonce="${nonce}">
-      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${JSON.stringify(traceViewUrlHash)}, ${revision});
+      (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${JSON.stringify(traceViewUrlHash)});
     </script>`,
   )
   return html
@@ -304,14 +294,13 @@ const TRACE_VIEW_CSS = `
   }
 `
 
-function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string, revision: number) {
+function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string) {
   const reportSelection = () => {
     const params = new URLSearchParams(window.location.hash.split('?')[1])
     const step = params.get('traceStep')
     if (step !== null) {
       vscode.postMessage({
         type: 'traceSelection',
-        revision,
         testId: params.get('test'),
         traceAttempt: params.get('traceAttempt'),
         traceStep: Number(step),
