@@ -441,3 +441,27 @@ test('renaming a folder back preserves test items', async ({ launch }) => {
   const restoredTest = tester.tree.getFileItem('deep.test.ts')
   await expect(restoredTest.locator).toBeVisible()
 })
+
+test('opens trace view', async ({ launch }) => {
+  const { page, tester } = await launch({
+    workspacePath: './samples/browser-v5',
+  })
+
+  await tester.tree.expand('basic.test.ts [chromium]')
+  await tester.runAllTests()
+  await expect(tester.tree.getResultsLocator()).toHaveText('2/2')
+  await page
+    .getByRole('treeitem', { name: /^records a trace \(Passed\)/ })
+    .click({ button: 'right' })
+  // VS Code enables menu mouse-up handlers 100ms after rendering.
+  await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
+
+  const trace = page
+    .frameLocator('iframe.webview')
+    .frameLocator('#active-frame')
+    .getByTestId('trace-view')
+  await expect(trace).toBeVisible()
+  await expect(
+    trace.frameLocator('iframe').getByRole('button', { name: 'Submit FOO' }),
+  ).toBeVisible()
+})
