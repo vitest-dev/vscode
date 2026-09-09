@@ -275,7 +275,11 @@ function transformTraceViewHtml(
     /<head\b[^>]*>/i,
     `$&
     <meta http-equiv="Content-Security-Policy" content="${csp}">
-    <style>${TRACE_VIEW_CSS}</style>
+    <style>${TRACE_VIEW_CSS}</style>`,
+  )
+  html = html.replace(
+    /<body\b[^>]*>/i,
+    `$&
     <script nonce="${nonce}">
       (${initializeTraceView.toString()})(acquireVsCodeApi(), window, ${JSON.stringify(traceViewUrlHash)});
     </script>`,
@@ -296,6 +300,25 @@ const TRACE_VIEW_CSS = `
 `
 
 function initializeTraceView(vscode: any, window: any, traceViewUrlHash: string) {
+  // Keep Vitest's color mode in sync with the VS Code webview theme.
+  const { document, localStorage } = window
+  const syncTheme = () => {
+    const theme = document.body.dataset.vscodeThemeKind
+    const dark = theme === 'vscode-dark' || theme === 'vscode-high-contrast'
+    const key = 'vueuse-color-scheme'
+    const newValue = dark ? 'dark' : 'light'
+    localStorage.setItem(key, newValue)
+    document.documentElement.classList.toggle('dark', dark)
+    window.dispatchEvent(
+      new window.StorageEvent('storage', { key, newValue, storageArea: localStorage }),
+    )
+  }
+  syncTheme()
+  new window.MutationObserver(syncTheme).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-vscode-theme-kind'],
+  })
+
   const reportSelection = () => {
     const params = new URLSearchParams(window.location.hash.split('?')[1])
     const step = params.get('traceStep')
