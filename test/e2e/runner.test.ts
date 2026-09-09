@@ -447,15 +447,19 @@ test('opens trace view', async ({ launch }) => {
     workspacePath: './samples/browser-v5',
   })
 
+  // Run the browser tests to generate a trace report.
   await tester.tree.expand('basic.test.ts [chromium]')
   await tester.runAllTests()
   await expect(tester.tree.getResultsLocator()).toHaveText('2/2')
+
+  // Open the recorded trace from the test's context menu.
   await page
     .getByRole('treeitem', { name: /^records a trace \(Passed\)/ })
     .click({ button: 'right' })
   // VS Code enables menu mouse-up handlers 100ms after rendering.
   await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
 
+  // Verify the webview displays the selected test's recorded button.
   const traceView = page
     .frameLocator('iframe.webview')
     .frameLocator('#active-frame')
