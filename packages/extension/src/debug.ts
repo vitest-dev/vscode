@@ -49,6 +49,9 @@ export async function debugTests(
   if (pkg.runtime === 'deno') {
     runtimeArgs.push('-A')
   }
+  if (pkg.runtime === 'bun') {
+    runtimeArgs.push('--bun')
+  }
 
   log.info('[DEBUG]', 'Starting debugging session', runtimeExecutable, ...(runtimeArgs || []))
 

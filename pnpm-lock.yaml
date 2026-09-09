@@ -442,6 +442,12 @@ importers:
         specifier: catalog:v5
         version: https://pkg.pr.new/vitest@0ae5d17(@types/node@24.10.1)(@vitest/browser-playwright@5.0.0)(@vitest/ui@5.0.0)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.10.1)(esbuild@0.27.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
 
+  samples/bun:
+    devDependencies:
+      vitest:
+        specifier: catalog:v3
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(happy-dom@20.9.0)(jiti@2.6.1)(jsdom@29.1.1)(tsx@4.21.0)(yaml@2.8.2)
+
   samples/continuous:
     devDependencies:
       vitest:

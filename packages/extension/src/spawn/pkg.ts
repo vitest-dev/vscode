@@ -4,8 +4,9 @@ import { gte } from 'semver'
 import { getSuggestedInstallCommand } from 'vitest-vscode-shared'
 import * as vscode from 'vscode'
 import { getConfig } from '../config'
-import { configGlob, minimumVersion, workspaceGlob } from '../constants'
+import { configGlob, minimumBunVersion, minimumVersion, workspaceGlob } from '../constants'
 import { log } from '../log'
+import { getBunVersion, validateBunVersion } from '../utils'
 import { resolveVitestPackage } from './resolve'
 
 function nonNullable<T>(value: T | null | undefined): value is T {
@@ -27,7 +28,7 @@ export interface VitestPackage {
   workspaceFile?: string
   loader?: string
   pnp?: string
-  runtime: 'deno' | 'node'
+  runtime: 'deno' | 'node' | 'bun'
 }
 
 // Before 5.0.0-rc.1 `testNamePattern` was matched the same way Jest does it:
@@ -48,10 +49,10 @@ function isVitestInPackageJson(root: string) {
   return false
 }
 
-function resolveVitestConfig(
+async function resolveVitestConfig(
   showWarning: boolean,
   configOrWorkspaceFile: vscode.Uri,
-): VitestPackage | null {
+): Promise<VitestPackage | null> {
   const folder = vscode.workspace.getWorkspaceFolder(configOrWorkspaceFile)!
   if (!folder)
     throw new Error(`Workspace folder not found for ${configOrWorkspaceFile}. Does the file exist?`)
@@ -87,6 +88,14 @@ function resolveVitestConfig(
   const id = normalize(configOrWorkspaceFile.fsPath)
   const prefix = `${basename(dirname(id))}:${basename(id)}`
   const runtime = guessRuntime(cwd, folder)
+
+  if (runtime === 'bun') {
+    const bunVersion = await getBunVersion(cwd)
+    if (bunVersion && !(await validateBunVersion(bunVersion, cwd, showWarning))) {
+      log.error('[API]', `Skipping ${configOrWorkspaceFile.fsPath} due to unsupported Bun version.`)
+      return null
+    }
+  }
 
   if (vitest.pnp) {
     return {
@@ -155,8 +164,10 @@ export async function resolveVitestPackages(
   ])
   if (!workspaceConfigs.meta.length && !configs.meta.length) {
     const pkg = await resolveVitestPackagesViaPackageJson(showWarning)
-    if (!pkg.meta.length && !pkg.warned)
-      return { configs: resolveVitestWorkspacePackages(showWarning).meta, workspaces: [] }
+    if (!pkg.meta.length && !pkg.warned) {
+      const workspacePackages = await resolveVitestWorkspacePackages(showWarning)
+      return { configs: workspacePackages.meta, workspaces: [] }
+    }
     return { configs: pkg.meta, workspaces: [] }
   }
   return {
@@ -165,10 +176,11 @@ export async function resolveVitestPackages(
   }
 }
 
-function resolveVitestWorkspacePackages(showWarning: boolean) {
+async function resolveVitestWorkspacePackages(showWarning: boolean) {
   let warned = false
   const meta: VitestPackage[] = []
-  vscode.workspace.workspaceFolders?.forEach((folder) => {
+
+  const processFolder = async (folder: vscode.WorkspaceFolder) => {
     const cwd = normalize(folder.uri.fsPath)
     const vitest = resolveVitestPackage(cwd, folder)
     if (!vitest) return
@@ -181,6 +193,16 @@ function resolveVitestWorkspacePackages(showWarning: boolean) {
     const id = normalize(folder.uri.fsPath)
     const prefix = `${basename(cwd)}:${basename(id)}`
     const runtime = guessRuntime(cwd, folder)
+
+    if (runtime === 'bun') {
+      const bunVersion = await getBunVersion(cwd)
+      if (bunVersion && !(await validateBunVersion(bunVersion, cwd, showWarning))) {
+        log.error('[API]', `Skipping ${cwd} due to unsupported Bun version.`)
+        warned = true
+        return
+      }
+    }
+
     meta.push({
       folder,
       id,
@@ -192,7 +214,10 @@ function resolveVitestWorkspacePackages(showWarning: boolean) {
       runtime,
       name: vitest.packageName,
     })
-  })
+  }
+
+  await Promise.all(vscode.workspace.workspaceFolders?.map(processFolder) ?? [])
+
   return {
     meta,
     warned,
@@ -280,16 +305,18 @@ async function resolveVitestWorkspaceConfigs() {
 
   if (vitestWorkspaces.length) {
     // if there is a workspace config, use it as root
+    const resolved = await Promise.all(
+      vitestWorkspaces.map((config) =>
+        resolveVitestConfig(
+          /* don't show warnings for workspaces because they have limited support */ false,
+          config,
+        ),
+      ),
+    )
     const meta = resolvePackagUniquePrefixes(
-      vitestWorkspaces
-        .map((config) => {
-          const vitest = resolveVitestConfig(
-            /* don't show warnings for workspaces because they have limited support */ false,
-            config,
-          )
-          if (!vitest) {
-            return null
-          }
+      resolved
+        .filter(nonNullable)
+        .map((vitest) => {
           // Version 4 doesn't support workspace files
           if (gte(vitest.version, '4.0.0')) {
             return null
@@ -348,8 +375,8 @@ async function resolveVitestConfigs(showWarning: boolean) {
     const filteredConfigFiles = hasViteAndVitestConfig
       ? configFiles.filter((file) => !basename(file.fsPath).includes('vite.'))
       : configFiles
-    filteredConfigFiles.forEach((config) => {
-      const vitest = resolveVitestConfig(showWarning, config)
+    for (const config of filteredConfigFiles) {
+      const vitest = await resolveVitestConfig(showWarning, config)
       if (vitest) {
         resolvedMeta.push({
           ...vitest,
@@ -358,7 +385,7 @@ async function resolveVitestConfigs(showWarning: boolean) {
       } else {
         warned = true
       }
-    })
+    }
   }
 
   return {
@@ -367,7 +394,7 @@ async function resolveVitestConfigs(showWarning: boolean) {
   }
 }
 
-function guessRuntime(cwd: string, folder: vscode.WorkspaceFolder): 'deno' | 'node' {
+function guessRuntime(cwd: string, folder: vscode.WorkspaceFolder): 'deno' | 'node' | 'bun' {
   const vitestConfig = getConfig(folder)
   if (vitestConfig.runtime !== 'auto') {
     return vitestConfig.runtime
@@ -378,6 +405,13 @@ function guessRuntime(cwd: string, folder: vscode.WorkspaceFolder): 'deno' | 'no
   }
   if (existsSync(resolve(cwd, 'deno.json'))) {
     return 'deno'
+  }
+  if (
+    existsSync(resolve(cwd, 'bun.lock')) ||
+    existsSync(resolve(cwd, 'bun.lockb')) ||
+    existsSync(resolve(cwd, 'bunfig.toml'))
+  ) {
+    return 'bun'
   }
   return 'node'
 }
