@@ -192,6 +192,7 @@ export interface SerializedProject {
 export interface WorkerReadyMetadata {
   projects: SerializedProject[]
   workspaceSource: string | false
+  htmlReportPath?: string
 }
 
 export interface EventReady {

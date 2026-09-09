@@ -15,6 +15,7 @@
 - **Coverage** support
 - **Inline console.log display**: Console logs appear inline in the editor next to the code that produced them
 - **Imports duration**: Displays the execution time for each import during continuous test runs.
+- **Trace View**: Opens recorded Vitest 5 browser interactions for a selected test.
 
 ## Requirements
 
@@ -133,6 +134,28 @@ If you hover over it, you can get a more detailed diagnostic.
 ![Import breakdown example](./img/import-breakdown.png 'Import breakdown example')
 
 You can disable this feature by turning off `vitest.showImportsDuration`.
+
+### Trace View
+
+With Vitest 5, the extension can open recorded browser interactions for a selected test in [Vitest Trace View](https://vitest.dev/guide/browser/trace-view.html). Enable Trace View and the HTML reporter in your existing Browser Mode configuration:
+
+```ts
+import { configDefaults, defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    reporters: [...configDefaults.reporters, 'html'],
+    browser: {
+      // Your existing Browser Mode configuration
+      traceView: true,
+    },
+  },
+})
+```
+
+After running a browser test through the extension, right-click the test in the Testing view or its editor gutter icon and select **Open Trace View**. The extension opens the trace view of the selected test from the generated HTML report in an editor tab.
+
+![Vitest Trace View open in Visual Studio Code](./img/trace-view.png)
 
 ## FAQs (Frequently Asked Questions)
 

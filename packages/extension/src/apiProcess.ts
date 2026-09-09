@@ -57,6 +57,10 @@ export class VitestProjectConfig {
     return usesJestTestNamePattern(this.pkg)
   }
 
+  get htmlReportPath() {
+    return this.metadata.htmlReportPath
+  }
+
   get package() {
     return this.pkg
   }

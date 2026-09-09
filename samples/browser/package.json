@@ -14,7 +14,7 @@
     "@vitest/browser": "catalog:latest",
     "@vitest/browser-playwright": "catalog:latest",
     "@vitest/coverage-v8": "catalog:latest",
-    "playwright": "^1.47.0",
+    "playwright": "catalog:",
     "vite": "catalog:latest",
     "vitest": "catalog:latest"
   }

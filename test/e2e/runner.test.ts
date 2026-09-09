@@ -441,3 +441,28 @@ test('renaming a folder back preserves test items', async ({ launch }) => {
   const restoredTest = tester.tree.getFileItem('deep.test.ts')
   await expect(restoredTest.locator).toBeVisible()
 })
+
+test.skipIf(process.env.TEST_LEGACY)('opens trace view', async ({ launch }) => {
+  const { page, tester } = await launch({
+    workspacePath: './samples/browser-v5',
+  })
+
+  // Run the browser tests to generate a trace report.
+  await tester.tree.expand('basic.test.ts [chromium]')
+  await tester.runAllTests()
+  await expect(tester.tree.getResultsLocator()).toHaveText('2/2', { timeout: 15_000 })
+
+  // Open the recorded trace from the test's context menu.
+  await page.locator('[aria-label*="records a trace (Passed)"]').click({ button: 'right' })
+  // VS Code enables menu mouse-up handlers 100ms after rendering.
+  await page.getByRole('menuitem', { name: 'Open Trace View', exact: true }).click({ delay: 150 })
+
+  // Verify the webview displays the selected test's recorded button.
+  const traceView = page
+    .frameLocator('iframe.webview')
+    .frameLocator('#active-frame')
+    .getByTestId('trace-view')
+  const traceViewFrame = traceView.frameLocator('iframe')
+  await expect(traceView).toBeVisible()
+  await expect(traceViewFrame.getByRole('button', { name: 'Submit FOO' })).toBeVisible()
+})

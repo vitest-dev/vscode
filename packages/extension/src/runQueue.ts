@@ -3,6 +3,7 @@ import type { RunHandle } from './apiProcess'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { TestTree } from './testTree'
+import type { TraceViewManager } from './traceView'
 import { VitestProcessAPI } from './apiProcess'
 import { log } from './log'
 import { ContinuousTestRunner, TestRunner } from './runner'
@@ -33,6 +34,7 @@ export class RunQueue {
     private readonly api: VitestProcessAPI,
     private readonly diagnostic: ExtensionDiagnostic | undefined,
     private readonly importsBreakdown: ImportsBreakdownProvider,
+    private readonly traceViewManager: TraceViewManager,
   ) {}
 
   public isContinuousTestItem(testItem: vscode.TestItem): boolean {
@@ -205,6 +207,7 @@ export class RunQueue {
       api || this.api,
       this.diagnostic,
       this.importsBreakdown,
+      this.traceViewManager,
     )
   }
 
@@ -216,6 +219,7 @@ export class RunQueue {
       this.api,
       this.diagnostic,
       this.importsBreakdown,
+      this.traceViewManager,
       this.testRunProfile,
       this.continuousRequests,
     )

@@ -4,6 +4,7 @@ import type { RunHandle, VitestProcessAPI } from './apiProcess'
 import type { ExtensionDiagnostic } from './diagnostic'
 import type { ImportsBreakdownProvider } from './importsBreakdownProvider'
 import type { TestTree } from './testTree'
+import type { TraceViewManager } from './traceView'
 import crypto from 'node:crypto'
 import path from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
@@ -40,6 +41,7 @@ export class TestRunner extends vscode.Disposable {
     protected readonly api: VitestProcessAPI,
     protected readonly diagnostic: ExtensionDiagnostic | undefined,
     protected readonly importsBreakdown: ImportsBreakdownProvider,
+    protected readonly traceViewManager?: TraceViewManager,
   ) {
     super(() => {
       log.verbose?.('Disposing test runner')
@@ -110,6 +112,10 @@ export class TestRunner extends vscode.Disposable {
     })
 
     handle.handlers.onTestRunEnd(async (files, unhandledError, collecting, coverage) => {
+      const htmlReportPath = this.api.config.htmlReportPath
+      if (!collecting && htmlReportPath) {
+        await this.traceViewManager?.update(this.api.id, htmlReportPath, files, this.tree)
+      }
       const testRun = this.testRun
 
       if (!testRun) {
@@ -369,10 +375,11 @@ export class ContinuousTestRunner extends TestRunner {
     api: VitestProcessAPI,
     diagnostic: ExtensionDiagnostic | undefined,
     importsBreakdown: ImportsBreakdownProvider,
+    traceViewManager: TraceViewManager,
     private readonly testRunProfile: vscode.TestRunProfile,
     private readonly continuousRequests: Set<vscode.TestRunRequest>,
   ) {
-    super(handle, controller, tree, api, diagnostic, importsBreakdown)
+    super(handle, controller, tree, api, diagnostic, importsBreakdown, traceViewManager)
     handle.handlers.onTestRunStart((files) => {
       this.startTestRun(files)
       log.verbose?.(
