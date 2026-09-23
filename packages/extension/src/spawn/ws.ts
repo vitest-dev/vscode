@@ -18,7 +18,7 @@ import {
 import { log } from '../log'
 import { createVitestRpc } from './rpc'
 import { resolve } from 'pathe'
-import { parse, stringify } from 'flatted'
+import { createRpcCodec, v8FormatVersion } from '../rpcCodec'
 
 export type WsConnectionMetadata = Omit<ResolvedMeta, 'process'> & {
   ws: WebSocket
@@ -86,24 +86,16 @@ export function onWsConnection(
       if (message.version) {
         pkg.version = message.version
       }
+      if (message.codec === 'json' && pkg.runtime === 'node') {
+        log.verbose?.(
+          '[API]',
+          `The worker's V8 serialization format differs from VS Code's (${v8FormatVersion()}), using JSON for RPC.`,
+        )
+      }
       const { api, handlers } = createVitestRpc({
         on: (listener) => ws.on('message', listener),
         send: (message) => ws.send(message),
-        serialize:
-          pkg.runtime !== 'node'
-            ? (e) =>
-                stringify(e, (_, v) => {
-                  if (v instanceof Error) {
-                    return {
-                      name: v.name,
-                      message: v.message,
-                      stack: v.stack,
-                    }
-                  }
-                  return v
-                })
-            : undefined,
-        deserialize: pkg.runtime !== 'node' ? parse : undefined,
+        ...createRpcCodec(message.codec),
       })
       ws.once('close', () => {
         log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
@@ -177,6 +169,7 @@ export function onWsConnection(
       configFile: pkg.configFile,
       cwd: pkg.cwd,
       runtime: pkg.runtime,
+      v8FormatVersion: v8FormatVersion(),
       arguments: pkg.arguments,
       workspaceFile: pkg.workspaceFile,
       id: pkg.id,

@@ -1,10 +1,9 @@
 import type { WorkerRunnerOptions } from 'vitest-vscode-shared'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import v8 from 'node:v8'
 import { createWorkerRPC, normalizeDriveLetter, WorkerWSEventEmitter } from 'vitest-vscode-shared'
 import { WebSocket } from 'ws'
-import { parse, stringify } from 'flatted'
+import { createRpcCodec, pickRpcCodec, v8FormatVersion } from '../rpcCodec'
 
 // this is the file that will be executed with "node <path>"
 
@@ -47,6 +46,7 @@ emitter.on('message', async function onMessage(message: any) {
 
       const worker = createWorker()
 
+      const codec = pickRpcCodec(data.meta.runtime, data.meta.v8FormatVersion, v8FormatVersion())
       const rpc = createWorkerRPC(worker, {
         on(listener) {
           emitter.on('message', listener)
@@ -54,26 +54,11 @@ emitter.on('message', async function onMessage(message: any) {
         post(message) {
           emitter.send(message)
         },
-        serialize:
-          data.meta.runtime !== 'node'
-            ? (e) =>
-                stringify(e, (_, v) => {
-                  if (v instanceof Error) {
-                    return {
-                      name: v.name,
-                      message: v.message,
-                      stack: v.stack,
-                    }
-                  }
-                  return v
-                })
-            : v8.serialize,
-        deserialize:
-          data.meta.runtime !== 'node' ? parse : (v) => v8.deserialize(Buffer.from(v) as any),
+        ...createRpcCodec(codec),
       })
       worker.initRpc(rpc)
       reporter.initRpc(rpc)
-      emitter.ready(metadata, isLegacy, vitestModule.version)
+      emitter.ready(metadata, isLegacy, vitestModule.version, codec)
 
       await worker.vitest.report('onInit', worker.vitest)
     } catch (err: any) {

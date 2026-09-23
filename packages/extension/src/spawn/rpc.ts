@@ -1,5 +1,4 @@
 import type { ExtensionWorkerEvents, ExtensionWorkerTransport } from 'vitest-vscode-shared'
-import v8 from 'node:v8'
 import { createBirpc } from 'birpc'
 import { log } from '../log'
 
@@ -65,8 +64,8 @@ export function createRpcOptions() {
 export function createVitestRpc(options: {
   on: (listener: (message: any) => void) => void
   send: (message: any) => void
-  serialize?: (v: any) => any
-  deserialize?: (v: any) => any
+  serialize: (v: any) => any
+  deserialize: (v: any) => any
 }) {
   const { events, handlers } = createRpcOptions()
 
@@ -79,8 +78,8 @@ export function createVitestRpc(options: {
     post(message) {
       options.send(message)
     },
-    serialize: options.serialize ?? v8.serialize,
-    deserialize: options.deserialize ?? ((v) => v8.deserialize(Buffer.from(v) as any)),
+    serialize: options.serialize,
+    deserialize: options.deserialize,
     onGeneralError(error) {
       log.error('RPC Error', error)
     },

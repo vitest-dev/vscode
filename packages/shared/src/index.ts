@@ -144,6 +144,8 @@ export interface WorkerInitMetadata {
   cwd: string
   arguments?: string
   runtime: 'node' | 'deno'
+  /** structured-clone format version of the extension host's V8 */
+  v8FormatVersion?: number
   configFile?: string
   workspaceFile?: string
   env: Record<string, any> | undefined
@@ -195,6 +197,8 @@ export interface WorkerReadyMetadata {
   htmlReportPath?: string
 }
 
+export type RpcCodec = 'v8' | 'json'
+
 export interface EventReady {
   type: 'ready'
   metadata: WorkerReadyMetadata
@@ -202,6 +206,8 @@ export interface EventReady {
   // the actual runtime version, unlike VitestPackage.version
   // this is also defined when vitest is resolved via yarn pnp
   version: string | undefined
+  // how the worker (de)serializes RPC messages; the extension must match it
+  codec: RpcCodec
 }
 
 export interface EventDebug {
