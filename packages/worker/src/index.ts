@@ -124,6 +124,8 @@ export async function initVitest(
                 off: () => {},
               } as any,
             }
+            config.server.watch = null
+            config.server.middlewareMode = true
           },
           api: {
             vitest: {
