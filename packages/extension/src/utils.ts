@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import { inspect, stripVTControlCharacters } from 'node:util'
 import { dirname, relative } from 'pathe'
+import { gte } from 'semver'
 import * as vscode from 'vscode'
 import which from 'which'
 import { getConfig } from './config'
@@ -32,6 +33,47 @@ export function pluralize(count: number, singular: string) {
   return `${count} ${singular}${count === 1 ? '' : 's'}`
 }
 
+export async function getBunVersion(cwd: string): Promise<string | null> {
+  const executable = await findRuntimeExecutable('bun', cwd).catch(() => null)
+  if (!executable) return null
+
+  return new Promise<string | null>((resolve) => {
+    const child = spawn(executable, ['--version'], {
+      cwd,
+      stdio: 'pipe',
+    })
+
+    let output = ''
+    child.stdout.on('data', (data) => (output += data.toString()))
+    child.on('error', () => resolve(null))
+    child.on('exit', (exitCode) => {
+      if (exitCode !== 0) return resolve(null)
+      const version = output.trim()
+      if (!version) return resolve(null)
+      resolve(version)
+    })
+  })
+}
+
+export async function validateBunVersion(
+  bunVersion: string,
+  cwd: string,
+  showWarning: boolean,
+): Promise<boolean> {
+  const { minimumBunVersion } = await import('./constants')
+  if (gte(bunVersion, minimumBunVersion)) {
+    return true
+  }
+
+  const message = `Bun v${bunVersion} is not supported. Bun v${minimumBunVersion} or newer is required for Vitest support.`
+  if (showWarning) {
+    vscode.window.showWarningMessage(message)
+  } else {
+    log.error('[API]', message)
+  }
+  return false
+}
+
 export function debounce<T extends (...args: any[]) => void>(cb: T, wait = 20) {
   let h: NodeJS.Timeout | undefined
   const callable = (...args: any) => {
@@ -57,13 +99,14 @@ export function waitUntilExists(file: string, timeoutMs = 5000) {
 }
 
 const pathToRuntime: {
+  bun?: string
   deno?: string
   node?: string
 } = {}
 
 // based on https://github.com/microsoft/playwright-vscode/blob/main/src/utils.ts#L144
 export async function findRuntimeExecutable(
-  runtime: 'node' | 'deno',
+  runtime: 'node' | 'deno' | 'bun',
   cwd: string,
 ): Promise<string> {
   if (getConfig().nodeExecutable)
@@ -94,7 +137,7 @@ export async function findRuntimeExecutable(
   return node
 }
 
-async function findRuntimeViaShell(runtime: 'node' | 'deno', cwd: string): Promise<string | null> {
+async function findRuntimeViaShell(runtime: 'node' | 'deno' | 'bun', cwd: string): Promise<string | null> {
   if (process.platform === 'win32') return null
   return new Promise<string | null>((resolve) => {
     const startToken = '___START_SHELL__'

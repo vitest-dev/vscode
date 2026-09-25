@@ -86,7 +86,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const ignoreWorkspace = get<boolean>('ignoreWorkspace', false) ?? false
   const showInlineConsoleLog = get<boolean>('showInlineConsoleLog', true) ?? true
   const forceCancelTimeout = get<number>('forceCancelTimeout', 1000) ?? 1000
-  const runtime = get<'node' | 'deno' | 'auto'>('runtime', 'auto') ?? 'auto'
+  const runtime = get<'node' | 'deno' | 'bun' | 'auto'>('runtime', 'auto') ?? 'auto'
   const watchOnStartup = get<boolean>('watchOnStartup', false) ?? false
 
   return {
