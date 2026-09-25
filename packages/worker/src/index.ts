@@ -87,15 +87,15 @@ export async function initVitest(
     'test',
     cliOptions,
     {
-      server: {
-        middlewareMode: true,
-        watch: null,
-      },
       plugins: [
         {
           name: 'vitest:vscode-extension',
           config(userConfig) {
             userConfig.test ??= {}
+
+            userConfig.server ??= {}
+            userConfig.server.watch = null
+            userConfig.server.middlewareMode = true
 
             const testReporters = toArray(userConfig.test.reporters)
             if (!testReporters.length) {
