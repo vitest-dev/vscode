@@ -272,7 +272,9 @@ export class TestRunner extends vscode.Disposable {
       if (loc.end?.column && loc.end.column < 0) loc.end.column = 0
     }
     for (const file in coverage) {
-      coverage[file] = coverage[file].data
+      if ('data' in coverage[file]) {
+        coverage[file] = coverage[file].data
+      }
 
       const fileCoverage = coverage[file]
       for (const key in fileCoverage.branchMap) {
