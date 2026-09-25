@@ -89,21 +89,18 @@ export function onWsConnection(
       const { api, handlers } = createVitestRpc({
         on: (listener) => ws.on('message', listener),
         send: (message) => ws.send(message),
-        serialize:
-          pkg.runtime !== 'node'
-            ? (e) =>
-                stringify(e, (_, v) => {
-                  if (v instanceof Error) {
-                    return {
-                      name: v.name,
-                      message: v.message,
-                      stack: v.stack,
-                    }
-                  }
-                  return v
-                })
-            : undefined,
-        deserialize: pkg.runtime !== 'node' ? parse : undefined,
+        serialize: (e) =>
+          stringify(e, (_, v) => {
+            if (v instanceof Error) {
+              return {
+                name: v.name,
+                message: v.message,
+                stack: v.stack,
+              }
+            }
+            return v
+          }),
+        deserialize: parse,
       })
       ws.once('close', () => {
         log.verbose?.('[API]', 'Vitest WebSocket connection closed, cannot call RPC anymore.')
