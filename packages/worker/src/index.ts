@@ -90,12 +90,9 @@ export async function initVitest(
       plugins: [
         {
           name: 'vitest:vscode-extension',
+          enforce: 'post',
           config(userConfig) {
             userConfig.test ??= {}
-
-            userConfig.server ??= {}
-            userConfig.server.watch = null
-            userConfig.server.middlewareMode = true
 
             const testReporters = toArray(userConfig.test.reporters)
             if (!testReporters.length) {
@@ -115,17 +112,19 @@ export async function initVitest(
               },
             }
           },
-          configResolved(config) {
-            // stub a server so Vite doesn't start a websocket connection,
-            // because we don't need it in the extension and it messes up Vite dev command
-            config.server.hmr = {
-              server: {
-                on: () => {},
-                off: () => {},
-              } as any,
-            }
-            config.server.watch = null
-            config.server.middlewareMode = true
+          configResolved: {
+            order: 'post',
+            handler(config) {
+              // stub a server so Vite doesn't start a websocket connection,
+              // because we don't need it in the extension and it messes up Vite dev command
+              config.server.hmr = {
+                server: {
+                  on: () => {},
+                  off: () => {},
+                } as any,
+              }
+              config.server.watch = null
+            },
           },
           api: {
             vitest: {
