@@ -26,6 +26,7 @@ import './polyfills'
 import { SnapshotEntryTool } from './snapshot/tools'
 import { SnapshotDocumentSymbolProvider } from './snapshot/documentSymbolProvider'
 import { SnapshotFoldingRangeProvider } from './snapshot/foldingRangeProvider'
+import { SnapshotDefinitionProvider } from './snapshot/definitionProvider'
 import { SnapshotHoverProvider } from './snapshot/hoverProvider'
 import { snapshotTestLanguages } from './snapshot/languages'
 
@@ -562,6 +563,10 @@ class VitestExtension {
       vscode.languages.registerHoverProvider(
         snapshotTestLanguages,
         new SnapshotHoverProvider(snapshotEntryTool),
+      ),
+      vscode.languages.registerDefinitionProvider(
+        snapshotTestLanguages,
+        new SnapshotDefinitionProvider(snapshotEntryTool),
       ),
     ]
 

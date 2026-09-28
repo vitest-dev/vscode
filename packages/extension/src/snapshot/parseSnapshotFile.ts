@@ -23,6 +23,9 @@ export interface ParsedSnapshotEntry {
   /** Offset range of the raw value (between the backticks). */
   bodyStart: number
   bodyEnd: number
+  /** Offset range of the value without Vitest's padding newlines. */
+  contentStart: number
+  contentEnd: number
 }
 
 /** Reverse Vitest's `printBacktickString` escaping. */
@@ -72,15 +75,21 @@ export function parseSnapshotEntries(text: string): ParsedSnapshotEntry[] {
     if (bodyEnd === -1) continue
     const end = text[bodyEnd + 1] === ';' ? bodyEnd + 2 : bodyEnd + 1
 
+    const rawBody = text.slice(bodyStart, bodyEnd)
+    const contentBody = stripExtraLineBreaks(rawBody)
+    const hasPadding = contentBody.length !== rawBody.length
+
     entries.push({
       name: unescapeSnapshot(rawKey),
-      body: stripExtraLineBreaks(unescapeSnapshot(text.slice(bodyStart, bodyEnd))),
+      body: unescapeSnapshot(contentBody),
       start,
       end,
       keyStart,
       keyEnd,
       bodyStart,
       bodyEnd,
+      contentStart: hasPadding ? bodyStart + 1 : bodyStart,
+      contentEnd: hasPadding ? bodyEnd - 1 : bodyEnd,
     })
 
     exportRegex.lastIndex = end

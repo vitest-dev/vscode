@@ -42,8 +42,8 @@ export class SnapshotEntryTool {
         document.positionAt(entry.keyEnd),
       ),
       bodyRange: new vscode.Range(
-        document.positionAt(entry.bodyStart),
-        document.positionAt(entry.bodyEnd),
+        document.positionAt(entry.contentStart),
+        document.positionAt(entry.contentEnd),
       ),
     }))
     this.latestUri = uri

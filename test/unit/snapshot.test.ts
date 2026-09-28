@@ -237,6 +237,26 @@ describe('parseSnapshotEntries', () => {
     const entry = findSnapshotEntry(snapshotEntries, 'no describe 1')!
     expect(snapshotText.slice(entry.start, entry.end)).to.equal('exports[`no describe 1`] = `"x"`;')
   })
+
+  it('raw body offsets include the padding newlines of multiline snapshots', () => {
+    const entry = findSnapshotEntry(snapshotEntries, 'Outer > top level it 1')!
+    expect(snapshotText.slice(entry.bodyStart, entry.bodyEnd)).to.equal(
+      '\n{\n  "a": Any<Number>,\n}\n',
+    )
+  })
+
+  it('content offsets point at the value without padding newlines', () => {
+    const entry = findSnapshotEntry(snapshotEntries, 'Outer > top level it 1')!
+    expect(snapshotText.slice(entry.contentStart, entry.contentEnd)).to.equal(
+      '{\n  "a": Any<Number>,\n}',
+    )
+  })
+
+  it('content offsets match the raw body for single-line snapshots', () => {
+    const entry = findSnapshotEntry(snapshotEntries, 'no describe 1')!
+    expect(entry.contentStart).to.equal(entry.bodyStart)
+    expect(entry.contentEnd).to.equal(entry.bodyEnd)
+  })
 })
 
 describe('resolveSnapshotPath', () => {

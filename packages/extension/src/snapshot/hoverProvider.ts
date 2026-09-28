@@ -1,10 +1,9 @@
 import * as vscode from 'vscode'
 import { getConfig } from '../config'
-import { ExternalMatchers } from './matchers'
+import { ExternalMatcherPattern } from './matchers'
 import { resolveSnapshotAt } from './resolveSnapshotAt'
 import type { SnapshotEntryTool } from './tools'
 
-const SnapshotMatcherPattern = new RegExp(Array.from(ExternalMatchers).join('|'))
 const MaxPreviewLength = 8 * 1024
 
 /** Length of the longest run of backticks in `text` (0 when there are none). */
@@ -47,7 +46,7 @@ export class SnapshotHoverProvider implements vscode.HoverProvider {
   ): Promise<vscode.Hover | undefined> {
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
     if (!getConfig(workspaceFolder).showSnapshotPreview) return undefined
-    if (!document.getWordRangeAtPosition(position, SnapshotMatcherPattern)) return undefined
+    if (!document.getWordRangeAtPosition(position, ExternalMatcherPattern)) return undefined
 
     const resolved = await resolveSnapshotAt(document, position, token, this.snapshotEntryTool)
     if (!resolved || token.isCancellationRequested) return undefined

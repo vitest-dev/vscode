@@ -6,6 +6,9 @@ export const ExternalMatchers: ReadonlySet<string> = new Set([
   'toThrowErrorMatchingSnapshot',
 ])
 
+/** Pattern matching the external matcher names, for `getWordRangeAtPosition`. */
+export const ExternalMatcherPattern = new RegExp(Array.from(ExternalMatchers).join('|'))
+
 /**
  * Matchers that consume Vitest's per-test snapshot counter. Inline and file
  * snapshots are not stored in `.snap`, but they still take a counter slot, so
