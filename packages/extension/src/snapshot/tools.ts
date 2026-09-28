@@ -1,75 +1,53 @@
 import * as vscode from 'vscode'
-
-const ExportSymbolRegex = /^exports\[`([^`]*)`\]/gm
-const RangeEndRegex = /`;$/m
+import { parseSnapshotEntries } from './parseSnapshotFile'
 
 export interface SnapshotEntry {
   name: string
   breadcrumb: [...describeName: string[], itName: string]
   start: number
   end: number
+  body: string
   fullRange: vscode.Range
   keyRange: vscode.Range
+  bodyRange: vscode.Range
 }
 
 export class SnapshotEntryTool {
   private latestUri: string | undefined = undefined
   private latestVersion: number | undefined = undefined
   snapshotEntries: SnapshotEntry[] = []
+
   process(
     document: vscode.TextDocument,
     uri: string,
     version: number,
     token: vscode.CancellationToken,
   ): void {
-    let changeUri = false
-    let changeVersion = false
-    if (this.latestUri !== uri) {
-      this.latestUri = uri
-      this.latestVersion = version
-      changeUri = true
-      changeVersion = true
-    } else if (this.latestVersion !== version) {
-      this.latestVersion = version
-      changeVersion = true
-    }
-
-    if (!changeUri && !changeVersion) {
+    if (this.latestUri === uri && this.latestVersion === version) {
       return // cached
-    } else {
-      // reset snapshotEntries
-      this.snapshotEntries = []
     }
-    if (token.isCancellationRequested) return // cancelled
-    const text = document.getText()
-    const exportsSymbols = text.matchAll(ExportSymbolRegex) || []
-
-    for (const match of exportsSymbols) {
-      const name = match[1]
-      const snapshotDataStart = match.index
-      const snapshotDataEnd =
-        snapshotDataStart +
-        // find the nearest closing delimiter
-        (text.slice(snapshotDataStart).match(RangeEndRegex)?.index ??
-          // fallback to empty snapshot
-          'exports[`'.length + name.length + '`]'.length + ' = `'.length + '""'.length) +
-        '`;'.length
-
-      this.snapshotEntries.push({
-        name: name,
-        breadcrumb: name.split(' > ') as [...describeName: string[], itName: string],
-        start: snapshotDataStart,
-        end: snapshotDataEnd,
-        fullRange: new vscode.Range(
-          document.positionAt(snapshotDataStart),
-          document.positionAt(snapshotDataEnd),
-        ),
-        keyRange: new vscode.Range(
-          document.positionAt(snapshotDataStart + 'exports[`'.length),
-          document.positionAt(snapshotDataStart + 'exports[`'.length + name.length),
-        ),
-      })
+    if (token.isCancellationRequested) {
+      return // cancelled: keep the previous cache untouched
     }
+
+    this.snapshotEntries = parseSnapshotEntries(document.getText()).map((entry) => ({
+      name: entry.name,
+      breadcrumb: entry.name.split(' > ') as [...describeName: string[], itName: string],
+      start: entry.start,
+      end: entry.end,
+      body: entry.body,
+      fullRange: new vscode.Range(document.positionAt(entry.start), document.positionAt(entry.end)),
+      keyRange: new vscode.Range(
+        document.positionAt(entry.keyStart),
+        document.positionAt(entry.keyEnd),
+      ),
+      bodyRange: new vscode.Range(
+        document.positionAt(entry.bodyStart),
+        document.positionAt(entry.bodyEnd),
+      ),
+    }))
+    this.latestUri = uri
+    this.latestVersion = version
   }
 }
 
