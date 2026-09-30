@@ -62,7 +62,6 @@ export async function initVitest(
     project: meta.projectFilter ?? args.project,
     watch: true,
     api: false,
-    // @ts-expect-error private property
     reporter: undefined,
     ui: false,
     includeTaskLocation: true,

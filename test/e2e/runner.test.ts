@@ -158,7 +158,7 @@ test('browser mode correctly collects tests', async ({ launch }) => {
 
   editFile('samples/browser/test/console.test.ts', (content) => `/arakara---\n${content}`)
 
-  await expect(consoleTest).toHaveError('Error: Unterminated regular expression')
+  await expect(consoleTest).toHaveError('Unterminated regular expression')
 })
 
 test('watcher updates the file if there are several config files', async ({ launch }) => {

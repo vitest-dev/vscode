@@ -42,28 +42,29 @@ catalog:
 catalogs:
   latest:
     '@types/picomatch': ^4.0.2
-    '@vitest/browser': ^4.1.0
-    '@vitest/browser-playwright': ^4.1.0
-    '@vitest/coverage-istanbul': ^4.1.0
-    '@vitest/coverage-v8': ^4.1.0
-    '@vitest/utils': ^4.1.0
+    '@vitest/browser': ^5.0.3
+    '@vitest/browser-playwright': ^5.0.3
+    '@vitest/coverage-istanbul': ^5.0.3
+    '@vitest/coverage-v8': ^5.0.3
+    '@vitest/utils': ^5.0.3
+    '@vitest/ui': ^5.0.3
     picomatch: ^4.0.3
     vite: ^7.2.6
-    vitest: ^4.1.0
+    vitest: ^5.0.3
   v3:
     '@vitest/browser': ^3.2.4
     '@vitest/coverage-v8': ^3.2.4
     '@vitest/runner': ^3.2.4
     '@vitest/utils': ^3.2.4
+    '@vitest/ui': ^3.2.4
     vite: ^7.2.6
     vitest: ^3.2.4
   v5:
-    '@vitest/browser-playwright': https://pkg.pr.new/@vitest/browser-playwright@0ae5d17
-    '@vitest/ui': https://pkg.pr.new/@vitest/ui@0ae5d17
-    vitest: https://pkg.pr.new/vitest@0ae5d17
+    '@vitest/browser-playwright': ^5.0.3
+    '@vitest/ui': ^5.0.3
+    vitest: ^5.0.3
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
   - esbuild
   - keytar
 shellEmulator: true
-trustPolicy: no-downgrade

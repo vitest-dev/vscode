@@ -4,7 +4,7 @@ import type {
   VitestWorkerRPC,
   WorkerWSEventEmitter,
 } from 'vitest-vscode-shared'
-import type { TestSpecification, Vitest as VitestCore } from 'vitest/node'
+import type { TestModule, TestSpecification, Vitest as VitestCore } from 'vitest/node'
 
 export class ExtensionWorkerRunner {
   private rpc!: VitestWorkerRPC
@@ -43,12 +43,19 @@ export class ExtensionWorkerRunner {
   }
 
   public async collectSpecifications(specifications: TestSpecification[]): Promise<void> {
-    const testModules = await this.vitest.experimental_parseSpecifications(specifications)
+    const testModules = await this.parseSpecifications(specifications)
     const promises = testModules.map((module) =>
       // TODO: fix "as any"
       this.rpc.onCollected((module as any).task, true),
     )
     await Promise.all(promises)
+  }
+
+  private parseSpecifications(specifications: TestSpecification[]): Promise<TestModule[]> {
+    if (this.vitest.parseSpecifications) {
+      return this.vitest.parseSpecifications(specifications)
+    }
+    return this.vitest.experimental_parseSpecifications(specifications)
   }
 
   initRpc(rpc: VitestWorkerRPC) {
