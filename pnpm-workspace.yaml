@@ -42,15 +42,15 @@ catalog:
 catalogs:
   latest:
     '@types/picomatch': ^4.0.2
-    '@vitest/browser': ^5.0.2
-    '@vitest/browser-playwright': ^5.0.2
-    '@vitest/coverage-istanbul': ^5.0.2
-    '@vitest/coverage-v8': ^5.0.2
-    '@vitest/utils': ^5.0.2
-    '@vitest/ui': ^5.0.2
+    '@vitest/browser': ^5.0.3
+    '@vitest/browser-playwright': ^5.0.3
+    '@vitest/coverage-istanbul': ^5.0.3
+    '@vitest/coverage-v8': ^5.0.3
+    '@vitest/utils': ^5.0.3
+    '@vitest/ui': ^5.0.3
     picomatch: ^4.0.3
     vite: ^7.2.6
-    vitest: ^5.0.2
+    vitest: ^5.0.3
   v3:
     '@vitest/browser': ^3.2.4
     '@vitest/coverage-v8': ^3.2.4
@@ -60,9 +60,9 @@ catalogs:
     vite: ^7.2.6
     vitest: ^3.2.4
   v5:
-    '@vitest/browser-playwright': ^5.0.2
-    '@vitest/ui': ^5.0.2
-    vitest: ^5.0.2
+    '@vitest/browser-playwright': ^5.0.3
+    '@vitest/ui': ^5.0.3
+    vitest: ^5.0.3
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
   - esbuild
