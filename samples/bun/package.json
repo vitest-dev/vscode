@@ -1,0 +1,14 @@
+{
+  "name": "bun-sample",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sample project using Bun runtime with Vitest",
+  "license": "ISC",
+  "scripts": {
+    "test": "bun --bun vitest run",
+    "test:watch": "bun --bun vitest"
+  },
+  "devDependencies": {
+    "vitest": "catalog:v3"
+  }
+}

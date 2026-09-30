@@ -413,7 +413,8 @@
           "enum": [
             "auto",
             "node",
-            "deno"
+            "deno",
+            "bun"
           ]
         },
         "vitest.watchOnStartup": {

@@ -63,6 +63,9 @@ export async function createVitestTerminalProcess(
   if (pkg.runtime === 'deno') {
     command += ' -A'
   }
+  if (pkg.runtime === 'bun') {
+    command += ' --bun'
+  }
   command += ` ${workerPath};`
 
   log.info('[TERMINAL]', `Initiated ws connection via ${wsAddress}`)
