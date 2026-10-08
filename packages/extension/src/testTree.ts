@@ -146,7 +146,11 @@ export class TestTree extends vscode.Disposable {
     const normalizedFile = normalize(file)
     const fileId = `${normalizedFile}${project}`
     const cached = this.fileItems.get(fileId)
-    if (cached) return cached
+    if (cached) {
+      // A file can be included in several configs (#799).
+      if (!cached.tags.includes(api.tag)) cached.tags = [...cached.tags, api.tag]
+      return cached
+    }
 
     const fileUri = vscode.Uri.file(resolve(file))
     const parentItem = this.getOrCreateFolderTestItem(api, dirname(file))
