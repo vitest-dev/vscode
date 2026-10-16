@@ -127,9 +127,7 @@ export async function initVitest(
           },
           api: {
             vitest: {
-              experimental: {
-                ignoreFsModuleCache: true,
-              },
+              ignoreFsModuleCache: true,
             },
           },
         },
