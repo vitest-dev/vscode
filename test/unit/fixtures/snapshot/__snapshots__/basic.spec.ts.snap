@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Outer > Inner > does a thing 1`] = `"1"`;
+
+exports[`Outer > Inner > does a thing 3`] = `"3"`;
+
+exports[`Outer > Inner > does a thing 4`] = `"4"`;
+
+exports[`Outer > Inner > does a thing > second 1`] = `
+{
+  "a": 1,
+}
+`;
+
+exports[`Outer > top level it 1`] = `
+{
+  "a": Any<Number>,
+}
+`;
+
+exports[`handles \`code\` in title 1`] = `"0"`;
+
+exports[`modified block 1`] = `"x"`;
+
+exports[`no describe 1`] = `"x"`;

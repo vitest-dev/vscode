@@ -85,6 +85,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
   const applyDiagnostic = get<boolean>('applyDiagnostic', true)
   const ignoreWorkspace = get<boolean>('ignoreWorkspace', false) ?? false
   const showInlineConsoleLog = get<boolean>('showInlineConsoleLog', true) ?? true
+  const showSnapshotPreview = get<boolean>('showSnapshotPreview', true) ?? true
   const forceCancelTimeout = get<number>('forceCancelTimeout', 1000) ?? 1000
   const runtime = get<'node' | 'deno' | 'auto'>('runtime', 'auto') ?? 'auto'
   const watchOnStartup = get<boolean>('watchOnStartup', false) ?? false
@@ -117,6 +118,7 @@ export function getConfig(workspaceFolder?: WorkspaceFolder) {
     logLevel,
     showImportsDuration: get<boolean>('showImportsDuration', true) ?? true,
     showInlineConsoleLog,
+    showSnapshotPreview,
   }
 }
 
