@@ -127,6 +127,8 @@ export async function initVitest(
           },
           api: {
             vitest: {
+              ignoreFsModuleCache: true,
+              // Vitest 4 only recognizes the experimental option.
               experimental: {
                 ignoreFsModuleCache: true,
               },
