@@ -517,21 +517,27 @@ function setTestErrors(test: vscode.TestItem, errors: TestError[] | undefined) {
   }
 }
 
-function testMessageForTestError(
+export function testMessageForTestError(
   testItem: vscode.TestItem,
   error: TestError | undefined,
 ): vscode.TestMessage {
   if (!error) return new vscode.TestMessage('Unknown error')
 
-  let testMessage
-  if (
-    error.actual != null &&
-    error.expected != null &&
-    error.actual !== 'undefined' &&
-    error.expected !== 'undefined'
-  )
-    testMessage = vscode.TestMessage.diff(getErrorMessage(error), error.expected, error.actual)
-  else testMessage = new vscode.TestMessage(getErrorMessage(error))
+  let diffError: TestError | undefined = error
+  while (
+    diffError &&
+    (diffError.actual == null ||
+      diffError.expected == null ||
+      diffError.actual === 'undefined' ||
+      diffError.expected === 'undefined')
+  ) {
+    diffError = diffError.cause
+  }
+
+  const message = getErrorMessage(error)
+  const testMessage = diffError
+    ? vscode.TestMessage.diff(message, diffError.expected!, diffError.actual!)
+    : new vscode.TestMessage(message)
 
   setMessageStackFramesFromErrorStacks(testMessage, error.stacks)
 
